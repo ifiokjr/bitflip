@@ -362,10 +362,4 @@
     cp -r $DEVENV_ROOT/target/site/bitflip $DEVENV_ROOT/dist/bitflip/site
     cp -r $DEVENV_ROOT/bitflip/Cargo.toml $DEVENV_ROOT/dist/bitflip
   '';
-  scripts."build:extension".exec = ''
-    set -e
-    wasm-pack build $DEVENV_ROOT/bitflip_extension/background_script --release -t web
-    wasm-pack build $DEVENV_ROOT/bitflip_extension/foreground_script --release -t no-modules
-    cd $DEVENV_ROOT/bitflip_extension/options && trunk build --release
-  '';
 }
