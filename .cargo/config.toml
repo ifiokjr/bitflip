@@ -1,0 +1,13 @@
+[alias]
+# bins
+llvm-cov = ["bin", "cargo-llvm-cov"]
+nextest = ["bin", "cargo-nextest"]
+insta = ["bin", "cargo-insta"]
+leptos = ["bin", "cargo-leptos"]
+mutants = ["bin", "cargo-mutants"]
+make = ["bin", "cargo-make"]
+
+# tests
+test_bitflip_client = ["nextest", "run", "-p", "bitflip_client", "-F", "ssr"]
+test_bitflip_client_integration = ["nextest", "run", "-p", "bitflip_client", "-F", "test_validator"]
+test_bitflip_program = ["nextest", "run", "-p", "bitflip_program", "-F", "serde"]

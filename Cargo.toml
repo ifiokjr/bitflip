@@ -1,0 +1,220 @@
+[workspace]
+members = ["bitflip", "bitflip_client", "bitflip_program"]
+resolver = "2"
+
+[workspace.package]
+version = "0.0.0"
+authors = ["Ifiok Jr. <ifiokotung@gmail.com>"]
+edition = "2021"
+homepage = "https://millionbitcanvas.com"
+license = "Apache-2.0"
+repository = "https://github.com/ifiokjr/bitflip"
+rust-version = "1.71.0"
+
+[workspace.dependencies]
+anchor-lang = { version = "0.30", features = ["init-if-needed"] }
+anchor-spl = "0.30"
+anchor-syn = "0.30"
+anyhow = "1"
+assert2 = "=0.3.14"
+assert_matches = "1"
+async-trait = "0.1"
+axum = "0.7"
+base64 = "0.22"
+bcrypt = "0.15"
+bincode = "1"
+bitflags = "2"
+bs58 = "0.5"
+cfg-if = "1"
+check_keyword = "0.3"
+chrono = "0.4"
+chrono-humanize = "0.2"
+codee = "0.2"
+console_error_panic_hook = "0.1"
+console_log = "1"
+const_str_to_pubkey = "0.1"
+crossbeam-channel = "0.5"
+cuid2 = "0.1"
+derive-where = "1"
+derive_more = "1"
+dom_testing_library = "0.1"
+dotenvy = "0.15"
+fake = "2"
+futures = "0.3"
+futures-timeout = "0.1"
+futures-timer = "3"
+futures-util = "0.3"
+gloo-console = "0.3"
+gloo-events = "0.2"
+gloo-net = "0.6"
+gloo-storage = "0.3"
+gloo-timers = "0.3"
+gloo-utils = "0.2"
+heck = "0.5"
+hmac = "0.12"
+http = "1"
+hyper = "1"
+image = "0.25"
+imagesize = "0.13"
+insta = "1"
+js-sys = "0.3"
+jsonwebtoken = "9"
+lazy_static = "1"
+leptos = "0.7.0-beta7"
+leptos-use = "0.14.0-beta4"
+leptos_axum = "0.7.0-beta7"
+leptos_dom = "0.7.0-beta7"
+leptos_meta = "0.7.0-beta7"
+leptos_router = "0.7.0-beta7"
+log = "0.4"
+mime_guess = "2"
+paste = "1"
+port_check = "0.2"
+rand = "0.8"
+regex = "1"
+retrier = "0.1"
+rstest = "0.22"
+rust-embed = "8"
+serde = "1"
+serde-big-array = "0.5.1"
+serde-wasm-bindgen = "0.6"
+serde_json = "1"
+serde_qs = "0.13"
+serde_with = "3"
+serial_test = "3"
+server_fn = "0.6"
+sha2 = "0.10"
+similar-asserts = "1"
+simple_logger = "5"
+solana-address-lookup-table-program = "=1.18"
+solana-banks-client = "=1.18"
+solana-banks-interface = "=1.18"
+solana-client = "=1.18"
+solana-config-program = "=1.18"
+solana-faucet = "=1.18"
+solana-program = "=1.18"
+solana-program-runtime = "=1.18"
+solana-program-test = "=1.18"
+solana-rpc = "=1.18"
+solana-sdk = "=1.18"
+solana-security-txt = "1"
+solana-streamer = "=1.18"
+solana-test-validator = "=1.18"
+solana-version = "=1.18"
+spl-associated-token-account = "3"
+spl-memo = "4"
+spl-pod = "0.2"
+spl-tlv-account-resolution = "0.6"
+spl-token = "4"
+spl-token-2022 = "3"
+spl-token-group-interface = "0.2"
+spl-token-metadata-interface = "0.3"
+spl-transfer-hook-interface = "0.6"
+spl-type-length-value = "0.4"
+strum = "0.26"
+surrealdb = "2"
+tailwind_fuse = "0.3"
+test-context = "0.3"
+test-log = "0.2"
+test_utils = { git = "https://github.com/ifiokjr/wasm_solana", branch = "main" }
+test_utils_solana = "0.4"
+thiserror = "1"
+tiny-skia = "0.11"
+tokio = "1"
+tower = "0.4"
+tower-cookies = "0.10"
+tower-http = "0.5"
+tower_governor = "0.4"
+tracing = "0.1"
+typed-builder = "0.20"
+uint = "0.10"
+url = "2"
+urlencoding = "2"
+validator = { version = "0.18", features = ["derive"] }
+wallet_standard = "0.2"
+wallet_standard_browser = "0.2"
+wallet_standard_wallets = "0.1"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+wasm-bindgen-test = "0.3"
+wasm_client_anchor = "0.2"
+wasm_client_solana = "0.3"
+web-sys = "0.3"
+
+# internal crates
+bitflip_client = { path = "./bitflip_client", version = "0.0.0" }
+bitflip_program = { path = "./bitflip_program", version = "0.0.0" }
+
+[patch.crates-io.curve25519-dalek]
+git = "https://github.com/anza-xyz/curve25519-dalek.git"
+rev = "b500cdc2a920cd5bff9e2dd974d7b97349d61464"
+
+[workspace.metadata.bin]
+anchor-cli = { version = "0.30.1", bins = ["anchor"] }
+cargo-insta = { version = "1.40.0" }
+cargo-leptos = { version = "0.2.20" }
+cargo-llvm-cov = { version = "0.6.13" }
+cargo-make = { version = "0.37.18" }
+cargo-nextest = { version = "0.9.79" }
+leptosfmt = { version = "0.1.31", bins = ["leptosfmt"] }
+
+[profile.dev.package]
+insta.opt-level = 3
+similar.opt-level = 3
+
+[profile.release.package.bitflip_program]
+overflow-checks = true
+codegen-units = 1
+incremental = false
+
+[profile.release.build-override]
+opt-level = 3
+incremental = false
+codegen-units = 1
+
+[profile.release]
+lto = "fat"
+overflow-checks = true
+
+[workspace.lints.rust]
+# Group lints
+rust_2021_compatibility = { level = "warn", priority = -1 }
+rust_2024_compatibility = { level = "warn", priority = -1 }
+
+# Individual lints
+unsafe_code = "deny"
+unstable_features = "deny"
+unused_extern_crates = "warn"
+unused_import_braces = "warn"
+unused_lifetimes = "warn"
+unused_macro_rules = "warn"
+unused_qualifications = "warn"
+variant_size_differences = "warn"
+
+[workspace.lints.clippy]
+# Group lints
+complexity = { level = "warn", priority = -1 }
+correctness = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }
+style = { level = "warn", priority = -1 }
+suspicious = { level = "warn", priority = -1 }
+
+# Individual lints
+blocks_in_conditions = "allow"
+cargo_common_metadata = "allow"
+cast_possible_truncation = "allow"
+cast_possible_wrap = "allow"
+cast_precision_loss = "allow"
+cast_sign_loss = "allow"
+expl_impl_clone_on_copy = "allow"
+items_after_statements = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+no_effect_underscore_binding = "allow"
+tabs-in-doc-comments = "allow"
+too_many_lines = "allow"
+wildcard_dependencies = "deny"
+wildcard_imports = "allow"

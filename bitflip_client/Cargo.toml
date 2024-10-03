@@ -1,0 +1,55 @@
+[package]
+name = "bitflip_client"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
+description = "The rust based client for interacting with the bitflip solana program `bitflip`."
+
+[lints]
+workspace = true
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "bitflip_client"
+
+[dependencies]
+anchor-lang = { workspace = true }
+anchor-spl = { workspace = true }
+async-trait = { workspace = true }
+bitflip_program = { workspace = true, features = ["serde"] }
+derive_more = { workspace = true, features = ["debug", "deref", "deref_mut"] }
+futures = { workspace = true }
+log = { workspace = true }
+paste = { workspace = true }
+solana-program = { workspace = true }
+solana-sdk = { workspace = true }
+typed-builder = { workspace = true }
+wallet_standard = { workspace = true, features = ["solana"] }
+wasm_client_anchor = { workspace = true }
+wasm_client_solana = { workspace = true }
+
+[dev-dependencies]
+anyhow = { workspace = true }
+assert2 = { workspace = true }
+insta = { workspace = true, features = ["ron", "yaml", "redactions"] }
+rstest = { workspace = true }
+solana-program-test = { workspace = true }
+spl-associated-token-account = { workspace = true }
+spl-transfer-hook-interface = { workspace = true }
+test-log = { workspace = true, features = ["log", "trace"] }
+test_utils = { workspace = true }
+test_utils_solana = { workspace = true, features = ["test_validator"] }
+tokio = { workspace = true, features = ["test-util", "rt", "macros", "time"] }
+wallet_standard_wallets = { workspace = true }
+
+[features]
+ssr = ["wasm_client_solana/ssr"]
+js = [
+	"wasm_client_solana/js",
+	"wasm_client_anchor/js",
+	"bitflip_program/no-entrypoint",
+]

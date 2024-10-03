@@ -1,0 +1,63 @@
+[language-server.nil]
+command = "nil"
+
+[language-server.nil.config]
+formatting = { command = ["nixfmt"] }
+
+[language-server.tailwindcss-ls]
+config = { userLanguages = { rust = "html", "*.rs" = "html" } }
+
+[language-server.rust-analyzer.config.check]
+command = "clippy"
+features = "all"
+
+[language-server.rust-analyzer.config.cargo]
+features = "all"
+
+[[language]]
+name = "markdown"
+indent = { tab-width = 2, unit = "\t" }
+language-servers = ["marksman", "ltex-ls"]
+formatter = { command = "dprint", args = ["fmt", "--stdin", "file.md"] }
+auto-format = true
+
+[[language]]
+name = "rust"
+language-servers = ["rust-analyzer", "tailwindcss-ls"]
+indent = { tab-width = 2, unit = "\t" }
+formatter = { command = "dprint", args = ["fmt", "--stdin", "file.rs"] }
+auto-format = true
+
+[[language]]
+name = "yaml"
+indent = { tab-width = 2, unit = "\t" }
+formatter = { command = "dprint", args = ["fmt", "--stdin", "file.yaml"] }
+auto-format = true
+
+[[language]]
+name = "toml"
+indent = { tab-width = 2, unit = "\t" }
+language-servers = ["lsp-ai", "taplo"]
+formatter = { command = "dprint", args = ["fmt", "--stdin", "Cargo.toml"] }
+auto-format = true
+
+[[language]]
+name = "nix"
+indent = { tab-width = 2, unit = "\t" }
+language-servers = ["nil"]
+formatter = { command = "dprint", args = ["fmt", "--stdin", "file.nix"] }
+auto-format = true
+
+[[language]]
+name = "html"
+language-servers = ["tailwindcss-ls", "vscode-html-language-server"]
+indent = { tab-width = 2, unit = "\t" }
+formatter = { command = "dprint", args = ["fmt", "--stdin", "file.html"] }
+auto-format = true
+
+[[language]]
+name = "css"
+language-servers = ["tailwindcss-ls", "vscode-css-language-server"]
+indent = { tab-width = 2, unit = "\t" }
+formatter = { command = "dprint", args = ["fmt", "--stdin", "file.css"] }
+auto-format = true

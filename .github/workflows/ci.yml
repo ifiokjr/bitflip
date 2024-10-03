@@ -1,0 +1,124 @@
+name: "ci"
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  lint:
+    timeout-minutes: 15
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: setup
+        uses: ./.github/actions/devenv
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          nix-cache: /tmp/nixcache
+          deno-cache: /tmp/denocache
+
+      - name: lint
+        run: lint:all
+        shell: bash
+
+  test_bitflip:
+    timeout-minutes: 15
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: setup
+        uses: ./.github/actions/devenv
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          nix-cache: /tmp/nixcache
+          deno-cache: /tmp/denocache
+
+      - name: test
+        run: cargo test_bitflip_client
+        shell: bash
+
+  build_bitflip:
+    timeout-minutes: 15
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: setup
+        uses: ./.github/actions/devenv
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          nix-cache: /tmp/nixcache
+          deno-cache: /tmp/denocache
+
+      - name: build
+        run: anchor:build
+        shell: bash
+
+      - name: test
+        run: cargo test_bitflip_client_integration
+        shell: bash
+
+  build_bitflip_website:
+    timeout-minutes: 15
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: setup
+        uses: ./.github/actions/devenv
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          nix-cache: /tmp/nixcache
+          deno-cache: /tmp/denocache
+
+      - name: build
+        run: build:bitflip
+        shell: bash
+
+      - name: get installed playwright version
+        id: playwright-version
+        run: |
+          TEMP_VERSION=`deno task playwright:version`
+          echo "PLAYWRIGHT_VERSION=$TEMP_VERSION" >> $GITHUB_ENV
+        shell: bash
+
+      - name: cache playwright binaries
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: |
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
+
+      - name: install playwright browsers and dependencies
+        run: deno run -Aq npm:playwright install --with-deps
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        shell: bash
+
+      - name: install playwright dependencies
+        run: deno run -Aq npm:playwright install --with-deps
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        shell: bash
+
+      - name: migrate db
+        run: prisma db push
+        shell: bash
+
+      - name: test
+        run: test:bitflip
+        shell: bash

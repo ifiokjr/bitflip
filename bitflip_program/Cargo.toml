@@ -1,0 +1,41 @@
+[package]
+name = "bitflip_program"
+version = "0.0.0"
+edition = "2021"
+description = "Created with Anchor"
+
+[lints]
+workspace = true
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "bitflip_program"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+serde = ["dep:serde", "dep:serde_with"]
+client = ["serde"]
+
+[dependencies]
+anchor-lang = { workspace = true, features = ["interface-instructions"] }
+anchor-spl = { workspace = true }
+bitflags = { workspace = true }
+const_str_to_pubkey = { workspace = true }
+derive_more = { workspace = true, features = ["add", "add_assign"] }
+serde = { workspace = true, features = ["derive"], optional = true }
+serde-big-array = { workspace = true }
+serde_with = { workspace = true, optional = true }
+
+[dev-dependencies]
+anyhow = { workspace = true }
+assert2 = { workspace = true }
+insta = { workspace = true, features = ["ron", "yaml", "redactions"] }
+rstest = { workspace = true }
+test_utils = { workspace = true }
+test_utils_solana = { workspace = true }
+tokio = { workspace = true, features = ["test-util", "rt", "macros", "time"] }
