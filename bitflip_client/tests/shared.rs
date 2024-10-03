@@ -8,13 +8,13 @@ use solana_sdk::signature::Signer;
 use test_utils::SECRET_KEY_ADMIN;
 use test_utils::SECRET_KEY_AUTHORITY;
 use test_utils::SECRET_KEY_TREASURY;
-use test_utils_solana::anchor_processor;
-use test_utils_solana::solana_sdk::account::Account;
 use test_utils_solana::ProgramTest;
 use test_utils_solana::ProgramTestContext;
+use test_utils_solana::anchor_processor;
+use test_utils_solana::solana_sdk::account::Account;
 use wallet_standard_wallets::MemoryWallet;
-use wasm_client_solana::SolanaRpcClient;
 use wasm_client_solana::LOCALNET;
+use wasm_client_solana::SolanaRpcClient;
 
 /// Add the anchor program to the project.
 pub fn create_program_test() -> ProgramTest {
@@ -42,22 +42,16 @@ impl BitflipProgramTest {
 		factory: F,
 	) -> Result<(Self, ProgramTestContext)> {
 		let admin_keypair = create_admin_keypair();
-		let rpc = SolanaRpcClient::new_with_commitment(
-			LOCALNET,
-			CommitmentConfig {
-				commitment: CommitmentLevel::Finalized,
-			},
-		);
+		let rpc = SolanaRpcClient::new_with_commitment(LOCALNET, CommitmentConfig {
+			commitment: CommitmentLevel::Finalized,
+		});
 		let data = Self { rpc };
 		let mut program_test = factory(&data);
 
-		program_test.add_account(
-			admin_keypair.pubkey(),
-			Account {
-				lamports: 1_000_000_000_000,
-				..Account::default()
-			},
-		);
+		program_test.add_account(admin_keypair.pubkey(), Account {
+			lamports: 1_000_000_000_000,
+			..Account::default()
+		});
 
 		let context = program_test.start_with_context().await;
 

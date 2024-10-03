@@ -4,13 +4,13 @@ async fn main() {
 	use axum::Router;
 	use bitflip::app::*;
 	use leptos::prelude::*;
-	use leptos_axum::generate_route_list;
 	use leptos_axum::LeptosRoutes;
-	use tower_http::compression::predicate::NotForContentType;
-	use tower_http::compression::predicate::SizeAbove;
+	use leptos_axum::generate_route_list;
 	use tower_http::compression::CompressionLayer;
 	use tower_http::compression::CompressionLevel;
 	use tower_http::compression::Predicate;
+	use tower_http::compression::predicate::NotForContentType;
+	use tower_http::compression::predicate::SizeAbove;
 
 	simple_logger::init_with_level(log::Level::Debug).expect("couldn't initialize logging");
 	let conf = get_configuration(None).unwrap();

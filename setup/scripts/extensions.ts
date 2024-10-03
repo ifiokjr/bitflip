@@ -3,10 +3,7 @@ import fs from "node:fs/promises";
 import { arch } from "node:os";
 import { chromium } from "playwright";
 import { Open } from "unzipper";
-import {
-	EXTENSIONS as E,
-	EXTENSIONS_FOLDER,
-} from "../../apps/kickjump/e2e/constants.js";
+import { EXTENSIONS as E, EXTENSIONS_FOLDER } from "./constants.ts";
 
 const EXTENSIONS: ExtensionMeta[] = Object.entries(E).map((
 	[name, details],

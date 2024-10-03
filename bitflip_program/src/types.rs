@@ -1,10 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_2022;
 
-use crate::get_token_amount;
 use crate::SEED_PREFIX;
 use crate::SEED_TREASURY;
 use crate::TOKEN_DECIMALS;
+use crate::get_token_amount;
 
 pub trait TransferToTreasury<'info> {
 	fn treasury(&self) -> AccountInfo<'info>;

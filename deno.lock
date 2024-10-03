@@ -1497,6 +1497,7 @@
   "workspace": {
     "dependencies": [
       "jsr:@molt/cli@^0.19.8",
+      "jsr:@std/path@^1.0.6",
       "npm:@egoist/tailwindcss-icons@^1.8.1",
       "npm:@iconify/json@^2.2.252",
       "npm:@playwright/test@^1.47.1",

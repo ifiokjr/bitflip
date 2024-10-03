@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
-use crate::BITS_DATA_SECTIONS;
 use crate::BITS_DATA_SECTION_LENGTH;
+use crate::BITS_DATA_SECTIONS;
 
 #[error_code]
 pub enum BitflipError {

@@ -1,41 +1,41 @@
 use std::collections::HashSet;
 
 use bitflip_program::AnchorResult;
+use bitflip_program::BITS_DATA_SECTION_LENGTH;
 use bitflip_program::BitsDataSectionState;
 use bitflip_program::SetBitsProps;
 use bitflip_program::SetBitsVariant;
-use bitflip_program::BITS_DATA_SECTION_LENGTH;
 use js_sys::Reflect;
 use leptos::html::Canvas;
 use leptos::prelude::*;
-use leptos_meta::provide_meta_context;
 use leptos_meta::Html;
 use leptos_meta::MetaTags;
 use leptos_meta::Stylesheet;
 use leptos_meta::Title;
+use leptos_meta::provide_meta_context;
+use leptos_router::StaticSegment;
 use leptos_router::components::FlatRoutes;
 use leptos_router::components::Route;
 use leptos_router::components::Router;
-use leptos_router::StaticSegment;
 use rand::Rng;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
-use web_sys::window;
 use web_sys::CanvasRenderingContext2d;
+use web_sys::window;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
 	view! {
 		<!DOCTYPE html>
 		<html lang="en" data-theme="light">
 			<head>
-				<meta charset="utf-8"/>
-				<meta name="viewport" content="width=device-width, initial-scale=1"/>
-				<AutoReload options=options.clone()/>
-				<HydrationScripts options islands=true/>
-				<MetaTags/>
+				<meta charset="utf-8" />
+				<meta name="viewport" content="width=device-width, initial-scale=1" />
+				<AutoReload options=options.clone() />
+				<HydrationScripts options islands=true />
+				<MetaTags />
 			</head>
 			<body class="doodle">
-				<App/>
+				<App />
 			</body>
 		</html>
 	}
@@ -47,20 +47,20 @@ pub fn App() -> impl IntoView {
 	provide_meta_context();
 
 	view! {
-		<Html attr:data-theme="light"/>
+		<Html attr:data-theme="light" />
 
-		<Stylesheet id="css-font" href="https://fonts.googleapis.com/css?family=Press+Start+2P"/>
-		<Stylesheet id="css-reset" href="/reset.css"/>
-		<Stylesheet id="css-leptos" href="/pkg/bitflip.css"/>
+		<Stylesheet id="css-font" href="https://fonts.googleapis.com/css?family=Press+Start+2P" />
+		<Stylesheet id="css-reset" href="/reset.css" />
+		<Stylesheet id="css-leptos" href="/pkg/bitflip.css" />
 
 		// sets the document title
-		<Title text="bitflip"/>
+		<Title text="bitflip" />
 
 		// content for this welcome page
 		<Router>
 			<main>
 				<FlatRoutes fallback=|| "Page not found.".into_view()>
-					<Route path=StaticSegment("") view=HomePage/>
+					<Route path=StaticSegment("") view=HomePage />
 				</FlatRoutes>
 			</main>
 		</Router>
@@ -71,7 +71,7 @@ pub fn App() -> impl IntoView {
 #[component]
 fn HomePage() -> impl IntoView {
 	let render_section = move |section| {
-		view! { <BitCanvasSection section=section/> }
+		view! { <BitCanvasSection section=section /> }
 	};
 
 	view! {
@@ -96,7 +96,7 @@ fn Bit16(index: u16) -> impl IntoView {
 			};
 		});
 
-		view! { <Bit checked=is_checked id=id on_toggle=on_toggle/> }
+		view! { <Bit checked=is_checked id=id on_toggle=on_toggle /> }
 	};
 
 	view! { <div class="grid grid-4x4">{(0u16..16u16).map(render_item).collect_view()}</div> }
@@ -108,7 +108,7 @@ fn Bit256(index: u16) -> impl IntoView {
 	let render_children = move |vector_index| {
 		let index = index + (vector_index);
 
-		view! { <Bit16 index=index/> }
+		view! { <Bit16 index=index /> }
 	};
 
 	view! { <div class="grid grid-4x4">{(0u16..16u16).map(render_children).collect_view()}</div> }
@@ -120,7 +120,7 @@ fn Bit4096(index: u16) -> impl IntoView {
 	let render_children = move |vector_index| {
 		let index = index + (vector_index * 16);
 
-		view! { <Bit256 index=index/> }
+		view! { <Bit256 index=index /> }
 	};
 
 	view! { <div class="grid grid-4x4">{(0u16..16u16).map(render_children).collect_view()}</div> }
@@ -199,7 +199,7 @@ fn BitCanvasSection(section: u8) -> impl IntoView {
 
 	view! {
 		<div class="w-[16rem] h-[16rem]">
-			<canvas node_ref=canvas_ref width=4096 height=4096 class="w-[16rem] h-[16rem]"></canvas>
+			<canvas node_ref=canvas_ref width=4096 height=4096 class="w-[16rem] h-[16rem]" />
 		</div>
 	}
 }
@@ -210,7 +210,7 @@ fn BitSection(section: u8) -> impl IntoView {
 	DataSectionContext::new(section);
 
 	let render_children = move |vector_index| {
-		view! { <Bit4096 index=vector_index * 256/> }
+		view! { <Bit4096 index=vector_index * 256 /> }
 	};
 
 	view! { <div class="grid grid-4x4">{(0u16..1u16).map(render_children).collect_view()}</div> }
@@ -232,8 +232,8 @@ fn Bit(checked: Signal<bool>, id: Signal<String>, on_toggle: Callback<()>) -> im
 				class="hidden"
 				id=id
 			/>
-			<CheckboxIcon class="fill-current swap-on"/>
-			<span class="bg-transparent swap-off"></span>
+			<CheckboxIcon class="fill-current swap-on" />
+			<span class="bg-transparent swap-off" />
 		</label>
 	}
 }
@@ -260,7 +260,7 @@ fn CheckboxIcon(
 			role="img"
 			aria-hidden="true"
 		>
-			<rect x="0" y="0" width="144.7578125" height="144.7578125" fill="none"></rect>
+			<rect x="0" y="0" width="144.7578125" height="144.7578125" fill="none" />
 			<g
 				stroke-linecap="round"
 				transform="translate(10 10) rotate(0 62.37890625 62.37890625)"
@@ -270,13 +270,13 @@ fn CheckboxIcon(
 					stroke="none"
 					stroke-width="0"
 					fill="currentColor"
-				></path>
+				/>
 				<path
 					d="M31.19 0 C53.05 -0.89, 76.95 3.93, 93.57 0 M31.19 0 C47.73 1.22, 63.26 1.15, 93.57 0 M93.57 0 C110.38 1.66, 124.42 9.91, 124.76 31.19 M93.57 0 C112.24 4.09, 124.1 8.56, 124.76 31.19 M124.76 31.19 C125.65 51.23, 125.9 77.04, 124.76 93.57 M124.76 31.19 C127.74 52.89, 126.01 74.98, 124.76 93.57 M124.76 93.57 C125.69 114.31, 114.48 128.1, 93.57 124.76 M124.76 93.57 C128.39 116.41, 115.39 126.71, 93.57 124.76 M93.57 124.76 C73.67 123.1, 51.97 122.16, 31.19 124.76 M93.57 124.76 C70.64 127.14, 51.22 127.24, 31.19 124.76 M31.19 124.76 C13.43 123.3, 2 115.24, 0 93.57 M31.19 124.76 C14.35 126.71, 0.76 116.42, 0 93.57 M0 93.57 C0.87 78.21, -1.32 58.52, 0 31.19 M0 93.57 C2.66 68.21, 3.18 44, 0 31.19 M0 31.19 C0.59 9.13, 12.49 1.58, 31.19 0 M0 31.19 C1 8.67, 5.94 -3.37, 31.19 0"
 					stroke="currentColor"
 					stroke-width="4"
 					fill="none"
-				></path>
+				/>
 			</g>
 		</svg>
 	}

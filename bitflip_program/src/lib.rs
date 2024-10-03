@@ -2,11 +2,11 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_2022;
-use anchor_spl::token_interface::token_metadata_initialize;
 use anchor_spl::token_interface::Mint;
 use anchor_spl::token_interface::Token2022;
 use anchor_spl::token_interface::TokenAccount;
 use anchor_spl::token_interface::TokenMetadataInitialize;
+use anchor_spl::token_interface::token_metadata_initialize;
 
 pub use crate::constants::*;
 pub use crate::errors::*;
@@ -217,14 +217,11 @@ impl<'info> InitializeToken<'info> {
 
 		// Need to verify that it is possible to do in the same instruction that the
 		// token is created.
-		let cpi_context = CpiContext::new(
-			token_program,
-			token_2022::MintTo {
-				mint,
-				to,
-				authority,
-			},
-		);
+		let cpi_context = CpiContext::new(token_program, token_2022::MintTo {
+			mint,
+			to,
+			authority,
+		});
 		let amount = get_token_amount(MAX_TOKENS, TOKEN_DECIMALS)?;
 
 		token_2022::mint_to(cpi_context, amount)

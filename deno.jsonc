@@ -1,28 +1,35 @@
 {
-  "tasks": {
-    "playwright:version": "deno run -Aq npm:playwright -V | sed -e 's/Version //'",
-    "tailwind:watch": "deno run -Aq npm:tailwindcss@3 -i $DEVENV_ROOT/setup/tailwind/input.css -o $DEVENV_ROOT/bitflip/style/output.css --config $DEVENV_ROOT/bitflip/tailwind.config.js --watch",
-    "tailwind:build": "deno run -Aq npm:tailwindcss@3 -i $DEVENV_ROOT/setup/tailwind/input.css -o $DEVENV_ROOT/bitflip/style/output.css --config $DEVENV_ROOT/bitflip/tailwind.config.js",
-    "update": "deno run --allow-env --allow-read --allow-write='~/.local,.' --allow-run=git,deno --allow-net=jsr.io jsr:@molt/cli",
-    "update:write": "deno task -q update --write",
-    "update:commit": "deno task -q update --commit"
-  },
-  "nodeModulesDir": true,
-  "imports": {
-    "@/tailwind/": "./setup/tailwind/",
-    "@egoist/tailwindcss-icons": "npm:@egoist/tailwindcss-icons@^1.8.1",
-    "@iconify/json": "npm:@iconify/json@^2.2.252",
-    "@molt/cli": "jsr:@molt/cli@^0.19.8",
-    "@playwright/test": "npm:@playwright/test@^1.47.1",
-    "@solana/web3.js": "npm:@solana/web3.js@^1.95.3",
-    "@tailwindcss/typography": "npm:@tailwindcss/typography@^0.5.15",
-    "bs58": "npm:bs58@^6.0.0",
-    "daisyui": "npm:daisyui@^4.12.10",
-    "playwright": "npm:playwright@^1.47.2",
-    "tailwindcss": "npm:tailwindcss@^3.4.13",
-    "tailwindcss-animated": "npm:tailwindcss-animated@^1.1.2",
-    "tailwindcss/": "npm:tailwindcss@^3.4.13/",
-    "tailwindcss/plugin": "npm:tailwindcss@^3.4.13/plugin.js",
-    "unzipper": "npm:unzipper@^0.12.3"
-  }
+	"tasks": {
+		"playwright:version": "deno run -Aq npm:playwright -V | sed -e 's/Version //'",
+		"tailwind:watch": "deno run -Aq npm:tailwindcss@3 -i $DEVENV_ROOT/setup/tailwind/input.css -o $DEVENV_ROOT/bitflip/style/output.css --config $DEVENV_ROOT/bitflip/tailwind.config.js --watch",
+		"tailwind:build": "deno run -Aq npm:tailwindcss@3 -i $DEVENV_ROOT/setup/tailwind/input.css -o $DEVENV_ROOT/bitflip/style/output.css --config $DEVENV_ROOT/bitflip/tailwind.config.js",
+		"update": "deno run --allow-env --allow-read --allow-write='~/.local,.' --allow-run=git,deno --allow-net=jsr.io jsr:@molt/cli",
+		"update:write": "deno task -q update --write",
+		"update:commit": "deno task -q update --commit"
+	},
+	"nodeModulesDir": true,
+	"imports": {
+		"@/tailwind/": "./setup/tailwind/",
+		"@egoist/tailwindcss-icons": "npm:@egoist/tailwindcss-icons@^1.8.1",
+		"@iconify/json": "npm:@iconify/json@^2.2.252",
+		"@molt/cli": "jsr:@molt/cli@^0.19.8",
+		"@playwright/test": "npm:@playwright/test@^1.47.1",
+		"@solana/web3.js": "npm:@solana/web3.js@^1.95.3",
+		"@std/path": "jsr:@std/path@^1.0.6",
+		"@tailwindcss/typography": "npm:@tailwindcss/typography@^0.5.15",
+		"bs58": "npm:bs58@^6.0.0",
+		"daisyui": "npm:daisyui@^4.12.10",
+		"playwright": "npm:playwright@^1.47.2",
+		"tailwindcss": "npm:tailwindcss@^3.4.13",
+		"tailwindcss-animated": "npm:tailwindcss-animated@^1.1.2",
+		"tailwindcss/": "npm:tailwindcss@^3.4.13/",
+		"tailwindcss/plugin": "npm:tailwindcss@^3.4.13/plugin.js",
+		"unzipper": "npm:unzipper@^0.12.3"
+	},
+	"lint": {
+		"exclude": ["target/**", "node_modules/**"],
+		"rules": {
+			"tags": ["recommended"]
+		}
+	}
 }
