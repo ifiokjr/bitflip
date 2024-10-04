@@ -37,7 +37,7 @@ auto-format = true
 [[language]]
 name = "toml"
 indent = { tab-width = 2, unit = "\t" }
-language-servers = ["lsp-ai", "taplo"]
+language-servers = ["taplo"]
 formatter = { command = "dprint", args = ["fmt", "--stdin", "Cargo.toml"] }
 auto-format = true
 

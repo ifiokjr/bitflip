@@ -4,6 +4,7 @@
 		"mkhl.direnv",
 		"ms-playwright.playwright",
 		"rust-lang.rust-analyzer",
-		"vadimcn.vscode-lldb"
+		"vadimcn.vscode-lldb",
+		"bradlc.vscode-tailwindcss"
 	]
 }
