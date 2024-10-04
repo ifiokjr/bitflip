@@ -1,0 +1,42 @@
+---
+source: bitflip_client/tests/compute_units.rs
+expression: config_state_account
+---
+authority:
+  - 204
+  - 41
+  - 109
+  - 182
+  - 252
+  - 170
+  - 242
+  - 95
+  - 90
+  - 190
+  - 103
+  - 20
+  - 66
+  - 112
+  - 0
+  - 95
+  - 11
+  - 33
+  - 201
+  - 29
+  - 129
+  - 252
+  - 77
+  - 105
+  - 38
+  - 75
+  - 95
+  - 65
+  - 23
+  - 191
+  - 53
+  - 214
+lamportsPerBit: 100000
+bump: 253
+treasuryBump: 252
+mintBump: ~
+bitsIndex: 0

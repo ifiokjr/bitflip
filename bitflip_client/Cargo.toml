@@ -20,7 +20,7 @@ name = "bitflip_client"
 anchor-lang = { workspace = true }
 anchor-spl = { workspace = true }
 async-trait = { workspace = true }
-bitflip_program = { workspace = true, features = ["serde"] }
+bitflip_program = { workspace = true, features = ["client"] }
 derive_more = { workspace = true, features = ["debug", "deref", "deref_mut"] }
 futures = { workspace = true }
 log = { workspace = true }

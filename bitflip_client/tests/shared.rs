@@ -1,8 +1,12 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
-use bitflip_client::BitflipProgram;
+use bitflip_client::BitflipProgramClient;
 use bitflip_program::ID_CONST;
+use solana_sdk::account::AccountSharedData;
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::commitment_config::CommitmentLevel;
+use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signature::Signer;
 use test_utils::SECRET_KEY_ADMIN;
@@ -10,11 +14,16 @@ use test_utils::SECRET_KEY_AUTHORITY;
 use test_utils::SECRET_KEY_TREASURY;
 use test_utils_solana::ProgramTest;
 use test_utils_solana::ProgramTestContext;
+use test_utils_solana::TestProgramInfo;
+use test_utils_solana::TestValidatorRunner;
+use test_utils_solana::TestValidatorRunnerProps;
 use test_utils_solana::anchor_processor;
 use test_utils_solana::solana_sdk::account::Account;
 use wallet_standard_wallets::MemoryWallet;
 use wasm_client_solana::LOCALNET;
 use wasm_client_solana::SolanaRpcClient;
+
+const DEVENV_ROOT: &str = env!("DEVENV_ROOT");
 
 /// Add the anchor program to the project.
 pub fn create_program_test() -> ProgramTest {
@@ -33,12 +42,38 @@ pub fn create_treasury_keypair() -> Keypair {
 	Keypair::from_bytes(&SECRET_KEY_TREASURY).unwrap()
 }
 
-pub struct BitflipProgramTest {
+pub async fn create_runner() -> TestValidatorRunner {
+	create_runner_with_accounts(HashMap::new()).await
+}
+
+pub async fn create_runner_with_accounts(
+	accounts: HashMap<Pubkey, AccountSharedData>,
+) -> TestValidatorRunner {
+	let launchpad_program = TestProgramInfo::builder()
+		.program_id(ID_CONST)
+		.program_path(format!("{DEVENV_ROOT}/target/deploy/bitflip_program.so"))
+		.build();
+	let props = TestValidatorRunnerProps::builder()
+		.programs(vec![launchpad_program])
+		.pubkeys(vec![
+			create_admin_keypair().pubkey(),
+			create_authority_keypair().pubkey(),
+			create_treasury_keypair().pubkey(),
+		])
+		.commitment(CommitmentLevel::Finalized)
+		.accounts(accounts)
+		.build();
+	let runner = TestValidatorRunner::run(props).await;
+
+	runner
+}
+
+pub struct BitflipProgramClientTest {
 	pub rpc: SolanaRpcClient,
 }
 
-impl BitflipProgramTest {
-	pub async fn run_with_program_factory<F: Fn(&BitflipProgramTest) -> ProgramTest>(
+impl BitflipProgramClientTest {
+	pub async fn run_with_program_factory<F: Fn(&BitflipProgramClientTest) -> ProgramTest>(
 		factory: F,
 	) -> Result<(Self, ProgramTestContext)> {
 		let admin_keypair = create_admin_keypair();
@@ -63,15 +98,15 @@ impl BitflipProgramTest {
 	}
 
 	/// The program using the admin wallet account
-	pub fn admin_program(&self) -> TestBitBitflipProgram {
+	pub fn admin_program(&self) -> TestBitflipProgramClient {
 		self.program(&create_admin_keypair())
 	}
 
 	/// A program using a custom payer.
-	pub fn program(&self, payer: &Keypair) -> TestBitBitflipProgram {
+	pub fn program(&self, payer: &Keypair) -> TestBitflipProgramClient {
 		let wallet = MemoryWallet::new(self.rpc.clone(), &[payer.insecure_clone()]);
 
-		TestBitBitflipProgram::builder()
+		TestBitflipProgramClient::builder()
 			.wallet(wallet)
 			.rpc(self.rpc.clone())
 			.build()
@@ -79,48 +114,4 @@ impl BitflipProgramTest {
 	}
 }
 
-pub type TestBitBitflipProgram = BitflipProgram<MemoryWallet>;
-
-#[macro_export]
-macro_rules! assert_simulated_error {
-	($result:ident, $expected_error:path) => {{
-		let error_name = $expected_error.name();
-
-		::assert2::check!(
-			$result.result.unwrap().is_err(),
-			"the simulation was expected to error"
-		);
-		::assert2::check!(
-			$result
-				.simulation_details
-				.unwrap()
-				.logs
-				.iter()
-				.any(|log| log.contains(format!("Error Code: {error_name}").as_str())),
-			"`{:#?}` not found in logs",
-			$expected_error,
-		);
-	}};
-}
-
-#[macro_export]
-macro_rules! assert_metadata_error {
-	($result:ident, $expected_error:path) => {{
-		let error_name = $expected_error.name();
-
-		::assert2::check!(
-			$result.result.is_err(),
-			"the simulation was expected to error"
-		);
-		::assert2::check!(
-			$result
-				.metadata
-				.unwrap()
-				.log_messages
-				.iter()
-				.any(|log| log.contains(format!("Error Code: {error_name}").as_str())),
-			"`{:#?}` not found in logs",
-			$expected_error,
-		);
-	}};
-}
+pub type TestBitflipProgramClient = BitflipProgramClient<MemoryWallet>;
