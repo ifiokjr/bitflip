@@ -52,3 +52,5 @@ node_modules/
 /playwright-report
 /test-ledger
 /test-results
+
+/bitflip/style/output.css

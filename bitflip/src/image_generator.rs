@@ -1,3 +1,8 @@
+use axum::extract::Path;
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use rand::Rng;
+use rand::SeedableRng;
 use tiny_skia::Color;
 use tiny_skia::Paint;
 use tiny_skia::Pixmap;
@@ -6,9 +11,8 @@ use tiny_skia::Transform;
 /// Generate an image for a section of the Bitflip game state.
 ///
 /// The image is a 4096x4096 PNG with each bit of the game state represented by
-/// a 16x16 square. In a new file create a function called generate
-/// `generate_section_image` which uses `tiny-skia` to generate a png when
-/// called? The image should be 4096x4096 with each bit represented by a 16x16
+/// a 16x16 square. This uses `tiny-skia` to generate a png when
+/// called. The image is 4096x4096 with each bit represented by a 16x16
 /// width square.
 ///
 /// Some more information, there are 16 sections in the `1024x1024` bit
@@ -44,4 +48,15 @@ pub fn generate_section_image(section_data: &[u16; 4096]) -> Vec<u8> {
 	}
 
 	pixmap.encode_png().unwrap()
+}
+
+#[allow(clippy::unused_async)]
+pub async fn section_image_handler(Path(section_index): Path<u8>) -> impl IntoResponse {
+	// Use a deterministic seed based on the section index
+	let mut rng = rand::rngs::StdRng::seed_from_u64(section_index.into());
+	let section_data: [u16; 4096] = std::array::from_fn(|_| rng.r#gen());
+
+	let png_data = generate_section_image(&section_data);
+
+	(StatusCode::OK, [("Content-Type", "image/png")], png_data)
 }

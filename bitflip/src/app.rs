@@ -14,9 +14,11 @@ use leptos_meta::Stylesheet;
 use leptos_meta::Title;
 use leptos_meta::provide_meta_context;
 use leptos_router::StaticSegment;
+use leptos_router::components::A;
 use leptos_router::components::FlatRoutes;
 use leptos_router::components::Route;
 use leptos_router::components::Router;
+use leptos_router::path;
 use rand::Rng;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
@@ -60,7 +62,7 @@ pub fn App() -> impl IntoView {
 		<Router>
 			<main>
 				<FlatRoutes fallback=|| "Page not found.".into_view()>
-					<Route path=StaticSegment("") view=HomePage />
+					<Route path=path!("") view=HomePage />
 				</FlatRoutes>
 			</main>
 		</Router>
@@ -71,7 +73,13 @@ pub fn App() -> impl IntoView {
 #[component]
 fn HomePage() -> impl IntoView {
 	let render_section = move |section| {
-		view! { <BitCanvasSection section=section /> }
+		view! {
+			<div class="w-[25vw] h-[25vw] hover:outline hover:outline-blue-300">
+				<A href=format!("/section/{section}")>
+					<img src=format!("/section-image/{section}") />
+				</A>
+			</div>
+		}
 	};
 
 	view! {
@@ -127,7 +135,7 @@ fn Bit4096(index: u16) -> impl IntoView {
 }
 
 #[component]
-fn BitCanvasSection(section: u8) -> impl IntoView {
+pub fn BitCanvasSection(section: u8) -> impl IntoView {
 	let data_section = DataSectionContext::new(section);
 	let canvas_ref = NodeRef::<Canvas>::new();
 	let effect = move || {

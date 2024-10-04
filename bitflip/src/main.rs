@@ -2,7 +2,9 @@
 #[tokio::main]
 async fn main() {
 	use axum::Router;
+	use axum::routing::get;
 	use bitflip::app::*;
+	use bitflip::image_generator::section_image_handler;
 	use leptos::prelude::*;
 	use leptos_axum::LeptosRoutes;
 	use leptos_axum::generate_route_list;
@@ -38,6 +40,7 @@ async fn main() {
 				.quality(CompressionLevel::Fastest)
 				.compress_when(predicate),
 		)
+		.route("/section-image/:section_index", get(section_image_handler))
 		.fallback(leptos_axum::file_and_error_handler(shell))
 		.with_state(leptos_options);
 
