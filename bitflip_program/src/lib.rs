@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_2022;
+use anchor_spl::token_2022::MintTo;
 use anchor_spl::token_interface::Mint;
 use anchor_spl::token_interface::Token2022;
 use anchor_spl::token_interface::TokenAccount;
@@ -20,7 +21,7 @@ pub mod idls;
 pub mod types;
 pub mod utils;
 
-declare_id!("ERteNUqr6wFmKkKf94gBYCJ5vZMZUCWzrnkVHAJdePvB");
+declare_id!("5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM");
 
 #[allow(clippy::needless_pass_by_value)]
 #[program]
@@ -39,7 +40,7 @@ pub mod bitflip_program {
 		mut ctx: Context<InitializeToken>,
 		props: InitializeTokenProps,
 	) -> AnchorResult {
-		InitializeToken::initialize_token_handler(&mut ctx, &props)
+		InitializeToken::initialize_token_handler(&mut ctx, props)
 	}
 
 	/// This will initialize the meta state for the bits.
@@ -89,7 +90,7 @@ pub struct InitializeConfig<'info> {
 	pub system_program: Program<'info, System>,
 }
 
-impl<'info> InitializeConfig<'info> {
+impl InitializeConfig<'_> {
 	pub fn initialize_config_handler(
 		ctx: &mut Context<Self>,
 		props: InitializeConfigProps,
@@ -127,7 +128,7 @@ impl InitializeConfigProps {
 			lamports_per_bit: LAMPORTS_PER_BIT,
 			bump,
 			treasury_bump,
-			mint_bump: None,
+			mint_bump: 0,
 			bits_index: 0,
 		}
 	}
@@ -169,7 +170,8 @@ pub struct InitializeToken<'info> {
 		bump = config.treasury_bump
 	)]
 	pub treasury: SystemAccount<'info>,
-	/// The treasury account which will hold the minted tokens.
+	/// The associated token account for the treasury which will hold the minted
+	/// tokens.
 	#[account(
 	  init,
 	  payer =	authority,
@@ -186,15 +188,15 @@ pub struct InitializeToken<'info> {
 	pub system_program: Program<'info, System>,
 }
 
-impl<'info> InitializeToken<'info> {
+impl InitializeToken<'_> {
 	pub fn initialize_token_handler(
 		ctx: &mut Context<Self>,
-		props: &InitializeTokenProps,
+		props: InitializeTokenProps,
 	) -> AnchorResult {
 		let rent_sysvar = Rent::get()?;
 		let mint = ctx.accounts.mint.to_account_info();
 
-		ctx.accounts.config.mint_bump = Some(ctx.bumps.mint);
+		ctx.accounts.config.mint_bump = ctx.bumps.mint;
 		ctx.accounts.initialize_token_metadata(props)?;
 		ctx.accounts.mint.reload()?;
 
@@ -213,21 +215,24 @@ impl<'info> InitializeToken<'info> {
 
 		let to = ctx.accounts.treasury_token_account.to_account_info();
 		let authority = ctx.accounts.authority.to_account_info();
-		let token_program = ctx.accounts.authority.to_account_info();
+		let token_program = ctx.accounts.token_program.to_account_info();
 
-		// Need to verify that it is possible to do in the same instruction that the
-		// token is created.
-		let cpi_context = CpiContext::new(token_program, token_2022::MintTo {
+		let cpi_context = CpiContext::new(token_program, MintTo {
 			mint,
 			to,
 			authority,
 		});
 		let amount = get_token_amount(MAX_TOKENS, TOKEN_DECIMALS)?;
 
-		token_2022::mint_to(cpi_context, amount)
+		token_2022::mint_to(cpi_context, amount)?;
+
+		Ok(())
 	}
 
-	fn initialize_token_metadata(&self, props: &InitializeTokenProps) -> AnchorResult {
+	fn initialize_token_metadata(
+		&self,
+		InitializeTokenProps { name, symbol, uri }: InitializeTokenProps,
+	) -> AnchorResult {
 		let cpi_accounts = TokenMetadataInitialize {
 			token_program_id: self.token_program.to_account_info(),
 			mint: self.mint.to_account_info(),
@@ -236,12 +241,7 @@ impl<'info> InitializeToken<'info> {
 			update_authority: self.authority.to_account_info(),
 		};
 		let cpi_ctx = CpiContext::new(self.token_program.to_account_info(), cpi_accounts);
-		token_metadata_initialize(
-			cpi_ctx,
-			props.name.clone(),
-			props.symbol.clone(),
-			props.uri.clone(),
-		)?;
+		token_metadata_initialize(cpi_ctx, name, symbol, uri)?;
 
 		Ok(())
 	}
@@ -289,7 +289,7 @@ pub struct InitializeBitsMeta<'info> {
 	pub system_program: Program<'info, System>,
 }
 
-impl<'info> InitializeBitsMeta<'info> {
+impl InitializeBitsMeta<'_> {
 	pub fn initialize_bits_meta_handler(ctx: &mut Context<Self>) -> AnchorResult {
 		let bits_meta = &mut ctx.accounts.bits_meta;
 		bits_meta.start_time = 0;
@@ -341,7 +341,7 @@ pub struct InitializeBitsDataSection<'info> {
 	pub system_program: Program<'info, System>,
 }
 
-impl<'info> InitializeBitsDataSection<'info> {
+impl InitializeBitsDataSection<'_> {
 	#[access_control(validate_data_section(section))]
 	pub fn initialize_bits_data_section_handler(ctx: Context<Self>, section: u8) -> AnchorResult {
 		let bits_meta = &mut ctx.accounts.bits_meta;
@@ -379,7 +379,7 @@ pub struct SetBits<'info> {
 	/// The token mint account.
 	#[account(
 	  seeds = [SEED_PREFIX, SEED_MINT],
-	  bump = config.get_mint_bump().unwrap(),
+	  bump = config.mint_bump,
   )]
 	pub mint: Box<InterfaceAccount<'info, Mint>>,
 	/// The treasury account which will transfer the spl tokens to the player.
@@ -431,7 +431,7 @@ pub struct SetBits<'info> {
 	pub system_program: Program<'info, System>,
 }
 
-impl<'info> SetBits<'info> {
+impl SetBits<'_> {
 	pub fn set_bits_handler(ctx: &mut Context<Self>, props: &SetBitsProps) -> AnchorResult {
 		props.validate()?;
 		ctx.accounts.update(props)
@@ -587,12 +587,15 @@ impl From<SetBitsProps> for instruction::SetBits {
 
 #[account]
 #[derive(InitSpace)]
-#[cfg_attr(feature = "serde", serde_with::serde_as)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", ::serde_with::serde_as)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct ConfigState {
 	/// The authority which can update this config.
-	#[cfg_attr(feature = "serde", serde_as(as = "serde_with:DisplayFromStr"))]
+	#[cfg_attr(
+		feature = "serde",
+		serde(with = "::serde_with::As::<serde_with::DisplayFromStr>")
+	)]
 	pub authority: Pubkey,
 	/// The number of lamports per bit change.
 	pub lamports_per_bit: u64,
@@ -602,7 +605,7 @@ pub struct ConfigState {
 	/// tokens are transferred.
 	pub treasury_bump: u8,
 	/// The mint account bump.
-	pub mint_bump: Option<u8>,
+	pub mint_bump: u8,
 	/// There will be a maximum of 4 games.
 	pub bits_index: u8,
 }
@@ -610,11 +613,6 @@ pub struct ConfigState {
 impl ConfigState {
 	pub const fn space() -> usize {
 		SPACE_DISCRIMINATOR + Self::INIT_SPACE
-	}
-
-	pub fn get_mint_bump(&self) -> Result<u8> {
-		self.mint_bump
-			.ok_or(BitflipError::TokenNotInitialized.into())
 	}
 }
 

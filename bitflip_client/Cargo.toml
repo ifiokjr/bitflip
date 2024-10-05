@@ -42,7 +42,7 @@ spl-associated-token-account = { workspace = true }
 spl-transfer-hook-interface = { workspace = true }
 test-log = { workspace = true, features = ["log", "trace"] }
 test_utils = { workspace = true }
-test_utils_solana = { workspace = true, features = ["test_validator"] }
+test_utils_solana = { workspace = true, features = [] }
 tokio = { workspace = true, features = ["test-util", "rt", "macros", "time"] }
 wallet_standard_wallets = { workspace = true }
 
@@ -53,3 +53,5 @@ js = [
 	"wasm_client_anchor/js",
 	"bitflip_program/no-entrypoint",
 ]
+test_validator = ["test_utils_solana/test_validator"]
+test_banks_client = []

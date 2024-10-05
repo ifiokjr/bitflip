@@ -36,7 +36,25 @@ jobs:
         with:
           args: --all-features
 
-  build_bitflip:
+  test:
+    timeout-minutes: 60
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: setup
+        uses: ./.github/actions/devenv
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          nix-cache: /tmp/nixcache
+          deno-cache: /tmp/denocache
+
+      - name: test client with banks
+        run: cargo test_bitflip_client
+        shell: bash
+
+  build_bitflip_program:
     timeout-minutes: 60
     runs-on: "ubuntu-latest"
     steps:
@@ -52,6 +70,25 @@ jobs:
 
       - name: build
         run: anchor:build
+        shell: bash
+
+  test_validator:
+    timeout-minutes: 60
+    needs: [build_bitflip_program]
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: setup
+        uses: ./.github/actions/devenv
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          nix-cache: /tmp/nixcache
+          deno-cache: /tmp/denocache
+
+      - name: test
+        run: cargo test_bitflip_client_validator
         shell: bash
 
   build_bitflip_website:

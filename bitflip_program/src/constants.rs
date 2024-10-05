@@ -36,7 +36,8 @@ pub const SEED_CONFIG: &[u8] = b"config";
 pub const SEED_BITS: &[u8] = b"bits";
 /// The PDA seed for a section of the bits.
 pub const SEED_BITS_SECTION: &[u8] = b"bits_section";
-pub const SEED_MINT: &[u8] = b"token";
+pub const SEED_MINT: &[u8] = b"mint";
+pub const SEED_MINT_AUTHORITY: &[u8] = b"mint_authority";
 pub const SEED_TREASURY: &[u8] = b"treasury";
 
 /// Assuming a price of 100USD per sol. This is approximately 1 cent.

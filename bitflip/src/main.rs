@@ -56,9 +56,8 @@ async fn main() {
 // client-only stuff for Trunk
 #[cfg(not(feature = "ssr"))]
 pub fn main() {
+	use bitflip::app::*;
 	use leptos::prelude::*;
-
-	use crate::app::*;
 
 	console_error_panic_hook::set_once();
 	leptos::mount::mount_to_body(App);

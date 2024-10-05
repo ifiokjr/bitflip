@@ -1,0 +1,27 @@
+---
+source: bitflip_client/tests/banks_client.rs
+expression: mint_account
+---
+type: mint
+info:
+  mintAuthority: "[authority:pubkey]"
+  supply: "1000000000000000"
+  decimals: 6
+  isInitialized: true
+  freezeAuthority: "[authority:pubkey]"
+  extensions:
+    - extension: metadataPointer
+      state:
+        authority: "[authority:pubkey]"
+        metadataAddress: "[mint:pubkey]"
+    - extension: mintCloseAuthority
+      state:
+        closeAuthority: "[authority:pubkey]"
+    - extension: tokenMetadata
+      state:
+        updateAuthority: EjxoynXa5jTq4MyZzWtTz6Uq8UHQDxebkWhvEkDXoZxH
+        mint: JDGveJQw5TeBP5b1keuRtyR32K6ArpFvwNfXGYJXiowa
+        name: Test
+        symbol: TEST
+        uri: "https://test.com/config.json"
+        additionalMetadata: []

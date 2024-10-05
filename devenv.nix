@@ -99,8 +99,8 @@
   scripts."test:all" = {
     exec = ''
       set -e
-      test:wallet_standard_wallets
-      test:wasm_client_solana
+      cargo test_bitflip_client
+      cargo test_bitflip_client_validator
     '';
     description = "Run all tests across the crates";
   };
@@ -309,12 +309,12 @@
     '';
     description = "Install the version of solana or use one from the cache.";
   };
-  scripts."anchor:build".exec = ''
+  scripts."build:anchor".exec = ''
     set -e
     anchor build
-    generated_bitflip_program_idl="$DEVENV_ROOT/target/idl/bitflip.json"
-    ci_bitflip_program_idl="$DEVENV_ROOT/idls/bitflip_ci.json"
-    saved_bitflip_program_idl="$DEVENV_ROOT/idls/bitflip.json"
+    generated_bitflip_program_idl="$DEVENV_ROOT/target/idl/bitflip_program.json"
+    ci_bitflip_program_idl="$DEVENV_ROOT/idls/bitflip_program_ci.json"
+    saved_bitflip_program_idl="$DEVENV_ROOT/idls/bitflip_program.json"
 
     if [ -n "$CI" ]; then
       echo "ℹ️ running inside CI"
@@ -337,7 +337,7 @@
     cp -f $generated_bitflip_program_idl $saved_bitflip_program_idl
     dprint fmt $DEVENV_ROOT/idls/*.json
   '';
-  scripts."docker:build".exec = ''
+  scripts."build:docker".exec = ''
     set -e
     docker build -t kj-dev -f $DEVENV_ROOT/bitflip/Dockerfile $DEVENV_ROOT
   '';

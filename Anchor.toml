@@ -5,16 +5,16 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-bitflip = "ERteNUqr6wFmKkKf94gBYCJ5vZMZUCWzrnkVHAJdePvB"
+bitflip = "5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM"
 
 [programs.testnet]
-bitflip = "ERteNUqr6wFmKkKf94gBYCJ5vZMZUCWzrnkVHAJdePvB"
+bitflip = "5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM"
 
 [programs.devnet]
-bitflip = "ERteNUqr6wFmKkKf94gBYCJ5vZMZUCWzrnkVHAJdePvB"
+bitflip = "5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM"
 
 [programs.mainnet]
-bitflip = "ERteNUqr6wFmKkKf94gBYCJ5vZMZUCWzrnkVHAJdePvB"
+bitflip = "5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM"
 
 [registry]
 url = "https://api.apr.dev"

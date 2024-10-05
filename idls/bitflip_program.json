@@ -1,0 +1,1346 @@
+{
+	"address": "5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM",
+	"metadata": {
+		"name": "bitflip_program",
+		"version": "0.0.0",
+		"spec": "0.1.0",
+		"description": "Created with Anchor"
+	},
+	"instructions": [
+		{
+			"name": "initialize_bits_data_section",
+			"docs": [
+				"This will initialize a single section of the bits data. It should be",
+				"called 16 times with the correct index of the data chunch."
+			],
+			"discriminator": [
+				171,
+				216,
+				141,
+				120,
+				246,
+				225,
+				197,
+				148
+			],
+			"accounts": [
+				{
+					"name": "config",
+					"docs": [
+						"The program configuration."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									99,
+									111,
+									110,
+									102,
+									105,
+									103
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "bits_meta",
+					"docs": [
+						"The meta data for the full bits state."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									115
+								]
+							},
+							{
+								"kind": "account",
+								"path": "bits_meta.index",
+								"account": "BitsMetaState"
+							}
+						]
+					}
+				},
+				{
+					"name": "bits_data_section",
+					"docs": [
+						"This is a section of the bits data being initialized."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									115
+								]
+							},
+							{
+								"kind": "account",
+								"path": "config.bits_index",
+								"account": "ConfigState"
+							},
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									115,
+									95,
+									115,
+									101,
+									99,
+									116,
+									105,
+									111,
+									110
+								]
+							},
+							{
+								"kind": "arg",
+								"path": "section"
+							}
+						]
+					}
+				},
+				{
+					"name": "authority",
+					"docs": [
+						"The authority that is able to sign for updates to the config and",
+						"initiate new games."
+					],
+					"writable": true,
+					"signer": true,
+					"relations": [
+						"config"
+					]
+				},
+				{
+					"name": "system_program",
+					"docs": [
+						"This is needed for initializing the bit state."
+					],
+					"address": "11111111111111111111111111111111"
+				}
+			],
+			"args": [
+				{
+					"name": "section",
+					"type": "u8"
+				}
+			]
+		},
+		{
+			"name": "initialize_bits_meta",
+			"docs": [
+				"This will initialize the meta state for the bits."
+			],
+			"discriminator": [
+				202,
+				134,
+				244,
+				179,
+				235,
+				49,
+				7,
+				137
+			],
+			"accounts": [
+				{
+					"name": "config",
+					"docs": [
+						"The program configuration."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									99,
+									111,
+									110,
+									102,
+									105,
+									103
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "bits_meta",
+					"docs": [
+						"Can't initialize the full state at one time, must incrementally add the",
+						"state."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									115
+								]
+							},
+							{
+								"kind": "account",
+								"path": "config.bits_index",
+								"account": "ConfigState"
+							}
+						]
+					}
+				},
+				{
+					"name": "authority",
+					"docs": [
+						"The authority that is able to sign for updates to the config and",
+						"initiate new games."
+					],
+					"writable": true,
+					"signer": true,
+					"relations": [
+						"config"
+					]
+				},
+				{
+					"name": "system_program",
+					"docs": [
+						"This is needed for initializing the bit state."
+					],
+					"address": "11111111111111111111111111111111"
+				}
+			],
+			"args": []
+		},
+		{
+			"name": "initialize_config",
+			"docs": [
+				"Initialize the configuration for the program."
+			],
+			"discriminator": [
+				208,
+				127,
+				21,
+				1,
+				194,
+				190,
+				196,
+				70
+			],
+			"accounts": [
+				{
+					"name": "config",
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									99,
+									111,
+									110,
+									102,
+									105,
+									103
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "admin",
+					"docs": [
+						"The hard-coded account that is used to initialize the program config",
+						"once."
+					],
+					"writable": true,
+					"signer": true,
+					"address": "4z5X2suocz9szaQnSshj2AW8tuLgUVmYUxiW9hhPaRHs"
+				},
+				{
+					"name": "treasury",
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									116,
+									114,
+									101,
+									97,
+									115,
+									117,
+									114,
+									121
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "system_program",
+					"docs": [
+						"This is needed for initializing the bit state."
+					],
+					"address": "11111111111111111111111111111111"
+				}
+			],
+			"args": [
+				{
+					"name": "props",
+					"type": {
+						"defined": {
+							"name": "InitializeConfigProps"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "initialize_token",
+			"discriminator": [
+				38,
+				209,
+				150,
+				50,
+				190,
+				117,
+				16,
+				54
+			],
+			"accounts": [
+				{
+					"name": "config",
+					"docs": [
+						"The program configuration."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									99,
+									111,
+									110,
+									102,
+									105,
+									103
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "authority",
+					"docs": [
+						"The mint authority."
+					],
+					"writable": true,
+					"signer": true,
+					"relations": [
+						"config"
+					]
+				},
+				{
+					"name": "mint",
+					"docs": [
+						"The token mint account."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									109,
+									105,
+									110,
+									116
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "treasury",
+					"docs": [
+						"The treasury account."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									116,
+									114,
+									101,
+									97,
+									115,
+									117,
+									114,
+									121
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "treasury_token_account",
+					"docs": [
+						"The associated token account for the treasury which will hold the minted",
+						"tokens."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "account",
+								"path": "treasury"
+							},
+							{
+								"kind": "account",
+								"path": "token_program"
+							},
+							{
+								"kind": "account",
+								"path": "mint"
+							}
+						],
+						"program": {
+							"kind": "const",
+							"value": [
+								140,
+								151,
+								37,
+								143,
+								78,
+								36,
+								137,
+								241,
+								187,
+								61,
+								16,
+								41,
+								20,
+								142,
+								13,
+								131,
+								11,
+								90,
+								19,
+								153,
+								218,
+								255,
+								16,
+								132,
+								4,
+								142,
+								123,
+								216,
+								219,
+								233,
+								248,
+								89
+							]
+						}
+					}
+				},
+				{
+					"name": "associated_token_program",
+					"docs": [
+						"The program for associated tokens"
+					],
+					"address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+				},
+				{
+					"name": "token_program",
+					"docs": [
+						"The token program."
+					],
+					"address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+				},
+				{
+					"name": "system_program",
+					"docs": [
+						"Needed in case a reallocation is required for the project memory."
+					],
+					"address": "11111111111111111111111111111111"
+				}
+			],
+			"args": [
+				{
+					"name": "props",
+					"type": {
+						"defined": {
+							"name": "InitializeTokenProps"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "set_bits",
+			"docs": [
+				"Flip bits based on the provided props."
+			],
+			"discriminator": [
+				67,
+				62,
+				24,
+				241,
+				239,
+				200,
+				236,
+				192
+			],
+			"accounts": [
+				{
+					"name": "config",
+					"docs": [
+						"The program configuration."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									99,
+									111,
+									110,
+									102,
+									105,
+									103
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "mint",
+					"docs": [
+						"The token mint account."
+					],
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									109,
+									105,
+									110,
+									116
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "treasury",
+					"docs": [
+						"The treasury account which will transfer the spl tokens to the player."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									116,
+									114,
+									101,
+									97,
+									115,
+									117,
+									114,
+									121
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "treasury_token_account",
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "account",
+								"path": "treasury"
+							},
+							{
+								"kind": "account",
+								"path": "token_program"
+							},
+							{
+								"kind": "account",
+								"path": "mint"
+							}
+						],
+						"program": {
+							"kind": "const",
+							"value": [
+								140,
+								151,
+								37,
+								143,
+								78,
+								36,
+								137,
+								241,
+								187,
+								61,
+								16,
+								41,
+								20,
+								142,
+								13,
+								131,
+								11,
+								90,
+								19,
+								153,
+								218,
+								255,
+								16,
+								132,
+								4,
+								142,
+								123,
+								216,
+								219,
+								233,
+								248,
+								89
+							]
+						}
+					}
+				},
+				{
+					"name": "bits_meta",
+					"docs": [
+						"The meta data for the full bits state."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									115
+								]
+							},
+							{
+								"kind": "account",
+								"path": "bits_meta.index",
+								"account": "BitsMetaState"
+							}
+						]
+					}
+				},
+				{
+					"name": "bits_data_section",
+					"docs": [
+						"The data for this section of the bit canvas."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									115
+								]
+							},
+							{
+								"kind": "account",
+								"path": "bits_meta.index",
+								"account": "BitsMetaState"
+							},
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									115,
+									95,
+									115,
+									101,
+									99,
+									116,
+									105,
+									111,
+									110
+								]
+							},
+							{
+								"kind": "arg",
+								"path": "props.section"
+							}
+						]
+					}
+				},
+				{
+					"name": "player",
+					"docs": [
+						"The player of the bit games"
+					],
+					"writable": true,
+					"signer": true
+				},
+				{
+					"name": "player_token_account",
+					"docs": [
+						"The associated token account for the main authority."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "account",
+								"path": "player"
+							},
+							{
+								"kind": "account",
+								"path": "token_program"
+							},
+							{
+								"kind": "account",
+								"path": "mint"
+							}
+						],
+						"program": {
+							"kind": "const",
+							"value": [
+								140,
+								151,
+								37,
+								143,
+								78,
+								36,
+								137,
+								241,
+								187,
+								61,
+								16,
+								41,
+								20,
+								142,
+								13,
+								131,
+								11,
+								90,
+								19,
+								153,
+								218,
+								255,
+								16,
+								132,
+								4,
+								142,
+								123,
+								216,
+								219,
+								233,
+								248,
+								89
+							]
+						}
+					}
+				},
+				{
+					"name": "associated_token_program",
+					"docs": [
+						"The program for associated tokens"
+					],
+					"address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+				},
+				{
+					"name": "token_program",
+					"docs": [
+						"The token program."
+					],
+					"address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+				},
+				{
+					"name": "system_program",
+					"docs": [
+						"Needed for cpi payment instructions instructions."
+					],
+					"address": "11111111111111111111111111111111"
+				}
+			],
+			"args": [
+				{
+					"name": "props",
+					"type": {
+						"defined": {
+							"name": "SetBitsProps"
+						}
+					}
+				}
+			]
+		}
+	],
+	"accounts": [
+		{
+			"name": "BitsDataSectionState",
+			"discriminator": [
+				140,
+				124,
+				237,
+				202,
+				139,
+				138,
+				99,
+				116
+			]
+		},
+		{
+			"name": "BitsMetaState",
+			"discriminator": [
+				93,
+				244,
+				217,
+				115,
+				235,
+				203,
+				72,
+				85
+			]
+		},
+		{
+			"name": "ConfigState",
+			"discriminator": [
+				193,
+				77,
+				160,
+				128,
+				208,
+				254,
+				180,
+				135
+			]
+		}
+	],
+	"errors": [
+		{
+			"code": 6000,
+			"name": "BitsIncreaseSpaceInvalid",
+			"msg": "The space is already fully initialized"
+		},
+		{
+			"code": 6001,
+			"name": "BitsUnchanged",
+			"msg": "No update recorded"
+		},
+		{
+			"code": 6002,
+			"name": "InvalidAccount",
+			"msg": "The provided account was invalid"
+		},
+		{
+			"code": 6003,
+			"name": "InvalidBitsArrayLength",
+			"msg": "The bits array is an invalid length"
+		},
+		{
+			"code": 6004,
+			"name": "InvalidBitsDataSection",
+			"msg": "Invalid bit data section requested"
+		},
+		{
+			"code": 6005,
+			"name": "InvalidBitsDataSectionIndex",
+			"msg": "Invalid bits data section index requested"
+		},
+		{
+			"code": 6006,
+			"name": "Invalid256BitsDataSectionIndex",
+			"msg": "The data section index must be a multiple of 16"
+		},
+		{
+			"code": 6007,
+			"name": "InvalidBitOffset",
+			"msg": "The bit offset is invalid and must be less than 16"
+		},
+		{
+			"code": 6008,
+			"name": "UnauthorizedAdmin",
+			"msg": "The admin used was incorrect"
+		},
+		{
+			"code": 6009,
+			"name": "AllSectionsInitialized",
+			"msg": "All bit data sections have already been initialized"
+		},
+		{
+			"code": 6010,
+			"name": "TokenNotInitialized",
+			"msg": "The token is not yet initialized"
+		}
+	],
+	"types": [
+		{
+			"name": "BitsDataSectionState",
+			"docs": [
+				"The data for each section of the the data. The total data is split into 16",
+				"sections and this is one of the sections."
+			],
+			"type": {
+				"kind": "struct",
+				"fields": [
+					{
+						"name": "data",
+						"docs": [
+							"The state of the bits that are represented as checkboxes on the",
+							"frontend."
+						],
+						"type": {
+							"array": [
+								"u16",
+								4096
+							]
+						}
+					},
+					{
+						"name": "section",
+						"docs": [
+							"The section index for this account."
+						],
+						"type": "u8"
+					},
+					{
+						"name": "bump",
+						"docs": [
+							"The bump for this account."
+						],
+						"type": "u8"
+					}
+				]
+			}
+		},
+		{
+			"name": "BitsMetaState",
+			"docs": [
+				"Adding [`BitState::on`] to [`BitState::off`] should always equal `1_000_000`"
+			],
+			"type": {
+				"kind": "struct",
+				"fields": [
+					{
+						"name": "start_time",
+						"docs": [
+							"The start time. If 0 then it hasn't started yet. Using an `Option` here",
+							"would waste an extra byte."
+						],
+						"type": "i64"
+					},
+					{
+						"name": "flips",
+						"docs": [
+							"The number of bit flips that have occurred."
+						],
+						"type": "u64"
+					},
+					{
+						"name": "on",
+						"docs": [
+							"The number of bits that are on."
+						],
+						"type": "u32"
+					},
+					{
+						"name": "off",
+						"docs": [
+							"The number of bits that are off."
+						],
+						"type": "u32"
+					},
+					{
+						"name": "index",
+						"docs": [
+							"The index of this currently played game."
+						],
+						"type": "u8"
+					},
+					{
+						"name": "bump",
+						"docs": [
+							"The bump for this account."
+						],
+						"type": "u8"
+					},
+					{
+						"name": "sections",
+						"docs": [
+							"The number of sections initialized."
+						],
+						"type": "u8"
+					}
+				]
+			}
+		},
+		{
+			"name": "ConfigState",
+			"type": {
+				"kind": "struct",
+				"fields": [
+					{
+						"name": "authority",
+						"docs": [
+							"The authority which can update this config."
+						],
+						"type": "pubkey"
+					},
+					{
+						"name": "lamports_per_bit",
+						"docs": [
+							"The number of lamports per bit change."
+						],
+						"type": "u64"
+					},
+					{
+						"name": "bump",
+						"docs": [
+							"Store the bump to save compute units."
+						],
+						"type": "u8"
+					},
+					{
+						"name": "treasury_bump",
+						"docs": [
+							"The treasury account bump where fees are sent and where the minted",
+							"tokens are transferred."
+						],
+						"type": "u8"
+					},
+					{
+						"name": "mint_bump",
+						"docs": [
+							"The mint account bump."
+						],
+						"type": "u8"
+					},
+					{
+						"name": "bits_index",
+						"docs": [
+							"There will be a maximum of 4 games."
+						],
+						"type": "u8"
+					}
+				]
+			}
+		},
+		{
+			"name": "InitializeConfigProps",
+			"type": {
+				"kind": "struct",
+				"fields": [
+					{
+						"name": "authority",
+						"docs": [
+							"The authority is the solana account which will have rights to update",
+							"this configuration."
+						],
+						"type": "pubkey"
+					}
+				]
+			}
+		},
+		{
+			"name": "InitializeTokenProps",
+			"type": {
+				"kind": "struct",
+				"fields": [
+					{
+						"name": "name",
+						"type": "string"
+					},
+					{
+						"name": "symbol",
+						"type": "string"
+					},
+					{
+						"name": "uri",
+						"type": "string"
+					}
+				]
+			}
+		},
+		{
+			"name": "SetBitsProps",
+			"type": {
+				"kind": "struct",
+				"fields": [
+					{
+						"name": "section",
+						"docs": [
+							"The data section being updated."
+						],
+						"type": "u8"
+					},
+					{
+						"name": "index",
+						"docs": [
+							"The index of the bit being set."
+						],
+						"type": "u16"
+					},
+					{
+						"name": "variant",
+						"docs": [
+							"The new bit values."
+						],
+						"type": {
+							"defined": {
+								"name": "SetBitsVariant"
+							}
+						}
+					}
+				]
+			}
+		},
+		{
+			"name": "SetBitsVariant",
+			"type": {
+				"kind": "enum",
+				"variants": [
+					{
+						"name": "On",
+						"fields": [
+							"u16"
+						]
+					},
+					{
+						"name": "Off",
+						"fields": [
+							"u16"
+						]
+					},
+					{
+						"name": "Bit16",
+						"fields": [
+							"u16"
+						]
+					},
+					{
+						"name": "Bits256",
+						"fields": [
+							{
+								"vec": "u16"
+							}
+						]
+					}
+				]
+			}
+		}
+	]
+}
