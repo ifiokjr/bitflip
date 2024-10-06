@@ -127,6 +127,7 @@ async fn initialize_token() -> anyhow::Result<()> {
 			associated_token_program,
 			token_program,
 			system_program,
+			bitflip_program: ID_CONST,
 		})
 		.signers(vec![&authority_keypair])
 		.build();
@@ -138,8 +139,9 @@ async fn initialize_token() -> anyhow::Result<()> {
 	log::info!("units_consumed: {simulation:#?}");
 	check!(simulation.value.units_consumed.unwrap() < 200_000);
 
-	let signature = initialize_token_request.sign_and_send_transaction().await?;
-	let authority_redaction = create_insta_redaction(authority, "authority:pubkey");
+	initialize_token_request.sign_and_send_transaction().await?;
+
+	let authority_redaction = create_insta_redaction(treasury, "authority:pubkey");
 	let mint_redaction = create_insta_redaction(mint, "mint:pubkey");
 	let program_redaction = create_insta_redaction(ID_CONST, "program:pubkey");
 	let mint_data = rpc.get_account_data(&mint).await?;

@@ -87,6 +87,7 @@ async fn initialize_token() -> anyhow::Result<()> {
 		get_associated_token_address_with_program_id(&treasury, &mint, &token_program);
 	let associated_token_program = spl_associated_token_account::ID;
 	let system_program = system_program::ID;
+	let bitflip_program = ID_CONST;
 
 	let mut ctx = create_program_context_with_factory(|p| {
 		p.add_account(config, create_config_state(None).into());
@@ -112,6 +113,7 @@ async fn initialize_token() -> anyhow::Result<()> {
 			associated_token_program,
 			token_program,
 			system_program,
+			bitflip_program,
 		})
 		.signers(vec![&authority_keypair])
 		.build();
@@ -125,8 +127,7 @@ async fn initialize_token() -> anyhow::Result<()> {
 	initialize_token_request
 		.sign_and_process_banks_client_transaction(&mut ctx.banks_client)
 		.await?;
-	let authority_redaction = create_insta_redaction(authority, "authority:pubkey");
-	let treasury_redaction = create_insta_redaction(treasury, "treasury:pubkey");
+	let authority_redaction = create_insta_redaction(treasury, "authority:pubkey");
 	let mint_redaction = create_insta_redaction(mint, "mint:pubkey");
 	let program_redaction = create_insta_redaction(ID_CONST, "program:pubkey");
 	let Account { data, .. } = ctx.banks_client.get_account(mint).await?.unwrap();
@@ -162,8 +163,34 @@ async fn initialize_token() -> anyhow::Result<()> {
 	log::info!("token account: {token_account:#?}");
 	insta::assert_yaml_snapshot!(token_account, {
 		".info.mint" => insta::dynamic_redaction(mint_redaction),
-		".info.owner" => insta::dynamic_redaction(treasury_redaction),
+		".info.owner" => insta::dynamic_redaction(authority_redaction),
 	});
+
+	Ok(())
+}
+
+#[test(tokio::test)]
+async fn initialize_bits_meta() -> anyhow::Result<()> {
+	let (config, _) = get_pda_config();
+	let authority_keypair = create_authority_keypair();
+	let authority = authority_keypair.pubkey();
+	let (mint, _) = get_pda_mint();
+	let (treasury, _) = get_pda_treasury();
+	let token_program = token_2022::ID;
+	let treasury_token_account =
+		get_associated_token_address_with_program_id(&treasury, &mint, &token_program);
+	let associated_token_program = spl_associated_token_account::ID;
+	let system_program = system_program::ID;
+
+	let mut ctx = create_program_context_with_factory(|p| {
+		p.add_account(config, create_config_state(None).into());
+	})
+	.await?;
+
+	let rpc = create_rpc();
+	let bitflip_program_client = get_admin_program(&rpc);
+
+	let initialize_token_request = bitflip_program_client.initialize_bits_meta();
 
 	Ok(())
 }

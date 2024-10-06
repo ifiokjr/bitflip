@@ -19,7 +19,7 @@ info:
         closeAuthority: "[authority:pubkey]"
     - extension: tokenMetadata
       state:
-        updateAuthority: EjxoynXa5jTq4MyZzWtTz6Uq8UHQDxebkWhvEkDXoZxH
+        updateAuthority: 3efNHZyyChJVkuUY2nEMKpF6jXYQDbuKDbnsFS3SfFFq
         mint: JDGveJQw5TeBP5b1keuRtyR32K6ArpFvwNfXGYJXiowa
         name: Test
         symbol: TEST

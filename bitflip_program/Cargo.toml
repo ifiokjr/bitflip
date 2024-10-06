@@ -12,14 +12,14 @@ crate-type = ["cdylib", "lib"]
 name = "bitflip_program"
 
 [features]
-default = []
-cpi = ["no-entrypoint"]
+default = ["cpi"]
+cpi = []
 no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
 idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 serde = ["dep:serde", "dep:serde_with"]
-client = ["serde"]
+client = ["serde", "no-entrypoint"]
 
 [dependencies]
 anchor-lang = { workspace = true, features = ["interface-instructions"] }

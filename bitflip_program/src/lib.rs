@@ -8,6 +8,7 @@ use anchor_spl::token_interface::Token2022;
 use anchor_spl::token_interface::TokenAccount;
 use anchor_spl::token_interface::TokenMetadataInitialize;
 use anchor_spl::token_interface::token_metadata_initialize;
+use program::BitflipProgram;
 
 pub use crate::constants::*;
 pub use crate::errors::*;
@@ -41,6 +42,13 @@ pub mod bitflip_program {
 		props: InitializeTokenProps,
 	) -> AnchorResult {
 		InitializeToken::initialize_token_handler(&mut ctx, props)
+	}
+
+	pub fn initialize_token_inner(
+		mut ctx: Context<InitializeTokenInner>,
+		props: InitializeTokenInnerProps,
+	) -> Result<u8> {
+		InitializeTokenInner::initialize_token_inner_handler(&mut ctx, props)
 	}
 
 	/// This will initialize the meta state for the bits.
@@ -145,9 +153,114 @@ pub struct InitializeToken<'info> {
 		bump = config.bump,
 	)]
 	pub config: Box<Account<'info, ConfigState>>,
-	/// The mint authority.
+	/// The program authority which must be a signer to create this token.
 	#[account(mut, signer)]
 	pub authority: SystemAccount<'info>,
+	/// CHECK: Initialized within [`InitializeTokenInner`].
+	#[account(mut)]
+	pub mint: UncheckedAccount<'info>,
+	/// CHECK: Checked within [`InitializeTokenInner`].
+	#[account(mut)]
+	pub treasury: UncheckedAccount<'info>,
+	/// CHECK: Checked within [`InitializeTokenInner`].
+	#[account(mut)]
+	pub treasury_token_account: UncheckedAccount<'info>,
+	/// CHECK: Checked within [`InitializeTokenInner`].
+	pub associated_token_program: UncheckedAccount<'info>,
+	/// CHECK: Checked within [`InitializeTokenInner`].
+	pub token_program: UncheckedAccount<'info>,
+	/// CHECK: Checked within [`InitializeTokenInner`].
+	pub system_program: UncheckedAccount<'info>,
+	/// The program that is for signing.
+	pub bitflip_program: Program<'info, BitflipProgram>,
+}
+
+impl InitializeToken<'_> {
+	pub fn initialize_token_handler(
+		ctx: &mut Context<Self>,
+		props: InitializeTokenProps,
+	) -> AnchorResult {
+		let treasury_bump = ctx.accounts.config.treasury_bump;
+		let treasury_seeds = &[SEED_PREFIX, SEED_TREASURY, &[treasury_bump]];
+		let signer_seeds = &[&treasury_seeds[..]];
+		let accounts = cpi::accounts::InitializeTokenInner {
+			authority: ctx.accounts.authority.to_account_info(),
+			mint: ctx.accounts.mint.to_account_info(),
+			treasury: ctx.accounts.treasury.to_account_info(),
+			treasury_token_account: ctx.accounts.treasury_token_account.to_account_info(),
+			associated_token_program: ctx.accounts.associated_token_program.to_account_info(),
+			token_program: ctx.accounts.token_program.to_account_info(),
+			system_program: ctx.accounts.system_program.to_account_info(),
+		};
+		let cpi_context = CpiContext::new_with_signer(
+			ctx.accounts.bitflip_program.to_account_info(),
+			accounts,
+			signer_seeds,
+		);
+		let inner_props = props.into_inner(treasury_bump);
+		let result = cpi::initialize_token_inner(cpi_context, inner_props)?;
+
+		ctx.accounts.config.mint_bump = result.get();
+
+		Ok(())
+	}
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct InitializeTokenProps {
+	pub name: String,
+	pub symbol: String,
+	pub uri: String,
+}
+
+impl From<InitializeTokenProps> for instruction::InitializeToken {
+	fn from(props: InitializeTokenProps) -> Self {
+		instruction::InitializeToken { props }
+	}
+}
+
+impl InitializeTokenProps {
+	pub fn into_inner(self, treasury_bump: u8) -> InitializeTokenInnerProps {
+		let Self { name, symbol, uri } = self;
+		InitializeTokenInnerProps {
+			name,
+			symbol,
+			uri,
+			treasury_bump,
+		}
+	}
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct InitializeTokenInnerProps {
+	pub name: String,
+	pub symbol: String,
+	pub uri: String,
+	pub treasury_bump: u8,
+}
+
+impl From<InitializeTokenInnerProps> for instruction::InitializeTokenInner {
+	fn from(props: InitializeTokenInnerProps) -> Self {
+		instruction::InitializeTokenInner { props }
+	}
+}
+
+impl From<InitializeTokenInnerProps> for InitializeTokenProps {
+	fn from(
+		InitializeTokenInnerProps {
+			name, symbol, uri, ..
+		}: InitializeTokenInnerProps,
+	) -> Self {
+		Self { name, symbol, uri }
+	}
+}
+
+#[derive(Accounts)]
+#[instruction(props: InitializeTokenInnerProps)]
+pub struct InitializeTokenInner<'info> {
+	/// CHECKED: checked in [`InitializeToken`] outer call.
+	#[account(mut)]
+	pub authority: Signer<'info>,
 	/// The token mint account.
 	#[account(
 	  init,
@@ -156,20 +269,20 @@ pub struct InitializeToken<'info> {
 	  bump,
 	  mint::token_program = token_program,
 	  mint::decimals = TOKEN_DECIMALS,
-	  mint::authority = authority,
-	  mint::freeze_authority = authority,
-	  extensions::metadata_pointer::authority = authority,
+	  mint::authority = treasury,
+	  mint::freeze_authority = treasury,
+	  extensions::metadata_pointer::authority = treasury,
 	  extensions::metadata_pointer::metadata_address = mint,
-	  extensions::close_authority::authority = authority
+	  extensions::close_authority::authority = treasury
   )]
 	pub mint: Box<InterfaceAccount<'info, Mint>>,
 	/// The treasury account.
 	#[account(
 		mut,
 		seeds = [SEED_PREFIX, SEED_TREASURY],
-		bump = config.treasury_bump
+		bump = props.treasury_bump
 	)]
-	pub treasury: SystemAccount<'info>,
+	pub treasury: Signer<'info>,
 	/// The associated token account for the treasury which will hold the minted
 	/// tokens.
 	#[account(
@@ -188,16 +301,16 @@ pub struct InitializeToken<'info> {
 	pub system_program: Program<'info, System>,
 }
 
-impl InitializeToken<'_> {
-	pub fn initialize_token_handler(
+impl InitializeTokenInner<'_> {
+	pub fn initialize_token_inner_handler(
 		ctx: &mut Context<Self>,
-		props: InitializeTokenProps,
-	) -> AnchorResult {
+		props: InitializeTokenInnerProps,
+	) -> Result<u8> {
 		let rent_sysvar = Rent::get()?;
 		let mint = ctx.accounts.mint.to_account_info();
 
-		ctx.accounts.config.mint_bump = ctx.bumps.mint;
-		ctx.accounts.initialize_token_metadata(props)?;
+		let result = ctx.bumps.mint;
+		ctx.accounts.initialize_token_metadata(props.into())?;
 		ctx.accounts.mint.reload()?;
 
 		let extra_lamports = rent_sysvar.minimum_balance(mint.data_len()) - mint.get_lamports();
@@ -214,7 +327,7 @@ impl InitializeToken<'_> {
 		}
 
 		let to = ctx.accounts.treasury_token_account.to_account_info();
-		let authority = ctx.accounts.authority.to_account_info();
+		let authority = ctx.accounts.treasury.to_account_info();
 		let token_program = ctx.accounts.token_program.to_account_info();
 
 		let cpi_context = CpiContext::new(token_program, MintTo {
@@ -226,7 +339,7 @@ impl InitializeToken<'_> {
 
 		token_2022::mint_to(cpi_context, amount)?;
 
-		Ok(())
+		Ok(result)
 	}
 
 	fn initialize_token_metadata(
@@ -237,26 +350,13 @@ impl InitializeToken<'_> {
 			token_program_id: self.token_program.to_account_info(),
 			mint: self.mint.to_account_info(),
 			metadata: self.mint.to_account_info(),
-			mint_authority: self.authority.to_account_info(),
-			update_authority: self.authority.to_account_info(),
+			mint_authority: self.treasury.to_account_info(),
+			update_authority: self.treasury.to_account_info(),
 		};
 		let cpi_ctx = CpiContext::new(self.token_program.to_account_info(), cpi_accounts);
 		token_metadata_initialize(cpi_ctx, name, symbol, uri)?;
 
 		Ok(())
-	}
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
-pub struct InitializeTokenProps {
-	pub name: String,
-	pub symbol: String,
-	pub uri: String,
-}
-
-impl From<InitializeTokenProps> for instruction::InitializeToken {
-	fn from(props: InitializeTokenProps) -> Self {
-		instruction::InitializeToken { props }
 	}
 }
 
