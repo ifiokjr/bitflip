@@ -13,7 +13,6 @@ use leptos_meta::MetaTags;
 use leptos_meta::Stylesheet;
 use leptos_meta::Title;
 use leptos_meta::provide_meta_context;
-use leptos_router::StaticSegment;
 use leptos_router::components::A;
 use leptos_router::components::FlatRoutes;
 use leptos_router::components::Route;
@@ -300,7 +299,7 @@ impl DataSectionContext {
 	pub fn new(section: u8) -> Self {
 		let mut rng = rand::thread_rng();
 		let mut inner_state = BitsDataSectionState {
-			data: [0; BITS_DATA_SECTION_LENGTH],
+			data: vec![0; BITS_DATA_SECTION_LENGTH],
 			section,
 			bump: 0,
 		};

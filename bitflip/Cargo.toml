@@ -20,8 +20,7 @@ console_log.workspace = true
 http.workspace = true
 js-sys = { workspace = true }
 leptos = { workspace = true, features = ["tracing", "nightly", "experimental-islands"] }
-leptos-use = { workspace = true }
-leptos_axum = { workspace = true, optional = true, features = ["islands-router"] }
+leptos_axum = { workspace = true, optional = true }
 leptos_meta = { workspace = true }
 leptos_router = { workspace = true, features = ["nightly"] }
 log = { workspace = true }

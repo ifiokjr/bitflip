@@ -1,5 +1,5 @@
 ---
-source: bitflip_client/tests/banks_client.rs
+source: bitflip_client/tests/test_validator.rs
 expression: mint_account
 ---
 type: mint

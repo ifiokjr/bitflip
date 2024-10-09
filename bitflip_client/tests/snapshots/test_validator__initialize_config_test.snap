@@ -1,0 +1,10 @@
+---
+source: bitflip_client/tests/test_validator.rs
+expression: config_state_account
+---
+authority: EjxoynXa5jTq4MyZzWtTz6Uq8UHQDxebkWhvEkDXoZxH
+lamportsPerBit: 100000
+bump: 254
+treasuryBump: 255
+mintBump: 0
+bitsIndex: 0

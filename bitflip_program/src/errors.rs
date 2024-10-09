@@ -12,15 +12,21 @@ pub enum BitflipError {
 	#[msg("The provided account was invalid")]
 	InvalidAccount,
 	#[msg("The bits array is an invalid length")]
-	InvalidBitsArrayLength,
+	InvalidBitsLength,
 	#[msg("Invalid bit data section requested")]
 	InvalidBitsDataSection,
 	#[msg("Invalid bits data section index requested")]
 	InvalidBitsDataSectionIndex,
+	#[msg("Invalid bits data section array length")]
+	InvalidBitsDataSectionLength,
+	#[msg("An invalid number of flipped bits was provided")]
+	InvalidFlippedBits,
 	#[msg("The data section index must be a multiple of 16")]
 	Invalid256BitsDataSectionIndex,
 	#[msg("The bit offset is invalid and must be less than 16")]
 	InvalidBitOffset,
+	#[msg("The current `BitsMetaState` is not running")]
+	NotRunning,
 	#[msg("The admin used was incorrect")]
 	UnauthorizedAdmin,
 	#[msg("All bit data sections have already been initialized")]
@@ -67,10 +73,7 @@ pub fn validate_bit_offset(offset: u16) -> Result<()> {
 }
 
 pub fn validate_bit_array_length(array: &[u16], expected: usize) -> Result<()> {
-	require!(
-		array.len() == expected,
-		BitflipError::InvalidBitsArrayLength
-	);
+	require!(array.len() == expected, BitflipError::InvalidBitsLength);
 
 	Ok(())
 }

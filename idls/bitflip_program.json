@@ -400,6 +400,10 @@
 		},
 		{
 			"name": "initialize_token",
+			"docs": [
+				"Initialize the token account. This must be called before the first game",
+				"starts to generate the reward token."
+			],
 			"discriminator": [
 				38,
 				209,
@@ -448,13 +452,78 @@
 				{
 					"name": "authority",
 					"docs": [
-						"The mint authority."
+						"The program authority which must be a signer to create this token."
 					],
 					"writable": true,
 					"signer": true,
 					"relations": [
 						"config"
 					]
+				},
+				{
+					"name": "mint",
+					"writable": true
+				},
+				{
+					"name": "treasury",
+					"writable": true
+				},
+				{
+					"name": "treasury_token_account",
+					"writable": true
+				},
+				{
+					"name": "associated_token_program"
+				},
+				{
+					"name": "token_program"
+				},
+				{
+					"name": "system_program"
+				},
+				{
+					"name": "bitflip_program",
+					"docs": [
+						"The program that is for signing."
+					],
+					"address": "5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM"
+				}
+			],
+			"args": [
+				{
+					"name": "props",
+					"type": {
+						"defined": {
+							"name": "InitializeTokenProps"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "initialize_token_inner",
+			"docs": [
+				"INNER: This method can only be called by [`initialize_token`]. It uses",
+				"the `treasury` signer as the authority for the mint account."
+			],
+			"discriminator": [
+				112,
+				121,
+				158,
+				27,
+				165,
+				27,
+				94,
+				26
+			],
+			"accounts": [
+				{
+					"name": "authority",
+					"docs": [
+						"CHECKED: checked in [`InitializeToken`] outer call."
+					],
+					"writable": true,
+					"signer": true
 				},
 				{
 					"name": "mint",
@@ -494,6 +563,7 @@
 						"The treasury account."
 					],
 					"writable": true,
+					"signer": true,
 					"pda": {
 						"seeds": [
 							{
@@ -612,11 +682,12 @@
 					"name": "props",
 					"type": {
 						"defined": {
-							"name": "InitializeTokenProps"
+							"name": "InitializeTokenInnerProps"
 						}
 					}
 				}
-			]
+			],
+			"returns": "u8"
 		},
 		{
 			"name": "set_bits",
@@ -987,6 +1058,121 @@
 					}
 				}
 			]
+		},
+		{
+			"name": "start_bits_session",
+			"docs": [
+				"Start the bits session with and set the flipped bits to the correct",
+				"number. This can only be called once 16 sections have been initialized."
+			],
+			"discriminator": [
+				86,
+				86,
+				164,
+				215,
+				248,
+				251,
+				126,
+				195
+			],
+			"accounts": [
+				{
+					"name": "config",
+					"docs": [
+						"The program configuration."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									99,
+									111,
+									110,
+									102,
+									105,
+									103
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "bits_meta",
+					"docs": [
+						"The meta data account for the game."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									115
+								]
+							},
+							{
+								"kind": "account",
+								"path": "config.bits_index",
+								"account": "ConfigState"
+							}
+						]
+					}
+				},
+				{
+					"name": "authority",
+					"docs": [
+						"The authority that is able to sign for updates to the config and",
+						"initiate new games."
+					],
+					"writable": true,
+					"signer": true,
+					"relations": [
+						"config"
+					]
+				},
+				{
+					"name": "system_program",
+					"docs": [
+						"This is needed for initializing the bit state."
+					],
+					"address": "11111111111111111111111111111111"
+				}
+			],
+			"args": [
+				{
+					"name": "flipped_bits",
+					"type": "u32"
+				}
+			]
 		}
 	],
 	"accounts": [
@@ -1048,7 +1234,7 @@
 		},
 		{
 			"code": 6003,
-			"name": "InvalidBitsArrayLength",
+			"name": "InvalidBitsLength",
 			"msg": "The bits array is an invalid length"
 		},
 		{
@@ -1063,26 +1249,41 @@
 		},
 		{
 			"code": 6006,
+			"name": "InvalidBitsDataSectionLength",
+			"msg": "Invalid bits data section array length"
+		},
+		{
+			"code": 6007,
+			"name": "InvalidFlippedBits",
+			"msg": "An invalid number of flipped bits was provided"
+		},
+		{
+			"code": 6008,
 			"name": "Invalid256BitsDataSectionIndex",
 			"msg": "The data section index must be a multiple of 16"
 		},
 		{
-			"code": 6007,
+			"code": 6009,
 			"name": "InvalidBitOffset",
 			"msg": "The bit offset is invalid and must be less than 16"
 		},
 		{
-			"code": 6008,
+			"code": 6010,
+			"name": "NotRunning",
+			"msg": "The current `BitsMetaState` is not running"
+		},
+		{
+			"code": 6011,
 			"name": "UnauthorizedAdmin",
 			"msg": "The admin used was incorrect"
 		},
 		{
-			"code": 6009,
+			"code": 6012,
 			"name": "AllSectionsInitialized",
 			"msg": "All bit data sections have already been initialized"
 		},
 		{
-			"code": 6010,
+			"code": 6013,
 			"name": "TokenNotInitialized",
 			"msg": "The token is not yet initialized"
 		}
@@ -1104,10 +1305,7 @@
 							"frontend."
 						],
 						"type": {
-							"array": [
-								"u16",
-								4096
-							]
+							"vec": "u16"
 						}
 					},
 					{
@@ -1251,6 +1449,30 @@
 							"this configuration."
 						],
 						"type": "pubkey"
+					}
+				]
+			}
+		},
+		{
+			"name": "InitializeTokenInnerProps",
+			"type": {
+				"kind": "struct",
+				"fields": [
+					{
+						"name": "name",
+						"type": "string"
+					},
+					{
+						"name": "symbol",
+						"type": "string"
+					},
+					{
+						"name": "uri",
+						"type": "string"
+					},
+					{
+						"name": "treasury_bump",
+						"type": "u8"
 					}
 				]
 			}

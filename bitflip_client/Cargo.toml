@@ -27,6 +27,8 @@ log = { workspace = true }
 paste = { workspace = true }
 solana-program = { workspace = true }
 solana-sdk = { workspace = true }
+spl-associated-token-account = { workspace = true }
+spl-token-2022 = { workspace = true }
 typed-builder = { workspace = true }
 wallet_standard = { workspace = true, features = ["solana"] }
 wasm_client_anchor = { workspace = true }
@@ -39,6 +41,7 @@ insta = { workspace = true, features = ["ron", "yaml", "redactions"] }
 rstest = { workspace = true }
 solana-program-test = { workspace = true }
 spl-associated-token-account = { workspace = true }
+spl-token-2022 = { workspace = true }
 spl-transfer-hook-interface = { workspace = true }
 test-log = { workspace = true, features = ["log", "trace"] }
 test_utils = { workspace = true }

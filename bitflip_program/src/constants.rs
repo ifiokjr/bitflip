@@ -2,6 +2,8 @@ use anchor_lang::prelude::Pubkey;
 use anchor_lang::solana_program::native_token::LAMPORTS_PER_SOL;
 use const_str_to_pubkey::str_to_pubkey;
 
+/// The admin pubkey to initialize the configuration for this program.
+///
 /// This is required to prevent a frontrunning attack. If the program is
 /// deployed it would be possible for someone to maliciously run the
 /// `launchpad_config_initialize` method which would give them full control of

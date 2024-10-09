@@ -3,8 +3,10 @@ use std::hash::RandomState;
 
 use anyhow::Result;
 use bitflip_client::BitflipProgramClient;
+use bitflip_client::get_pda_bits_meta;
 use bitflip_client::get_pda_config;
 use bitflip_client::get_pda_treasury;
+use bitflip_program::BitsMetaState;
 use bitflip_program::ID_CONST;
 use bitflip_program::InitializeConfigProps;
 use solana_sdk::account::AccountSharedData;
@@ -19,12 +21,10 @@ use test_utils::SECRET_KEY_TREASURY;
 use test_utils::SECRET_KEY_WALLET;
 use test_utils_solana::FromAnchorData;
 use test_utils_solana::ProgramTest;
-use test_utils_solana::ProgramTestContext;
+use test_utils_solana::TestRpcProvider;
 use test_utils_solana::anchor_processor;
 use test_utils_solana::solana_sdk::account::Account;
 use wallet_standard_wallets::MemoryWallet;
-use wasm_client_solana::LOCALNET;
-use wasm_client_solana::SimulateTransactionResponse;
 use wasm_client_solana::SolanaRpcClient;
 
 #[cfg(feature = "test_validator")]
@@ -78,13 +78,9 @@ pub async fn create_runner_with_accounts(
 	test_utils_solana::TestValidatorRunner::run(props).await
 }
 
-pub(crate) fn create_rpc() -> SolanaRpcClient {
-	SolanaRpcClient::new(LOCALNET)
-}
-
 pub(crate) async fn create_program_context_with_factory<F: Fn(&mut ProgramTest)>(
 	factory: F,
-) -> Result<ProgramTestContext> {
+) -> Result<TestRpcProvider> {
 	let mut program_test = create_program_test();
 
 	factory(&mut program_test);
@@ -101,10 +97,10 @@ pub(crate) async fn create_program_context_with_factory<F: Fn(&mut ProgramTest)>
 
 	let context = program_test.start_with_context().await;
 
-	Ok(context)
+	Ok(context.into())
 }
 
-pub async fn create_program_context() -> Result<ProgramTestContext> {
+pub async fn create_program_context() -> Result<TestRpcProvider> {
 	create_program_context_with_factory(|_| {}).await
 }
 
@@ -136,5 +132,88 @@ pub fn create_config_state(mint_bump: Option<u8>) -> AccountSharedData {
 
 	AccountSharedData::from_anchor_data(state, ID_CONST)
 }
+
+pub fn create_bits_meta_state(index: u8) -> AccountSharedData {
+	let (_, bump) = get_pda_bits_meta(index);
+	let bits_meta_state = BitsMetaState::new(index, bump);
+
+	AccountSharedData::from_anchor_data(bits_meta_state, ID_CONST)
+}
+
+// /// Create mint state with extensions.
+// pub fn create_mint_state() -> Result<AccountSharedData> {
+// 	let (treasury, _) = get_pda_treasury();
+// 	let (mint, _) = get_pda_mint();
+// 	let mut data: Vec<u8> = vec![];
+
+// 	let base = Mint {
+// 		mint_authority: Some(treasury).into(),
+// 		supply: MAX_TOKENS,
+// 		decimals: TOKEN_DECIMALS,
+// 		is_initialized: true,
+// 		freeze_authority: Some(treasury).into(),
+// 	};
+// 	let metadata_pointer = MetadataPointer {
+// 		authority: Some(treasury).try_into()?,
+// 		metadata_address: Some(mint).try_into()?,
+// 	};
+// 	let mint_close_authority = MintCloseAuthority {
+// 		close_authority: Some(treasury).try_into()?,
+// 	};
+// 	let token_metadata = TokenMetadata {
+// 		update_authority: Some(treasury).try_into()?,
+// 		mint,
+// 		name: "Test Token".into(),
+// 		symbol: "TEST".into(),
+// 		uri: "https://test.com/token.json".into(),
+// 		additional_metadata: vec![],
+// 	};
+// 	Mint::pack(base, &mut data)?;
+
+// 	// token_metadata.serialize()
+// 	let mut state = StateWithExtensionsMut::<Mint>::unpack(&mut data)?;
+// 	let metadata_pointer: &mut MetadataPointer = state.init_extension(true)?;
+// 	metadata_pointer.authority = Some(treasury).try_into()?;
+// 	metadata_pointer.metadata_address = Some(mint).try_into()?;
+
+// 	let mint_close_authority: &mut MintCloseAuthority =
+// state.init_extension(true)?; 	mint_close_authority.close_authority =
+// Some(treasury).try_into()?;
+
+// 	let token_metadata: &mut TokenMetadata = state.init_extension(true)?;
+
+// 	let rent = Rent::default();
+
+// 	// let account = AccountSharedData::new(, , )
+// }
+
+// /// Create token account state with extensions.
+// pub fn create_token_account_state(mint: Pubkey, owner: Pubkey) ->
+// Result<AccountSharedData> { 	let mut data: Vec<u8> = vec![];
+
+// 	let base = TokenAccount {
+// 		mint,
+// 		owner,
+// 		amount: 1_000_000_000_000_000,
+// 		delegate: None.into(),
+// 		state: spl_token_2022::state::AccountState::Initialized,
+// 		is_native: None.into(),
+// 		delegated_amount: 0,
+// 		close_authority: None.into(),
+// 	};
+
+// 	let account =
+// 		StateWithExtensions::<TokenAccount>::unpack_from_slice_with_extensions(&
+// data, &[ 			ImmutableOwner::TYPE,
+// 		])?;
+
+// 	account.pack_into_slice(&mut data);
+// 	ImmutableOwner.pack_into_slice(&mut data);
+
+// 	let rent = Rent::default();
+// 	let lamports = rent.minimum_balance(data.len());
+
+// 	Ok(AccountSharedData::from_data(lamports, data, ID_CONST))
+// }
 
 pub type TestBitflipProgramClient = BitflipProgramClient<MemoryWallet>;

@@ -37,6 +37,8 @@ pub mod bitflip_program {
 		InitializeConfig::initialize_config_handler(&mut ctx, props)
 	}
 
+	/// Initialize the token account. This must be called before the first game
+	/// starts to generate the reward token.
 	pub fn initialize_token(
 		mut ctx: Context<InitializeToken>,
 		props: InitializeTokenProps,
@@ -44,6 +46,8 @@ pub mod bitflip_program {
 		InitializeToken::initialize_token_handler(&mut ctx, props)
 	}
 
+	/// INNER: This method can only be called by [`initialize_token`]. It uses
+	/// the `treasury` signer as the authority for the mint account.
 	pub fn initialize_token_inner(
 		mut ctx: Context<InitializeTokenInner>,
 		props: InitializeTokenInnerProps,
@@ -63,6 +67,15 @@ pub mod bitflip_program {
 		section: u8,
 	) -> AnchorResult {
 		InitializeBitsDataSection::initialize_bits_data_section_handler(ctx, section)
+	}
+
+	/// Start the bits session with and set the flipped bits to the correct
+	/// number. This can only be called once 16 sections have been initialized.
+	pub fn start_bits_session(
+		mut ctx: Context<StartBitsSession>,
+		flipped_bits: u32,
+	) -> AnchorResult {
+		StartBitsSession::start_bits_session_handler(&mut ctx, flipped_bits)
 	}
 
 	/// Flip bits based on the provided props.
@@ -391,14 +404,10 @@ pub struct InitializeBitsMeta<'info> {
 
 impl InitializeBitsMeta<'_> {
 	pub fn initialize_bits_meta_handler(ctx: &mut Context<Self>) -> AnchorResult {
-		let bits_meta = &mut ctx.accounts.bits_meta;
-		bits_meta.start_time = 0;
-		bits_meta.flips = 0;
-		bits_meta.on = 0;
-		bits_meta.off = BITS_TOTAL as u32;
-		bits_meta.index = ctx.accounts.config.bits_index;
-		bits_meta.bump = ctx.bumps.bits_meta;
-		bits_meta.sections = 0;
+		ctx.accounts.bits_meta.set_inner(BitsMetaState::new(
+			ctx.accounts.config.bits_index,
+			ctx.bumps.bits_meta,
+		));
 
 		Ok(())
 	}
@@ -449,12 +458,11 @@ impl InitializeBitsDataSection<'_> {
 
 		bits_data_section.section = section;
 		bits_data_section.bump = ctx.bumps.bits_data_section;
-		// TODO: Initialize the bits data section if possible on stack instead of heap.
-		bits_meta.sections += 1;
+		bits_data_section.data = vec![0; BITS_DATA_SECTION_LENGTH];
 
-		if usize::from(bits_meta.sections) == BITS_DATA_SECTIONS {
-			bits_meta.start_time = Clock::get()?.unix_timestamp;
-		}
+		// TODO: Initialize the bits data section if possible on stack instead of heap.
+
+		bits_meta.sections += 1;
 
 		Ok(())
 	}
@@ -463,6 +471,70 @@ impl InitializeBitsDataSection<'_> {
 impl From<u8> for instruction::InitializeBitsDataSection {
 	fn from(section: u8) -> Self {
 		instruction::InitializeBitsDataSection { section }
+	}
+}
+
+#[derive(Accounts)]
+#[instruction(flipped_bits: u32)]
+pub struct StartBitsSession<'info> {
+	/// The program configuration.
+	#[account(
+		mut,
+		has_one = authority,
+		seeds = [SEED_PREFIX, SEED_CONFIG],
+		bump = config.bump,
+	)]
+	pub config: Box<Account<'info, ConfigState>>,
+	/// The meta data account for the game.
+	#[account(
+		mut,
+		seeds = [SEED_PREFIX, SEED_BITS, &config.bits_index.to_le_bytes()],
+		bump = bits_meta.bump
+	)]
+	pub bits_meta: Box<Account<'info, BitsMetaState>>,
+	/// The authority that is able to sign for updates to the config and
+	/// initiate new games.
+	#[account(mut)]
+	pub authority: Signer<'info>,
+	/// This is needed for initializing the bit state.
+	#[account(address = system_program::ID)]
+	pub system_program: Program<'info, System>,
+}
+
+impl StartBitsSession<'_> {
+	#[access_control(ctx.accounts.validate(flipped_bits))]
+	pub fn start_bits_session_handler(
+		ctx: &mut Context<StartBitsSession>,
+		flipped_bits: u32,
+	) -> AnchorResult {
+		let bits_meta = &mut ctx.accounts.bits_meta;
+		let config = &mut ctx.accounts.config;
+
+		bits_meta.start_time = Clock::get()?.unix_timestamp;
+		bits_meta.on = flipped_bits;
+		bits_meta.off = u32::try_from(BITS_TOTAL)?
+			.checked_sub(flipped_bits)
+			.ok_or(ProgramError::ArithmeticOverflow)?;
+		config.bits_index = config
+			.bits_index
+			.checked_add(1)
+			.ok_or(ProgramError::ArithmeticOverflow)?;
+
+		Ok(())
+	}
+
+	/// Validate the handler.
+	pub fn validate(&self, flipped_bits: u32) -> AnchorResult {
+		require!(
+			flipped_bits as usize <= BITS_TOTAL,
+			BitflipError::InvalidFlippedBits
+		);
+		require!(
+			usize::from(self.bits_meta.sections) == BITS_DATA_SECTION_LENGTH,
+			BitflipError::InvalidBitsDataSectionIndex
+		);
+
+		Ok(())
 	}
 }
 
@@ -532,9 +604,21 @@ pub struct SetBits<'info> {
 }
 
 impl SetBits<'_> {
+	#[access_control(ctx.accounts.validate(props))]
 	pub fn set_bits_handler(ctx: &mut Context<Self>, props: &SetBitsProps) -> AnchorResult {
+		ctx.accounts.update(props)?;
+		ctx.accounts.bits_data_section.validate()
+	}
+
+	fn validate(&self, props: &SetBitsProps) -> AnchorResult {
+		let current_time = Clock::get()?.unix_timestamp;
+		require!(
+			self.bits_meta.running(current_time),
+			BitflipError::NotRunning
+		);
 		props.validate()?;
-		ctx.accounts.update(props)
+
+		Ok(())
 	}
 
 	fn update(&mut self, props: &SetBitsProps) -> AnchorResult {
@@ -740,6 +824,18 @@ pub struct BitsMetaState {
 }
 
 impl BitsMetaState {
+	pub fn new(index: u8, bump: u8) -> Self {
+		Self {
+			start_time: 0,
+			flips: 0,
+			on: 0,
+			off: BITS_TOTAL as u32,
+			index,
+			bump,
+			sections: 0,
+		}
+	}
+
 	pub fn space() -> usize {
 		SPACE_DISCRIMINATOR + Self::INIT_SPACE
 	}
@@ -754,6 +850,10 @@ impl BitsMetaState {
 
 	pub fn ended(&self, current_time: i64) -> bool {
 		self.started() && current_time > self.end_time()
+	}
+
+	pub fn running(&self, current_time: i64) -> bool {
+		self.started() && !self.ended(current_time)
 	}
 
 	pub fn flip_on(&mut self, changed_bits: u32) -> AnchorResult {
@@ -800,8 +900,8 @@ impl BitsMetaState {
 pub struct BitsDataSectionState {
 	/// The state of the bits that are represented as checkboxes on the
 	/// frontend.
-	#[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
-	pub data: [u16; BITS_DATA_SECTION_LENGTH],
+	#[max_len(BITS_DATA_SECTION_LENGTH)]
+	pub data: Vec<u16>,
 	/// The section index for this account.
 	pub section: u8,
 	/// The bump for this account.
@@ -809,6 +909,18 @@ pub struct BitsDataSectionState {
 }
 
 impl BitsDataSectionState {
+	/// Ensure that the update keeps the data section in tact.
+	pub fn validate(&self) -> AnchorResult {
+		require!(
+			self.data.len() == BITS_DATA_SECTION_LENGTH,
+			BitflipError::InvalidBitsDataSectionLength
+		);
+
+		validate_data_section(self.section)?;
+
+		Ok(())
+	}
+
 	pub fn space() -> usize {
 		SPACE_DISCRIMINATOR + Self::INIT_SPACE
 	}
