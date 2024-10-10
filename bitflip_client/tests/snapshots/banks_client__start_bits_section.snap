@@ -1,0 +1,11 @@
+---
+source: bitflip_client/tests/banks_client.rs
+expression: bits_meta_account
+---
+startTime: "[timestamp]"
+flips: 0
+"on": 0
+"off": 1048576
+index: 0
+bump: 254
+sections: 16

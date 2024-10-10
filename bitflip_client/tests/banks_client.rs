@@ -1,4 +1,5 @@
 #![cfg(feature = "test_banks_client")]
+
 use anchor_spl::token_2022;
 use assert2::check;
 use bitflip_client::get_pda_bits_data_section;
@@ -8,23 +9,32 @@ use bitflip_client::get_pda_mint;
 use bitflip_client::get_pda_treasury;
 use bitflip_client::initialize_bits_data_sections_request;
 use bitflip_client::initialize_token_request;
+use bitflip_client::set_bits_request;
 use bitflip_program::BITS_DATA_SECTION_LENGTH;
 use bitflip_program::BitsDataSectionState;
 use bitflip_program::BitsMetaState;
 use bitflip_program::ConfigState;
 use bitflip_program::ID_CONST;
 use bitflip_program::InitializeConfigProps;
+use bitflip_program::SetBitsVariant;
 use bitflip_program::TOKEN_DECIMALS;
+use bitflip_program::accounts;
 use bitflip_program::accounts::InitializeConfig;
 use futures::future::try_join_all;
+use shared::IntoAccountSharedData;
 use shared::create_bits_meta_state;
+use shared::create_bits_section_state;
 use solana_sdk::account::Account;
+use solana_sdk::clock::Clock;
 use solana_sdk::signer::Signer;
 use solana_sdk::system_program;
 use spl_associated_token_account::get_associated_token_address_with_program_id;
 use test_log::test;
 use test_utils::create_insta_redaction;
+use test_utils_solana::ProgramTest;
 use test_utils_solana::prelude::*;
+use wasm_client_solana::solana_account_decoder::UiAccount;
+use wasm_client_solana::solana_account_decoder::UiAccountEncoding;
 use wasm_client_solana::solana_account_decoder::parse_account_data::SplTokenAdditionalData;
 use wasm_client_solana::solana_account_decoder::parse_token::parse_token_v2;
 
@@ -51,9 +61,9 @@ async fn initialize_config_test() -> anyhow::Result<()> {
 	.await?;
 
 	let rpc = provider.to_rpc_client();
-	let bitflip_program_client = get_admin_program(&rpc);
+	let program_client = get_admin_program(&rpc);
 
-	let initialize_config_request = bitflip_program_client
+	let request = program_client
 		.initialize_config()
 		.args(InitializeConfigProps { authority })
 		.accounts(InitializeConfig {
@@ -65,16 +75,11 @@ async fn initialize_config_test() -> anyhow::Result<()> {
 		.signers(vec![&admin_keypair])
 		.build();
 
-	let simulation = initialize_config_request.simulate_transaction().await?;
-
+	let simulation = request.simulate_transaction().await?;
 	log::info!("simulation: {simulation:#?}");
+	request.sign_and_send_transaction().await?;
 
-	initialize_config_request
-		.sign_and_send_transaction()
-		.await?;
-
-	let config_state_account: ConfigState = bitflip_program_client.account(&config).await?;
-
+	let config_state_account: ConfigState = program_client.account(&config).await?;
 	insta::assert_yaml_snapshot!(config_state_account);
 
 	Ok(())
@@ -94,12 +99,12 @@ async fn initialize_token() -> anyhow::Result<()> {
 	})
 	.await?;
 	let rpc = provider.to_rpc_client();
-	let bitflip_program_client = get_admin_program(&rpc);
-	let request = initialize_token_request(&bitflip_program_client, &authority_keypair);
+	let program_client = get_admin_program(&rpc);
+	let request = initialize_token_request(&program_client, &authority_keypair);
 	let simulation = request.simulate_transaction().await?;
 	log::info!("simulation: {simulation:#?}");
-
 	request.sign_and_send_transaction().await?;
+
 	let authority_redaction = create_insta_redaction(treasury, "authority:pubkey");
 	let mint_redaction = create_insta_redaction(mint, "mint:pubkey");
 	let program_redaction = create_insta_redaction(ID_CONST, "program:pubkey");
@@ -110,7 +115,6 @@ async fn initialize_token() -> anyhow::Result<()> {
 	)?;
 
 	log::info!("mint account: {mint_account:#?}");
-
 	insta::assert_yaml_snapshot!(mint_account, {
 		".info.mintAuthority" => insta::dynamic_redaction(authority_redaction.clone()),
 		".info.freezeAuthority" => insta::dynamic_redaction(authority_redaction.clone()),
@@ -153,11 +157,11 @@ async fn initialize_bits_meta() -> anyhow::Result<()> {
 	.await?;
 
 	let rpc = provider.to_rpc_client();
-	let bitflip_program_client = get_admin_program(&rpc);
+	let program_client = get_admin_program(&rpc);
 
-	let initialize_bits_meta_request = bitflip_program_client
+	let request = program_client
 		.initialize_bits_meta()
-		.accounts(bitflip_program::accounts::InitializeBitsMeta {
+		.accounts(accounts::InitializeBitsMeta {
 			config,
 			bits_meta,
 			authority,
@@ -166,15 +170,11 @@ async fn initialize_bits_meta() -> anyhow::Result<()> {
 		.signers(vec![&authority_keypair])
 		.build();
 
-	let simulation = initialize_bits_meta_request.simulate_transaction().await?;
+	let simulation = request.simulate_transaction().await?;
 	log::info!("simulation: {simulation:#?}");
+	request.sign_and_send_transaction().await?;
 
-	initialize_bits_meta_request
-		.sign_and_send_transaction()
-		.await?;
-
-	let bits_meta_account: BitsMetaState = bitflip_program_client.account(&bits_meta).await?;
-
+	let bits_meta_account: BitsMetaState = program_client.account(&bits_meta).await?;
 	insta::assert_yaml_snapshot!(bits_meta_account);
 
 	Ok(())
@@ -190,7 +190,7 @@ async fn initialize_bits_data_sections() -> anyhow::Result<()> {
 
 	let provider = create_program_context_with_factory(move |p| {
 		p.add_account(config, create_config_state(None).into());
-		p.add_account(bits_meta, create_bits_meta_state(index).into());
+		p.add_account(bits_meta, create_bits_meta_state(index, None).into());
 	})
 	.await?;
 
@@ -205,8 +205,7 @@ async fn initialize_bits_data_sections() -> anyhow::Result<()> {
 		request.sign_and_send_transaction().await?;
 	}
 
-	let range = 0u8..16u8;
-	let futures = range.into_iter().map(|section| {
+	let futures = (0u8..16u8).map(|section| {
 		async move {
 			let pubkey = get_pda_bits_data_section(index, section).0;
 			program_client_ref
@@ -228,6 +227,156 @@ async fn initialize_bits_data_sections() -> anyhow::Result<()> {
 		);
 		check!(account.bump == bump, "check bump for section:  {section}");
 	}
+
+	Ok(())
+}
+
+#[test(tokio::test)]
+async fn start_bits_section() -> anyhow::Result<()> {
+	let (config, _) = get_pda_config();
+
+	let authority_keypair = create_authority_keypair();
+	let (bits_meta, _) = get_pda_bits_meta(0);
+	let index = 0;
+
+	let provider = create_program_context_with_factory(move |p| {
+		p.add_account(config, create_config_state(None).into());
+		p.add_account(bits_meta, create_bits_meta_state(index, Some(16)).into());
+
+		for (pubkey, account) in create_bits_section_state(index) {
+			p.add_account(pubkey, account.into());
+		}
+	})
+	.await?;
+
+	let rpc = provider.to_rpc_client();
+	let program_client = get_admin_program(&rpc);
+	initialize_token_request(&program_client, &authority_keypair)
+		.sign_and_send_transaction()
+		.await?;
+
+	let request = program_client
+		.start_bits_session()
+		.signer(&authority_keypair)
+		.args(0)
+		.accounts(accounts::StartBitsSession {
+			config,
+			bits_meta,
+			authority: authority_keypair.pubkey(),
+			system_program: system_program::ID,
+		})
+		.build();
+
+	let simulation = request.simulate_transaction().await?;
+	log::info!("simulation: {simulation:#?}");
+	request.sign_and_send_transaction().await?;
+
+	let bits_meta_account: BitsMetaState = program_client.account(&bits_meta).await?;
+	insta::assert_yaml_snapshot!(bits_meta_account, {
+		".startTime" => "[timestamp]"
+	});
+	check!(bits_meta_account.started());
+
+	Ok(())
+}
+
+#[test(tokio::test)]
+async fn set_bits_on() -> anyhow::Result<()> {
+	let (config, _) = get_pda_config();
+	let (mint, mint_bump) = get_pda_mint();
+	let authority_keypair = create_authority_keypair();
+	let (bits_meta, bits_meta_bump) = get_pda_bits_meta(0);
+	let game_index = 0;
+	let section = 0;
+	let index = 0;
+	let provider = create_program_context_with_factory(move |p: &mut ProgramTest| {
+		p.add_account(config, create_config_state(Some(mint_bump)).into());
+		p.add_account(bits_meta, create_bits_meta_state(0, None).into());
+
+		for (pubkey, account) in create_bits_section_state(game_index) {
+			p.add_account(pubkey, account.into());
+		}
+	})
+	.await?;
+	let rpc = provider.to_rpc_client();
+	let program_client = get_admin_program(&rpc);
+	let bits_data_section = get_pda_bits_data_section(game_index, section).0;
+	let (treasury, _) = get_pda_treasury();
+	let token_program = token_2022::ID;
+	let player = program_client.payer();
+	let treasury_token_account =
+		get_associated_token_address_with_program_id(&treasury, &mint, &token_program);
+	let associated_token_program = spl_associated_token_account::ID;
+	let player_token_account =
+		get_associated_token_address_with_program_id(&player, &mint, &token_program);
+
+	initialize_token_request(&program_client, &authority_keypair)
+		.sign_and_send_transaction()
+		.await?;
+
+	{
+		let mut ctx = provider.lock().await;
+		let clock: Clock = ctx.banks_client.get_sysvar().await?;
+		ctx.set_account(
+			&bits_meta,
+			&BitsMetaState::builder()
+				.start_time(clock.unix_timestamp)
+				.index(game_index)
+				.sections(16)
+				.bump(bits_meta_bump)
+				.build()
+				.into_account_shared_data(),
+		);
+	}
+
+	let offset = 12;
+	let bits = 1 << offset;
+	let request = set_bits_request(
+		&program_client,
+		game_index,
+		section,
+		index,
+		SetBitsVariant::On(offset),
+	);
+	let simulation = request.simulate_transaction().await?;
+	log::info!("simulation: {simulation:#?}");
+	request.sign_and_send_transaction().await?;
+
+	let account: BitsDataSectionState = program_client.account(&bits_data_section).await?;
+	check!(account.data[0] == bits);
+
+	let player_redaction = create_insta_redaction(player, "player:pubkey");
+	let mint_redaction = create_insta_redaction(mint, "mint:pubkey");
+	let Account {
+		data: player_token_account_data,
+		..
+	} = rpc.get_account(&player_token_account).await?;
+	let parsed_payer_token_account = parse_token_v2(
+		&player_token_account_data,
+		Some(&SplTokenAdditionalData::with_decimals(TOKEN_DECIMALS)),
+	)?;
+	log::info!("player token account: {parsed_payer_token_account:#?}");
+	insta::assert_yaml_snapshot!(parsed_payer_token_account, {
+		".info.mint" => insta::dynamic_redaction(mint_redaction),
+		".info.owner" => insta::dynamic_redaction(player_redaction),
+	});
+
+	let bits_meta_account: BitsMetaState = program_client.account(&bits_meta).await?;
+	check!(bits_meta_account.started());
+	insta::assert_yaml_snapshot!(bits_meta_account, {
+		".startTime" => "[timestamp]"
+	});
+
+	let treasury_account = rpc.get_account(&treasury).await?;
+	let treasury_ui_account = UiAccount::encode(
+		&treasury,
+		&treasury_account,
+		UiAccountEncoding::Base58,
+		None,
+		None,
+	);
+	log::info!("treasury account: {treasury_ui_account:#?}");
+	insta::assert_yaml_snapshot!(treasury_ui_account);
 
 	Ok(())
 }

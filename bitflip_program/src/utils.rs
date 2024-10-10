@@ -4,7 +4,7 @@ use derive_more::AddAssign;
 
 use crate::BitflipError;
 
-#[derive(Default, PartialEq, Eq, Add, AddAssign)]
+#[derive(Default, Debug, PartialEq, Eq, Add, AddAssign)]
 pub struct BitChanges {
 	pub on: u32,
 	pub off: u32,
@@ -83,9 +83,7 @@ mod tests {
 	#[case(1, 1)]
 	#[case(3124, 3124)]
 	#[case(u16::MAX, u16::MAX)]
-	fn errors_with_identical_bits(#[case] previous: u16, #[case] next: u16) -> Result<()> {
+	fn errors_with_identical_bits(#[case] previous: u16, #[case] next: u16) {
 		check!(get_bit_changes(previous, next).is_err());
-
-		Ok(())
 	}
 }

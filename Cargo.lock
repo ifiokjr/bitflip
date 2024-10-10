@@ -1085,6 +1085,7 @@ dependencies = [
  "test_utils",
  "test_utils_solana",
  "tokio",
+ "typed-builder 0.20.0",
 ]
 
 [[package]]

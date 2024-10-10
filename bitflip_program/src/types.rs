@@ -6,12 +6,12 @@ use crate::SEED_TREASURY;
 use crate::TOKEN_DECIMALS;
 use crate::get_token_amount;
 
-pub trait TransferToTreasury<'info> {
+pub trait TransferSolToTreasury<'info> {
 	fn treasury(&self) -> AccountInfo<'info>;
 	fn player(&self) -> AccountInfo<'info>;
 	fn system_program(&self) -> AccountInfo<'info>;
 
-	fn transfer_to_treasury(&self, flipped_bits: u32, lamports_per_bit: u64) -> Result<()> {
+	fn transfer_sol_to_treasury(&self, flipped_bits: u32, lamports_per_bit: u64) -> Result<()> {
 		let from = self.player();
 		let to = self.treasury();
 		let accounts = anchor_lang::system_program::Transfer { from, to };
@@ -25,7 +25,7 @@ pub trait TransferToTreasury<'info> {
 	}
 }
 
-pub trait TransferFromTreasury<'info> {
+pub trait TransferTokenFromTreasury<'info> {
 	fn mint(&self) -> AccountInfo<'info>;
 	fn treasury(&self) -> AccountInfo<'info>;
 	fn treasury_bump(&self) -> u8;
@@ -33,7 +33,7 @@ pub trait TransferFromTreasury<'info> {
 	fn player_token_account(&self) -> AccountInfo<'info>;
 	fn token_program(&self) -> AccountInfo<'info>;
 
-	fn transfer_from_treasury(&self, flipped_bits: u32) -> Result<()> {
+	fn transfer_token_from_treasury(&self, flipped_bits: u32) -> Result<()> {
 		let signer = &[SEED_PREFIX, SEED_TREASURY, &[self.treasury_bump()]];
 		let signer_seeds = &[&signer[..]];
 		let from = self.treasury_token_account();

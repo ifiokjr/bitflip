@@ -209,7 +209,7 @@ async fn initialize_bits_data_sections() -> anyhow::Result<()> {
 	let authority_keypair = create_authority_keypair();
 	let (bits_meta, _) = get_pda_bits_meta(index);
 	accounts.insert(config, create_config_state(None));
-	accounts.insert(bits_meta, create_bits_meta_state(index));
+	accounts.insert(bits_meta, create_bits_meta_state(index, None));
 
 	let runner = create_runner_with_accounts(accounts).await;
 	let rpc = runner.rpc();

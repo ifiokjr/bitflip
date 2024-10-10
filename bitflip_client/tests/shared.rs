@@ -1,11 +1,16 @@
 use std::collections::HashMap;
 use std::hash::RandomState;
 
+use anchor_lang::AnchorSerialize;
+use anchor_lang::Discriminator;
 use anyhow::Result;
 use bitflip_client::BitflipProgramClient;
+use bitflip_client::get_pda_bits_data_section;
 use bitflip_client::get_pda_bits_meta;
 use bitflip_client::get_pda_config;
 use bitflip_client::get_pda_treasury;
+use bitflip_program::BITS_DATA_SECTION_LENGTH;
+use bitflip_program::BitsDataSectionState;
 use bitflip_program::BitsMetaState;
 use bitflip_program::ID_CONST;
 use bitflip_program::InitializeConfigProps;
@@ -84,12 +89,10 @@ pub(crate) async fn create_program_context_with_factory<F: Fn(&mut ProgramTest)>
 	let mut program_test = create_program_test();
 
 	factory(&mut program_test);
-
 	program_test.add_account(create_admin_keypair().pubkey(), Account {
 		lamports: sol_to_lamports(10.0),
 		..Account::default()
 	});
-
 	program_test.add_account(create_authority_keypair().pubkey(), Account {
 		lamports: sol_to_lamports(10.0),
 		..Account::default()
@@ -133,87 +136,50 @@ pub fn create_config_state(mint_bump: Option<u8>) -> AccountSharedData {
 	AccountSharedData::from_anchor_data(state, ID_CONST)
 }
 
-pub fn create_bits_meta_state(index: u8) -> AccountSharedData {
+pub fn create_bits_meta_state(index: u8, sections: Option<u8>) -> AccountSharedData {
 	let (_, bump) = get_pda_bits_meta(index);
-	let bits_meta_state = BitsMetaState::new(index, bump);
+	let mut bits_meta_state = BitsMetaState::new(index, bump);
+
+	if let Some(last_section) = sections {
+		bits_meta_state.sections = last_section;
+	}
 
 	AccountSharedData::from_anchor_data(bits_meta_state, ID_CONST)
 }
 
-// /// Create mint state with extensions.
-// pub fn create_mint_state() -> Result<AccountSharedData> {
-// 	let (treasury, _) = get_pda_treasury();
-// 	let (mint, _) = get_pda_mint();
-// 	let mut data: Vec<u8> = vec![];
+pub fn create_bits_section_state(index: u8) -> Vec<(Pubkey, AccountSharedData)> {
+	let mut states = vec![];
 
-// 	let base = Mint {
-// 		mint_authority: Some(treasury).into(),
-// 		supply: MAX_TOKENS,
-// 		decimals: TOKEN_DECIMALS,
-// 		is_initialized: true,
-// 		freeze_authority: Some(treasury).into(),
-// 	};
-// 	let metadata_pointer = MetadataPointer {
-// 		authority: Some(treasury).try_into()?,
-// 		metadata_address: Some(mint).try_into()?,
-// 	};
-// 	let mint_close_authority = MintCloseAuthority {
-// 		close_authority: Some(treasury).try_into()?,
-// 	};
-// 	let token_metadata = TokenMetadata {
-// 		update_authority: Some(treasury).try_into()?,
-// 		mint,
-// 		name: "Test Token".into(),
-// 		symbol: "TEST".into(),
-// 		uri: "https://test.com/token.json".into(),
-// 		additional_metadata: vec![],
-// 	};
-// 	Mint::pack(base, &mut data)?;
+	for section in 0u8..16u8 {
+		let (bits_data_section, bump) = get_pda_bits_data_section(index, section);
+		let state = BitsDataSectionState {
+			data: vec![0; BITS_DATA_SECTION_LENGTH],
+			section,
+			bump,
+		};
 
-// 	// token_metadata.serialize()
-// 	let mut state = StateWithExtensionsMut::<Mint>::unpack(&mut data)?;
-// 	let metadata_pointer: &mut MetadataPointer = state.init_extension(true)?;
-// 	metadata_pointer.authority = Some(treasury).try_into()?;
-// 	metadata_pointer.metadata_address = Some(mint).try_into()?;
+		states.push((
+			bits_data_section,
+			AccountSharedData::from_anchor_data(state, ID_CONST),
+		));
+	}
 
-// 	let mint_close_authority: &mut MintCloseAuthority =
-// state.init_extension(true)?; 	mint_close_authority.close_authority =
-// Some(treasury).try_into()?;
-
-// 	let token_metadata: &mut TokenMetadata = state.init_extension(true)?;
-
-// 	let rent = Rent::default();
-
-// 	// let account = AccountSharedData::new(, , )
-// }
-
-// /// Create token account state with extensions.
-// pub fn create_token_account_state(mint: Pubkey, owner: Pubkey) ->
-// Result<AccountSharedData> { 	let mut data: Vec<u8> = vec![];
-
-// 	let base = TokenAccount {
-// 		mint,
-// 		owner,
-// 		amount: 1_000_000_000_000_000,
-// 		delegate: None.into(),
-// 		state: spl_token_2022::state::AccountState::Initialized,
-// 		is_native: None.into(),
-// 		delegated_amount: 0,
-// 		close_authority: None.into(),
-// 	};
-
-// 	let account =
-// 		StateWithExtensions::<TokenAccount>::unpack_from_slice_with_extensions(&
-// data, &[ 			ImmutableOwner::TYPE,
-// 		])?;
-
-// 	account.pack_into_slice(&mut data);
-// 	ImmutableOwner.pack_into_slice(&mut data);
-
-// 	let rent = Rent::default();
-// 	let lamports = rent.minimum_balance(data.len());
-
-// 	Ok(AccountSharedData::from_data(lamports, data, ID_CONST))
-// }
+	states
+}
 
 pub type TestBitflipProgramClient = BitflipProgramClient<MemoryWallet>;
+
+pub trait IntoAccountSharedData: AnchorSerialize + Discriminator {
+	fn into_account_shared_data(self) -> AccountSharedData;
+	fn into_account(self) -> Account;
+}
+
+impl IntoAccountSharedData for BitsMetaState {
+	fn into_account_shared_data(self) -> AccountSharedData {
+		AccountSharedData::from_anchor_data(self, ID_CONST)
+	}
+
+	fn into_account(self) -> Account {
+		self.into_account_shared_data().into()
+	}
+}

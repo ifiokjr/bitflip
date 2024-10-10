@@ -39,12 +39,12 @@ pub fn get_pda_bits_meta_with_program(index: u8, program_id: &Pubkey) -> (Pubkey
 	Pubkey::find_program_address(&[SEED_PREFIX, SEED_BITS, &index.to_le_bytes()], program_id)
 }
 
-pub fn get_pda_bits_data_section(index: u8, section: u8) -> (Pubkey, u8) {
-	get_pda_bits_data_section_with_program(index, section, &ID_CONST)
+pub fn get_pda_bits_data_section(game_index: u8, section: u8) -> (Pubkey, u8) {
+	get_pda_bits_data_section_with_program(game_index, section, &ID_CONST)
 }
 
 pub fn get_pda_bits_data_section_with_program(
-	index: u8,
+	game_index: u8,
 	section: u8,
 	program_id: &Pubkey,
 ) -> (Pubkey, u8) {
@@ -52,7 +52,7 @@ pub fn get_pda_bits_data_section_with_program(
 		&[
 			SEED_PREFIX,
 			SEED_BITS,
-			&index.to_le_bytes(),
+			&game_index.to_le_bytes(),
 			SEED_BITS_SECTION,
 			&section.to_le_bytes(),
 		],

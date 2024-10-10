@@ -22,7 +22,7 @@ serde = ["dep:serde", "dep:serde_with"]
 client = ["serde", "no-entrypoint"]
 
 [dependencies]
-anchor-lang = { workspace = true, features = ["interface-instructions"] }
+anchor-lang = { workspace = true, features = ["interface-instructions", "init-if-needed"] }
 anchor-spl = { workspace = true }
 bitflags = { workspace = true }
 const_str_to_pubkey = { workspace = true }
@@ -30,6 +30,7 @@ derive_more = { workspace = true, features = ["add", "add_assign"] }
 serde = { workspace = true, features = ["derive"], optional = true }
 serde-big-array = { workspace = true }
 serde_with = { workspace = true, optional = true }
+typed-builder = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }

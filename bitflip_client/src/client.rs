@@ -4,20 +4,21 @@ use std::ops::Mul;
 use anchor_spl::token_2022;
 use bitflip_program::ID_CONST;
 use bitflip_program::InitializeTokenProps;
+use bitflip_program::SetBitsProps;
+use bitflip_program::SetBitsVariant;
 use bitflip_program::accounts;
 use bitflip_program::accounts::InitializeToken;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::signature::Keypair;
-use solana_sdk::signer::Signer;
 use solana_sdk::system_program;
 use spl_associated_token_account::get_associated_token_address_with_program_id;
+use wallet_standard::prelude::*;
 use wasm_client_anchor::AnchorClientError;
 use wasm_client_anchor::AnchorClientResult;
-use wasm_client_anchor::AnchorRequestMethods;
 use wasm_client_anchor::EmptyAnchorRequest;
-use wasm_client_anchor::WalletAnchor;
 use wasm_client_anchor::create_program_client;
 use wasm_client_anchor::create_program_client_macro;
+use wasm_client_anchor::prelude::*;
 
 use crate::get_pda_bits_data_section;
 use crate::get_pda_bits_meta;
@@ -73,6 +74,7 @@ pub fn initialize_token_request<'a, W: WalletAnchor>(
 		.build()
 }
 
+/// Initialize all the sections for the bitflip game.
 pub async fn initialize_bits_data_sections_request<'a, W: WalletAnchor>(
 	program_client: &'a BitflipProgramClient<W>,
 	signer: &'a Keypair,
@@ -140,8 +142,52 @@ pub async fn initialize_bits_data_sections_request<'a, W: WalletAnchor>(
 	Ok(requests)
 }
 
+pub fn set_bits_request<W: WalletAnchor>(
+	program_client: &BitflipProgramClient<W>,
+	game_index: u8,
+	section: u8,
+	index: u16,
+	variant: SetBitsVariant,
+) -> SetBitsRequest<'_, W> {
+	let (config, _) = get_pda_config();
+	let player = WalletSolanaPubkey::pubkey(program_client.wallet());
+
+	let (bits_meta, _) = get_pda_bits_meta(0);
+	let (mint, _) = get_pda_mint();
+	let (treasury, _) = get_pda_treasury();
+	let token_program = token_2022::ID;
+	let treasury_token_account =
+		get_associated_token_address_with_program_id(&treasury, &mint, &token_program);
+	let associated_token_program = spl_associated_token_account::ID;
+	let player_token_account =
+		get_associated_token_address_with_program_id(&player, &mint, &token_program);
+	let system_program = system_program::ID;
+
+	program_client
+		.set_bits()
+		.args(SetBitsProps {
+			section,
+			index,
+			variant,
+		})
+		.accounts(accounts::SetBits {
+			config,
+			mint,
+			treasury,
+			treasury_token_account,
+			bits_meta,
+			bits_data_section: get_pda_bits_data_section(game_index, section).0,
+			player,
+			player_token_account,
+			associated_token_program,
+			token_program,
+			system_program,
+		})
+		.build()
+}
+
 pub const MAX_COMPUTE_UNIT_LIMIT: u32 = 1_400_000;
-struct RangeChunks {
+pub(crate) struct RangeChunks {
 	start: usize,
 	end: usize,
 	chunk_size: usize,

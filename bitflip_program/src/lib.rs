@@ -9,6 +9,7 @@ use anchor_spl::token_interface::TokenAccount;
 use anchor_spl::token_interface::TokenMetadataInitialize;
 use anchor_spl::token_interface::token_metadata_initialize;
 use program::BitflipProgram;
+use typed_builder::TypedBuilder;
 
 pub use crate::constants::*;
 pub use crate::errors::*;
@@ -196,20 +197,36 @@ impl InitializeToken<'_> {
 		let treasury_bump = ctx.accounts.config.treasury_bump;
 		let treasury_seeds = &[SEED_PREFIX, SEED_TREASURY, &[treasury_bump]];
 		let signer_seeds = &[&treasury_seeds[..]];
+		let authority = ctx.accounts.authority.to_account_info();
+		let mint = ctx.accounts.mint.to_account_info();
+		let treasury = ctx.accounts.treasury.to_account_info();
+		let treasury_token_account = ctx.accounts.treasury_token_account.to_account_info();
+		let associated_token_program = ctx.accounts.associated_token_program.to_account_info();
+		let token_program = ctx.accounts.token_program.to_account_info();
+		let system_program = ctx.accounts.system_program.to_account_info();
+		let bitflip_program = ctx.accounts.bitflip_program.to_account_info();
+		let minimum_balance = Rent::get()?.minimum_balance(0);
+
+		if treasury.lamports() < minimum_balance {
+			let from = authority.clone();
+			let to = treasury.clone();
+			let accounts = system_program::Transfer { from, to };
+			let cpi_context = CpiContext::new(system_program.clone(), accounts);
+
+			// transfer the minimum sol to the treasury for rent exemption
+			system_program::transfer(cpi_context, minimum_balance)?;
+		}
+
 		let accounts = cpi::accounts::InitializeTokenInner {
-			authority: ctx.accounts.authority.to_account_info(),
-			mint: ctx.accounts.mint.to_account_info(),
-			treasury: ctx.accounts.treasury.to_account_info(),
-			treasury_token_account: ctx.accounts.treasury_token_account.to_account_info(),
-			associated_token_program: ctx.accounts.associated_token_program.to_account_info(),
-			token_program: ctx.accounts.token_program.to_account_info(),
-			system_program: ctx.accounts.system_program.to_account_info(),
+			authority,
+			mint,
+			treasury,
+			treasury_token_account,
+			associated_token_program,
+			token_program,
+			system_program,
 		};
-		let cpi_context = CpiContext::new_with_signer(
-			ctx.accounts.bitflip_program.to_account_info(),
-			accounts,
-			signer_seeds,
-		);
+		let cpi_context = CpiContext::new_with_signer(bitflip_program, accounts, signer_seeds);
 		let inner_props = props.into_inner(treasury_bump);
 		let result = cpi::initialize_token_inner(cpi_context, inner_props)?;
 
@@ -530,11 +547,17 @@ impl StartBitsSession<'_> {
 			BitflipError::InvalidFlippedBits
 		);
 		require!(
-			usize::from(self.bits_meta.sections) == BITS_DATA_SECTION_LENGTH,
+			usize::from(self.bits_meta.sections) == BITS_DATA_SECTIONS,
 			BitflipError::InvalidBitsDataSectionIndex
 		);
 
 		Ok(())
+	}
+}
+
+impl From<u32> for instruction::StartBitsSession {
+	fn from(flipped_bits: u32) -> Self {
+		Self { flipped_bits }
 	}
 }
 
@@ -550,6 +573,9 @@ pub struct SetBits<'info> {
 	pub config: Box<Account<'info, ConfigState>>,
 	/// The token mint account.
 	#[account(
+	  extensions::metadata_pointer::authority = treasury,
+	  extensions::metadata_pointer::metadata_address = mint,
+	  extensions::close_authority::authority = treasury,
 	  seeds = [SEED_PREFIX, SEED_MINT],
 	  bump = config.mint_bump,
   )]
@@ -606,11 +632,85 @@ pub struct SetBits<'info> {
 impl SetBits<'_> {
 	#[access_control(ctx.accounts.validate(props))]
 	pub fn set_bits_handler(ctx: &mut Context<Self>, props: &SetBitsProps) -> AnchorResult {
+		msg!("inside `set_bits_handler`");
+		let rent = Rent::get()?;
 		ctx.accounts.update(props)?;
-		ctx.accounts.bits_data_section.validate()
+		let config = ctx.accounts.config.to_account_info();
+		let config_balance = config.lamports();
+		let config_space = config.data_len();
+		let config_min = rent.minimum_balance(config_space);
+		let mint = ctx.accounts.mint.to_account_info();
+		let mint_balance = mint.lamports();
+		let mint_space = mint.data_len();
+		let mint_min = rent.minimum_balance(mint_space);
+		let pta = ctx.accounts.player_token_account.to_account_info();
+		let pta_balance = pta.lamports();
+		let pta_space = pta.data_len();
+		let pta_min = rent.minimum_balance(pta_space);
+		let bits_meta = ctx.accounts.bits_meta.to_account_info();
+		let bits_meta_balance = bits_meta.lamports();
+		let bits_meta_space = bits_meta.data_len();
+		let bits_meta_min = rent.minimum_balance(bits_meta_space);
+		let bits_data_section = ctx.accounts.bits_data_section.to_account_info();
+		let bits_data_section_balance = bits_data_section.lamports();
+		let bits_data_section_space = bits_data_section.data_len();
+		let bits_data_section_min = rent.minimum_balance(bits_data_section_space);
+		let tta = ctx.accounts.treasury_token_account.to_account_info();
+		let tta_balance = tta.lamports();
+		let tta_space = tta.data_len();
+		let tta_min = rent.minimum_balance(tta_space);
+
+		msg!(
+			"`config` balance: {}, space: {}, required rent: {}, valid: {}",
+			config_balance,
+			config_space,
+			config_min,
+			config_min == config_balance,
+		);
+		msg!(
+			"`mint` balance: {}, space: {}, required rent: {}, valid: {}",
+			mint_balance,
+			mint_space,
+			mint_min,
+			mint_min == mint_balance,
+		);
+		msg!(
+			"`player_token_account` balance: {}, space: {}, required rent: {}, valid: {}",
+			pta_balance,
+			pta_space,
+			pta_min,
+			pta_min == pta_balance,
+		);
+		msg!(
+			"`bits_meta` balance: {}, space: {}, required rent: {}, valid: {}",
+			bits_meta_balance,
+			bits_meta_space,
+			bits_meta_min,
+			bits_meta_min == bits_meta_balance,
+		);
+		msg!(
+			"`bits_data_section` balance: {}, space: {}, required rent: {}, valid: {}",
+			bits_data_section_balance,
+			bits_data_section_space,
+			bits_data_section_min,
+			bits_data_section_min == bits_data_section_balance,
+		);
+		msg!(
+			"`treasury_token_account` balance: {}, space: {}, required rent: {}, valid: {}",
+			tta_balance,
+			tta_space,
+			tta_min,
+			tta_min == tta_balance,
+		);
+
+		ctx.accounts.bits_data_section.validate()?;
+		msg!("completed update");
+
+		Ok(())
 	}
 
 	fn validate(&self, props: &SetBitsProps) -> AnchorResult {
+		msg!("validating set bits...");
 		let current_time = Clock::get()?.unix_timestamp;
 		require!(
 			self.bits_meta.running(current_time),
@@ -618,17 +718,19 @@ impl SetBits<'_> {
 		);
 		props.validate()?;
 
+		msg!("VALIDATED set bits!");
 		Ok(())
 	}
 
 	fn update(&mut self, props: &SetBitsProps) -> AnchorResult {
 		let changes = self.bits_data_section.set_bits(props)?;
+		msg!("here are the changes: {:#?}", changes);
 		let flipped_bits = changes.total()?;
 
 		self.bits_meta.flip_on(changes.on)?;
 		self.bits_meta.flip_off(changes.off)?;
-		self.transfer_from_treasury(flipped_bits)?;
-		self.transfer_to_treasury(
+		self.transfer_token_from_treasury(flipped_bits)?;
+		self.transfer_sol_to_treasury(
 			flipped_bits,
 			props
 				.get_multiplier()
@@ -638,7 +740,7 @@ impl SetBits<'_> {
 	}
 }
 
-impl<'info> TransferToTreasury<'info> for SetBits<'info> {
+impl<'info> TransferSolToTreasury<'info> for SetBits<'info> {
 	fn treasury(&self) -> AccountInfo<'info> {
 		self.treasury.to_account_info()
 	}
@@ -652,7 +754,7 @@ impl<'info> TransferToTreasury<'info> for SetBits<'info> {
 	}
 }
 
-impl<'info> TransferFromTreasury<'info> for SetBits<'info> {
+impl<'info> TransferTokenFromTreasury<'info> for SetBits<'info> {
 	fn mint(&self) -> AccountInfo<'info> {
 		self.mint.to_account_info()
 	}
@@ -802,24 +904,30 @@ impl ConfigState {
 
 /// Adding [`BitState::on`] to [`BitState::off`] should always equal `1_000_000`
 #[account]
-#[derive(InitSpace)]
+#[derive(InitSpace, Debug, TypedBuilder)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct BitsMetaState {
 	/// The start time. If 0 then it hasn't started yet. Using an `Option` here
 	/// would waste an extra byte.
+	#[builder(default)]
 	pub start_time: i64,
 	/// The number of bit flips that have occurred.
+	#[builder(default)]
 	pub flips: u64,
 	/// The number of bits that are on.
+	#[builder(default)]
 	pub on: u32,
 	/// The number of bits that are off.
+	#[builder(default = BITS_TOTAL as u32)]
 	pub off: u32,
 	/// The index of this currently played game.
+	#[builder(default)]
 	pub index: u8,
 	/// The bump for this account.
 	pub bump: u8,
 	/// The number of sections initialized.
+	#[builder(default)]
 	pub sections: u8,
 }
 
@@ -941,17 +1049,21 @@ impl BitsDataSectionState {
 
 	pub fn set_bits(&mut self, props: &SetBitsProps) -> Result<BitChanges> {
 		let index = props.index as usize;
+		msg!("index: {}", index);
 		let mut changes = BitChanges::default();
 
 		match &props.variant {
 			SetBitsVariant::On(offset) => {
+				msg!("set bits variant ON");
 				let current = self.data[index..=index][0];
 				let bit = 1 << *offset;
 				let updated = current | bit;
+				msg!("current: {}, bit: {}, updated: {}", current, bit, updated);
 
 				require!(updated != current, BitflipError::BitsUnchanged);
 
 				self.data[index..=index].copy_from_slice(&[updated]);
+				msg!("data after update: {:#?}", &self.data[index..=index]);
 				changes.on = 1;
 			}
 
