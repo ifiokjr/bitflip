@@ -25,6 +25,7 @@ use shared::IntoAccountSharedData;
 use shared::create_bits_meta_state;
 use shared::create_bits_section_state;
 use solana_sdk::account::Account;
+use solana_sdk::account::ReadableAccount;
 use solana_sdk::clock::Clock;
 use solana_sdk::signer::Signer;
 use solana_sdk::system_program;
@@ -306,7 +307,6 @@ async fn set_bits_on() -> anyhow::Result<()> {
 	let player = program_client.payer();
 	let treasury_token_account =
 		get_associated_token_address_with_program_id(&treasury, &mint, &token_program);
-	let associated_token_program = spl_associated_token_account::ID;
 	let player_token_account =
 		get_associated_token_address_with_program_id(&player, &mint, &token_program);
 
@@ -347,18 +347,27 @@ async fn set_bits_on() -> anyhow::Result<()> {
 
 	let player_redaction = create_insta_redaction(player, "player:pubkey");
 	let mint_redaction = create_insta_redaction(mint, "mint:pubkey");
-	let Account {
-		data: player_token_account_data,
-		..
-	} = rpc.get_account(&player_token_account).await?;
-	let parsed_payer_token_account = parse_token_v2(
-		&player_token_account_data,
+	let treasury_redaction = create_insta_redaction(treasury, "treasury:pubkey");
+	let raw_player_token_account = rpc.get_account(&player_token_account).await?;
+	let parsed_player_token_account = parse_token_v2(
+		raw_player_token_account.data(),
 		Some(&SplTokenAdditionalData::with_decimals(TOKEN_DECIMALS)),
 	)?;
-	log::info!("player token account: {parsed_payer_token_account:#?}");
-	insta::assert_yaml_snapshot!(parsed_payer_token_account, {
-		".info.mint" => insta::dynamic_redaction(mint_redaction),
+	log::info!("player token account: {parsed_player_token_account:#?}");
+	insta::assert_yaml_snapshot!(parsed_player_token_account, {
+		".info.mint" => insta::dynamic_redaction(mint_redaction.clone()),
 		".info.owner" => insta::dynamic_redaction(player_redaction),
+	});
+
+	let raw_treasury_token_account = rpc.get_account(&treasury_token_account).await?;
+	let parsed_treasury_token_account = parse_token_v2(
+		raw_treasury_token_account.data(),
+		Some(&SplTokenAdditionalData::with_decimals(TOKEN_DECIMALS)),
+	)?;
+	log::info!("treasury token account: {parsed_treasury_token_account:#?}");
+	insta::assert_yaml_snapshot!(parsed_treasury_token_account, {
+		".info.mint" => insta::dynamic_redaction(mint_redaction),
+		".info.owner" => insta::dynamic_redaction(treasury_redaction),
 	});
 
 	let bits_meta_account: BitsMetaState = program_client.account(&bits_meta).await?;
