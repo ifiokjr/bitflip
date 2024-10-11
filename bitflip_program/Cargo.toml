@@ -19,18 +19,19 @@ no-idl = []
 no-log-ix-name = []
 idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 serde = ["dep:serde", "dep:serde_with"]
-client = ["serde", "no-entrypoint"]
+client = ["serde", "no-entrypoint", "dep:typed-builder"]
 
 [dependencies]
 anchor-lang = { workspace = true, features = ["interface-instructions", "init-if-needed"] }
 anchor-spl = { workspace = true }
 bitflags = { workspace = true }
+bytemuck = { workspace = true }
 const_str_to_pubkey = { workspace = true }
 derive_more = { workspace = true, features = ["add", "add_assign"] }
 serde = { workspace = true, features = ["derive"], optional = true }
 serde-big-array = { workspace = true }
 serde_with = { workspace = true, optional = true }
-typed-builder = { workspace = true }
+typed-builder = { workspace = true, optional = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }

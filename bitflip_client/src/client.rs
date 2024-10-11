@@ -117,6 +117,7 @@ pub async fn initialize_bits_data_sections_request<'a, W: WalletAnchor>(
 
 	let mut requests = vec![];
 	let steps = MAX_COMPUTE_UNIT_LIMIT / compute_units;
+	log::info!("number of steps: {steps}");
 
 	for chunk in range_chunks(0..16, steps as usize) {
 		log::info!("creating sections {chunk:#?} with len: {}", chunk.len());
@@ -140,6 +141,27 @@ pub async fn initialize_bits_data_sections_request<'a, W: WalletAnchor>(
 	}
 
 	Ok(requests)
+}
+
+pub fn start_bits_session_request<'a, W: WalletAnchor>(
+	program_client: &'a BitflipProgramClient<W>,
+	signer: &'a Keypair,
+	game_index: u8,
+) -> StartBitsSessionRequest<'a, W> {
+	let (config, _) = get_pda_config();
+	let (bits_meta, _) = get_pda_bits_meta(game_index);
+
+	program_client
+		.start_bits_session()
+		.signer(signer)
+		.args(0)
+		.accounts(accounts::StartBitsSession {
+			config,
+			bits_meta,
+			authority: signer.pubkey(),
+			system_program: system_program::ID,
+		})
+		.build()
 }
 
 pub fn set_bits_request<W: WalletAnchor>(

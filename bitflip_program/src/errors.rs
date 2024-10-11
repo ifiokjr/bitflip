@@ -19,6 +19,8 @@ pub enum BitflipError {
 	InvalidBitsDataSectionIndex,
 	#[msg("Invalid bits data section array length")]
 	InvalidBitsDataSectionLength,
+	#[msg("Data sections initialized out of order")]
+	InvalidBitsDataSectionOrder,
 	#[msg("An invalid number of flipped bits was provided")]
 	InvalidFlippedBits,
 	#[msg("The data section index must be a multiple of 16")]

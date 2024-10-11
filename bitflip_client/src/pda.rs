@@ -31,12 +31,15 @@ pub fn get_pda_mint_with_program(program_id: &Pubkey) -> (Pubkey, u8) {
 	Pubkey::find_program_address(&[SEED_PREFIX, SEED_MINT], program_id)
 }
 
-pub fn get_pda_bits_meta(index: u8) -> (Pubkey, u8) {
-	get_pda_bits_meta_with_program(index, &ID_CONST)
+pub fn get_pda_bits_meta(game_index: u8) -> (Pubkey, u8) {
+	get_pda_bits_meta_with_program(game_index, &ID_CONST)
 }
 
-pub fn get_pda_bits_meta_with_program(index: u8, program_id: &Pubkey) -> (Pubkey, u8) {
-	Pubkey::find_program_address(&[SEED_PREFIX, SEED_BITS, &index.to_le_bytes()], program_id)
+pub fn get_pda_bits_meta_with_program(game_index: u8, program_id: &Pubkey) -> (Pubkey, u8) {
+	Pubkey::find_program_address(
+		&[SEED_PREFIX, SEED_BITS, &game_index.to_le_bytes()],
+		program_id,
+	)
 }
 
 pub fn get_pda_bits_data_section(game_index: u8, section: u8) -> (Pubkey, u8) {

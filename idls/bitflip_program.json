@@ -1254,36 +1254,41 @@
 		},
 		{
 			"code": 6007,
+			"name": "InvalidBitsDataSectionOrder",
+			"msg": "Data sections initialized out of order"
+		},
+		{
+			"code": 6008,
 			"name": "InvalidFlippedBits",
 			"msg": "An invalid number of flipped bits was provided"
 		},
 		{
-			"code": 6008,
+			"code": 6009,
 			"name": "Invalid256BitsDataSectionIndex",
 			"msg": "The data section index must be a multiple of 16"
 		},
 		{
-			"code": 6009,
+			"code": 6010,
 			"name": "InvalidBitOffset",
 			"msg": "The bit offset is invalid and must be less than 16"
 		},
 		{
-			"code": 6010,
+			"code": 6011,
 			"name": "NotRunning",
 			"msg": "The current `BitsMetaState` is not running"
 		},
 		{
-			"code": 6011,
+			"code": 6012,
 			"name": "UnauthorizedAdmin",
 			"msg": "The admin used was incorrect"
 		},
 		{
-			"code": 6012,
+			"code": 6013,
 			"name": "AllSectionsInitialized",
 			"msg": "All bit data sections have already been initialized"
 		},
 		{
-			"code": 6013,
+			"code": 6014,
 			"name": "TokenNotInitialized",
 			"msg": "The token is not yet initialized"
 		}
@@ -1295,32 +1300,25 @@
 				"The data for each section of the the data. The total data is split into 16",
 				"sections and this is one of the sections."
 			],
+			"serialization": "bytemuckunsafe",
+			"repr": {
+				"kind": "c"
+			},
 			"type": {
 				"kind": "struct",
 				"fields": [
 					{
 						"name": "data",
 						"docs": [
-							"The state of the bits that are represented as checkboxes on the",
+							"The state of the bits that are represented as flippable bits on the",
 							"frontend."
 						],
 						"type": {
-							"vec": "u16"
+							"array": [
+								"u16",
+								4096
+							]
 						}
-					},
-					{
-						"name": "section",
-						"docs": [
-							"The section index for this account."
-						],
-						"type": "u8"
-					},
-					{
-						"name": "bump",
-						"docs": [
-							"The bump for this account."
-						],
-						"type": "u8"
 					}
 				]
 			}
@@ -1377,11 +1375,11 @@
 						"type": "u8"
 					},
 					{
-						"name": "sections",
+						"name": "section_bumps",
 						"docs": [
-							"The number of sections initialized."
+							"The bumps for each initialized section"
 						],
-						"type": "u8"
+						"type": "bytes"
 					}
 				]
 			}

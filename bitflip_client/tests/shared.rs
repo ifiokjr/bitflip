@@ -10,14 +10,17 @@ use bitflip_client::get_pda_bits_meta;
 use bitflip_client::get_pda_config;
 use bitflip_client::get_pda_treasury;
 use bitflip_program::BITS_DATA_SECTION_LENGTH;
+use bitflip_program::BITS_DATA_SECTIONS;
 use bitflip_program::BitsDataSectionState;
 use bitflip_program::BitsMetaState;
 use bitflip_program::ID_CONST;
 use bitflip_program::InitializeConfigProps;
 use solana_sdk::account::AccountSharedData;
+use solana_sdk::account::WritableAccount;
 use solana_sdk::commitment_config::CommitmentLevel;
 use solana_sdk::native_token::sol_to_lamports;
 use solana_sdk::pubkey::Pubkey;
+use solana_sdk::rent::Rent;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signature::Signer;
 use test_utils::SECRET_KEY_ADMIN;
@@ -136,32 +139,49 @@ pub fn create_config_state(mint_bump: Option<u8>) -> AccountSharedData {
 	AccountSharedData::from_anchor_data(state, ID_CONST)
 }
 
-pub fn create_bits_meta_state(index: u8, sections: Option<u8>) -> AccountSharedData {
-	let (_, bump) = get_pda_bits_meta(index);
-	let mut bits_meta_state = BitsMetaState::new(index, bump);
+pub fn create_bits_meta_state(game_index: u8, sections: Option<u8>) -> AccountSharedData {
+	let (_, bump) = get_pda_bits_meta(game_index);
+	let mut bits_meta_state = BitsMetaState::new(game_index, bump);
 
 	if let Some(last_section) = sections {
-		bits_meta_state.sections = last_section;
+		for section in 0..last_section {
+			let (_, bump) = get_pda_bits_data_section(game_index, section);
+			bits_meta_state.section_bumps.push(bump);
+		}
 	}
 
-	AccountSharedData::from_anchor_data(bits_meta_state, ID_CONST)
+	let mut data = bits_meta_state.into_account_shared_data();
+
+	data.resize(BitsMetaState::space(), 0);
+
+	data
+}
+
+pub fn create_section_bumps(game_index: u8) -> Vec<u8> {
+	let mut section_bumps = vec![];
+
+	for section in 0..16 {
+		section_bumps.push(get_pda_bits_data_section(game_index, section).1);
+	}
+
+	section_bumps
 }
 
 pub fn create_bits_section_state(index: u8) -> Vec<(Pubkey, AccountSharedData)> {
 	let mut states = vec![];
 
 	for section in 0u8..16u8 {
-		let (bits_data_section, bump) = get_pda_bits_data_section(index, section);
+		let mut data = vec![];
 		let state = BitsDataSectionState {
-			data: vec![0; BITS_DATA_SECTION_LENGTH],
-			section,
-			bump,
+			data: [0; BITS_DATA_SECTION_LENGTH],
 		};
 
-		states.push((
-			bits_data_section,
-			AccountSharedData::from_anchor_data(state, ID_CONST),
-		));
+		data.append(&mut BitsDataSectionState::DISCRIMINATOR.to_vec());
+		data.append(&mut state.to_bytes());
+		let rent = Rent::default().minimum_balance(BitsDataSectionState::space());
+		let account = AccountSharedData::create(rent, data, ID_CONST, false, u64::MAX);
+
+		states.push((get_pda_bits_data_section(index, section).0, account));
 	}
 
 	states

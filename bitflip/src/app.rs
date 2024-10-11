@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use bitflip_program::AnchorResult;
 use bitflip_program::BITS_DATA_SECTION_LENGTH;
 use bitflip_program::BitsDataSectionState;
+use bitflip_program::SetBitsDataSection;
 use bitflip_program::SetBitsProps;
 use bitflip_program::SetBitsVariant;
 use js_sys::Reflect;
@@ -291,6 +292,7 @@ fn CheckboxIcon(
 
 #[derive(Clone, Copy)]
 pub struct DataSectionContext {
+	section: ReadSignal<u8>,
 	state: RwSignal<BitsDataSectionState>,
 	updates: RwSignal<HashSet<SetBitsProps>>,
 }
@@ -299,19 +301,23 @@ impl DataSectionContext {
 	pub fn new(section: u8) -> Self {
 		let mut rng = rand::thread_rng();
 		let mut inner_state = BitsDataSectionState {
-			data: vec![0; BITS_DATA_SECTION_LENGTH],
-			section,
-			bump: 0,
+			data: [0; BITS_DATA_SECTION_LENGTH],
 		};
 
 		for ii in 0..BITS_DATA_SECTION_LENGTH {
 			inner_state.data[ii] = rng.r#gen();
 		}
 
+		let (section, _) = signal(section);
 		let state = RwSignal::new(inner_state);
 		let updates = RwSignal::new(HashSet::new());
 
-		let context = Self { state, updates };
+		let context = Self {
+			section,
+			state,
+			updates,
+		};
+
 		provide_context(context);
 
 		context
@@ -322,10 +328,11 @@ impl DataSectionContext {
 	}
 
 	pub fn update(&self, index: u16, variant: SetBitsVariant) -> AnchorResult {
+		let section = self.section.get_untracked();
 		let mut state = self.state.write();
 		let updates = self.updates.read();
 		let new_update = SetBitsProps {
-			section: state.section,
+			section,
 			index,
 			variant,
 		};
@@ -365,13 +372,14 @@ impl DataSectionContext {
 
 	pub fn bit_is_updated(&self, index: u16, offset: u16) -> bool {
 		let updates = self.updates.read();
+		let section = self.section.get_untracked();
 		let on_update = SetBitsProps {
-			section: self.state.read().section,
+			section,
 			index,
 			variant: SetBitsVariant::On(offset),
 		};
 		let off_update = SetBitsProps {
-			section: self.state.read().section,
+			section,
 			index,
 			variant: SetBitsVariant::Off(offset),
 		};
@@ -392,7 +400,7 @@ impl DataSectionContext {
 	}
 
 	pub fn bit_dom_id(&self, index: u16, offset: u16) -> String {
-		let section = self.state.read().section;
+		let section = self.section.get_untracked();
 		format!("bit:{section}:{index}:{offset}")
 	}
 }

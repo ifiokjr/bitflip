@@ -1,3 +1,6 @@
+use std::ops::Deref;
+use std::ops::DerefMut;
+
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use anchor_spl::associated_token::AssociatedToken;
@@ -9,7 +12,6 @@ use anchor_spl::token_interface::TokenAccount;
 use anchor_spl::token_interface::TokenMetadataInitialize;
 use anchor_spl::token_interface::token_metadata_initialize;
 use program::BitflipProgram;
-use typed_builder::TypedBuilder;
 
 pub use crate::constants::*;
 pub use crate::errors::*;
@@ -457,7 +459,7 @@ pub struct InitializeBitsDataSection<'info> {
 		seeds = [SEED_PREFIX, SEED_BITS, &config.bits_index.to_le_bytes(), SEED_BITS_SECTION, &section.to_le_bytes()],
 		bump
 	)]
-	pub bits_data_section: Box<Account<'info, BitsDataSectionState>>,
+	pub bits_data_section: AccountLoader<'info, BitsDataSectionState>,
 	/// The authority that is able to sign for updates to the config and
 	/// initiate new games.
 	#[account(mut)]
@@ -470,16 +472,15 @@ pub struct InitializeBitsDataSection<'info> {
 impl InitializeBitsDataSection<'_> {
 	#[access_control(validate_data_section(section))]
 	pub fn initialize_bits_data_section_handler(ctx: Context<Self>, section: u8) -> AnchorResult {
+		msg!("inside the `initialize_bits_data_section_handler`");
 		let bits_meta = &mut ctx.accounts.bits_meta;
-		let bits_data_section = &mut ctx.accounts.bits_data_section;
 
-		bits_data_section.section = section;
-		bits_data_section.bump = ctx.bumps.bits_data_section;
-		bits_data_section.data = vec![0; BITS_DATA_SECTION_LENGTH];
+		require!(
+			section as usize == bits_meta.section_bumps.len(),
+			BitflipError::InvalidBitsDataSectionOrder,
+		);
 
-		// TODO: Initialize the bits data section if possible on stack instead of heap.
-
-		bits_meta.sections += 1;
+		bits_meta.section_bumps.push(ctx.bumps.bits_data_section);
 
 		Ok(())
 	}
@@ -547,7 +548,7 @@ impl StartBitsSession<'_> {
 			BitflipError::InvalidFlippedBits
 		);
 		require!(
-			usize::from(self.bits_meta.sections) == BITS_DATA_SECTIONS,
+			self.bits_meta.section_bumps.len() == BITS_DATA_SECTIONS,
 			BitflipError::InvalidBitsDataSectionIndex
 		);
 
@@ -598,16 +599,16 @@ pub struct SetBits<'info> {
 	#[account(
 		mut,
 		seeds = [SEED_PREFIX, SEED_BITS, &bits_meta.index.to_le_bytes()],
-		bump = bits_meta.bump
+		bump = bits_meta.bump,
 	)]
 	pub bits_meta: Box<Account<'info, BitsMetaState>>,
 	/// The data for this section of the bit canvas.
 	#[account(
 		mut,
 		seeds = [SEED_PREFIX, SEED_BITS, &bits_meta.index.to_le_bytes(), SEED_BITS_SECTION, &props.section.to_le_bytes()],
-		bump = bits_data_section.bump,
+		bump = bits_meta.section_bumps.get(props.section as usize).copied().unwrap()
 	)]
-	pub bits_data_section: Box<Account<'info, BitsDataSectionState>>,
+	pub bits_data_section: AccountLoader<'info, BitsDataSectionState>,
 	/// The player of the bit games
 	#[account(mut)]
 	pub player: Signer<'info>,
@@ -703,7 +704,6 @@ impl SetBits<'_> {
 			tta_min == tta_balance,
 		);
 
-		ctx.accounts.bits_data_section.validate()?;
 		msg!("completed update");
 
 		Ok(())
@@ -723,7 +723,10 @@ impl SetBits<'_> {
 	}
 
 	fn update(&mut self, props: &SetBitsProps) -> AnchorResult {
-		let changes = self.bits_data_section.set_bits(props)?;
+		msg!("about to load the account");
+		let mut state = self.bits_data_section.load_mut()?;
+		let changes = state.set_bits(props)?;
+
 		msg!("here are the changes: {:#?}", changes);
 		let flipped_bits = changes.total()?;
 
@@ -904,31 +907,33 @@ impl ConfigState {
 
 /// Adding [`BitState::on`] to [`BitState::off`] should always equal `1_000_000`
 #[account]
-#[derive(InitSpace, Debug, TypedBuilder)]
+#[derive(InitSpace, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "client", derive(typed_builder::TypedBuilder))]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct BitsMetaState {
 	/// The start time. If 0 then it hasn't started yet. Using an `Option` here
 	/// would waste an extra byte.
-	#[builder(default)]
+	#[cfg_attr(feature = "client", builder(default))]
 	pub start_time: i64,
 	/// The number of bit flips that have occurred.
-	#[builder(default)]
+	#[cfg_attr(feature = "client", builder(default))]
 	pub flips: u64,
 	/// The number of bits that are on.
-	#[builder(default)]
+	#[cfg_attr(feature = "client", builder(default))]
 	pub on: u32,
 	/// The number of bits that are off.
-	#[builder(default = BITS_TOTAL as u32)]
+	#[cfg_attr(feature = "client", builder(default = BITS_TOTAL as u32))]
 	pub off: u32,
 	/// The index of this currently played game.
-	#[builder(default)]
+	#[cfg_attr(feature = "client", builder(default))]
 	pub index: u8,
 	/// The bump for this account.
 	pub bump: u8,
-	/// The number of sections initialized.
-	#[builder(default)]
-	pub sections: u8,
+	/// The bumps for each initialized section
+	#[cfg_attr(feature = "client", builder(default))]
+	#[max_len(BITS_DATA_SECTIONS)]
+	pub section_bumps: Vec<u8>,
 }
 
 impl BitsMetaState {
@@ -940,7 +945,7 @@ impl BitsMetaState {
 			off: BITS_TOTAL as u32,
 			index,
 			bump,
-			sections: 0,
+			section_bumps: vec![],
 		}
 	}
 
@@ -962,6 +967,11 @@ impl BitsMetaState {
 
 	pub fn running(&self, current_time: i64) -> bool {
 		self.started() && !self.ended(current_time)
+	}
+
+	/// The index of the next section.
+	pub fn section_index(&self) -> u8 {
+		u8::try_from(self.section_bumps.len()).unwrap()
 	}
 
 	pub fn flip_on(&mut self, changed_bits: u32) -> AnchorResult {
@@ -1001,53 +1011,50 @@ impl BitsMetaState {
 
 /// The data for each section of the the data. The total data is split into 16
 /// sections and this is one of the sections.
-#[account]
+#[account(zero_copy(unsafe))]
+#[repr(C)]
 #[derive(InitSpace)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct BitsDataSectionState {
-	/// The state of the bits that are represented as checkboxes on the
+	/// The state of the bits that are represented as flippable bits on the
 	/// frontend.
-	#[max_len(BITS_DATA_SECTION_LENGTH)]
-	pub data: Vec<u16>,
-	/// The section index for this account.
-	pub section: u8,
-	/// The bump for this account.
-	pub bump: u8,
+	#[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
+	pub data: [u16; BITS_DATA_SECTION_LENGTH],
 }
 
 impl BitsDataSectionState {
-	/// Ensure that the update keeps the data section in tact.
-	pub fn validate(&self) -> AnchorResult {
-		require!(
-			self.data.len() == BITS_DATA_SECTION_LENGTH,
-			BitflipError::InvalidBitsDataSectionLength
-		);
-
-		validate_data_section(self.section)?;
-
-		Ok(())
-	}
-
 	pub fn space() -> usize {
-		SPACE_DISCRIMINATOR + Self::INIT_SPACE
+		SPACE_DISCRIMINATOR + 2 * BITS_DATA_SECTION_LENGTH
 	}
 
-	// fn get_data_slice(&mut self, props: &SetBitsProps) -> &mut [u16] {
-	// 	let index = props.index as usize;
+	#[cfg(feature = "client")]
+	pub fn to_bytes(&self) -> Vec<u8> {
+		bytemuck::bytes_of(self).to_vec()
+	}
 
-	// 	match &props.variant {
-	// 		SetBitsVariant::On(_) | SetBitsVariant::Off(_) | SetBitsVariant::Bit16(_)
-	// => { 			&mut self.data[index..=index]
-	// 		}
-	// 		SetBitsVariant::Bits256(_) => {
-	// 			let index_with_offset = props.index.saturating_add(15) as usize;
-	// 			&mut self.data[index..=index_with_offset]
-	// 		}
-	// 	}
-	// }
+	#[cfg(feature = "client")]
+	pub fn to_bytes_ref(&self) -> &[u8] {
+		bytemuck::bytes_of(self)
+	}
 
-	pub fn set_bits(&mut self, props: &SetBitsProps) -> Result<BitChanges> {
+	#[cfg(feature = "client")]
+	pub fn to_bytes_mut(&mut self) -> &mut [u8] {
+		bytemuck::bytes_of_mut(self)
+	}
+
+	#[cfg(feature = "client")]
+	pub fn from_bytes(bytes: &[u8]) -> Self {
+		bytemuck::pod_read_unaligned(bytes)
+	}
+}
+
+pub trait SetBitsDataSection: Deref<Target = BitsDataSectionState> + DerefMut {
+	fn set_bits(
+		// mut state: RefMut<'_, BitsDataSectionState>,
+		&mut self,
+		props: &SetBitsProps,
+	) -> Result<BitChanges> {
 		let index = props.index as usize;
 		msg!("index: {}", index);
 		let mut changes = BitChanges::default();
@@ -1102,6 +1109,8 @@ impl BitsDataSectionState {
 		Ok(changes)
 	}
 }
+
+impl<T: Deref<Target = BitsDataSectionState> + DerefMut> SetBitsDataSection for T {}
 
 #[account]
 #[derive(InitSpace)]
