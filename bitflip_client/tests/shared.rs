@@ -10,7 +10,6 @@ use bitflip_client::get_pda_bits_meta;
 use bitflip_client::get_pda_config;
 use bitflip_client::get_pda_treasury;
 use bitflip_program::BITS_DATA_SECTION_LENGTH;
-use bitflip_program::BITS_DATA_SECTIONS;
 use bitflip_program::BitsDataSectionState;
 use bitflip_program::BitsMetaState;
 use bitflip_program::ID_CONST;
