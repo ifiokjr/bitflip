@@ -7,7 +7,7 @@
 		"update:write": "deno task -q update --write",
 		"update:commit": "deno task -q update --commit"
 	},
-	"nodeModulesDir": true,
+	"nodeModulesDir": "auto",
 	"imports": {
 		"@/tailwind/": "./setup/tailwind/",
 		"@egoist/tailwindcss-icons": "npm:@egoist/tailwindcss-icons@^1.8.1",

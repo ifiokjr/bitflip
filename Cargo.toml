@@ -41,6 +41,7 @@ derive_more = "1"
 dom_testing_library = "0.1"
 dotenvy = "0.15"
 fake = "2"
+fixed = "1"
 futures = "0.3"
 futures-timeout = "0.1"
 futures-timer = "3"
@@ -61,12 +62,12 @@ insta = "1"
 js-sys = "0.3"
 jsonwebtoken = "9"
 lazy_static = "1"
-leptos = "0.7.0-gamma2"
-leptos-use = { git = "https://github.com/Synphonyte/leptos-use", rev = "c6d22e19cb73318d979f5fe4b355c133adcaa5ea" }
-leptos_axum = "0.7.0-gamma2"
-leptos_dom = "0.7.0-gamma2"
-leptos_meta = "0.7.0-gamma2"
-leptos_router = "0.7.0-gamma2"
+leptos = "=0.7.0-gamma3"
+leptos-use = "=0.14.0-gamma2"
+leptos_axum = "=0.7.0-gamma3"
+leptos_dom = "=0.7.0-gamma3"
+leptos_meta = "=0.7.0-gamma3"
+leptos_router = "=0.7.0-gamma3"
 log = "0.4"
 mime_guess = "2"
 paste = "1"
@@ -118,7 +119,7 @@ tailwind_fuse = "0.3"
 test-context = "0.3"
 test-log = "0.2"
 test_utils = { git = "https://github.com/ifiokjr/wasm_solana", branch = "main" }
-test_utils_solana = "0.4"
+test_utils_solana = "0.5.2"
 thiserror = "1"
 tiny-skia = "0.11"
 tokio = "1"
@@ -132,14 +133,14 @@ uint = "0.10"
 url = "2"
 urlencoding = "2"
 validator = { version = "0.18", features = ["derive"] }
-wallet_standard = "0.2"
-wallet_standard_browser = "0.2"
-wallet_standard_wallets = "0.1"
+wallet_standard = "0.4.0"
+wallet_standard_browser = "0.3.1"
+wallet_standard_wallets = "0.1.12"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 wasm-bindgen-test = "0.3"
-wasm_client_anchor = "0.3"
-wasm_client_solana = "0.3"
+wasm_client_anchor = "0.5.1"
+wasm_client_solana = "0.5.0"
 web-sys = "0.3"
 
 # internal crates
@@ -152,6 +153,7 @@ rev = "b500cdc2a920cd5bff9e2dd974d7b97349d61464"
 
 [workspace.metadata.bin]
 anchor-cli = { version = "0.30.1", bins = ["anchor"] }
+avm = { version = "0.30.1", git = "https://github.com/coral-xyz/anchor", tag = "v0.30.1", bins = ["avm"] }
 cargo-insta = { version = "1.40.0" }
 cargo-leptos = { version = "0.2.20" }
 cargo-llvm-cov = { version = "0.6.13" }

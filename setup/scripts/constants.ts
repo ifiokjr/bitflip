@@ -1,4 +1,4 @@
-import path from "node:path";
+import * as path from "@std/path";
 
 export const EXTENSIONS_FOLDER = path.join(
 	import.meta.dirname ?? "",
