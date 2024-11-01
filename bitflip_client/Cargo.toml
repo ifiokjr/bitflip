@@ -38,7 +38,7 @@ wasm_client_solana = { workspace = true }
 [dev-dependencies]
 anyhow = { workspace = true }
 assert2 = { workspace = true }
-insta = { workspace = true, features = ["ron", "yaml", "redactions"] }
+insta = { workspace = true, features = ["json", "redactions", "ron", "yaml"] }
 rstest = { workspace = true }
 solana-program-test = { workspace = true }
 spl-associated-token-account = { workspace = true }

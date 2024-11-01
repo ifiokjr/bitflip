@@ -1,56 +1,56 @@
 use anchor_lang::prelude::*;
 
-use crate::BITS_DATA_SECTION_LENGTH;
-use crate::BITS_DATA_SECTIONS;
+use crate::BITFLIP_SECTION_LENGTH;
 
 #[error_code]
 pub enum BitflipError {
+	#[msg(
+		"The incorrect section is being initialized. The sections must be initialized sequentially"
+	)]
+	IncorrectSectionInitialized,
 	#[msg("The space is already fully initialized")]
 	BitsIncreaseSpaceInvalid,
 	#[msg("No update recorded")]
 	BitsUnchanged,
+	#[msg("The data section index must be a multiple of 16")]
+	Invalid256BitsDataSectionIndex,
 	#[msg("The provided account was invalid")]
 	InvalidAccount,
-	#[msg("The bits array is an invalid length")]
-	InvalidBitsLength,
-	#[msg("Invalid bit data section requested")]
-	InvalidBitsDataSection,
-	#[msg("Invalid bits data section index requested")]
-	InvalidBitsDataSectionIndex,
+	#[msg("There are invalid bit changes. This should not be possible")]
+	InvalidBitChanges,
+	#[msg("The bit offset is invalid and must be less than 16")]
+	InvalidBitOffset,
+	#[msg("Invalid section requested")]
+	InvalidSectionRequested,
+	#[msg("Invalid section index requested")]
+	InvalidSectionIndex,
 	#[msg("Invalid bits data section array length")]
 	InvalidBitsDataSectionLength,
 	#[msg("Data sections initialized out of order")]
 	InvalidBitsDataSectionOrder,
+	#[msg("The bits array is an invalid length")]
+	InvalidBitsLength,
 	#[msg("An invalid number of flipped bits was provided")]
 	InvalidFlippedBits,
-	#[msg("The data section index must be a multiple of 16")]
-	Invalid256BitsDataSectionIndex,
-	#[msg("The bit offset is invalid and must be less than 16")]
-	InvalidBitOffset,
-	#[msg("The current `BitsMetaState` is not running")]
+	#[msg("The current `GameState` is not running")]
 	NotRunning,
-	#[msg("The admin used was incorrect")]
-	UnauthorizedAdmin,
-	#[msg("All bit data sections have already been initialized")]
-	AllSectionsInitialized,
 	#[msg("The token is not yet initialized")]
 	TokenNotInitialized,
-}
-
-pub fn validate_data_section(section: u8) -> Result<()> {
-	require!(
-		usize::from(section) < BITS_DATA_SECTIONS,
-		BitflipError::InvalidBitsDataSection
-	);
-
-	Ok(())
+	#[msg("The admin used was incorrect")]
+	UnauthorizedAdmin,
+	#[msg("The previous section does not meet the minimum flips threshold")]
+	MinimumFlipThreshold,
+	#[msg("The same account cannot own consecutive sections")]
+	SectionOwnerDuplicate,
+	#[msg("The access signer has not been updated")]
+	AccessSignerNotUpdated,
 }
 
 /// Returns the offset.
-pub fn validate_data_section_index(index: u16) -> Result<()> {
+pub fn validate_section_index(index: u16) -> Result<()> {
 	require!(
-		usize::from(index) < BITS_DATA_SECTION_LENGTH,
-		BitflipError::InvalidBitsDataSectionIndex
+		usize::from(index) < BITFLIP_SECTION_LENGTH,
+		BitflipError::InvalidSectionIndex
 	);
 
 	Ok(())

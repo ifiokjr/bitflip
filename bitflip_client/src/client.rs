@@ -1,47 +1,87 @@
-use std::ops::Div;
-use std::ops::Mul;
-
 use anchor_spl::token_2022;
+use bitflip_program::FlipBitsProps;
 use bitflip_program::ID_CONST;
 use bitflip_program::InitializeTokenProps;
-use bitflip_program::SetBitsProps;
 use bitflip_program::SetBitsVariant;
 use bitflip_program::accounts;
 use bitflip_program::accounts::InitializeToken;
-use solana_sdk::compute_budget::ComputeBudgetInstruction;
+use solana_sdk::hash;
+use solana_sdk::nonce;
+use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
+#[cfg(not(feature = "test_banks_client"))]
+use solana_sdk::system_instruction::advance_nonce_account;
 use solana_sdk::system_program;
+use solana_sdk::sysvar;
 use spl_associated_token_account::get_associated_token_address_with_program_id;
 use wallet_standard::prelude::*;
 use wasm_client_anchor::AnchorClientError;
 use wasm_client_anchor::AnchorClientResult;
-use wasm_client_anchor::EmptyAnchorRequest;
 use wasm_client_anchor::create_program_client;
 use wasm_client_anchor::create_program_client_macro;
 use wasm_client_anchor::prelude::*;
+use wasm_client_solana::SolanaRpcClient;
+use wasm_client_solana::nonce_utils;
 
-use crate::get_pda_bits_data_section;
-use crate::get_pda_bits_meta;
+use crate::get_derived_player_token_account;
 use crate::get_pda_config;
+use crate::get_pda_derived_player;
+use crate::get_pda_game;
+use crate::get_pda_game_nonce;
 use crate::get_pda_mint;
+use crate::get_pda_section;
 use crate::get_pda_treasury;
+use crate::get_player_token_account;
+use crate::get_section_token_account;
+use crate::get_treasury_token_account;
 
 create_program_client!(ID_CONST, BitflipProgramClient);
 create_program_client_macro!(bitflip_program, BitflipProgramClient);
 
-bitflip_program_client_request_builder!(InitializeConfig);
+bitflip_program_client_request_builder!(InitializeConfig, "optional:args");
 bitflip_program_client_request_builder!(InitializeToken);
-bitflip_program_client_request_builder!(InitializeBitsMeta, "optional:args");
-bitflip_program_client_request_builder!(InitializeBitsDataSection);
-bitflip_program_client_request_builder!(StartBitsSession);
-bitflip_program_client_request_builder!(SetBits);
+bitflip_program_client_request_builder!(InitializeGame, "optional:args");
+bitflip_program_client_request_builder!(StartGame, "optional:args");
+bitflip_program_client_request_builder!(UnlockSection, "optional:args");
+bitflip_program_client_request_builder!(FlipBits);
+bitflip_program_client_request_builder!(CreateDerivedPlayer, "optional:args");
+bitflip_program_client_request_builder!(UpdateAuthority, "optional:args");
+bitflip_program_client_request_builder!(RefreshAccessSigner, "optional:args");
+
+/// Initialize the config for this program.
+///
+/// The program client must use the `authority` as the payer. The `admin` will
+/// need to be added as a signer to the generated transaction.
+pub fn initialize_config<W: WalletAnchor>(
+	program_client: &BitflipProgramClient<W>,
+	admin: Pubkey,
+) -> InitializeConfigRequest<'_, W> {
+	let config = get_pda_config().0;
+	let treasury = get_pda_treasury().0;
+	let authority = program_client.payer();
+	let system_program = system_program::ID;
+
+	let request = program_client
+		.initialize_config()
+		.accounts(accounts::InitializeConfig {
+			config,
+			admin,
+			treasury,
+			authority,
+			system_program,
+		})
+		.build();
+
+	request
+}
 
 /// Initialize the token request.
-pub fn initialize_token_request<'a, W: WalletAnchor>(
-	program_client: &'a BitflipProgramClient<W>,
-	signer: &'a Keypair,
-) -> InitializeTokenRequest<'a, W> {
-	let authority = signer.pubkey();
+///
+/// The payer is the authority and is provided by the program client.
+pub fn initialize_token_request<W: WalletAnchor>(
+	program_client: &BitflipProgramClient<W>,
+) -> InitializeTokenRequest<'_, W> {
+	let authority = program_client.payer();
 	let (config, _) = get_pda_config();
 	let (mint, _) = get_pda_mint();
 	let (treasury, _) = get_pda_treasury();
@@ -56,7 +96,7 @@ pub fn initialize_token_request<'a, W: WalletAnchor>(
 		.initialize_token()
 		.args(InitializeTokenProps {
 			name: "Bitflip".into(),
-			symbol: "BITFLIP".into(),
+			symbol: "BIT".into(),
 			uri: "https://bitflip.art/token.json".into(),
 		})
 		.accounts(InitializeToken {
@@ -70,135 +110,176 @@ pub fn initialize_token_request<'a, W: WalletAnchor>(
 			system_program,
 			bitflip_program,
 		})
-		.signer(signer)
 		.build()
 }
 
-/// Initialize all the sections for the bitflip game.
-pub async fn initialize_bits_data_sections_request<'a, W: WalletAnchor>(
-	program_client: &'a BitflipProgramClient<W>,
-	signer: &'a Keypair,
-	game_index: u8,
-) -> AnchorClientResult<Vec<EmptyAnchorRequest<'a, W>>> {
-	let (config, _) = get_pda_config();
-	let (bits_meta, _) = get_pda_bits_meta(0);
-	let system_program = system_program::ID;
-
-	let create_request = move |section: u8| {
-		let bits_data_section = get_pda_bits_data_section(game_index, section).0;
-
-		program_client
-			.initialize_bits_data_section()
-			.args(section)
-			.accounts(accounts::InitializeBitsDataSection {
-				config,
-				bits_meta,
-				bits_data_section,
-				authority: signer.pubkey(),
-				system_program,
-			})
-			.signer(signer)
-			.build()
-	};
-
-	let Some(compute_units) = create_request(0)
-		.simulate_transaction()
-		.await?
-		.value
-		.units_consumed
-		.map(|v| v.div(100).mul(110) as u32)
-	else {
-		return Err(AnchorClientError::Custom(
-			"Could not simulate the transaction".into(),
-		));
-	};
-
-	log::info!("These are the calculated computed units: {compute_units}");
-
-	let mut requests = vec![];
-	let steps = MAX_COMPUTE_UNIT_LIMIT / compute_units;
-	log::info!("number of steps: {steps}");
-
-	for chunk in range_chunks(0..16, steps as usize) {
-		log::info!("creating sections {chunk:#?} with len: {}", chunk.len());
-		let mut instructions = vec![];
-		let compute_limit_instruction =
-			ComputeBudgetInstruction::set_compute_unit_limit(compute_units.mul(chunk.len() as u32));
-
-		instructions.push(compute_limit_instruction);
-
-		for section in chunk {
-			instructions.append(&mut create_request(section as u8).instructions());
-		}
-
-		let request = program_client
-			.empty_request()
-			.instructions(instructions)
-			.sync_signers(vec![signer])
-			.build();
-
-		requests.push(request);
-	}
-
-	Ok(requests)
-}
-
-pub fn start_bits_session_request<'a, W: WalletAnchor>(
-	program_client: &'a BitflipProgramClient<W>,
-	signer: &'a Keypair,
-	game_index: u8,
-) -> StartBitsSessionRequest<'a, W> {
-	let (config, _) = get_pda_config();
-	let (bits_meta, _) = get_pda_bits_meta(game_index);
-
-	program_client
-		.start_bits_session()
-		.signer(signer)
-		.args(0)
-		.accounts(accounts::StartBitsSession {
-			config,
-			bits_meta,
-			authority: signer.pubkey(),
-			system_program: system_program::ID,
-		})
-		.build()
-}
-
-pub fn set_bits_request<W: WalletAnchor>(
+pub fn initialize_game_request<W: WalletAnchor>(
 	program_client: &BitflipProgramClient<W>,
+	access_signer: Pubkey,
+	refresh_signer: Pubkey,
 	game_index: u8,
-	section: u8,
-	index: u16,
-	variant: SetBitsVariant,
-) -> SetBitsRequest<'_, W> {
-	let (config, _) = get_pda_config();
-	let player = WalletSolanaPubkey::pubkey(program_client.wallet());
-
-	let (bits_meta, _) = get_pda_bits_meta(0);
-	let (mint, _) = get_pda_mint();
-	let (treasury, _) = get_pda_treasury();
-	let token_program = token_2022::ID;
-	let treasury_token_account =
-		get_associated_token_address_with_program_id(&treasury, &mint, &token_program);
-	let associated_token_program = spl_associated_token_account::ID;
-	let player_token_account =
-		get_associated_token_address_with_program_id(&player, &mint, &token_program);
+) -> InitializeGameRequest<'_, W> {
+	let config = get_pda_config().0;
+	let game = get_pda_game(game_index).0;
+	let game_nonce = get_pda_game_nonce(game_index).0;
+	let authority = program_client.payer();
+	let recent_blockhashes = sysvar::recent_blockhashes::ID;
+	let rent = sysvar::rent::ID;
 	let system_program = system_program::ID;
 
 	program_client
-		.set_bits()
-		.args(SetBitsProps {
-			section,
-			index,
-			variant,
+		.initialize_game()
+		.accounts(accounts::InitializeGame {
+			config,
+			game,
+			game_nonce,
+			authority,
+			access_signer,
+			refresh_signer,
+			recent_blockhashes,
+			rent,
+			system_program,
 		})
-		.accounts(accounts::SetBits {
+		.build()
+}
+/// Unlock a section using a `DurableNonce` tranaction.
+///
+/// The request that is returned from this method still needs to be signed by
+/// the backend wih the `access_signer`.
+pub fn unlock_section_request<W: WalletAnchor>(
+	program_client: &BitflipProgramClient<W>,
+	access_signer: Pubkey,
+	game_index: u8,
+	section_index: u8,
+	_nonce_blockhash: hash::Hash,
+) -> UnlockSectionRequest<'_, W> {
+	let config = get_pda_config().0;
+	let mint = get_pda_mint().0;
+	let treasury = get_pda_treasury().0;
+	let treasury_token_account = get_treasury_token_account();
+	let player = program_client.payer();
+	let player_token_account = get_player_token_account(&player);
+	let associated_token_program = spl_associated_token_account::ID;
+	let token_program = token_2022::ID;
+	#[cfg(not(feature = "test_banks_client"))]
+	let game_nonce = get_pda_game_nonce(game_index).0;
+	let game = get_pda_game(0).0;
+	let system_program = system_program::ID;
+	let section = get_pda_section(game_index, section_index).0;
+	let section_token_account = get_section_token_account(game_index, section_index);
+	log::info!("game_index: {game_index}, section_index: {section_index}");
+	let previous_section =
+		{ (section_index > 0).then(|| get_pda_section(game_index, section_index - 1).0) };
+	#[cfg(not(feature = "test_banks_client"))]
+	let advance_nonce_instruction = advance_nonce_account(&game_nonce, &access_signer);
+	let request = program_client.unlock_section();
+	#[cfg(not(feature = "test_banks_client"))]
+	let request = request
+		.blockhash(_nonce_blockhash)
+		.instruction(advance_nonce_instruction);
+	let request = request
+		.accounts(accounts::UnlockSection {
 			config,
 			mint,
 			treasury,
 			treasury_token_account,
-			bits_meta,
-			bits_data_section: get_pda_bits_data_section(game_index, section).0,
+			game,
+			section,
+			section_token_account,
+			previous_section,
+			player,
+			player_token_account,
+			associated_token_program,
+			token_program,
+			system_program,
+			access_signer,
+		})
+		.build();
+
+	request
+}
+
+pub async fn get_game_nonce_account(
+	rpc: &SolanaRpcClient,
+	game_index: u8,
+) -> AnchorClientResult<nonce::state::Data> {
+	let game_nonce = get_pda_game_nonce(game_index).0;
+	let nonce_account = nonce_utils::get_account(rpc, &game_nonce)
+		.await
+		.map_err(|e| AnchorClientError::Custom(e.to_string()))?;
+	let nonce_data = nonce_utils::data_from_account(&nonce_account)
+		.map_err(|e| AnchorClientError::Custom(e.to_string()))?;
+
+	Ok(nonce_data)
+}
+
+/// Start the game using the `authority` as the payer for the transaction.
+///
+/// The request will still need to be signed on the backend by the
+/// `access_signer`.
+pub fn start_game_request<W: WalletAnchor>(
+	program_client: &BitflipProgramClient<W>,
+	access_signer: Pubkey,
+	game_index: u8,
+) -> StartGameRequest<'_, W> {
+	let config = get_pda_config().0;
+	let game = get_pda_game(game_index).0;
+	let authority = program_client.payer();
+	let system_program = system_program::ID;
+
+	program_client
+		.start_game()
+		.accounts(accounts::StartGame {
+			config,
+			game,
+			authority,
+			access_signer,
+			system_program,
+		})
+		.build()
+}
+
+pub fn flip_bits_request<W: WalletAnchor>(
+	program_client: &BitflipProgramClient<W>,
+	game_index: u8,
+	section_index: u8,
+	array_index: u16,
+	variant: SetBitsVariant,
+) -> FlipBitsRequest<'_, W> {
+	let (config, _) = get_pda_config();
+	let player = program_client.wallet().solana_pubkey();
+	let game = get_pda_game(game_index).0;
+	let mint = get_pda_mint().0;
+	let section = get_pda_section(game_index, section_index).0;
+	let section_token_account = get_section_token_account(game_index, section_index);
+	let token_program = token_2022::ID;
+	let associated_token_program = spl_associated_token_account::ID;
+	let player_token_account = get_player_token_account(&player);
+	let system_program = system_program::ID;
+
+	log::info!(
+		"\nconfig: {config}
+player: {player}
+mint: {mint}
+game: {game}
+section: {section}
+section_token_account: {section_token_account}
+player_token_account: {player_token_account}"
+	);
+
+	program_client
+		.flip_bits()
+		.args(FlipBitsProps {
+			section_index,
+			array_index,
+			variant,
+		})
+		.accounts(accounts::FlipBits {
+			config,
+			mint,
+			game,
+			section,
+			section_token_account,
 			player,
 			player_token_account,
 			associated_token_program,
@@ -208,32 +289,75 @@ pub fn set_bits_request<W: WalletAnchor>(
 		.build()
 }
 
-pub const MAX_COMPUTE_UNIT_LIMIT: u32 = 1_400_000;
-pub(crate) struct RangeChunks {
-	start: usize,
-	end: usize,
-	chunk_size: usize,
+/// The player should be the wallet's pubkey included in the `program_client`.
+pub fn create_derived_player_request<W: WalletAnchor>(
+	program_client: &BitflipProgramClient<W>,
+) -> CreateDerivedPlayerRequest<'_, W> {
+	let config = get_pda_config().0;
+	let mint = get_pda_mint().0;
+	let player = program_client.wallet().solana_pubkey();
+	let derived_player = get_pda_derived_player(&player).0;
+	let derived_player_token_account = get_derived_player_token_account(&derived_player);
+	let associated_token_program = spl_associated_token_account::ID;
+	let token_program = token_2022::ID;
+	let system_program = system_program::ID;
+
+	program_client
+		.create_derived_player()
+		.accounts(accounts::CreateDerivedPlayer {
+			config,
+			mint,
+			derived_player,
+			derived_player_token_account,
+			player,
+			associated_token_program,
+			token_program,
+			system_program,
+		})
+		.build()
 }
 
-impl Iterator for RangeChunks {
-	type Item = std::ops::Range<usize>;
+/// Refresh the access signer for the game.
+///
+/// The refresh signer must be included as a signer in the transaction.
+pub fn refresh_access_signer_request<'a, W: WalletAnchor>(
+	program_client: &'a BitflipProgramClient<W>,
+	game_index: u8,
+	access_signer_keypair: &'a Keypair,
+) -> RefreshAccessSignerRequest<'a, W> {
+	let config = get_pda_config().0;
+	let game = get_pda_game(game_index).0;
+	let refresh_signer = program_client.payer();
+	let access_signer = access_signer_keypair.pubkey();
 
-	fn next(&mut self) -> Option<Self::Item> {
-		if self.start >= self.end {
-			None
-		} else {
-			let chunk_end = (self.start + self.chunk_size).min(self.end);
-			let chunk = self.start..chunk_end;
-			self.start = chunk_end;
-			Some(chunk)
-		}
-	}
+	program_client
+		.refresh_access_signer()
+		.signer(access_signer_keypair)
+		.accounts(accounts::RefreshAccessSigner {
+			config,
+			game,
+			access_signer,
+			refresh_signer,
+		})
+		.build()
 }
 
-fn range_chunks(range: std::ops::Range<usize>, chunk_size: usize) -> RangeChunks {
-	RangeChunks {
-		start: range.start,
-		end: range.end,
-		chunk_size,
-	}
+/// Update the authority of the config. The new admin must be included as a
+/// signer in the transaction when submitted. Submitting the transaction without
+/// manually signing will not succeed.
+pub fn update_authority_request<W: WalletAnchor>(
+	program_client: &BitflipProgramClient<W>,
+	new_authority: Pubkey,
+) -> UpdateAuthorityRequest<'_, W> {
+	let config = get_pda_config().0;
+	let authority = program_client.payer();
+
+	program_client
+		.update_authority()
+		.accounts(accounts::UpdateAuthority {
+			config,
+			authority,
+			new_authority,
+		})
+		.build()
 }

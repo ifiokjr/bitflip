@@ -3,21 +3,34 @@ use std::hash::RandomState;
 
 use anchor_lang::AnchorSerialize;
 use anchor_lang::Discriminator;
+use anchor_lang::system_program;
+use anchor_spl::token::TokenAccount;
 use anyhow::Result;
 use bitflip_client::BitflipProgramClient;
-use bitflip_client::get_pda_bits_data_section;
-use bitflip_client::get_pda_bits_meta;
 use bitflip_client::get_pda_config;
+use bitflip_client::get_pda_game;
+use bitflip_client::get_pda_game_nonce;
+use bitflip_client::get_pda_mint;
+use bitflip_client::get_pda_section;
 use bitflip_client::get_pda_treasury;
-use bitflip_program::BITS_DATA_SECTION_LENGTH;
-use bitflip_program::BitsDataSectionState;
-use bitflip_program::BitsMetaState;
+use bitflip_client::get_section_token_account;
+use bitflip_program::ConfigState;
+use bitflip_program::GameState;
 use bitflip_program::ID_CONST;
-use bitflip_program::InitializeConfigProps;
+use bitflip_program::MINIMUM_FLIPS_PER_SECTION;
+use bitflip_program::SectionState;
+use bitflip_program::TOKEN_DECIMALS;
+use bitflip_program::TOKENS_PER_SECTION;
+use bitflip_program::get_token_amount;
 use solana_sdk::account::AccountSharedData;
 use solana_sdk::account::WritableAccount;
+use solana_sdk::account_utils::StateMut;
 use solana_sdk::commitment_config::CommitmentLevel;
+use solana_sdk::hash::Hash;
 use solana_sdk::native_token::sol_to_lamports;
+use solana_sdk::nonce;
+use solana_sdk::nonce::state::DurableNonce;
+use solana_sdk::program_pack::Pack;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::rent::Rent;
 use solana_sdk::signature::Keypair;
@@ -32,6 +45,7 @@ use test_utils_solana::TestRpcProvider;
 use test_utils_solana::anchor_processor;
 use test_utils_solana::solana_sdk::account::Account;
 use wallet_standard_wallets::MemoryWallet;
+use wasm_client_anchor::prelude::*;
 use wasm_client_solana::SolanaRpcClient;
 
 #[cfg(feature = "test_validator")]
@@ -99,6 +113,10 @@ pub(crate) async fn create_program_context_with_factory<F: Fn(&mut ProgramTest)>
 		lamports: sol_to_lamports(10.0),
 		..Account::default()
 	});
+	program_test.add_account(create_wallet_keypair().pubkey(), Account {
+		lamports: sol_to_lamports(10.0),
+		..Account::default()
+	});
 
 	let context = program_test.start_with_context().await;
 
@@ -114,6 +132,14 @@ pub fn get_admin_program(rpc: &SolanaRpcClient) -> TestBitflipProgramClient {
 	get_program(rpc, &create_admin_keypair())
 }
 
+pub fn get_authority_program(rpc: &SolanaRpcClient) -> TestBitflipProgramClient {
+	get_program(rpc, &create_authority_keypair())
+}
+
+pub fn get_wallet_program(rpc: &SolanaRpcClient) -> TestBitflipProgramClient {
+	get_program(rpc, &create_wallet_keypair())
+}
+
 /// A program client using a custom payer.
 pub fn get_program(rpc: &SolanaRpcClient, payer: &Keypair) -> TestBitflipProgramClient {
 	let wallet = MemoryWallet::new(rpc.clone(), &[payer.insecure_clone()]);
@@ -127,63 +153,103 @@ pub fn get_program(rpc: &SolanaRpcClient, payer: &Keypair) -> TestBitflipProgram
 
 pub fn create_config_state(mint_bump: Option<u8>) -> AccountSharedData {
 	let authority = create_authority_keypair().pubkey();
-	let (_, bump) = get_pda_config();
-	let (_, treasury_bump) = get_pda_treasury();
-	let mut state = InitializeConfigProps { authority }.into_launchpad_state(bump, treasury_bump);
+	let config_bump = get_pda_config().1;
+	let treasury_bump = get_pda_treasury().1;
+	let mut state = ConfigState::new(authority, config_bump, treasury_bump);
 
 	if let Some(mint_bump) = mint_bump {
 		state.mint_bump = mint_bump;
 	}
 
-	AccountSharedData::from_anchor_data(state, ID_CONST)
+	state.into_account_shared_data()
 }
 
-pub fn create_bits_meta_state(game_index: u8, sections: Option<u8>) -> AccountSharedData {
-	let (_, bump) = get_pda_bits_meta(game_index);
-	let mut bits_meta_state = BitsMetaState::new(game_index, bump);
+pub fn create_game_state(
+	game_index: u8,
+	section_index: u8,
+	start_time: i64,
+	access_expiry: i64,
+) -> (AccountSharedData, AccountSharedData, Keypair, Keypair) {
+	let game_bump = get_pda_game(game_index).1;
+	let game_nonce_bump = get_pda_game_nonce(game_index).1;
+	let (access_signer, refresh_signer) = (Keypair::new(), Keypair::new());
+	let game_state = GameState::builder()
+		.access_signer(access_signer.pubkey())
+		.refresh_signer(refresh_signer.pubkey())
+		.start_time(start_time)
+		.game_index(game_index)
+		.bump(game_bump)
+		.nonce_bump(game_nonce_bump)
+		.access_expiry(access_expiry)
+		.section_index(section_index)
+		.build();
 
-	if let Some(last_section) = sections {
-		for section in 0..last_section {
-			let (_, bump) = get_pda_bits_data_section(game_index, section);
-			bits_meta_state.section_bumps.push(bump);
-		}
-	}
+	let state = nonce::State::new_initialized(
+		&access_signer.pubkey(),
+		DurableNonce::from_blockhash(&Hash::default()),
+		100_000,
+	);
+	let versioned_state = nonce::state::Versions::new(state);
+	let space = nonce::State::size();
+	let rent_sysvar = Rent::default();
+	let lamports = rent_sysvar.minimum_balance(space);
+	let mut game_nonce_account = AccountSharedData::new(lamports, space, &system_program::ID);
+	game_nonce_account.set_state(&versioned_state).unwrap();
 
-	let mut data = bits_meta_state.into_account_shared_data();
-
-	data.resize(BitsMetaState::space(), 0);
-
-	data
+	(
+		game_state.into_account_shared_data(),
+		game_nonce_account,
+		access_signer,
+		refresh_signer,
+	)
 }
 
-pub fn create_section_bumps(game_index: u8) -> Vec<u8> {
-	let mut section_bumps = vec![];
+pub fn create_section_state(
+	game_index: u8,
+	next_section_index: u8,
+) -> HashMap<Pubkey, AccountSharedData> {
+	let mint = get_pda_mint().0;
+	let mut map = HashMap::new();
 
-	for section in 0..16 {
-		section_bumps.push(get_pda_bits_data_section(game_index, section).1);
-	}
+	for section_index in 0..next_section_index {
+		let (section, section_bump) = get_pda_section(game_index, section_index);
+		let section_token_account = get_section_token_account(game_index, section_index);
 
-	section_bumps
-}
+		let mut section_state =
+			SectionState::new(Pubkey::new_unique(), section_bump, section_index);
+		section_state.flips = MINIMUM_FLIPS_PER_SECTION;
+		map.insert(section, section_state.into_account_shared_data());
 
-pub fn create_bits_section_state(index: u8) -> Vec<(Pubkey, AccountSharedData)> {
-	let mut states = vec![];
-
-	for section in 0u8..16u8 {
-		let mut data = vec![];
-		let state = BitsDataSectionState {
-			data: [0; BITS_DATA_SECTION_LENGTH],
+		let amount = get_token_amount(TOKENS_PER_SECTION, TOKEN_DECIMALS).unwrap();
+		let token_account_state = spl_token_2022::state::Account {
+			mint,
+			owner: section,
+			amount,
+			delegate: None.into(),
+			state: spl_token_2022::state::AccountState::Initialized,
+			is_native: None.into(),
+			delegated_amount: 0,
+			close_authority: None.into(),
 		};
-
-		data.append(&mut BitsDataSectionState::DISCRIMINATOR.to_vec());
-		data.append(&mut state.to_bytes());
-		let rent = Rent::default().minimum_balance(BitsDataSectionState::space());
-		let account = AccountSharedData::create(rent, data, ID_CONST, false, u64::MAX);
-
-		states.push((get_pda_bits_data_section(index, section).0, account));
+		let token_account_data = {
+			let mut buf = vec![0u8; spl_token_2022::state::Account::LEN];
+			token_account_state.pack_into_slice(&mut buf[..]);
+			buf
+		};
+		let lamports = Rent::default().minimum_balance(token_account_data.len());
+		map.insert(
+			section_token_account,
+			AccountSharedData::create(
+				lamports,
+				token_account_data,
+				spl_token_2022::ID,
+				false,
+				u64::MAX,
+			),
+		);
 	}
 
-	states
+	map
 }
 
 pub type TestBitflipProgramClient = BitflipProgramClient<MemoryWallet>;
@@ -193,7 +259,7 @@ pub trait IntoAccountSharedData: AnchorSerialize + Discriminator {
 	fn into_account(self) -> Account;
 }
 
-impl IntoAccountSharedData for BitsMetaState {
+impl<T: AnchorSerialize + Discriminator> IntoAccountSharedData for T {
 	fn into_account_shared_data(self) -> AccountSharedData {
 		AccountSharedData::from_anchor_data(self, ID_CONST)
 	}
