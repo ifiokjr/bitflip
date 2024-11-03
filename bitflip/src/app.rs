@@ -1,10 +1,11 @@
 use std::collections::HashSet;
 
+use bitflip_client::get_pda_section;
 use bitflip_program::AnchorResult;
-use bitflip_program::BITS_DATA_SECTION_LENGTH;
-use bitflip_program::BitsDataSectionState;
+use bitflip_program::BITFLIP_SECTION_LENGTH;
+use bitflip_program::FlipBitsProps;
+use bitflip_program::SectionState;
 use bitflip_program::SetBitsDataSection;
-use bitflip_program::SetBitsProps;
 use bitflip_program::SetBitsVariant;
 use js_sys::Reflect;
 use leptos::html::Canvas;
@@ -20,6 +21,7 @@ use leptos_router::components::Route;
 use leptos_router::components::Router;
 use leptos_router::path;
 use rand::Rng;
+use solana_sdk::pubkey::Pubkey;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use web_sys::CanvasRenderingContext2d;
@@ -135,8 +137,8 @@ fn Bit4096(index: u16) -> impl IntoView {
 }
 
 #[component]
-pub fn BitCanvasSection(section: u8) -> impl IntoView {
-	let data_section = DataSectionContext::new(section);
+pub fn BitCanvasSection(game_index: u8, section_index: u8) -> impl IntoView {
+	let data_section = DataSectionContext::new(game_index, section_index);
 	let canvas_ref = NodeRef::<Canvas>::new();
 	let effect = move || {
 		let Some(canvas) = canvas_ref.get() else {
@@ -214,8 +216,8 @@ pub fn BitCanvasSection(section: u8) -> impl IntoView {
 
 /// A 256x256 bit array
 #[component]
-fn BitSection(section: u8) -> impl IntoView {
-	DataSectionContext::new(section);
+fn BitSection(game_index: u8, section_index: u8) -> impl IntoView {
+	DataSectionContext::new(game_index, section_index);
 
 	let render_children = move |vector_index| {
 		view! { <Bit4096 index=vector_index * 256 /> }
@@ -293,22 +295,21 @@ fn CheckboxIcon(
 #[derive(Clone, Copy)]
 pub struct DataSectionContext {
 	section: ReadSignal<u8>,
-	state: RwSignal<BitsDataSectionState>,
-	updates: RwSignal<HashSet<SetBitsProps>>,
+	state: RwSignal<SectionState>,
+	updates: RwSignal<HashSet<FlipBitsProps>>,
 }
 
 impl DataSectionContext {
-	pub fn new(section: u8) -> Self {
+	pub fn new(game_index: u8, section_index: u8) -> Self {
 		let mut rng = rand::thread_rng();
-		let mut inner_state = BitsDataSectionState {
-			data: [0; BITS_DATA_SECTION_LENGTH],
-		};
+		let section_bump = get_pda_section(game_index, section_index).1;
+		let mut inner_state = SectionState::new(Pubkey::new_unique(), section_bump, section_index);
 
-		for ii in 0..BITS_DATA_SECTION_LENGTH {
+		for ii in 0..BITFLIP_SECTION_LENGTH {
 			inner_state.data[ii] = rng.r#gen();
 		}
 
-		let (section, _) = signal(section);
+		let (section, _) = signal(section_index);
 		let state = RwSignal::new(inner_state);
 		let updates = RwSignal::new(HashSet::new());
 
@@ -331,9 +332,9 @@ impl DataSectionContext {
 		let section = self.section.get_untracked();
 		let mut state = self.state.write();
 		let updates = self.updates.read();
-		let new_update = SetBitsProps {
-			section,
-			index,
+		let new_update = FlipBitsProps {
+			section_index: section,
+			array_index: index,
 			variant,
 		};
 		let mut updates_to_remove = vec![];
@@ -373,14 +374,14 @@ impl DataSectionContext {
 	pub fn bit_is_updated(&self, index: u16, offset: u16) -> bool {
 		let updates = self.updates.read();
 		let section = self.section.get_untracked();
-		let on_update = SetBitsProps {
-			section,
-			index,
+		let on_update = FlipBitsProps {
+			section_index: section,
+			array_index: index,
 			variant: SetBitsVariant::On(offset),
 		};
-		let off_update = SetBitsProps {
-			section,
-			index,
+		let off_update = FlipBitsProps {
+			section_index: section,
+			array_index: index,
 			variant: SetBitsVariant::Off(offset),
 		};
 
@@ -389,13 +390,13 @@ impl DataSectionContext {
 
 	pub fn bit_16_is_updated(&self, index: u16) -> bool {
 		self.updates.read().iter().any(|update| {
-			update.index == index && matches!(update.variant, SetBitsVariant::Bit16(_))
+			update.array_index == index && matches!(update.variant, SetBitsVariant::Bit16(_))
 		})
 	}
 
 	pub fn bit_256_is_updated(&self, index: u16) -> bool {
 		self.updates.read().iter().any(|update| {
-			update.index == index && matches!(update.variant, SetBitsVariant::Bits256(_))
+			update.array_index == index && matches!(update.variant, SetBitsVariant::Bits256(_))
 		})
 	}
 

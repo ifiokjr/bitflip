@@ -5,6 +5,7 @@ use bitflip_program::InitializeTokenProps;
 use bitflip_program::SetBitsVariant;
 use bitflip_program::accounts;
 use bitflip_program::accounts::InitializeToken;
+use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::hash;
 use solana_sdk::nonce;
 use solana_sdk::pubkey::Pubkey;
@@ -256,6 +257,7 @@ pub fn flip_bits_request<W: WalletAnchor>(
 	let associated_token_program = spl_associated_token_account::ID;
 	let player_token_account = get_player_token_account(&player);
 	let system_program = system_program::ID;
+	let instruction = ComputeBudgetInstruction::set_compute_unit_limit(1_400_000);
 
 	log::info!(
 		"\nconfig: {config}
@@ -269,6 +271,7 @@ player_token_account: {player_token_account}"
 
 	program_client
 		.flip_bits()
+		.instruction(instruction)
 		.args(FlipBitsProps {
 			section_index,
 			array_index,

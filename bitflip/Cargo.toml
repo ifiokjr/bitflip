@@ -27,10 +27,12 @@ log = { workspace = true }
 mime_guess = { workspace = true, optional = true }
 rand = { workspace = true }
 rust-embed = { workspace = true, features = ["axum", "mime_guess", "tokio"], optional = true }
+serde = { workspace = true, features = ["derive"] }
 simple_logger = { workspace = true }
+solana-sdk = { workspace = true }
 thiserror.workspace = true
 tiny-skia = { workspace = true, optional = true }
-tokio = { workspace = true, features = ["rt-multi-thread"], optional = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"], optional = true }
 tower = { workspace = true, optional = true }
 tower-http = { workspace = true, features = ["fs", "compression-gzip", "compression-br"], optional = true }
 tracing = { workspace = true, optional = true }

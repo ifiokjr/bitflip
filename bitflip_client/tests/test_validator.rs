@@ -57,11 +57,9 @@ async fn initialize_config_test() -> anyhow::Result<()> {
 	let authority = authority_keypair.pubkey();
 	let system_program = system_program::id();
 	let (config, _) = get_pda_config();
+	log::info!("config: {config}");
 	let (treasury, _) = get_pda_treasury();
-	let mut accounts = HashMap::new();
-	accounts.insert(config, create_config_state(None));
-
-	let runner = create_runner_with_accounts(accounts).await;
+	let runner = create_runner_with_accounts(HashMap::new()).await;
 	let rpc = runner.rpc();
 
 	let program_client = get_authority_program(rpc);
@@ -108,7 +106,8 @@ async fn initialize_token() -> anyhow::Result<()> {
 	let request = initialize_token_request(&program_client);
 	let simulation = request.simulate().await?;
 	log::info!("simulation: {simulation:#?}");
-	request.sign_and_send_transaction().await?;
+	let signature = request.sign_and_send_transaction().await?;
+	rpc.confirm_transaction(&signature).await?;
 
 	let authority_redaction = create_insta_redaction(treasury, "authority:pubkey");
 	let mint_redaction = create_insta_redaction(mint, "mint:pubkey");
@@ -341,9 +340,10 @@ async fn unlock_first_section() -> anyhow::Result<()> {
 	let owner = create_wallet_keypair().pubkey();
 	let mint = get_pda_mint().0;
 
-	initialize_token_request(&get_authority_program(rpc))
+	let signature = initialize_token_request(&get_authority_program(rpc))
 		.sign_and_send_transaction()
 		.await?;
+	rpc.confirm_transaction(&signature).await?;
 
 	let blockhash = get_game_nonce_account(rpc, game_index).await?.blockhash();
 	let request = unlock_section_request(
@@ -361,7 +361,8 @@ async fn unlock_first_section() -> anyhow::Result<()> {
 
 	let mut transaction = request.sign_transaction().await?;
 	transaction.sign(&[&access_signer], None);
-	rpc.send_and_confirm_transaction(&transaction).await?;
+	let signature = rpc.send_and_confirm_transaction(&transaction).await?;
+	rpc.confirm_transaction(&signature).await?;
 
 	let data_redaction = |content: Content, _: ContentPath| {
 		let slice = content.as_slice().unwrap();
@@ -461,11 +462,12 @@ async fn toggle_bit() -> anyhow::Result<()> {
 	let section = get_pda_section(game_index, section_index).0;
 	let section_token_account = get_section_token_account(game_index, section_index);
 	let player_token_account = get_player_token_account(&player);
-
-	initialize_token_request(&get_authority_program(rpc))
+	let signature = initialize_token_request(&get_authority_program(rpc))
 		.sign_and_send_transaction()
 		.await?;
+	rpc.confirm_transaction(&signature).await?;
 	log::info!("setting up section: {section}, section_token_account: {section_token_account}");
+
 	let blockhash = get_game_nonce_account(rpc, game_index).await?.blockhash();
 	let unlock_request = unlock_section_request(
 		&program_client,
@@ -479,8 +481,10 @@ async fn toggle_bit() -> anyhow::Result<()> {
 
 	let mut unlock_section_transaction = unlock_request.sign_transaction().await?;
 	unlock_section_transaction.try_sign(&[&access_signer], None)?;
-	rpc.send_and_confirm_transaction(&unlock_section_transaction)
+	let signature = rpc
+		.send_and_confirm_transaction(&unlock_section_transaction)
 		.await?;
+	rpc.confirm_transaction(&signature).await?;
 	log::info!("done setting section");
 
 	let offset = 12;
@@ -494,7 +498,10 @@ async fn toggle_bit() -> anyhow::Result<()> {
 	);
 	let simulation = request.simulate().await?;
 	log::info!("simulation: {simulation:#?}");
-	request.sign_and_send_transaction().await?;
+	check!(simulation.value.units_consumed.unwrap() < 200_000);
+
+	let signature = request.sign_and_send_transaction().await?;
+	rpc.confirm_transaction(&signature).await?;
 
 	let account: SectionState = program_client.account(&bits_data_section).await?;
 	check!(account.data[0] == bits);

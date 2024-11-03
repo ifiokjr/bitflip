@@ -1,5 +1,8 @@
 pub mod app;
 #[cfg(feature = "ssr")]
+pub mod db;
+pub mod functions;
+#[cfg(feature = "ssr")]
 pub mod image_generator;
 mod wallet;
 

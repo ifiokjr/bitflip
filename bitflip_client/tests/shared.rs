@@ -4,7 +4,6 @@ use std::hash::RandomState;
 use anchor_lang::AnchorSerialize;
 use anchor_lang::Discriminator;
 use anchor_lang::system_program;
-use anchor_spl::token::TokenAccount;
 use anyhow::Result;
 use bitflip_client::BitflipProgramClient;
 use bitflip_client::get_pda_config;
@@ -91,6 +90,7 @@ pub async fn create_runner_with_accounts(
 			create_admin_keypair().pubkey(),
 			create_authority_keypair().pubkey(),
 			create_treasury_keypair().pubkey(),
+			create_wallet_keypair().pubkey(),
 		])
 		.commitment(CommitmentLevel::Finalized)
 		.accounts(accounts)
