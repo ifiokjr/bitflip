@@ -404,7 +404,7 @@ async fn unlock_first_section() -> anyhow::Result<()> {
 	insta::assert_compact_json_snapshot!(section_state, {
 		".data" => insta::dynamic_redaction(data_redaction),
 		".owner" => insta::dynamic_redaction(owner_redaction),
-	}, @r#"{"data": "[u16; 256]", "owner": "[owner:pubkey]", "flips": 0, "on": 0, "off": 4096, "bump": 254, "index": 0}"#);
+	}, @r#"{"owner": "[owner:pubkey]", "flips": 0, "on": 0, "off": 4096, "index": 0, "bump": 255, "dataBump": 255}"#);
 
 	let data = rpc.get_account_data(&section_token_account).await?;
 	let parsed_section_token_account = parse_token_v2(
