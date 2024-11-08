@@ -10,13 +10,16 @@ use bitflip_client::get_pda_config;
 use bitflip_client::get_pda_game;
 use bitflip_client::get_pda_game_nonce;
 use bitflip_client::get_pda_mint;
-use bitflip_client::get_pda_section;
+use bitflip_client::get_pda_section_data;
+use bitflip_client::get_pda_section_state;
 use bitflip_client::get_pda_treasury;
 use bitflip_client::get_section_token_account;
+use bitflip_program::BITFLIP_SECTION_LENGTH;
 use bitflip_program::ConfigState;
 use bitflip_program::GameState;
 use bitflip_program::ID_CONST;
 use bitflip_program::MINIMUM_FLIPS_PER_SECTION;
+use bitflip_program::SectionData;
 use bitflip_program::SectionState;
 use bitflip_program::TOKEN_DECIMALS;
 use bitflip_program::TOKENS_PER_SECTION;
@@ -189,6 +192,7 @@ pub fn create_game_state(
 		DurableNonce::from_blockhash(&Hash::default()),
 		100_000,
 	);
+	log::info!("game_state: {game_state:#?}");
 	let versioned_state = nonce::state::Versions::new(state);
 	let space = nonce::State::size();
 	let rent_sysvar = Rent::default();
@@ -212,13 +216,30 @@ pub fn create_section_state(
 	let mut map = HashMap::new();
 
 	for section_index in 0..next_section_index {
-		let (section, section_bump) = get_pda_section(game_index, section_index);
+		let (section, section_bump) = get_pda_section_state(game_index, section_index);
+		let (section_data, section_data_bump) = get_pda_section_data(game_index, section_index);
 		let section_token_account = get_section_token_account(game_index, section_index);
 
-		let mut section_state =
-			SectionState::new(Pubkey::new_unique(), section_bump, section_index);
+		let mut section_state = SectionState::new(
+			Pubkey::new_unique(),
+			section_index,
+			section_bump,
+			section_data_bump,
+		);
 		section_state.flips = MINIMUM_FLIPS_PER_SECTION;
 		map.insert(section, section_state.into_account_shared_data());
+
+		let section_data_account = {
+			let section_data = SectionData {
+				data: [0; BITFLIP_SECTION_LENGTH],
+			};
+			let mut data = vec![];
+			data.append(&mut SectionData::DISCRIMINATOR.to_vec());
+			data.append(&mut section_data.to_bytes());
+			let rent = Rent::default().minimum_balance(SectionData::space());
+			AccountSharedData::create(rent, data, ID_CONST, false, u64::MAX)
+		};
+		map.insert(section_data, section_data_account);
 
 		let amount = get_token_amount(TOKENS_PER_SECTION, TOKEN_DECIMALS).unwrap();
 		let token_account_state = spl_token_2022::state::Account {

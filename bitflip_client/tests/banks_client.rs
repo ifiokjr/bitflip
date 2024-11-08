@@ -10,7 +10,8 @@ use bitflip_client::get_pda_config;
 use bitflip_client::get_pda_game;
 use bitflip_client::get_pda_game_nonce;
 use bitflip_client::get_pda_mint;
-use bitflip_client::get_pda_section;
+use bitflip_client::get_pda_section_data;
+use bitflip_client::get_pda_section_state;
 use bitflip_client::get_pda_treasury;
 use bitflip_client::get_player_token_account;
 use bitflip_client::get_section_token_account;
@@ -22,6 +23,7 @@ use bitflip_program::ACCESS_SIGNER_DURATION;
 use bitflip_program::BITFLIP_SECTION_LENGTH;
 use bitflip_program::ConfigState;
 use bitflip_program::GameState;
+use bitflip_program::SectionData;
 use bitflip_program::SectionState;
 use bitflip_program::SetBitsVariant;
 use bitflip_program::TOKEN_DECIMALS;
@@ -323,7 +325,7 @@ async fn unlock_first_section() -> anyhow::Result<()> {
 	let config = get_pda_config().0;
 	let game = get_pda_game(game_index).0;
 	let game_nonce = get_pda_game_nonce(game_index).0;
-	let section = get_pda_section(game_index, section_index).0;
+	let section = get_pda_section_state(game_index, section_index).0;
 	let section_token_account = get_section_token_account(game_index, section_index);
 	let now = SystemTime::now()
 		.duration_since(SystemTime::UNIX_EPOCH)?
@@ -391,7 +393,7 @@ async fn unlock_first_section() -> anyhow::Result<()> {
 	insta::assert_compact_json_snapshot!(section_state, {
 		".data" => insta::dynamic_redaction(data_redaction),
 		".owner" => insta::dynamic_redaction(owner_redaction),
-	}, @r#"{"data": "[u16; 256]", "owner": "[owner:pubkey]", "flips": 0, "on": 0, "off": 4096, "bump": 254, "index": 0}"#);
+	}, @r#"{"owner": "[owner:pubkey]", "flips": 0, "on": 0, "off": 4096, "index": 0, "bump": 255, "dataBump": 255}"#);
 
 	let Account { data, .. } = rpc.get_account(&section_token_account).await?;
 	let parsed_section_token_account = parse_token_v2(
@@ -464,16 +466,18 @@ async fn toggle_bit() -> anyhow::Result<()> {
 	.await?;
 	let rpc = provider.to_rpc_client();
 	let program_client = get_wallet_program(&rpc);
-	let bits_data_section = get_pda_section(game_index, next_section_index).0;
+	let section_state = get_pda_section_state(game_index, next_section_index).0;
+	let section_data = get_pda_section_data(game_index, next_section_index).0;
 	let player = program_client.payer();
-	let section = get_pda_section(game_index, section_index).0;
 	let section_token_account = get_section_token_account(game_index, section_index);
 	let player_token_account = get_player_token_account(&player);
 
 	initialize_token_request(&get_authority_program(&rpc))
 		.sign_and_send_transaction()
 		.await?;
-	log::info!("setting up section: {section}, section_token_account: {section_token_account}");
+	log::info!(
+		"setting up section: {section_state}, section_token_account: {section_token_account}"
+	);
 	let blockhash = get_game_nonce_account(&rpc, game_index).await?.blockhash();
 	let unlock_request = unlock_section_request(
 		&program_client,
@@ -504,17 +508,18 @@ async fn toggle_bit() -> anyhow::Result<()> {
 	log::info!("simulation: {simulation:#?}");
 	request.sign_and_send_transaction().await?;
 
-	let account: SectionState = program_client.account(&bits_data_section).await?;
-	check!(account.data[0] == bits);
+	let section_data_account: SectionData = program_client.account(&section_data).await?;
+	check!(section_data_account.data[0] == bits);
 
 	let player_redaction = create_insta_redaction(player, "player:pubkey");
 	let mint_redaction = create_insta_redaction(mint, "mint:pubkey");
-	let section_redaction = create_insta_redaction(section, "section:pubkey");
+	let section_redaction = create_insta_redaction(section_state, "section:pubkey");
 	let raw_player_token_account = rpc.get_account(&player_token_account).await?;
 	let parsed_player_token_account = parse_token_v2(
 		raw_player_token_account.data(),
 		Some(&SplTokenAdditionalData::with_decimals(TOKEN_DECIMALS)),
 	)?;
+
 	log::info!("player token account: {parsed_player_token_account:#?}");
 	insta::assert_compact_json_snapshot!(parsed_player_token_account, {
 		".info.mint" => insta::dynamic_redaction(mint_redaction.clone()),
@@ -574,39 +579,22 @@ async fn toggle_bit() -> anyhow::Result<()> {
  }
  "#);
 
-	let game_state_account: GameState = program_client.account(&game).await?;
-	check!(game_state_account.started());
-	let section_state_account: SectionState = program_client.account(&section).await?;
-	let data_redaction = move |content: Content, _: ContentPath| {
-		let slice = content.as_slice().unwrap();
-		check!(
-			slice.len() == BITFLIP_SECTION_LENGTH,
-			"there should be {BITFLIP_SECTION_LENGTH} elements in the array"
-		);
-
-		for (ii, item) in slice.iter().enumerate() {
-			if ii == bit_index as usize {
-				check!(
-					item.as_u64().unwrap() as u16 == bits,
-					"item at index {ii} should be {bits}"
-				);
-			} else {
-				check!(
-					item.as_u64().unwrap() as u16 == 0,
-					"item at index {ii} should be 0"
-				);
-			}
+	let section_state_account: SectionState = program_client.account(&section_state).await?;
+	let section_data_account: SectionData = program_client.account(&section_data).await?;
+	for (ii, item) in section_data_account.data.iter().enumerate() {
+		if ii == bit_index as usize {
+			check!(*item == bits, "item at index {ii} should be {bits}");
+		} else {
+			check!(*item == 0, "item at index {ii} should be 0");
 		}
+	}
 
-		format!("[u16; {BITFLIP_SECTION_LENGTH}]")
-	};
 	let owner_redaction = create_insta_redaction(&player, "player:pubkey");
 
 	insta::assert_compact_json_snapshot!(section_state_account, {
-		".data" => insta::dynamic_redaction(data_redaction),
 		".owner" => insta::dynamic_redaction(owner_redaction),
 		".startTime" => "[timestamp]",
-	}, @r#"{"data": "[u16; 256]", "owner": "[player:pubkey]", "flips": 1, "on": 1, "off": 4095, "bump": 254, "index": 0}"#);
+	}, @r#"{"owner": "[player:pubkey]", "flips": 1, "on": 1, "off": 4095, "index": 0, "bump": 255, "dataBump": 255}"#);
 
 	Ok(())
 }

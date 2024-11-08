@@ -33,7 +33,7 @@ pub enum BitflipError {
 	#[msg("An invalid number of flipped bits was provided")]
 	InvalidFlippedBits,
 	#[msg("The current `GameState` is not running")]
-	NotRunning,
+	GameNotRunning,
 	#[msg("The token is not yet initialized")]
 	TokenNotInitialized,
 	#[msg("The admin used was incorrect")]

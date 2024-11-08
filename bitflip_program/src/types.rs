@@ -4,7 +4,7 @@ use anchor_spl::token_2022;
 
 use crate::SEED_GAME;
 use crate::SEED_PREFIX;
-use crate::SEED_SECTION;
+use crate::SEED_SECTION_STATE;
 use crate::TOKEN_DECIMALS;
 use crate::get_token_amount;
 
@@ -42,7 +42,7 @@ pub trait TransferTokenFromSection<'info> {
 			SEED_PREFIX,
 			SEED_GAME,
 			&self.game_index().to_le_bytes(),
-			SEED_SECTION,
+			SEED_SECTION_STATE,
 			&self.section_index().to_le_bytes(),
 			&[self.section_bump()],
 		];

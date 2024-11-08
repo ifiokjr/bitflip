@@ -6,7 +6,8 @@ use bitflip_program::SEED_GAME_NONCE;
 use bitflip_program::SEED_MINT;
 use bitflip_program::SEED_PLAYER;
 use bitflip_program::SEED_PREFIX;
-use bitflip_program::SEED_SECTION;
+use bitflip_program::SEED_SECTION_DATA;
+use bitflip_program::SEED_SECTION_STATE;
 use bitflip_program::SEED_TREASURY;
 use solana_sdk::pubkey::Pubkey;
 use spl_associated_token_account::get_associated_token_address_with_program_id;
@@ -86,11 +87,11 @@ pub fn get_pda_game_nonce_with_program(game_index: u8, program_id: &Pubkey) -> (
 	)
 }
 
-pub fn get_pda_section(game_index: u8, section_index: u8) -> (Pubkey, u8) {
-	get_pda_section_with_program(game_index, section_index, &ID_CONST)
+pub fn get_pda_section_state(game_index: u8, section_index: u8) -> (Pubkey, u8) {
+	get_pda_section_state_with_program(game_index, section_index, &ID_CONST)
 }
 
-pub fn get_pda_section_with_program(
+pub fn get_pda_section_state_with_program(
 	game_index: u8,
 	section_index: u8,
 	program_id: &Pubkey,
@@ -100,7 +101,28 @@ pub fn get_pda_section_with_program(
 			SEED_PREFIX,
 			SEED_GAME,
 			&game_index.to_le_bytes(),
-			SEED_SECTION,
+			SEED_SECTION_STATE,
+			&section_index.to_le_bytes(),
+		],
+		program_id,
+	)
+}
+
+pub fn get_pda_section_data(game_index: u8, section_index: u8) -> (Pubkey, u8) {
+	get_pda_section_data_with_program(game_index, section_index, &ID_CONST)
+}
+
+pub fn get_pda_section_data_with_program(
+	game_index: u8,
+	section_index: u8,
+	program_id: &Pubkey,
+) -> (Pubkey, u8) {
+	Pubkey::find_program_address(
+		&[
+			SEED_PREFIX,
+			SEED_GAME,
+			&game_index.to_le_bytes(),
+			SEED_SECTION_DATA,
 			&section_index.to_le_bytes(),
 		],
 		program_id,
@@ -108,7 +130,7 @@ pub fn get_pda_section_with_program(
 }
 
 pub fn get_section_token_account(game_index: u8, section_index: u8) -> Pubkey {
-	let section = get_pda_section(game_index, section_index).0;
+	let section = get_pda_section_state(game_index, section_index).0;
 	let mint = get_pda_mint().0;
 	let token_program = token_2022::ID;
 

@@ -80,7 +80,11 @@ pub const SEED_GAME: &[u8] = b"game";
 pub const SEED_GAME_NONCE: &[u8] = b"nonce";
 /// The PDA seed for a section within the game. Each game has 256 sections.
 #[constant]
-pub const SEED_SECTION: &[u8] = b"section";
+pub const SEED_SECTION_STATE: &[u8] = b"section_state";
+/// The PDA seed for the section data of each the game. Each game has 256
+/// sections.
+#[constant]
+pub const SEED_SECTION_DATA: &[u8] = b"section_data";
 
 /// Assuming a price of 100USD per sol. This is approximately 1 cent.
 #[constant]

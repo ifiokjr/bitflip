@@ -30,7 +30,8 @@ use crate::get_pda_derived_player;
 use crate::get_pda_game;
 use crate::get_pda_game_nonce;
 use crate::get_pda_mint;
-use crate::get_pda_section;
+use crate::get_pda_section_data;
+use crate::get_pda_section_state;
 use crate::get_pda_treasury;
 use crate::get_player_token_account;
 use crate::get_section_token_account;
@@ -109,7 +110,6 @@ pub fn initialize_token_request<W: WalletAnchor>(
 			associated_token_program,
 			token_program,
 			system_program,
-			bitflip_program,
 		})
 		.build()
 }
@@ -166,11 +166,12 @@ pub fn unlock_section_request<W: WalletAnchor>(
 	let game_nonce = get_pda_game_nonce(game_index).0;
 	let game = get_pda_game(0).0;
 	let system_program = system_program::ID;
-	let section = get_pda_section(game_index, section_index).0;
+	let section = get_pda_section_state(game_index, section_index).0;
+	let section_data = get_pda_section_data(game_index, section_index).0;
 	let section_token_account = get_section_token_account(game_index, section_index);
 	log::info!("game_index: {game_index}, section_index: {section_index}");
 	let previous_section =
-		{ (section_index > 0).then(|| get_pda_section(game_index, section_index - 1).0) };
+		{ (section_index > 0).then(|| get_pda_section_state(game_index, section_index - 1).0) };
 	#[cfg(not(feature = "test_banks_client"))]
 	let advance_nonce_instruction = advance_nonce_account(&game_nonce, &access_signer);
 	let request = program_client.unlock_section();
@@ -186,6 +187,7 @@ pub fn unlock_section_request<W: WalletAnchor>(
 			treasury_token_account,
 			game,
 			section,
+			section_data,
 			section_token_account,
 			previous_section,
 			player,
@@ -251,7 +253,8 @@ pub fn flip_bits_request<W: WalletAnchor>(
 	let player = program_client.wallet().solana_pubkey();
 	let game = get_pda_game(game_index).0;
 	let mint = get_pda_mint().0;
-	let section = get_pda_section(game_index, section_index).0;
+	let section = get_pda_section_state(game_index, section_index).0;
+	let section_data = get_pda_section_data(game_index, section_index).0;
 	let section_token_account = get_section_token_account(game_index, section_index);
 	let token_program = token_2022::ID;
 	let associated_token_program = spl_associated_token_account::ID;
@@ -282,6 +285,7 @@ player_token_account: {player_token_account}"
 			mint,
 			game,
 			section,
+			section_data,
 			section_token_account,
 			player,
 			player_token_account,

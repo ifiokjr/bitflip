@@ -10,7 +10,8 @@ use bitflip_client::get_pda_config;
 use bitflip_client::get_pda_game;
 use bitflip_client::get_pda_game_nonce;
 use bitflip_client::get_pda_mint;
-use bitflip_client::get_pda_section;
+use bitflip_client::get_pda_section_data;
+use bitflip_client::get_pda_section_state;
 use bitflip_client::get_pda_treasury;
 use bitflip_client::get_player_token_account;
 use bitflip_client::get_section_token_account;
@@ -22,6 +23,7 @@ use bitflip_program::ACCESS_SIGNER_DURATION;
 use bitflip_program::BITFLIP_SECTION_LENGTH;
 use bitflip_program::ConfigState;
 use bitflip_program::GameState;
+use bitflip_program::SectionData;
 use bitflip_program::SectionState;
 use bitflip_program::SetBitsVariant;
 use bitflip_program::TOKEN_DECIMALS;
@@ -317,11 +319,13 @@ async fn unlock_first_section() -> anyhow::Result<()> {
 	let config = get_pda_config().0;
 	let game = get_pda_game(game_index).0;
 	let game_nonce = get_pda_game_nonce(game_index).0;
-	let section = get_pda_section(game_index, section_index).0;
+	let section = get_pda_section_state(game_index, section_index).0;
 	let section_token_account = get_section_token_account(game_index, section_index);
 	let now = SystemTime::now()
 		.duration_since(SystemTime::UNIX_EPOCH)?
 		.as_secs() as i64;
+	log::info!("now: {now}");
+
 	let (game_account_data, game_nonce_account_data, access_signer, _) = create_game_state(
 		game_index,
 		section_index,
@@ -340,9 +344,25 @@ async fn unlock_first_section() -> anyhow::Result<()> {
 	let owner = create_wallet_keypair().pubkey();
 	let mint = get_pda_mint().0;
 
-	let signature = initialize_token_request(&get_authority_program(rpc))
-		.sign_and_send_transaction()
-		.await?;
+	log::warn!("the running game: {game}");
+	let game_state_account: GameState = rpc.get_anchor_account(&game).await?;
+	log::info!("onchain game_state: {game_state_account:#?}");
+
+	let authority_program_client = get_authority_program(rpc);
+	// let start_request = start_game_request(
+	// 	&authority_program_client,
+	// 	access_signer.pubkey(),
+	// 	game_index,
+	// );
+	// let simulation = start_request.simulate().await?;
+	// log::info!("token simulation: {simulation:#?}");
+	// let signature = start_request.sign_and_send_transaction().await?;
+	// rpc.confirm_transaction(&signature).await?;
+
+	let token_request = initialize_token_request(&authority_program_client);
+	let simulation = token_request.simulate().await?;
+	log::info!("token simulation: {simulation:#?}");
+	let signature = token_request.sign_and_send_transaction().await?;
 	rpc.confirm_transaction(&signature).await?;
 
 	let blockhash = get_game_nonce_account(rpc, game_index).await?.blockhash();
@@ -354,10 +374,11 @@ async fn unlock_first_section() -> anyhow::Result<()> {
 		blockhash,
 	);
 
+	log::info!("about to simulate section request!");
 	// ensure that the transaction is valid even though it hasn't yet been signed by
 	// the `access_signer`
 	let simulation = request.simulate().await?;
-	log::debug!("simulation: {simulation:#?}");
+	log::info!("simulation: {simulation:#?}");
 
 	let mut transaction = request.sign_transaction().await?;
 	transaction.sign(&[&access_signer], None);
@@ -457,9 +478,10 @@ async fn toggle_bit() -> anyhow::Result<()> {
 	let runner = create_runner_with_accounts(accounts).await;
 	let rpc = runner.rpc();
 	let program_client = get_wallet_program(rpc);
-	let bits_data_section = get_pda_section(game_index, next_section_index).0;
+	let section_state = get_pda_section_state(game_index, next_section_index).0;
+	let section_data = get_pda_section_data(game_index, next_section_index).0;
 	let player = program_client.payer();
-	let section = get_pda_section(game_index, section_index).0;
+	let section = get_pda_section_state(game_index, section_index).0;
 	let section_token_account = get_section_token_account(game_index, section_index);
 	let player_token_account = get_player_token_account(&player);
 	let signature = initialize_token_request(&get_authority_program(rpc))
@@ -503,7 +525,7 @@ async fn toggle_bit() -> anyhow::Result<()> {
 	let signature = request.sign_and_send_transaction().await?;
 	rpc.confirm_transaction(&signature).await?;
 
-	let account: SectionState = program_client.account(&bits_data_section).await?;
+	let account: SectionData = program_client.account(&section_data).await?;
 	check!(account.data[0] == bits);
 
 	let player_redaction = create_insta_redaction(player, "player:pubkey");
@@ -573,39 +595,22 @@ async fn toggle_bit() -> anyhow::Result<()> {
  }
  "#);
 
-	let game_state_account: GameState = program_client.account(&game).await?;
-	check!(game_state_account.started());
-	let section_state_account: SectionState = program_client.account(&section).await?;
-	let data_redaction = move |content: Content, _: ContentPath| {
-		let slice = content.as_slice().unwrap();
-		check!(
-			slice.len() == BITFLIP_SECTION_LENGTH,
-			"there should be {BITFLIP_SECTION_LENGTH} elements in the array"
-		);
-
-		for (ii, item) in slice.iter().enumerate() {
-			if ii == bit_index as usize {
-				check!(
-					item.as_u64().unwrap() as u16 == bits,
-					"item at index {ii} should be {bits}"
-				);
-			} else {
-				check!(
-					item.as_u64().unwrap() as u16 == 0,
-					"item at index {ii} should be 0"
-				);
-			}
+	let section_state_account: SectionState = program_client.account(&section_state).await?;
+	let section_data_account: SectionData = program_client.account(&section_data).await?;
+	for (ii, item) in section_data_account.data.iter().enumerate() {
+		if ii == bit_index as usize {
+			check!(*item == bits, "item at index {ii} should be {bits}");
+		} else {
+			check!(*item == 0, "item at index {ii} should be 0");
 		}
+	}
 
-		format!("[u16; {BITFLIP_SECTION_LENGTH}]")
-	};
 	let owner_redaction = create_insta_redaction(&player, "player:pubkey");
 
 	insta::assert_compact_json_snapshot!(section_state_account, {
-		".data" => insta::dynamic_redaction(data_redaction),
-		".owner" => insta::dynamic_redaction(owner_redaction),
-		".startTime" => "[timestamp]",
-	}, @r#"{"data": "[u16; 256]", "owner": "[player:pubkey]", "flips": 1, "on": 1, "off": 4095, "bump": 254, "index": 0}"#);
+	 ".owner" => insta::dynamic_redaction(owner_redaction),
+	 ".startTime" => "[timestamp]",
+ }, @r#"{"owner": "[player:pubkey]", "flips": 1, "on": 1, "off": 4095, "index": 0, "bump": 255, "dataBump": 255}"#);
 
 	Ok(())
 }

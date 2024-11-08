@@ -5,15 +5,14 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::nonce;
 use anchor_lang::solana_program::sysvar::recent_blockhashes::RecentBlockhashes;
 use anchor_lang::system_program;
+use anchor_spl::associated_token;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_2022;
-use anchor_spl::token_2022::MintTo;
 use anchor_spl::token_interface::Mint;
 use anchor_spl::token_interface::Token2022;
 use anchor_spl::token_interface::TokenAccount;
 use anchor_spl::token_interface::TokenMetadataInitialize;
 use anchor_spl::token_interface::token_metadata_initialize;
-use program::BitflipProgram;
 
 pub use crate::constants::*;
 pub use crate::errors::*;
@@ -52,15 +51,6 @@ pub mod bitflip_program {
 		props: InitializeTokenProps,
 	) -> AnchorResult {
 		initialize_token_handler(&mut ctx, props)
-	}
-
-	/// INNER: This method can only be called by [`initialize_token`]. It uses
-	/// the `treasury` signer as the authority for the mint account.
-	pub fn initialize_token_inner(
-		mut ctx: Context<InitializeTokenInner>,
-		props: InitializeTokenInnerProps,
-	) -> Result<u8> {
-		initialize_token_inner_handler(&mut ctx, props)
 	}
 
 	/// This will initialize the meta state for the bits.
@@ -184,126 +174,6 @@ pub struct InitializeToken<'info> {
 		bump = config.bump,
 	)]
 	pub config: Box<Account<'info, ConfigState>>,
-	/// The program authority which must be a signer to create this token.
-	#[account(mut, signer)]
-	pub authority: SystemAccount<'info>,
-	/// CHECK: Initialized within [`InitializeTokenInner`].
-	#[account(mut)]
-	pub mint: UncheckedAccount<'info>,
-	/// CHECK: Checked within [`InitializeTokenInner`].
-	#[account(mut)]
-	pub treasury: UncheckedAccount<'info>,
-	/// CHECK: Checked within [`InitializeTokenInner`].
-	#[account(mut)]
-	pub treasury_token_account: UncheckedAccount<'info>,
-	/// CHECK: Checked within [`InitializeTokenInner`].
-	pub associated_token_program: UncheckedAccount<'info>,
-	/// CHECK: Checked within [`InitializeTokenInner`].
-	pub token_program: UncheckedAccount<'info>,
-	/// CHECK: Checked within [`InitializeTokenInner`].
-	pub system_program: UncheckedAccount<'info>,
-	/// The program that is for signing.
-	pub bitflip_program: Program<'info, BitflipProgram>,
-}
-
-pub fn initialize_token_handler(
-	ctx: &mut Context<InitializeToken>,
-	props: InitializeTokenProps,
-) -> AnchorResult {
-	let treasury_bump = ctx.accounts.config.treasury_bump;
-	let treasury_seeds = &[SEED_PREFIX, SEED_TREASURY, &[treasury_bump]];
-	let signer_seeds = &[&treasury_seeds[..]];
-	let authority = ctx.accounts.authority.to_account_info();
-	let mint = ctx.accounts.mint.to_account_info();
-	let treasury = ctx.accounts.treasury.to_account_info();
-	let treasury_token_account = ctx.accounts.treasury_token_account.to_account_info();
-	let associated_token_program = ctx.accounts.associated_token_program.to_account_info();
-	let token_program = ctx.accounts.token_program.to_account_info();
-	let system_program = ctx.accounts.system_program.to_account_info();
-	let bitflip_program = ctx.accounts.bitflip_program.to_account_info();
-	let minimum_balance = Rent::get()?.minimum_balance(0);
-
-	if treasury.lamports() < minimum_balance {
-		let from = authority.clone();
-		let to = treasury.clone();
-		let accounts = system_program::Transfer { from, to };
-		let cpi_context = CpiContext::new(system_program.clone(), accounts);
-
-		// transfer the minimum sol to the treasury for rent exemption
-		system_program::transfer(cpi_context, minimum_balance)?;
-	}
-
-	let accounts = cpi::accounts::InitializeTokenInner {
-		authority,
-		mint,
-		treasury,
-		treasury_token_account,
-		associated_token_program,
-		token_program,
-		system_program,
-	};
-	let cpi_context = CpiContext::new_with_signer(bitflip_program, accounts, signer_seeds);
-	let inner_props = props.into_inner(treasury_bump);
-	let result = cpi::initialize_token_inner(cpi_context, inner_props)?;
-
-	ctx.accounts.config.mint_bump = result.get();
-
-	Ok(())
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
-pub struct InitializeTokenProps {
-	pub name: String,
-	pub symbol: String,
-	pub uri: String,
-}
-
-impl From<InitializeTokenProps> for instruction::InitializeToken {
-	fn from(props: InitializeTokenProps) -> Self {
-		instruction::InitializeToken { props }
-	}
-}
-
-impl InitializeTokenProps {
-	pub fn into_inner(self, treasury_bump: u8) -> InitializeTokenInnerProps {
-		let Self { name, symbol, uri } = self;
-		InitializeTokenInnerProps {
-			name,
-			symbol,
-			uri,
-			treasury_bump,
-		}
-	}
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
-pub struct InitializeTokenInnerProps {
-	pub name: String,
-	pub symbol: String,
-	pub uri: String,
-	pub treasury_bump: u8,
-}
-
-impl From<InitializeTokenInnerProps> for instruction::InitializeTokenInner {
-	fn from(props: InitializeTokenInnerProps) -> Self {
-		instruction::InitializeTokenInner { props }
-	}
-}
-
-impl From<InitializeTokenInnerProps> for InitializeTokenProps {
-	fn from(
-		InitializeTokenInnerProps {
-			name, symbol, uri, ..
-		}: InitializeTokenInnerProps,
-	) -> Self {
-		Self { name, symbol, uri }
-	}
-}
-
-#[derive(Accounts)]
-#[instruction(props: InitializeTokenInnerProps)]
-pub struct InitializeTokenInner<'info> {
-	/// CHECKED: checked in [`InitializeToken`] outer call.
 	#[account(mut)]
 	pub authority: Signer<'info>,
 	/// The token mint account.
@@ -325,19 +195,13 @@ pub struct InitializeTokenInner<'info> {
 	#[account(
 		mut,
 		seeds = [SEED_PREFIX, SEED_TREASURY],
-		bump = props.treasury_bump
+		bump = config.treasury_bump
 	)]
-	pub treasury: Signer<'info>,
-	/// The associated token account for the treasury which will hold the minted
-	/// tokens.
-	#[account(
-	  init,
-	  payer =	authority,
-	  associated_token::token_program = token_program,
-	  associated_token::mint = mint,
-	  associated_token::authority = treasury,
-  )]
-	pub treasury_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+	pub treasury: SystemAccount<'info>,
+	/// CHECK: The associated token account for the treasury which will hold the
+	/// minted tokens and is created in this instruction.
+	#[account(mut)]
+	pub treasury_token_account: UncheckedAccount<'info>,
 	/// The program for associated tokens
 	pub associated_token_program: Program<'info, AssociatedToken>,
 	/// The token program.
@@ -346,10 +210,11 @@ pub struct InitializeTokenInner<'info> {
 	pub system_program: Program<'info, System>,
 }
 
-impl InitializeTokenInner<'_> {
+impl InitializeToken<'_> {
 	fn initialize_token_metadata(
 		&self,
 		InitializeTokenProps { name, symbol, uri }: InitializeTokenProps,
+		signer_seeds: &[&[&[u8]]],
 	) -> AnchorResult {
 		let cpi_accounts = TokenMetadataInitialize {
 			token_program_id: self.token_program.to_account_info(),
@@ -358,50 +223,111 @@ impl InitializeTokenInner<'_> {
 			mint_authority: self.treasury.to_account_info(),
 			update_authority: self.treasury.to_account_info(),
 		};
-		let cpi_ctx = CpiContext::new(self.token_program.to_account_info(), cpi_accounts);
+		let cpi_ctx = CpiContext::new_with_signer(
+			self.token_program.to_account_info(),
+			cpi_accounts,
+			signer_seeds,
+		);
 		token_metadata_initialize(cpi_ctx, name, symbol, uri)?;
 
 		Ok(())
 	}
 }
 
-pub fn initialize_token_inner_handler(
-	ctx: &mut Context<InitializeTokenInner>,
-	props: InitializeTokenInnerProps,
-) -> Result<u8> {
+pub fn initialize_token_handler(
+	ctx: &mut Context<InitializeToken>,
+	props: InitializeTokenProps,
+) -> AnchorResult {
 	let rent_sysvar = Rent::get()?;
-	let mint = ctx.accounts.mint.to_account_info();
+	let config = &mut ctx.accounts.config;
+	let treasury_lamports = ctx.accounts.treasury.lamports();
+	let treasury_bump = config.treasury_bump;
+	let treasury_seeds = &[SEED_PREFIX, SEED_TREASURY, &[treasury_bump]];
+	let signer_seeds = &[&treasury_seeds[..]];
 
-	let result = ctx.bumps.mint;
-	ctx.accounts.initialize_token_metadata(props.into())?;
+	config.mint_bump = ctx.bumps.mint;
+	ctx.accounts
+		.initialize_token_metadata(props, signer_seeds)?;
 	ctx.accounts.mint.reload()?;
 
-	let extra_lamports = rent_sysvar.minimum_balance(mint.data_len()) - mint.get_lamports();
+	let mint = ctx.accounts.mint.to_account_info();
+	let extra_lamports = rent_sysvar
+		.minimum_balance(mint.data_len())
+		.checked_sub(mint.get_lamports())
+		.ok_or(ProgramError::ArithmeticOverflow)?;
+
+	if !rent_sysvar.is_exempt(mint.lamports(), mint.data_len()) {
+		let accounts = system_program::Transfer {
+			from: ctx.accounts.authority.to_account_info(),
+			to: ctx.accounts.treasury.to_account_info(),
+		};
+		let cpi_context = CpiContext::new(ctx.accounts.system_program.to_account_info(), accounts);
+
+		// transfer the minimum sol to the treasury for rent exemption
+		system_program::transfer(cpi_context, rent_sysvar.minimum_balance(0))?;
+	}
 
 	// transfer minimum rent to mint account when required
 	if extra_lamports > 0 {
-		let from = ctx.accounts.authority.to_account_info();
-		let to = mint.clone();
-		let system_program = ctx.accounts.system_program.to_account_info();
-		let cpi_context = CpiContext::new(system_program, system_program::Transfer { from, to });
+		let cpi_context = CpiContext::new(
+			ctx.accounts.system_program.to_account_info(),
+			system_program::Transfer {
+				from: ctx.accounts.authority.to_account_info(),
+				to: ctx.accounts.mint.to_account_info(),
+			},
+		);
 
 		system_program::transfer(cpi_context, extra_lamports)?;
 	}
 
-	let to = ctx.accounts.treasury_token_account.to_account_info();
-	let authority = ctx.accounts.treasury.to_account_info();
-	let token_program = ctx.accounts.token_program.to_account_info();
+	// create treasury_token_account
+	{
+		let cpi_ctx = CpiContext::new_with_signer(
+			ctx.accounts.associated_token_program.to_account_info(),
+			associated_token::Create {
+				payer: ctx.accounts.authority.to_account_info(),
+				associated_token: ctx.accounts.treasury_token_account.to_account_info(),
+				authority: ctx.accounts.treasury.to_account_info(),
+				mint: ctx.accounts.mint.to_account_info(),
+				system_program: ctx.accounts.system_program.to_account_info(),
+				token_program: ctx.accounts.token_program.to_account_info(),
+			},
+			signer_seeds,
+		);
 
-	let cpi_context = CpiContext::new(token_program, MintTo {
-		mint,
-		to,
-		authority,
-	});
-	let amount = get_token_amount(TOTAL_TOKENS, TOKEN_DECIMALS)?;
+		associated_token::create(cpi_ctx)?;
+	}
 
-	token_2022::mint_to(cpi_context, amount)?;
+	// mint tokens to the treasury_token_account
+	{
+		let cpi_context = CpiContext::new_with_signer(
+			ctx.accounts.token_program.to_account_info(),
+			token_2022::MintTo {
+				mint: ctx.accounts.mint.to_account_info(),
+				to: ctx.accounts.treasury_token_account.to_account_info(),
+				authority: ctx.accounts.treasury.to_account_info(),
+			},
+			signer_seeds,
+		);
+		let amount = get_token_amount(TOTAL_TOKENS, TOKEN_DECIMALS)?;
 
-	Ok(result)
+		token_2022::mint_to(cpi_context, amount)?;
+	}
+
+	Ok(())
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct InitializeTokenProps {
+	pub name: String,
+	pub symbol: String,
+	pub uri: String,
+}
+
+impl From<InitializeTokenProps> for instruction::InitializeToken {
+	fn from(props: InitializeTokenProps) -> Self {
+		instruction::InitializeToken { props }
+	}
 }
 
 #[derive(Accounts)]
@@ -596,10 +522,19 @@ pub struct UnlockSection<'info> {
 		init,
 		payer = player,
 		space = SectionState::space(),
-		seeds = [SEED_PREFIX, SEED_GAME, &config.game_index.to_le_bytes(), SEED_SECTION, &game.section_index.to_le_bytes()],
+		seeds = [SEED_PREFIX, SEED_GAME, &config.game_index.to_le_bytes(), SEED_SECTION_STATE, &game.section_index.to_le_bytes()],
 		bump
 	)]
 	pub section: Box<Account<'info, SectionState>>,
+	/// This is a section of the bits data being initialized.
+	#[account(
+		init,
+		payer = player,
+		space = SectionData::space(),
+		seeds = [SEED_PREFIX, SEED_GAME, &config.game_index.to_le_bytes(), SEED_SECTION_DATA, &game.section_index.to_le_bytes()],
+		bump
+	)]
+	pub section_data: AccountLoader<'info, SectionData>,
 	/// The token account which holds the section tokens.
 	#[account(
 		init,
@@ -614,7 +549,7 @@ pub struct UnlockSection<'info> {
 	#[account(
 		constraint = game.section_index > 0,
 		constraint = previous_section.index.checked_add(1).unwrap() == game.section_index,
-		seeds = [SEED_PREFIX, SEED_GAME, &config.game_index.to_le_bytes(), SEED_SECTION, &game.section_index.saturating_sub(1).to_le_bytes()],
+		seeds = [SEED_PREFIX, SEED_GAME, &config.game_index.to_le_bytes(), SEED_SECTION_STATE, &game.section_index.saturating_sub(1).to_le_bytes()],
 		bump = previous_section.bump
 	)]
 	pub previous_section: Option<Box<Account<'info, SectionState>>>,
@@ -653,20 +588,24 @@ pub struct UnlockSectionEvent {
 pub fn unlock_section_handler(ctx: &mut Context<UnlockSection>) -> AnchorResult {
 	let game = &mut ctx.accounts.game;
 	let section = &mut ctx.accounts.section;
+	let section_data = &mut ctx.accounts.section_data;
 	let section_index = game.section_index;
 	let config = &ctx.accounts.config;
 	let owner = ctx.accounts.player.key();
 	let bump = ctx.bumps.section;
-	let section_state = SectionState::new(owner, bump, section_index);
+	let data_bump = ctx.bumps.section_data;
+	let section_state = SectionState::new(owner, section_index, bump, data_bump);
 	let unlock_section_event = UnlockSectionEvent {
 		owner,
 		section_index,
 	};
 
+	section_data.load_init()?;
 	section.set_inner(section_state);
 
 	// the game must have started
-	require!(game.started(), BitflipError::NotRunning);
+	msg!("the running game: {}", game.key());
+	require!(game.started(), BitflipError::GameNotRunning);
 
 	if section_index < u8::MAX {
 		game.section_index += 1;
@@ -840,10 +779,17 @@ pub struct FlipBits<'info> {
 	#[account(
 		mut,
 		constraint = props.section_index == section.index @ BitflipError::InvalidSectionIndex,
-		seeds = [SEED_PREFIX, SEED_GAME, &game.game_index.to_le_bytes(), SEED_SECTION, &props.section_index.to_le_bytes()],
+		seeds = [SEED_PREFIX, SEED_GAME, &game.game_index.to_le_bytes(), SEED_SECTION_STATE, &props.section_index.to_le_bytes()],
 		bump = section.bump
 	)]
 	pub section: Box<Account<'info, SectionState>>,
+	/// The data for this section of the bit canvas.
+	#[account(
+		mut,
+		seeds = [SEED_PREFIX, SEED_GAME, &game.game_index.to_le_bytes(), SEED_SECTION_DATA, &props.section_index.to_le_bytes()],
+		bump = section.data_bump
+	)]
+	pub section_data: AccountLoader<'info, SectionData>,
 	/// The token account for the section.
 	#[account(
 		mut,
@@ -877,7 +823,10 @@ impl FlipBits<'_> {
 	fn validate(&self, props: &FlipBitsProps) -> AnchorResult {
 		msg!("validating set bits...");
 		let current_time = Clock::get()?.unix_timestamp;
-		require!(self.game.running(current_time), BitflipError::NotRunning);
+		require!(
+			self.game.running(current_time),
+			BitflipError::GameNotRunning
+		);
 		props.validate()?;
 
 		msg!("VALIDATED set bits!");
@@ -886,7 +835,7 @@ impl FlipBits<'_> {
 
 	fn update(&mut self, props: &FlipBitsProps) -> AnchorResult {
 		msg!("about to load the account");
-		let changes = self.section.set_bits(props)?;
+		let changes = self.section_data.load_mut()?.set_bits(props)?;
 
 		msg!("here are the changes: {:#?}", changes);
 		let flipped_bits = changes.total()?;
@@ -1237,10 +1186,16 @@ impl GameState {
 	}
 
 	pub fn started(&self) -> bool {
+		msg!("start_time: {}", self.start_time);
 		self.start_time > 0
 	}
 
 	pub fn ended(&self, current_time: i64) -> bool {
+		msg!(
+			"current_time: {}, end_time: {}",
+			current_time,
+			self.end_time()
+		);
 		self.started() && current_time > self.end_time()
 	}
 
@@ -1248,9 +1203,47 @@ impl GameState {
 		self.started() && !self.ended(current_time)
 	}
 }
-
-/// The data for each section of the the data. The total data is split into 16
+/// The total data is split into 16
 /// sections and this is one of the sections.
+#[account(zero_copy)]
+#[repr(C)]
+#[derive(Debug, InitSpace)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
+pub struct SectionData {
+	/// The state of the bits that are represented as flippable bits on the
+	/// frontend.
+	#[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
+	pub data: [u16; BITFLIP_SECTION_LENGTH],
+}
+
+impl SectionData {
+	pub fn space() -> usize {
+		SPACE_DISCRIMINATOR + Self::INIT_SPACE
+	}
+
+	#[cfg(feature = "client")]
+	pub fn to_bytes(&self) -> Vec<u8> {
+		bytemuck::bytes_of(self).to_vec()
+	}
+
+	#[cfg(feature = "client")]
+	pub fn to_bytes_ref(&self) -> &[u8] {
+		bytemuck::bytes_of(self)
+	}
+
+	#[cfg(feature = "client")]
+	pub fn to_bytes_mut(&mut self) -> &mut [u8] {
+		bytemuck::bytes_of_mut(self)
+	}
+
+	#[cfg(feature = "client")]
+	pub fn from_bytes(bytes: &[u8]) -> Self {
+		bytemuck::pod_read_unaligned(bytes)
+	}
+}
+
+/// The state for each section of game.
 ///
 /// This will also store the lamports that are accumulated by this game section.
 #[account]
@@ -1258,10 +1251,6 @@ impl GameState {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct SectionState {
-	/// The state of the bits that are represented as flippable bits on the
-	/// frontend.
-	#[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
-	pub data: [u16; BITFLIP_SECTION_LENGTH],
 	/// The owner of this section.
 	#[cfg_attr(
 		feature = "serde",
@@ -1274,10 +1263,12 @@ pub struct SectionState {
 	pub on: u32,
 	/// The number of bits that are off.
 	pub off: u32,
-	/// The bump for this section state.
-	pub bump: u8,
 	/// The index for this section state.
 	pub index: u8,
+	/// The bump for this section state.
+	pub bump: u8,
+	/// The bump for the section data.
+	pub data_bump: u8,
 }
 
 impl SectionState {
@@ -1285,14 +1276,14 @@ impl SectionState {
 		SPACE_DISCRIMINATOR + Self::INIT_SPACE
 	}
 
-	pub fn new(owner: Pubkey, bump: u8, index: u8) -> Self {
+	pub fn new(owner: Pubkey, index: u8, bump: u8, data_bump: u8) -> Self {
 		Self {
-			data: [0; BITFLIP_SECTION_LENGTH],
 			owner,
 			flips: 0,
 			on: 0,
 			off: BITFLIP_SECTION_TOTAL_BITS,
 			bump,
+			data_bump,
 			index,
 		}
 	}
@@ -1332,7 +1323,7 @@ impl SectionState {
 	}
 }
 
-pub trait SetBitsDataSection: Deref<Target = SectionState> + DerefMut {
+pub trait SetBitsSectionData: Deref<Target = SectionData> + DerefMut {
 	fn set_bits(
 		// mut state: RefMut<'_, BitsDataSectionState>,
 		&mut self,
@@ -1393,7 +1384,7 @@ pub trait SetBitsDataSection: Deref<Target = SectionState> + DerefMut {
 	}
 }
 
-impl<T: Deref<Target = SectionState> + DerefMut> SetBitsDataSection for T {}
+impl<T: Deref<Target = SectionData> + DerefMut> SetBitsSectionData for T {}
 
 #[account]
 #[derive(InitSpace)]
