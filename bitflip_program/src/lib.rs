@@ -240,7 +240,6 @@ pub fn initialize_token_handler(
 ) -> AnchorResult {
 	let rent_sysvar = Rent::get()?;
 	let config = &mut ctx.accounts.config;
-	let treasury_lamports = ctx.accounts.treasury.lamports();
 	let treasury_bump = config.treasury_bump;
 	let treasury_seeds = &[SEED_PREFIX, SEED_TREASURY, &[treasury_bump]];
 	let signer_seeds = &[&treasury_seeds[..]];
@@ -763,12 +762,12 @@ pub struct FlipBits<'info> {
 		bump = config.bump,
 	)]
 	pub config: Box<Account<'info, ConfigState>>,
-	/// The token mint account.
+	/// CHECK: The token mint account.
 	#[account(
 	  seeds = [SEED_PREFIX, SEED_MINT],
 	  bump = config.mint_bump,
   )]
-	pub mint: Box<InterfaceAccount<'info, Mint>>,
+	pub mint: UncheckedAccount<'info>,
 	/// The meta data for the full bits state.
 	#[account(
 		seeds = [SEED_PREFIX, SEED_GAME, &game.game_index.to_le_bytes()],
@@ -790,18 +789,13 @@ pub struct FlipBits<'info> {
 		bump = section.data_bump
 	)]
 	pub section_data: AccountLoader<'info, SectionData>,
-	/// The token account for the section.
-	#[account(
-		mut,
-	  associated_token::token_program = token_program,
-		associated_token::mint = mint,
-		associated_token::authority = section,
-	)]
-	pub section_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+	/// CHECK: The token account for the section.
+	#[account(mut)]
+	pub section_token_account: UncheckedAccount<'info>,
 	/// The player of the bit games
 	#[account(mut)]
 	pub player: Signer<'info>,
-	/// The associated token account for the main authority.
+	/// CHECK: The associated token account for the main authority.
 	#[account(
 	  init_if_needed,
 	  payer =	player,
@@ -835,7 +829,7 @@ impl FlipBits<'_> {
 
 	fn update(&mut self, props: &FlipBitsProps) -> AnchorResult {
 		msg!("about to load the account");
-		let changes = self.section_data.load_mut()?.set_bits(props)?;
+		let changes = self.section_data.load_mut()?.flip_bits(props)?;
 
 		msg!("here are the changes: {:#?}", changes);
 		let flipped_bits = changes.total()?;
@@ -860,79 +854,7 @@ pub fn flip_bits_handler(ctx: &mut Context<FlipBits>, props: &FlipBitsProps) -> 
 	msg!("props: {:#?}", props);
 	msg!("section: {:#?}", &ctx.accounts.section);
 	msg!("inside `flip_bits_handler`");
-	let rent = Rent::get()?;
 	ctx.accounts.update(props)?;
-	let config = ctx.accounts.config.to_account_info();
-	let config_balance = config.lamports();
-	let config_space = config.data_len();
-	let config_min = rent.minimum_balance(config_space);
-	let mint = ctx.accounts.mint.to_account_info();
-	let mint_balance = mint.lamports();
-	let mint_space = mint.data_len();
-	let mint_min = rent.minimum_balance(mint_space);
-	let pta = ctx.accounts.player_token_account.to_account_info();
-	let pta_balance = pta.lamports();
-	let pta_space = pta.data_len();
-	let pta_min = rent.minimum_balance(pta_space);
-	let game_state = ctx.accounts.game.to_account_info();
-	let game_state_balance = game_state.lamports();
-	let game_state_space = game_state.data_len();
-	let game_state_min = rent.minimum_balance(game_state_space);
-	let section = ctx.accounts.section.to_account_info();
-	let section_balance = section.lamports();
-	let section_space = section.data_len();
-	let section_min = rent.minimum_balance(section_space);
-	let tta = ctx.accounts.section_token_account.to_account_info();
-	let tta_balance = tta.lamports();
-	let tta_space = tta.data_len();
-	let tta_min = rent.minimum_balance(tta_space);
-
-	msg!(
-		"`config` balance: {}, space: {}, required rent: {}, valid: {}",
-		config_balance,
-		config_space,
-		config_min,
-		config_min == config_balance,
-	);
-	msg!(
-		"`mint` balance: {}, space: {}, required rent: {}, valid: {}",
-		mint_balance,
-		mint_space,
-		mint_min,
-		mint_min == mint_balance,
-	);
-	msg!(
-		"`player_token_account` balance: {}, space: {}, required rent: {}, valid:
-	{}",
-		pta_balance,
-		pta_space,
-		pta_min,
-		pta_min == pta_balance,
-	);
-	msg!(
-		"`game_state` balance: {}, space: {}, required rent: {}, valid: {}",
-		game_state_balance,
-		game_state_space,
-		game_state_min,
-		game_state_min == game_state_balance,
-	);
-	msg!(
-		"`bits_data_section` balance: {}, space: {}, required rent: {}, valid: {}",
-		section_balance,
-		section_space,
-		section_min,
-		section_min == section_balance,
-	);
-	msg!(
-		"`treasury_token_account` balance: {}, space: {}, required rent: {}, valid:
-	{}",
-		tta_balance,
-		tta_space,
-		tta_min,
-		tta_min == tta_balance,
-	);
-
-	msg!("completed update");
 
 	Ok(())
 }
@@ -1323,8 +1245,8 @@ impl SectionState {
 	}
 }
 
-pub trait SetBitsSectionData: Deref<Target = SectionData> + DerefMut {
-	fn set_bits(
+pub trait FlipBitsSectionData: Deref<Target = SectionData> + DerefMut {
+	fn flip_bits(
 		// mut state: RefMut<'_, BitsDataSectionState>,
 		&mut self,
 		props: &FlipBitsProps,
@@ -1384,7 +1306,7 @@ pub trait SetBitsSectionData: Deref<Target = SectionData> + DerefMut {
 	}
 }
 
-impl<T: Deref<Target = SectionData> + DerefMut> SetBitsSectionData for T {}
+impl<T: Deref<Target = SectionData> + DerefMut> FlipBitsSectionData for T {}
 
 #[account]
 #[derive(InitSpace)]

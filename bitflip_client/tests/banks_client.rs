@@ -458,10 +458,10 @@ async fn toggle_bit() -> anyhow::Result<()> {
 		p.add_account(game, game_account_data.clone().into());
 		p.add_account(game_nonce, game_nonce_account_data.clone().into());
 
-		// let section_accounts = create_section_state(game_index,
-		// next_section_index); for (pubkey, data) in section_accounts {
-		// 	p.add_account(pubkey, data.into());
-		// }
+		let section_accounts = create_section_state(game_index, next_section_index);
+		for (pubkey, data) in section_accounts {
+			p.add_account(pubkey, data.into());
+		}
 	})
 	.await?;
 	let rpc = provider.to_rpc_client();

@@ -270,9 +270,6 @@
 				},
 				{
 					"name": "mint",
-					"docs": [
-						"The token mint account."
-					],
 					"pda": {
 						"seeds": [
 							{
@@ -378,7 +375,71 @@
 									116,
 									105,
 									111,
-									110
+									110,
+									95,
+									115,
+									116,
+									97,
+									116,
+									101
+								]
+							},
+							{
+								"kind": "arg",
+								"path": "props.section_index"
+							}
+						]
+					}
+				},
+				{
+					"name": "section_data",
+					"docs": [
+						"The data for this section of the bit canvas."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									103,
+									97,
+									109,
+									101
+								]
+							},
+							{
+								"kind": "account",
+								"path": "game.game_index",
+								"account": "GameState"
+							},
+							{
+								"kind": "const",
+								"value": [
+									115,
+									101,
+									99,
+									116,
+									105,
+									111,
+									110,
+									95,
+									100,
+									97,
+									116,
+									97
 								]
 							},
 							{
@@ -390,63 +451,7 @@
 				},
 				{
 					"name": "section_token_account",
-					"docs": [
-						"The token account for the section."
-					],
-					"writable": true,
-					"pda": {
-						"seeds": [
-							{
-								"kind": "account",
-								"path": "section"
-							},
-							{
-								"kind": "account",
-								"path": "token_program"
-							},
-							{
-								"kind": "account",
-								"path": "mint"
-							}
-						],
-						"program": {
-							"kind": "const",
-							"value": [
-								140,
-								151,
-								37,
-								143,
-								78,
-								36,
-								137,
-								241,
-								187,
-								61,
-								16,
-								41,
-								20,
-								142,
-								13,
-								131,
-								11,
-								90,
-								19,
-								153,
-								218,
-								255,
-								16,
-								132,
-								4,
-								142,
-								123,
-								216,
-								219,
-								233,
-								248,
-								89
-							]
-						}
-					}
+					"writable": true
 				},
 				{
 					"name": "player",
@@ -458,9 +463,6 @@
 				},
 				{
 					"name": "player_token_account",
-					"docs": [
-						"The associated token account for the main authority."
-					],
 					"writable": true,
 					"pda": {
 						"seeds": [
@@ -896,79 +898,11 @@
 				},
 				{
 					"name": "authority",
-					"docs": [
-						"The program authority which must be a signer to create this token."
-					],
 					"writable": true,
 					"signer": true,
 					"relations": [
 						"config"
 					]
-				},
-				{
-					"name": "mint",
-					"writable": true
-				},
-				{
-					"name": "treasury",
-					"writable": true
-				},
-				{
-					"name": "treasury_token_account",
-					"writable": true
-				},
-				{
-					"name": "associated_token_program"
-				},
-				{
-					"name": "token_program"
-				},
-				{
-					"name": "system_program"
-				},
-				{
-					"name": "bitflip_program",
-					"docs": [
-						"The program that is for signing."
-					],
-					"address": "5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM"
-				}
-			],
-			"args": [
-				{
-					"name": "props",
-					"type": {
-						"defined": {
-							"name": "InitializeTokenProps"
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "initialize_token_inner",
-			"docs": [
-				"INNER: This method can only be called by [`initialize_token`]. It uses",
-				"the `treasury` signer as the authority for the mint account."
-			],
-			"discriminator": [
-				112,
-				121,
-				158,
-				27,
-				165,
-				27,
-				94,
-				26
-			],
-			"accounts": [
-				{
-					"name": "authority",
-					"docs": [
-						"CHECKED: checked in [`InitializeToken`] outer call."
-					],
-					"writable": true,
-					"signer": true
 				},
 				{
 					"name": "mint",
@@ -1008,7 +942,6 @@
 						"The treasury account."
 					],
 					"writable": true,
-					"signer": true,
 					"pda": {
 						"seeds": [
 							{
@@ -1042,63 +975,9 @@
 				{
 					"name": "treasury_token_account",
 					"docs": [
-						"The associated token account for the treasury which will hold the minted",
-						"tokens."
+						"minted tokens and is created in this instruction."
 					],
-					"writable": true,
-					"pda": {
-						"seeds": [
-							{
-								"kind": "account",
-								"path": "treasury"
-							},
-							{
-								"kind": "account",
-								"path": "token_program"
-							},
-							{
-								"kind": "account",
-								"path": "mint"
-							}
-						],
-						"program": {
-							"kind": "const",
-							"value": [
-								140,
-								151,
-								37,
-								143,
-								78,
-								36,
-								137,
-								241,
-								187,
-								61,
-								16,
-								41,
-								20,
-								142,
-								13,
-								131,
-								11,
-								90,
-								19,
-								153,
-								218,
-								255,
-								16,
-								132,
-								4,
-								142,
-								123,
-								216,
-								219,
-								233,
-								248,
-								89
-							]
-						}
-					}
+					"writable": true
 				},
 				{
 					"name": "associated_token_program",
@@ -1127,12 +1006,11 @@
 					"name": "props",
 					"type": {
 						"defined": {
-							"name": "InitializeTokenInnerProps"
+							"name": "InitializeTokenProps"
 						}
 					}
 				}
-			],
-			"returns": "u8"
+			]
 		},
 		{
 			"name": "refresh_access_signer",
@@ -1626,7 +1504,72 @@
 									116,
 									105,
 									111,
-									110
+									110,
+									95,
+									115,
+									116,
+									97,
+									116,
+									101
+								]
+							},
+							{
+								"kind": "account",
+								"path": "game.section_index",
+								"account": "GameState"
+							}
+						]
+					}
+				},
+				{
+					"name": "section_data",
+					"docs": [
+						"This is a section of the bits data being initialized."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									103,
+									97,
+									109,
+									101
+								]
+							},
+							{
+								"kind": "account",
+								"path": "config.game_index",
+								"account": "ConfigState"
+							},
+							{
+								"kind": "const",
+								"value": [
+									115,
+									101,
+									99,
+									116,
+									105,
+									111,
+									110,
+									95,
+									100,
+									97,
+									116,
+									97
 								]
 							},
 							{
@@ -1741,7 +1684,13 @@
 									116,
 									105,
 									111,
-									110
+									110,
+									95,
+									115,
+									116,
+									97,
+									116,
+									101
 								]
 							},
 							{
@@ -1956,6 +1905,19 @@
 			]
 		},
 		{
+			"name": "SectionData",
+			"discriminator": [
+				51,
+				109,
+				67,
+				25,
+				77,
+				210,
+				1,
+				102
+			]
+		},
+		{
 			"name": "SectionState",
 			"discriminator": [
 				107,
@@ -2052,7 +2014,7 @@
 		},
 		{
 			"code": 6013,
-			"name": "NotRunning",
+			"name": "GameNotRunning",
 			"msg": "The current `GameState` is not running"
 		},
 		{
@@ -2232,30 +2194,6 @@
 			}
 		},
 		{
-			"name": "InitializeTokenInnerProps",
-			"type": {
-				"kind": "struct",
-				"fields": [
-					{
-						"name": "name",
-						"type": "string"
-					},
-					{
-						"name": "symbol",
-						"type": "string"
-					},
-					{
-						"name": "uri",
-						"type": "string"
-					},
-					{
-						"name": "treasury_bump",
-						"type": "u8"
-					}
-				]
-			}
-		},
-		{
 			"name": "InitializeTokenProps",
 			"type": {
 				"kind": "struct",
@@ -2276,13 +2214,15 @@
 			}
 		},
 		{
-			"name": "SectionState",
+			"name": "SectionData",
 			"docs": [
-				"The data for each section of the the data. The total data is split into 16",
-				"sections and this is one of the sections.",
-				"",
-				"This will also store the lamports that are accumulated by this game section."
+				"The total data is split into 16",
+				"sections and this is one of the sections."
 			],
+			"serialization": "bytemuck",
+			"repr": {
+				"kind": "c"
+			},
 			"type": {
 				"kind": "struct",
 				"fields": [
@@ -2298,7 +2238,20 @@
 								256
 							]
 						}
-					},
+					}
+				]
+			}
+		},
+		{
+			"name": "SectionState",
+			"docs": [
+				"The state for each section of game.",
+				"",
+				"This will also store the lamports that are accumulated by this game section."
+			],
+			"type": {
+				"kind": "struct",
+				"fields": [
 					{
 						"name": "owner",
 						"docs": [
@@ -2328,6 +2281,13 @@
 						"type": "u32"
 					},
 					{
+						"name": "index",
+						"docs": [
+							"The index for this section state."
+						],
+						"type": "u8"
+					},
+					{
 						"name": "bump",
 						"docs": [
 							"The bump for this section state."
@@ -2335,9 +2295,9 @@
 						"type": "u8"
 					},
 					{
-						"name": "index",
+						"name": "data_bump",
 						"docs": [
-							"The index for this section state."
+							"The bump for the section data."
 						],
 						"type": "u8"
 					}
@@ -2509,12 +2469,21 @@
 			"value": "[98, 105, 116, 102, 108, 105, 112]"
 		},
 		{
-			"name": "SEED_SECTION",
+			"name": "SEED_SECTION_DATA",
+			"docs": [
+				"The PDA seed for the section data of each the game. Each game has 256",
+				"sections."
+			],
+			"type": "bytes",
+			"value": "[115, 101, 99, 116, 105, 111, 110, 95, 100, 97, 116, 97]"
+		},
+		{
+			"name": "SEED_SECTION_STATE",
 			"docs": [
 				"The PDA seed for a section within the game. Each game has 256 sections."
 			],
 			"type": "bytes",
-			"value": "[115, 101, 99, 116, 105, 111, 110]"
+			"value": "[115, 101, 99, 116, 105, 111, 110, 95, 115, 116, 97, 116, 101]"
 		},
 		{
 			"name": "SEED_TREASURY",
