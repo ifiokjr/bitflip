@@ -10,13 +10,17 @@
       pkgs.curl
       pkgs.deno
       pkgs.dprint
+      pkgs.flyctl
       pkgs.jq
       pkgs.libiconv
+      pkgs.mold
+      pkgs.openssl
       pkgs.protobuf # needed for `solana-test-validator` in tests
       pkgs.nixfmt-rfc-style
       pkgs.rustup
       pkgs.shfmt
       pkgs.surrealdb
+      pkgs.surrealdb-migrations
       pkgs.wasm-pack
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin (
@@ -104,13 +108,11 @@
     '';
     description = "Run all tests across the crates";
   };
-  scripts."coverage:all" = {
+  scripts."db:start" = {
     exec = ''
-      set -e
-      coverage:wallet_standard_wallets
-      cargo llvm-cov report --doctests --codecov --output-path codecov.json
+      surreal start --log debug --user $SURREAL_USER --password $SURREAL_PASS
     '';
-    description = "Run coverage across the crates";
+    description = "Start the surrealdb instance";
   };
   scripts."fix:all" = {
     exec = ''
@@ -270,7 +272,7 @@
   scripts."install:solana" = {
     exec = ''
       set -e
-      SOLANA_DOWNLOAD_ROOT="https://github.com/solana-labs/solana/releases/download"
+      SOLANA_DOWNLOAD_ROOT="https://github.com/anza-xyz/agave/releases/download"
       LOCAL_CACHE="$DEVENV_ROOT/.local-cache"
       VERSION=`cat $DEVENV_ROOT/setup/cache-versions.json | jq -r '.solana'`
       OS_TYPE="$(uname -s)"
@@ -309,6 +311,13 @@
     '';
     description = "Install the version of solana or use one from the cache.";
   };
+	scripts."build:steel" = {
+		exec = ''
+			set -e
+			cargo build-sbf --manifest-path $DEVENV_ROOT/bitflip_steel_program/Cargo.toml --arch sbfv1
+		'';
+		description = "Build the steel program.";
+	};
   scripts."build:anchor".exec = ''
     set -e
     anchor build
@@ -337,29 +346,50 @@
     cp -f $generated_bitflip_program_idl $saved_bitflip_program_idl
     dprint fmt $DEVENV_ROOT/idls/*.json
   '';
-  scripts."build:docker".exec = ''
-    set -e
-    docker build -t kj-dev -f $DEVENV_ROOT/bitflip/Dockerfile $DEVENV_ROOT
-  '';
-  scripts."watch:bitflip".exec = ''
-    cargo make watch:bitflip
-  '';
-  scripts."build:bitflip".exec = ''
-    set -e
-    cargo make build:bitflip:tailwind
-    cargo leptos build --project bitflip --release -vv --features="prod"
-  '';
-  scripts."serve:bitflip".exec = ''
-    set -e
-    cargo make build:bitflip:tailwind
-    cargo leptos serve --project bitflip --release -vv --features="prod"
-  '';
-  scripts."prepare:bitflip".exec = ''
-    set -e
-    rm -rf $DEVENV_ROOT/dist/bitflip
-    mkdir -p $DEVENV_ROOT/dist/bitflip
-    cp $DEVENV_ROOT/target/release/bitflip $DEVENV_ROOT/dist/bitflip/bitflip
-    cp -r $DEVENV_ROOT/target/site/bitflip $DEVENV_ROOT/dist/bitflip/site
-    cp -r $DEVENV_ROOT/bitflip/Cargo.toml $DEVENV_ROOT/dist/bitflip
-  '';
+  tasks."build:docker" = {
+    exec = ''
+      set -e
+      docker build -t kj-dev -f $DEVENV_ROOT/bitflip/Dockerfile $DEVENV_ROOT
+    '';
+    description = "";
+  };
+  tasks."watch:bitflip" = {
+    exec = ''
+      cargo make watch:bitflip
+    '';
+    description = "";
+  };
+  tasks."build:bitflip" = {
+    exec = ''
+      set -e
+      cargo make build:bitflip:tailwind
+      cargo leptos build --project bitflip --release -vv --features="prod"
+    '';
+    description = "";
+  };
+  tasks."serve:bitflip" = {
+    exec = ''
+      set -e
+      cargo make build:bitflip:tailwind
+      cargo leptos serve --project bitflip --release -vv --features="prod"
+    '';
+    description = "";
+  };
+  tasks."prepare:bitflip" = {
+    exec = ''
+      set -e
+      rm -rf $DEVENV_ROOT/dist/bitflip
+      mkdir -p $DEVENV_ROOT/dist/bitflip
+      cp $DEVENV_ROOT/target/release/bitflip $DEVENV_ROOT/dist/bitflip/bitflip
+      cp -r $DEVENV_ROOT/target/site/bitflip $DEVENV_ROOT/dist/bitflip/site
+      cp -r $DEVENV_ROOT/bitflip/Cargo.toml $DEVENV_ROOT/dist/bitflip
+    '';
+    description = "";
+  };
+  tasks."watch:bitflip:leptos" = {
+    exec = ''
+      cargo leptos watch --hot-reload --project bitflip
+    '';
+    description = "";
+  };
 }
