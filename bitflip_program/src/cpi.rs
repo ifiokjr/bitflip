@@ -87,6 +87,83 @@ pub(crate) fn group_pointer_initialize<'info>(
 	)
 }
 
+pub(crate) fn token_group_initialize<'info>(
+	token_program_info: &AccountInfo<'info>,
+	group_info: &AccountInfo<'info>,
+	mint_info: &AccountInfo<'info>,
+	mint_authority_info: &AccountInfo<'info>,
+	signers_seeds: &[&[&[u8]]],
+) -> ProgramResult {
+	let ix = spl_token_group_interface::instruction::initialize_group(
+		token_program_info.key,
+		group_info.key,
+		mint_info.key,
+		mint_authority_info.key,
+		Some(*mint_authority_info.key),
+		8,
+	);
+	solana_program::program::invoke_signed(
+		&ix,
+		&[
+			token_program_info.clone(),
+			group_info.clone(),
+			mint_info.clone(),
+			mint_authority_info.clone(),
+		],
+		signers_seeds,
+	)
+}
+
+pub(crate) fn group_member_pointer_initialize<'info>(
+	mint_info: &AccountInfo<'info>,
+	authority_info: &AccountInfo<'info>,
+	token_program_info: &AccountInfo<'info>,
+	signers_seeds: &[&[&[u8]]],
+) -> ProgramResult {
+	let ix = spl_token_2022::extension::group_member_pointer::instruction::initialize(
+		token_program_info.key,
+		mint_info.key,
+		Some(*authority_info.key),
+		Some(*mint_info.key),
+	)?;
+	solana_program::program::invoke_signed(
+		&ix,
+		&[token_program_info.clone(), mint_info.clone()],
+		signers_seeds,
+	)
+}
+
+pub(crate) fn token_group_member_initialize<'info>(
+	token_program_info: &AccountInfo<'info>,
+	member_info: &AccountInfo<'info>,
+	member_mint_info: &AccountInfo<'info>,
+	member_mint_authority_info: &AccountInfo<'info>,
+	group_info: &AccountInfo<'info>,
+	group_authority_info: &AccountInfo<'info>,
+	signers_seeds: &[&[&[u8]]],
+) -> ProgramResult {
+	let ix = spl_token_group_interface::instruction::initialize_member(
+		token_program_info.key,
+		member_info.key,
+		member_mint_info.key,
+		member_mint_authority_info.key,
+		group_info.key,
+		group_authority_info.key,
+	);
+	solana_program::program::invoke_signed(
+		&ix,
+		&[
+			token_program_info.clone(),
+			member_info.clone(),
+			member_mint_info.clone(),
+			member_mint_authority_info.clone(),
+			group_info.clone(),
+			group_authority_info.clone(),
+		],
+		signers_seeds,
+	)
+}
+
 pub(crate) fn mint_close_authority_initialize<'info>(
 	mint_info: &AccountInfo<'info>,
 	authority_info: &AccountInfo<'info>,

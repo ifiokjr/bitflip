@@ -2,10 +2,9 @@ use steel::*;
 
 use crate::BITFLIP_SECTION_LENGTH;
 
-#[derive(Default, Debug, Error, Clone, Copy, PartialEq, Eq, IntoPrimitive)]
+#[derive(Debug, Error, Clone, Copy, PartialEq, Eq, IntoPrimitive)]
 #[repr(u32)]
 pub enum BitflipError {
-	#[default]
 	#[error("An unknown error occured")]
 	Unknown,
 	#[error(

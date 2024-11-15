@@ -52,15 +52,13 @@ pub const SEED_PLAYER: &[u8] = b"player";
 /// The PDA seed for the configuration account.
 pub const SEED_CONFIG: &[u8] = b"config";
 /// The PDA seed for BIT mint token account.
-pub const SEED_BIT_MINT: &[u8] = b"bit_mint";
-/// The PDA seed for BYTE mint token account.
-pub const SEED_BYTE_MINT: &[u8] = b"byte_mint";
-/// The PDA seed for KILO_BIT mint token account.
-pub const SEED_KILO_BIT_MINT: &[u8] = b"kilo_bit_mint";
-/// The PDA seed for MEGA_BIT mint token account.
-pub const SEED_MEGA_BIT_MINT: &[u8] = b"mega_bit_mint";
-/// The PDA seed for GIGA_BIT mint token account.
-pub const SEED_GIGA_BIT_MINT: &[u8] = b"giga_bit_mint";
+pub const SEED_BIT_MINT: &[u8] = b"mint_bit";
+/// The PDA seed for KIBIBIT mint token account.
+pub const SEED_KIBIBIT_MINT: &[u8] = b"mint_kibibit";
+/// The PDA seed for MEBIBIT mint token account.
+pub const SEED_MEBIBIT_MINT: &[u8] = b"mint_mebibit";
+/// The PDA seed for GIBIBIT mint token account.
+pub const SEED_GIBIBIT_MINT: &[u8] = b"mint_gibibit";
 /// The treasury account which is also the authority for the `mint` token
 /// account.
 pub const SEED_TREASURY: &[u8] = b"treasury";
@@ -80,17 +78,14 @@ pub const SPACE_U32: usize = 4;
 
 // Token Metadata
 pub const BIT_TOKEN_NAME: &str = "Bit";
-pub const BIT_TOKEN_SYMBOL: &str = "BIT";
+pub const BIT_TOKEN_SYMBOL: &str = "B";
 pub const BIT_TOKEN_URI: &str = "https://bitflip.art/bit-meta.json";
-pub const BYTE_TOKEN_NAME: &str = "Byte";
-pub const BYTE_TOKEN_SYMBOL: &str = "BYTE";
-pub const BYTE_TOKEN_URI: &str = "https://bitflip.art/byte-meta.json";
-pub const KILO_BIT_TOKEN_NAME: &str = "KiloBit";
-pub const KILO_BIT_TOKEN_SYMBOL: &str = "KBIT";
-pub const KILO_BIT_TOKEN_URI: &str = "https://bitflip.art/kbit-meta.json";
-pub const MEGA_BIT_TOKEN_NAME: &str = "MegaBit";
-pub const MEGA_BIT_TOKEN_SYMBOL: &str = "MBIT";
-pub const MEGA_BIT_TOKEN_URI: &str = "https://bitflip.art/mbit-meta.json";
-pub const GBIT_TOKEN_NAME: &str = "GigaBit";
-pub const GIGA_BIT_TOKEN_SYMBOL: &str = "GBIT";
-pub const GIGA_BIT_TOKEN_URI: &str = "https://bitflip.art/gbit-meta.json";
+pub const KIBIBIT_TOKEN_NAME: &str = "KibiBit";
+pub const KIBIBIT_TOKEN_SYMBOL: &str = "KiB";
+pub const KIBIBIT_TOKEN_URI: &str = "https://bitflip.art/kbit-meta.json";
+pub const MEBIBIT_TOKEN_NAME: &str = "MebiBit";
+pub const MEBIBIT_TOKEN_SYMBOL: &str = "MiB";
+pub const MEBIBIT_TOKEN_URI: &str = "https://bitflip.art/mbit-meta.json";
+pub const GIBIBIT_TOKEN_NAME: &str = "GibiBit";
+pub const GIBIBIT_TOKEN_SYMBOL: &str = "GiB";
+pub const GIBIBIT_TOKEN_URI: &str = "https://bitflip.art/gbit-meta.json";

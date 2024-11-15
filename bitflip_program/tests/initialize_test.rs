@@ -15,6 +15,7 @@ use shared::ToRpcClient;
 use shared::create_admin_keypair;
 use shared::create_authority_keypair;
 use shared::create_program_context_with_factory;
+use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::instruction::InstructionError;
 use solana_sdk::signature::Keypair;
 use solana_sdk::transaction::TransactionError;
@@ -40,7 +41,7 @@ async fn initialize_config_test_validator() -> anyhow::Result<()> {
 	let compute_units = shared_initialize_config_test(create_validator_rpc).await?;
 	let rounded_compute_units = bitflip_program::round_compute_units_up(compute_units);
 
-	check!(rounded_compute_units <= 200_000);
+	check!(rounded_compute_units <= 400_000);
 	insta::assert_snapshot!(format!("{rounded_compute_units} CU"));
 
 	Ok(())
@@ -98,9 +99,15 @@ async fn shared_initialize_config_test<
 	let mint_bit = get_pda_mint_bit().0;
 	let treasury_bit_token_account = get_treasury_bit_token_account();
 	let recent_blockhash = rpc.get_latest_blockhash().await?;
-	let ix = initialize(&admin, &authority);
-	let mut transaction =
-		VersionedTransaction::new_unsigned_v0(&authority, &[ix], &[], recent_blockhash)?;
+	let instruction = initialize(&admin, &authority);
+	let compute_limit_instruction = ComputeBudgetInstruction::set_compute_unit_limit(1_400_000);
+	let mut transaction = VersionedTransaction::new_unsigned_v0(
+		&authority,
+		&[compute_limit_instruction, instruction],
+		&[],
+		recent_blockhash,
+	)?;
+
 	let simulation = rpc.simulate_transaction(&transaction).await?;
 	log::info!("simulation: {simulation:#?}");
 
@@ -118,7 +125,18 @@ async fn shared_initialize_config_test<
 	let authority_redaction = create_insta_redaction(authority, "treasury");
 	insta::assert_compact_json_snapshot!(config_state_account,{
 		".authority" => insta::dynamic_redaction(authority_redaction),
-	}, @r#"{"authority": "[treasury]", "bump": 254, "treasuryBump": 255, "mintBitBump": 255, "gameIndex": 0}"#);
+	}, @r#"
+ {
+   "authority": "[treasury]",
+   "bump": 254,
+   "treasuryBump": 255,
+   "mintBitBump": 255,
+   "mintKibibitBump": 255,
+   "mintMebibitBump": 255,
+   "mintGibibitBump": 255,
+   "gameIndex": 0
+ }
+ "#);
 
 	let treasury_lamports = rpc.get_balance(&treasury).await?;
 	check!(treasury_lamports == Rent::default().minimum_balance(0));
@@ -178,7 +196,7 @@ async fn shared_initialize_config_test<
            "updateAuthority": "[treasury:pubkey]",
            "mint": "[mint_bit:pubkey]",
            "name": "Bit",
-           "symbol": "BIT",
+           "symbol": "B",
            "uri": "https://bitflip.art/bit-meta.json",
            "additionalMetadata": []
          }

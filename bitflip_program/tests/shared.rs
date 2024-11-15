@@ -15,6 +15,9 @@ use bitflip_program::get_pda_config;
 use bitflip_program::get_pda_game;
 use bitflip_program::get_pda_game_nonce;
 use bitflip_program::get_pda_mint_bit;
+use bitflip_program::get_pda_mint_gibibit;
+use bitflip_program::get_pda_mint_kibibit;
+use bitflip_program::get_pda_mint_mebibit;
 use bitflip_program::get_pda_section;
 use bitflip_program::get_pda_treasury;
 use bitflip_program::get_section_bit_token_account;
@@ -167,9 +170,21 @@ pub fn create_config_state() -> AccountSharedData {
 	let authority = create_authority_keypair().pubkey();
 	let config_bump = get_pda_config().1;
 	let treasury_bump = get_pda_treasury().1;
-	let mint_bump = get_pda_mint_bit().1;
+	let mint_bit_bump = get_pda_mint_bit().1;
+	let mint_kibibit_bump = get_pda_mint_kibibit().1;
+	let mint_mebibit_bump = get_pda_mint_mebibit().1;
+	let mint_gibibit_bump = get_pda_mint_gibibit().1;
 
-	ConfigState::new(authority, config_bump, treasury_bump, mint_bump).to_account_shared_data()
+	ConfigState::new(
+		authority,
+		config_bump,
+		treasury_bump,
+		mint_bit_bump,
+		mint_kibibit_bump,
+		mint_mebibit_bump,
+		mint_gibibit_bump,
+	)
+	.to_account_shared_data()
 }
 
 pub fn create_game_state(

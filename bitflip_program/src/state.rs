@@ -32,6 +32,12 @@ pub struct ConfigState {
 	pub treasury_bump: u8,
 	/// The mint account bump.
 	pub mint_bit_bump: u8,
+	/// The mint account bump for KIBIBIT.
+	pub mint_kibibit_bump: u8,
+	/// The mint account bump for MEBIBIT.
+	pub mint_mebibit_bump: u8,
+	/// The mint account bump for GIBIBIT.
+	pub mint_gibibit_bump: u8,
 	/// There will be a maximum of 256 games.
 	pub game_index: u8,
 }
@@ -41,12 +47,23 @@ impl ConfigState {
 		8 + std::mem::size_of::<Self>()
 	}
 
-	pub fn new(authority: Pubkey, bump: u8, treasury_bump: u8, mint_bit_bump: u8) -> ConfigState {
+	pub fn new(
+		authority: Pubkey,
+		bump: u8,
+		treasury_bump: u8,
+		mint_bit_bump: u8,
+		mint_kibibit_bump: u8,
+		mint_mebibit_bump: u8,
+		mint_gibibit_bump: u8,
+	) -> ConfigState {
 		ConfigState {
 			authority,
 			bump,
 			treasury_bump,
 			mint_bit_bump,
+			mint_kibibit_bump,
+			mint_mebibit_bump,
+			mint_gibibit_bump,
 			game_index: 0,
 		}
 	}
@@ -166,7 +183,11 @@ pub struct SectionState {
 	/// The bump for this section state.
 	pub bump: u8,
 	/// Padding to make the size of the struct a multiple of 8.
+	#[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
 	pub _padding: [u8; 2],
+	// /// Extra space in case we need more fields in the future.
+	// #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
+	// pub extra_space: [u8; 64],
 }
 
 impl SectionState {
