@@ -1,22 +1,29 @@
 use std::collections::HashMap;
 use std::hash::RandomState;
 
+use anchor_lang::AnchorSerialize;
+use anchor_lang::Discriminator;
+use anchor_lang::system_program;
 use anyhow::Result;
-use bitflip_steel_program::ConfigState;
-use bitflip_steel_program::GameState;
-use bitflip_steel_program::ID;
-use bitflip_steel_program::MINIMUM_FLIPS_PER_SECTION;
-use bitflip_steel_program::SectionState;
-use bitflip_steel_program::TOKEN_DECIMALS;
-use bitflip_steel_program::TOKENS_PER_SECTION;
-use bitflip_steel_program::get_pda_config;
-use bitflip_steel_program::get_pda_game;
-use bitflip_steel_program::get_pda_game_nonce;
-use bitflip_steel_program::get_pda_mint;
-use bitflip_steel_program::get_pda_section_state;
-use bitflip_steel_program::get_pda_treasury;
-use bitflip_steel_program::get_section_token_account;
-use bitflip_steel_program::get_token_amount;
+use bitflip_legacy_client::BitflipLegacyProgramClient;
+use bitflip_legacy_client::get_pda_config;
+use bitflip_legacy_client::get_pda_game;
+use bitflip_legacy_client::get_pda_game_nonce;
+use bitflip_legacy_client::get_pda_mint;
+use bitflip_legacy_client::get_pda_section_data;
+use bitflip_legacy_client::get_pda_section_state;
+use bitflip_legacy_client::get_pda_treasury;
+use bitflip_legacy_client::get_section_token_account;
+use bitflip_legacy_program::BITFLIP_SECTION_LENGTH;
+use bitflip_legacy_program::ConfigState;
+use bitflip_legacy_program::GameState;
+use bitflip_legacy_program::ID_CONST;
+use bitflip_legacy_program::MINIMUM_FLIPS_PER_SECTION;
+use bitflip_legacy_program::SectionData;
+use bitflip_legacy_program::SectionState;
+use bitflip_legacy_program::TOKEN_DECIMALS;
+use bitflip_legacy_program::TOKENS_PER_SECTION;
+use bitflip_legacy_program::get_token_amount;
 use solana_sdk::account::AccountSharedData;
 use solana_sdk::account::WritableAccount;
 use solana_sdk::account_utils::StateMut;
@@ -30,44 +37,28 @@ use solana_sdk::pubkey::Pubkey;
 use solana_sdk::rent::Rent;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signature::Signer;
-use steel::*;
 use test_utils::SECRET_KEY_ADMIN;
 use test_utils::SECRET_KEY_AUTHORITY;
 use test_utils::SECRET_KEY_TREASURY;
 use test_utils::SECRET_KEY_WALLET;
+use test_utils_solana::FromAnchorData;
 use test_utils_solana::ProgramTest;
 use test_utils_solana::TestRpcProvider;
-use test_utils_solana::processor;
+use test_utils_solana::anchor_processor;
 use test_utils_solana::solana_sdk::account::Account;
 use wallet_standard_wallets::MemoryWallet;
+use wasm_client_anchor::prelude::*;
 use wasm_client_solana::SolanaRpcClient;
 
 #[cfg(feature = "test_validator")]
 const DEVENV_ROOT: &str = env!("DEVENV_ROOT");
 
-pub trait ToRpcClient {
-	fn to_rpc(&self) -> SolanaRpcClient;
-}
-
-impl ToRpcClient for TestRpcProvider {
-	fn to_rpc(&self) -> SolanaRpcClient {
-		self.to_rpc_client()
-	}
-}
-
-#[cfg(feature = "test_validator")]
-impl ToRpcClient for test_utils_solana::TestValidatorRunner {
-	fn to_rpc(&self) -> SolanaRpcClient {
-		self.rpc().clone()
-	}
-}
-
 /// Add the anchor program to the project.
 pub(crate) fn create_program_test() -> ProgramTest {
 	ProgramTest::new(
 		"bitflip",
-		ID,
-		processor!(bitflip_steel_program::process_instruction),
+		ID_CONST,
+		anchor_processor!(bitflip_legacy_program),
 	)
 }
 
@@ -97,9 +88,9 @@ pub async fn create_runner_with_accounts(
 	accounts: HashMap<Pubkey, AccountSharedData, RandomState>,
 ) -> test_utils_solana::TestValidatorRunner {
 	let launchpad_program = test_utils_solana::TestProgramInfo::builder()
-		.program_id(ID)
+		.program_id(ID_CONST)
 		.program_path(format!(
-			"{DEVENV_ROOT}/target/deploy/bitflip_steel_program.so"
+			"{DEVENV_ROOT}/target/deploy/bitflip_legacy_program.so"
 		))
 		.build();
 	let props = test_utils_solana::TestValidatorRunnerProps::builder()
@@ -146,21 +137,27 @@ pub async fn create_program_context() -> Result<TestRpcProvider> {
 }
 
 /// The program client using the admin wallet account
-pub fn get_admin_wallet(rpc: &SolanaRpcClient) -> MemoryWallet {
-	get_wallet(rpc, &create_admin_keypair())
+pub fn get_admin_program(rpc: &SolanaRpcClient) -> TestBitflipLegacyProgramClient {
+	get_program(rpc, &create_admin_keypair())
 }
 
-pub fn get_authority_wallet(rpc: &SolanaRpcClient) -> MemoryWallet {
-	get_wallet(rpc, &create_authority_keypair())
+pub fn get_authority_program(rpc: &SolanaRpcClient) -> TestBitflipLegacyProgramClient {
+	get_program(rpc, &create_authority_keypair())
 }
 
-pub fn get_wallet_wallet(rpc: &SolanaRpcClient) -> MemoryWallet {
-	get_wallet(rpc, &create_wallet_keypair())
+pub fn get_wallet_program(rpc: &SolanaRpcClient) -> TestBitflipLegacyProgramClient {
+	get_program(rpc, &create_wallet_keypair())
 }
 
 /// A program client using a custom payer.
-pub fn get_wallet(rpc: &SolanaRpcClient, payer: &Keypair) -> MemoryWallet {
-	MemoryWallet::new(rpc.clone(), &[payer.insecure_clone()])
+pub fn get_program(rpc: &SolanaRpcClient, payer: &Keypair) -> TestBitflipLegacyProgramClient {
+	let wallet = MemoryWallet::new(rpc.clone(), &[payer.insecure_clone()]);
+
+	TestBitflipLegacyProgramClient::builder()
+		.wallet(wallet)
+		.rpc(rpc.clone())
+		.build()
+		.into()
 }
 
 pub fn create_config_state(mint_bump: Option<u8>) -> AccountSharedData {
@@ -173,9 +170,7 @@ pub fn create_config_state(mint_bump: Option<u8>) -> AccountSharedData {
 		state.mint_bump = mint_bump;
 	}
 
-	state.to_bytes();
-
-	state.to_account_shared_data()
+	state.into_account_shared_data()
 }
 
 pub fn create_game_state(
@@ -212,7 +207,7 @@ pub fn create_game_state(
 	game_nonce_account.set_state(&versioned_state).unwrap();
 
 	(
-		game_state.to_account_shared_data(),
+		game_state.into_account_shared_data(),
 		game_nonce_account,
 		access_signer,
 		refresh_signer,
@@ -228,12 +223,29 @@ pub fn create_section_state(
 
 	for section_index in 0..next_section_index {
 		let (section, section_bump) = get_pda_section_state(game_index, section_index);
+		let (section_data, section_data_bump) = get_pda_section_data(game_index, section_index);
 		let section_token_account = get_section_token_account(game_index, section_index);
 
-		let mut section_state =
-			SectionState::new(Pubkey::new_unique(), section_index, section_bump);
+		let mut section_state = SectionState::new(
+			Pubkey::new_unique(),
+			section_index,
+			section_bump,
+			section_data_bump,
+		);
 		section_state.flips = MINIMUM_FLIPS_PER_SECTION;
-		map.insert(section, section_state.to_account_shared_data());
+		map.insert(section, section_state.into_account_shared_data());
+
+		let section_data_account = {
+			let section_data = SectionData {
+				data: [0; BITFLIP_SECTION_LENGTH],
+			};
+			let mut data = vec![];
+			data.append(&mut SectionData::DISCRIMINATOR.to_vec());
+			data.append(&mut section_data.to_bytes());
+			let rent = Rent::default().minimum_balance(SectionData::space());
+			AccountSharedData::create(rent, data, ID_CONST, false, u64::MAX)
+		};
+		map.insert(section_data, section_data_account);
 
 		let amount = get_token_amount(TOKENS_PER_SECTION, TOKEN_DECIMALS).unwrap();
 		let token_account_state = spl_token_2022::state::Account {
@@ -267,26 +279,19 @@ pub fn create_section_state(
 	map
 }
 
-pub trait IntoAccountSharedData: Pod + Discriminator {
-	fn to_account_shared_data(&self) -> AccountSharedData;
-	fn to_account(&self) -> Account;
+pub type TestBitflipLegacyProgramClient = BitflipLegacyProgramClient<MemoryWallet>;
+
+pub trait IntoAccountSharedData: AnchorSerialize + Discriminator {
+	fn into_account_shared_data(self) -> AccountSharedData;
+	fn into_account(self) -> Account;
 }
 
-impl<T: Pod + Discriminator> IntoAccountSharedData for T {
-	fn to_account_shared_data(&self) -> AccountSharedData {
-		let mut bytes = Vec::new();
-		let mut initial_bytes = [0u8; 8];
-		initial_bytes[0] = T::discriminator();
-
-		bytes.extend_from_slice(&initial_bytes);
-		bytes.extend_from_slice(bytemuck::bytes_of(self));
-
-		let rent = Rent::default().minimum_balance(bytes.len());
-
-		AccountSharedData::create(rent, bytes, ID, false, 0)
+impl<T: AnchorSerialize + Discriminator> IntoAccountSharedData for T {
+	fn into_account_shared_data(self) -> AccountSharedData {
+		AccountSharedData::from_anchor_data(self, ID_CONST)
 	}
 
-	fn to_account(&self) -> Account {
-		self.to_account_shared_data().into()
+	fn into_account(self) -> Account {
+		self.into_account_shared_data().into()
 	}
 }

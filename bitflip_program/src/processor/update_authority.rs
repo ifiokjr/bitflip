@@ -51,7 +51,6 @@ pub struct UpdateAuthority {}
 
 instruction!(BitflipInstruction, UpdateAuthority);
 
-#[cfg(feature = "client")]
 #[cfg(test)]
 mod tests {
 	use assert2::check;
@@ -60,6 +59,7 @@ mod tests {
 
 	use super::*;
 	use crate::get_pda_config;
+	use crate::get_pda_mint_bit;
 	use crate::get_pda_treasury;
 	use crate::leak;
 
@@ -185,6 +185,7 @@ mod tests {
 	fn create_account_infos() -> [AccountInfo<'static>; 3] {
 		let (config_key, config_bump) = leak(get_pda_config());
 		let treasury_bump = get_pda_treasury().1;
+		let mint_bump = get_pda_mint_bit().1;
 		let authority_lamports = leak(1_000_000_000);
 		let new_authority_lamports = leak(1_000_000_000);
 		let authority_key = leak(Pubkey::new_unique());
@@ -194,7 +195,7 @@ mod tests {
 		let mut data = vec![0u8; 8];
 		data[0] = ConfigState::discriminator();
 		data.append(
-			&mut ConfigState::new(*authority_key, *config_bump, treasury_bump)
+			&mut ConfigState::new(*authority_key, *config_bump, treasury_bump, mint_bump)
 				.to_bytes()
 				.to_vec(),
 		);

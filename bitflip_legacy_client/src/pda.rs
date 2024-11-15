@@ -1,14 +1,14 @@
 use anchor_spl::token_2022;
-use bitflip_program::ID_CONST;
-use bitflip_program::SEED_CONFIG;
-use bitflip_program::SEED_GAME;
-use bitflip_program::SEED_GAME_NONCE;
-use bitflip_program::SEED_MINT;
-use bitflip_program::SEED_PLAYER;
-use bitflip_program::SEED_PREFIX;
-use bitflip_program::SEED_SECTION_DATA;
-use bitflip_program::SEED_SECTION_STATE;
-use bitflip_program::SEED_TREASURY;
+use bitflip_legacy_program::ID_CONST;
+use bitflip_legacy_program::SEED_CONFIG;
+use bitflip_legacy_program::SEED_GAME;
+use bitflip_legacy_program::SEED_GAME_NONCE;
+use bitflip_legacy_program::SEED_MINT;
+use bitflip_legacy_program::SEED_PLAYER;
+use bitflip_legacy_program::SEED_PREFIX;
+use bitflip_legacy_program::SEED_SECTION_DATA;
+use bitflip_legacy_program::SEED_SECTION_STATE;
+use bitflip_legacy_program::SEED_TREASURY;
 use solana_sdk::pubkey::Pubkey;
 use spl_associated_token_account::get_associated_token_address_with_program_id;
 

@@ -1010,8 +1010,8 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "axum 0.7.7",
- "bitflip_client",
- "bitflip_program",
+ "bitflip_legacy_client",
+ "bitflip_legacy_program",
  "codee",
  "console_error_panic_hook",
  "console_log 1.0.0",
@@ -1042,7 +1042,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bitflip_client"
+name = "bitflip_legacy_client"
 version = "0.0.0"
 dependencies = [
  "anchor-lang",
@@ -1050,7 +1050,7 @@ dependencies = [
  "anyhow",
  "assert2",
  "async-trait",
- "bitflip_program",
+ "bitflip_legacy_program",
  "bytemuck",
  "derive_more 1.0.0",
  "futures 0.3.31",
@@ -1076,7 +1076,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bitflip_program"
+name = "bitflip_legacy_program"
 version = "0.0.0"
 dependencies = [
  "anchor-lang",
@@ -1100,7 +1100,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bitflip_steel_program"
+name = "bitflip_program"
 version = "0.0.0"
 dependencies = [
  "anyhow",
@@ -1122,6 +1122,7 @@ dependencies = [
  "solana-security-txt",
  "spl-associated-token-account 3.0.4",
  "spl-token-2022 3.0.4",
+ "spl-token-metadata-interface 0.3.5",
  "spl-transfer-hook-interface 0.6.5",
  "steel",
  "test-log",
@@ -1203,11 +1204,11 @@ dependencies = [
 
 [[package]]
 name = "borsh"
-version = "1.5.2"
+version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5327f6c99920069d1fe374aa743be1af0031dea9f250852cdf1ae6a0861ee24"
+checksum = "2506947f73ad44e344215ccd6403ac2ae18cd8e046e581a441bf8d199f257f03"
 dependencies = [
- "borsh-derive 1.5.2",
+ "borsh-derive 1.5.3",
  "cfg_aliases",
 ]
 
@@ -1239,9 +1240,9 @@ dependencies = [
 
 [[package]]
 name = "borsh-derive"
-version = "1.5.2"
+version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10aedd8f1a81a8aafbfde924b0e3061cd6fedd6f6bbcfc6a76e6fd426d7bfe26"
+checksum = "c2593a3b8b938bd68373196c9832f516be11fa487ef4ae745eb282e6a56a7244"
 dependencies = [
  "once_cell",
  "proc-macro-crate 3.2.0",
@@ -1332,9 +1333,9 @@ dependencies = [
 
 [[package]]
 name = "bstr"
-version = "1.10.0"
+version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40723b8fb387abc38f4f4a37c09073622e41dd12327033091ef8950659e6dc0c"
+checksum = "1a68f1f47cdf0ec8ee4b941b2eee2a80cb796db73118c0dd09ac63fbe405be22"
 dependencies = [
  "memchr",
  "serde",
@@ -1437,9 +1438,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.0"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1aeb932158bd710538c73702db6945cb68a8fb08c519e6e12706b94263b36db8"
+checksum = "fd9de9f2205d5ef3fd67e685b0df337994ddd4495e2a28d185500d0e1edfea47"
 dependencies = [
  "jobserver",
  "libc",
@@ -2416,9 +2417,9 @@ checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
 
 [[package]]
 name = "flate2"
-version = "1.0.34"
+version = "1.0.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1b589b4dc103969ad3cf85c950899926ec64300a1a46d76c03a6072957036f0"
+checksum = "c936bfdafb507ebbf50b8074c54fa31c5be9a1e7e5f467dd659697041407d07c"
 dependencies = [
  "crc32fast",
  "miniz_oxide",
@@ -6220,9 +6221,9 @@ dependencies = [
 
 [[package]]
 name = "serde_tuple"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5991beac1639af3c125efc081bb53e8ca04dd243ad84832799db89b930e537cc"
+checksum = "f0f9b739e59a0e07b7a73bc11c3dcd6abf790d0f54042b67a422d4bd1f6cf6c0"
 dependencies = [
  "serde",
  "serde_tuple_macros",
@@ -6230,9 +6231,9 @@ dependencies = [
 
 [[package]]
 name = "serde_tuple_macros"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a418ec717f9e70ce0261268e41367429f97af6a04b58c7e6159128a011c6cfa"
+checksum = "9e87546e85c5047d03b454d12ee25266fc269a461a4029956ca58d246b9aefae"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6706,7 +6707,7 @@ version = "1.18.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e58fa66e1e240097665e7f87b267aa8e976ea3fcbd86918c8fd218c875395ada"
 dependencies = [
- "borsh 1.5.2",
+ "borsh 1.5.3",
  "futures 0.3.31",
  "solana-banks-interface",
  "solana-program",
@@ -7422,7 +7423,7 @@ dependencies = [
  "blake3",
  "borsh 0.10.4",
  "borsh 0.9.3",
- "borsh 1.5.2",
+ "borsh 1.5.3",
  "bs58 0.4.0",
  "bv",
  "bytemuck",
@@ -7805,7 +7806,7 @@ dependencies = [
  "base64 0.21.7",
  "bincode",
  "bitflags 2.6.0",
- "borsh 1.5.2",
+ "borsh 1.5.3",
  "bs58 0.4.0",
  "bytemuck",
  "byteorder",
@@ -8351,7 +8352,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "143109d789171379e6143ef23191786dfaac54289ad6e7917cfb26b36c432b10"
 dependencies = [
  "assert_matches",
- "borsh 1.5.2",
+ "borsh 1.5.3",
  "num-derive 0.4.2",
  "num-traits",
  "solana-program",
@@ -8458,7 +8459,7 @@ version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c52d84c55efeef8edcc226743dc089d7e3888b8e3474569aa3eff152b37b9996"
 dependencies = [
- "borsh 1.5.2",
+ "borsh 1.5.3",
  "bytemuck",
  "solana-program",
  "solana-zk-token-sdk",
@@ -8652,7 +8653,7 @@ version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3da00495b602ebcf5d8ba8b3ecff1ee454ce4c125c9077747be49c2d62335ba"
 dependencies = [
- "borsh 1.5.2",
+ "borsh 1.5.3",
  "solana-program",
  "spl-discriminator 0.2.5",
  "spl-pod 0.2.5",
@@ -9107,7 +9108,7 @@ dependencies = [
  "assert2",
  "async-trait",
  "bincode",
- "borsh 1.5.2",
+ "borsh 1.5.3",
  "chrono-humanize",
  "crossbeam-channel",
  "derive_more 1.0.0",

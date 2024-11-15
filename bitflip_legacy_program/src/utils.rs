@@ -1,6 +1,6 @@
+use anchor_lang::prelude::*;
 use derive_more::Add;
 use derive_more::AddAssign;
-use steel::ProgramError;
 
 use crate::BitflipError;
 
@@ -11,16 +11,15 @@ pub struct BitChanges {
 }
 
 impl BitChanges {
-	pub fn total(&self) -> Result<u32, ProgramError> {
+	pub fn total(&self) -> Result<u32> {
 		self.on
 			.checked_add(self.off)
-			.ok_or(ProgramError::ArithmeticOverflow)
+			.ok_or(ProgramError::ArithmeticOverflow.into())
 	}
 }
-pub fn get_bit_changes(previous: u16, next: u16) -> Result<BitChanges, ProgramError> {
-	if next == previous {
-		return Err(BitflipError::BitsUnchanged.into());
-	}
+
+pub fn get_bit_changes(previous: u16, next: u16) -> Result<BitChanges> {
+	require!(next != previous, BitflipError::BitsUnchanged);
 
 	let mut changes = BitChanges::default();
 	let previous_string = format!("{previous:016b}");
@@ -50,17 +49,16 @@ pub fn get_bit_changes(previous: u16, next: u16) -> Result<BitChanges, ProgramEr
 	Ok(changes)
 }
 
-pub fn get_token_amount(tokens: u64, decimals: u8) -> Result<u64, ProgramError> {
+pub fn get_token_amount(tokens: u64, decimals: u8) -> Result<u64> {
 	tokens
 		.checked_mul(10u64.pow(decimals.into()))
-		.ok_or(ProgramError::ArithmeticOverflow)
+		.ok_or(ProgramError::ArithmeticOverflow.into())
 }
 
 #[cfg(test)]
 mod tests {
 	use assert2::check;
 	use rstest::rstest;
-	use steel::ProgramResult;
 
 	use super::*;
 
@@ -73,7 +71,7 @@ mod tests {
 		#[case] previous: u16,
 		#[case] next: u16,
 		#[case] (on, off): (u32, u32),
-	) -> ProgramResult {
+	) -> Result<()> {
 		let result = get_bit_changes(previous, next)?;
 		check!(result == BitChanges { on, off });
 		check!(result.total()? == on + off);

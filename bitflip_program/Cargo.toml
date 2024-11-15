@@ -1,44 +1,58 @@
 [package]
 name = "bitflip_program"
-version = "0.0.0"
-edition = "2021"
-description = "Created with Anchor"
-
-[lints]
-workspace = true
+version = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+description = ""
 
 [lib]
 crate-type = ["cdylib", "lib"]
 name = "bitflip_program"
 
-[features]
-default = ["cpi"]
-cpi = []
-no-entrypoint = []
-no-idl = []
-no-log-ix-name = []
-idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
-serde = ["dep:serde", "dep:serde_with"]
-client = ["serde", "no-entrypoint", "dep:typed-builder"]
-
 [dependencies]
-anchor-lang = { workspace = true, features = ["event-cpi", "interface-instructions", "init-if-needed"] }
-anchor-spl = { workspace = true }
 bitflags = { workspace = true }
 bytemuck = { workspace = true }
 const_str_to_pubkey = { workspace = true }
 derive_more = { workspace = true, features = ["add", "add_assign"] }
-fixed = { workspace = true }
+log = { workspace = true, optional = true }
+num_enum = { workspace = true }
 serde = { workspace = true, features = ["derive"], optional = true }
 serde-big-array = { workspace = true }
 serde_with = { workspace = true, optional = true }
+solana-program = { workspace = true }
+solana-security-txt = { workspace = true }
+spl-associated-token-account = { workspace = true, features = ["no-entrypoint"] }
+spl-token-2022 = { workspace = true, features = ["no-entrypoint"] }
+spl-token-metadata-interface = { workspace = true }
+steel = { workspace = true }
 typed-builder = { workspace = true, optional = true }
+wasm_client_solana = { workspace = true, optional = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
 assert2 = { workspace = true }
-insta = { workspace = true, features = ["ron", "yaml", "redactions"] }
+insta = { workspace = true, features = ["json", "redactions", "ron", "yaml"] }
 rstest = { workspace = true }
+solana-program-test = { workspace = true }
+solana-sdk = { workspace = true }
+spl-associated-token-account = { workspace = true }
+spl-token-2022 = { workspace = true }
+spl-transfer-hook-interface = { workspace = true }
+test-log = { workspace = true, features = ["log", "trace"] }
 test_utils = { workspace = true }
-test_utils_solana = { workspace = true }
+test_utils_solana = { workspace = true, features = [] }
 tokio = { workspace = true, features = ["test-util", "rt", "macros", "time"] }
+wallet_standard_wallets = { workspace = true }
+
+[features]
+no-entrypoint = []
+serde = ["dep:serde", "dep:serde_with"]
+client = ["serde", "dep:typed-builder", "dep:wasm_client_solana", "dep:log"]
+ssr = ["wasm_client_solana?/ssr"]
+js = [
+	"wasm_client_solana?/js",
+	"no-entrypoint",
+]
+test_validator = ["client", "test_utils_solana/test_validator", "dep:log"]

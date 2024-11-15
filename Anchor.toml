@@ -26,7 +26,7 @@ cluster = "Localnet"
 wallet = "./setup/keypairs/admin.json"
 
 [workspace]
-members = ["bitflip_program"]
+members = ["bitflip_legacy_program"]
 
 [scripts]
 test = "echo hello"

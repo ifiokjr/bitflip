@@ -8,8 +8,8 @@ mutants = ["bin", "cargo-mutants"]
 make = ["bin", "cargo-make"]
 
 # tests
-test_bitflip_client = ["nextest", "run", "-p", "bitflip_client", "-F", "ssr,test_banks_client"]
-test_bitflip_client_validator = ["nextest", "run", "-p", "bitflip_client", "-F", "ssr,test_validator"]
+test_bitflip_legacy_client = ["nextest", "run", "-p", "bitflip_legacy_client", "-F", "ssr,test_banks_client"]
+test_bitflip_legacy_client_validator = ["nextest", "run", "-p", "bitflip_legacy_client", "-F", "ssr,test_validator"]
 
-test_program = ["nextest", "run", "-p", "bitflip_steel_program", "-F", "ssr,client"]
-test_program_validator = ["nextest", "run", "-p", "bitflip_steel_program", "-F", "ssr,test_validator"]
+test_program = ["nextest", "run", "-p", "bitflip_program", "-F", "ssr,client"]
+test_program_validator = ["nextest", "run", "-p", "bitflip_program", "-F", "ssr,test_validator"]

@@ -31,7 +31,7 @@ pub struct ConfigState {
 	/// tokens are transferred.
 	pub treasury_bump: u8,
 	/// The mint account bump.
-	pub mint_bump: u8,
+	pub mint_bit_bump: u8,
 	/// There will be a maximum of 256 games.
 	pub game_index: u8,
 }
@@ -41,12 +41,12 @@ impl ConfigState {
 		8 + std::mem::size_of::<Self>()
 	}
 
-	pub fn new(authority: Pubkey, bump: u8, treasury_bump: u8) -> ConfigState {
+	pub fn new(authority: Pubkey, bump: u8, treasury_bump: u8, mint_bit_bump: u8) -> ConfigState {
 		ConfigState {
 			authority,
 			bump,
 			treasury_bump,
-			mint_bump: 0,
+			mint_bit_bump,
 			game_index: 0,
 		}
 	}

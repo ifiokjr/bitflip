@@ -103,8 +103,8 @@
   scripts."test:all" = {
     exec = ''
       set -e
-      cargo test_bitflip_client
-      cargo test_bitflip_client_validator
+      cargo test_bitflip_legacy_client
+      cargo test_bitflip_legacy_client_validator
     '';
     description = "Run all tests across the crates";
   };
@@ -311,39 +311,39 @@
     '';
     description = "Install the version of solana or use one from the cache.";
   };
-	scripts."build:steel" = {
+	scripts."build:program" = {
 		exec = ''
 			set -e
-			cargo build-sbf --manifest-path $DEVENV_ROOT/bitflip_steel_program/Cargo.toml --arch sbfv1
+			cargo build-sbf --manifest-path $DEVENV_ROOT/bitflip_program/Cargo.toml --arch sbfv1
 		'';
 		description = "Build the steel program.";
 	};
-  scripts."build:anchor".exec = ''
+  scripts."build:program:legacy".exec = ''
     set -e
     anchor build
-    generated_bitflip_program_idl="$DEVENV_ROOT/target/idl/bitflip_program.json"
-    ci_bitflip_program_idl="$DEVENV_ROOT/idls/bitflip_program_ci.json"
-    saved_bitflip_program_idl="$DEVENV_ROOT/idls/bitflip_program.json"
+    generated_bitflip_legacy_program_idl="$DEVENV_ROOT/target/idl/bitflip_legacy_program.json"
+    ci_bitflip_legacy_program_idl="$DEVENV_ROOT/idls/bitflip_legacy_program_ci.json"
+    saved_bitflip_legacy_program_idl="$DEVENV_ROOT/idls/bitflip_legacy_program.json"
 
     if [ -n "$CI" ]; then
       echo "ℹ️ running inside CI"
-      cp -f $generated_bitflip_program_idl $ci_bitflip_program_idl
+      cp -f $generated_bitflip_legacy_program_idl $ci_bitflip_legacy_program_idl
       dprint fmt $DEVENV_ROOT/idls/*.json
-      if cmp -s "$ci_bitflip_program_idl" "$saved_bitflip_program_idl"; then
+      if cmp -s "$ci_bitflip_legacy_program_idl" "$saved_bitflip_legacy_program_idl"; then
         echo "✅ files are identical"
-        rm $ci_bitflip_program_idl
+        rm $ci_bitflip_legacy_program_idl
         exit 0
       else
         echo "❌ idl files were not updated"
         echo "ℹ️ make sure to run `anchor:build` before pushing your code"
       fi
 
-      rm $ci_bitflip_program_idl
+      rm $ci_bitflip_legacy_program_idl
       exit 1
     fi
 
     echo "ℹ️ running outside ci"
-    cp -f $generated_bitflip_program_idl $saved_bitflip_program_idl
+    cp -f $generated_bitflip_legacy_program_idl $saved_bitflip_legacy_program_idl
     dprint fmt $DEVENV_ROOT/idls/*.json
   '';
   tasks."build:docker" = {

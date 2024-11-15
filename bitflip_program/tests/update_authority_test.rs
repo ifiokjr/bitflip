@@ -1,10 +1,12 @@
+#![cfg(feature = "client")]
+
 use std::future::Future;
 
 use assert2::check;
-use bitflip_steel_program::BitflipError;
-use bitflip_steel_program::ConfigState;
-use bitflip_steel_program::get_pda_config;
-use bitflip_steel_program::update_authority;
+use bitflip_program::BitflipError;
+use bitflip_program::ConfigState;
+use bitflip_program::get_pda_config;
+use bitflip_program::update_authority;
 use shared::ToRpcClient;
 use shared::create_authority_keypair;
 use shared::create_config_state;
@@ -21,13 +23,20 @@ mod shared;
 
 #[test_log::test(tokio::test)]
 async fn update_authority_test() -> anyhow::Result<()> {
-	shared_update_authority_test(create_banks_client_rpc).await
+	shared_update_authority_test(create_banks_client_rpc).await?;
+	Ok(())
 }
 
 #[cfg(feature = "test_validator")]
 #[test_log::test(tokio::test)]
 async fn update_authority_test_validator() -> anyhow::Result<()> {
-	shared_update_authority_test(create_validator_rpc).await
+	let compute_units = shared_update_authority_test(create_validator_rpc).await?;
+	let rounded_compute_units = bitflip_program::round_compute_units_up(compute_units);
+
+	check!(rounded_compute_units == 10_000);
+	insta::assert_snapshot!(format!("{rounded_compute_units} CU"));
+
+	Ok(())
 }
 
 #[test_log::test(tokio::test)]
@@ -44,7 +53,7 @@ async fn authority_must_change_test_validator() -> anyhow::Result<()> {
 async fn create_banks_client_rpc() -> anyhow::Result<impl ToRpcClient> {
 	let provider = create_program_context_with_factory(|p| {
 		let config = get_pda_config().0;
-		let config_state_account = create_config_state(None);
+		let config_state_account = create_config_state();
 		p.add_account(config, config_state_account.into());
 	})
 	.await?;
@@ -54,16 +63,12 @@ async fn create_banks_client_rpc() -> anyhow::Result<impl ToRpcClient> {
 
 #[cfg(feature = "test_validator")]
 async fn create_validator_rpc() -> anyhow::Result<impl ToRpcClient> {
-	use std::collections::HashMap;
-
-	use shared::create_runner_with_accounts;
-	let mut accounts = HashMap::new();
+	let mut accounts = std::collections::HashMap::new();
 	let config = get_pda_config().0;
-	let config_state_account = create_config_state(None);
-
+	let config_state_account = create_config_state();
 	accounts.insert(config, config_state_account);
 
-	let runner = create_runner_with_accounts(accounts).await;
+	let runner = shared::create_runner_with_accounts(accounts).await;
 
 	Ok(runner)
 }
@@ -74,7 +79,7 @@ async fn shared_update_authority_test<
 	Create: FnOnce() -> Fut,
 >(
 	create_provider: Create,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<u64> {
 	let provider = create_provider().await?;
 	let rpc = provider.to_rpc();
 	let authority_keypair = create_authority_keypair();
@@ -89,7 +94,7 @@ async fn shared_update_authority_test<
 
 	let simulation = rpc.simulate_transaction(&transaction).await?;
 	log::info!("simulation: {simulation:#?}");
-	check!(simulation.value.units_consumed.unwrap() < 100_000);
+	let compute_units = simulation.value.units_consumed.unwrap();
 
 	transaction
 		.try_sign(&[&new_authority_keypair], None)?
@@ -103,9 +108,9 @@ async fn shared_update_authority_test<
 	let authority_redaction = create_insta_redaction(new_authority, "new_authority:pubkey");
 	insta::assert_compact_json_snapshot!(config_state_account,{
 		".authority" => insta::dynamic_redaction(authority_redaction),
-	}, @r#"{"authority": "[new_authority:pubkey]", "bump": 254, "treasuryBump": 255, "mintBump": 0, "gameIndex": 0}"#);
+	}, @r#"{"authority": "[new_authority:pubkey]", "bump": 254, "treasuryBump": 255, "mintBitBump": 255, "gameIndex": 0}"#);
 
-	Ok(())
+	Ok(compute_units)
 }
 
 async fn shared_authority_must_change_test<

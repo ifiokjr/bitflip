@@ -1,10 +1,10 @@
 use anchor_spl::token_2022;
-use bitflip_program::FlipBitsProps;
-use bitflip_program::ID_CONST;
-use bitflip_program::InitializeTokenProps;
-use bitflip_program::SetBitsVariant;
-use bitflip_program::accounts;
-use bitflip_program::accounts::InitializeToken;
+use bitflip_legacy_program::FlipBitsProps;
+use bitflip_legacy_program::ID_CONST;
+use bitflip_legacy_program::InitializeTokenProps;
+use bitflip_legacy_program::SetBitsVariant;
+use bitflip_legacy_program::accounts;
+use bitflip_legacy_program::accounts::InitializeToken;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::hash;
 use solana_sdk::nonce;
@@ -37,25 +37,25 @@ use crate::get_player_token_account;
 use crate::get_section_token_account;
 use crate::get_treasury_token_account;
 
-create_program_client!(ID_CONST, BitflipProgramClient);
-create_program_client_macro!(bitflip_program, BitflipProgramClient);
+create_program_client!(ID_CONST, BitflipLegacyProgramClient);
+create_program_client_macro!(bitflip_legacy_program, BitflipLegacyProgramClient);
 
-bitflip_program_client_request_builder!(InitializeConfig, "optional:args");
-bitflip_program_client_request_builder!(InitializeToken);
-bitflip_program_client_request_builder!(InitializeGame, "optional:args");
-bitflip_program_client_request_builder!(StartGame, "optional:args");
-bitflip_program_client_request_builder!(UnlockSection, "optional:args");
-bitflip_program_client_request_builder!(FlipBits);
-bitflip_program_client_request_builder!(CreateDerivedPlayer, "optional:args");
-bitflip_program_client_request_builder!(UpdateAuthority, "optional:args");
-bitflip_program_client_request_builder!(RefreshAccessSigner, "optional:args");
+bitflip_legacy_program_client_request_builder!(InitializeConfig, "optional:args");
+bitflip_legacy_program_client_request_builder!(InitializeToken);
+bitflip_legacy_program_client_request_builder!(InitializeGame, "optional:args");
+bitflip_legacy_program_client_request_builder!(StartGame, "optional:args");
+bitflip_legacy_program_client_request_builder!(UnlockSection, "optional:args");
+bitflip_legacy_program_client_request_builder!(FlipBits);
+bitflip_legacy_program_client_request_builder!(CreateDerivedPlayer, "optional:args");
+bitflip_legacy_program_client_request_builder!(UpdateAuthority, "optional:args");
+bitflip_legacy_program_client_request_builder!(RefreshAccessSigner, "optional:args");
 
 /// Initialize the config for this program.
 ///
 /// The program client must use the `authority` as the payer. The `admin` will
 /// need to be added as a signer to the generated transaction.
 pub fn initialize_config<W: WalletAnchor>(
-	program_client: &BitflipProgramClient<W>,
+	program_client: &BitflipLegacyProgramClient<W>,
 	admin: Pubkey,
 ) -> InitializeConfigRequest<'_, W> {
 	let config = get_pda_config().0;
@@ -81,7 +81,7 @@ pub fn initialize_config<W: WalletAnchor>(
 ///
 /// The payer is the authority and is provided by the program client.
 pub fn initialize_token_request<W: WalletAnchor>(
-	program_client: &BitflipProgramClient<W>,
+	program_client: &BitflipLegacyProgramClient<W>,
 ) -> InitializeTokenRequest<'_, W> {
 	let authority = program_client.payer();
 	let (config, _) = get_pda_config();
@@ -92,7 +92,7 @@ pub fn initialize_token_request<W: WalletAnchor>(
 		get_associated_token_address_with_program_id(&treasury, &mint, &token_program);
 	let associated_token_program = spl_associated_token_account::ID;
 	let system_program = system_program::ID;
-	let bitflip_program = ID_CONST;
+	let bitflip_legacy_program = ID_CONST;
 
 	program_client
 		.initialize_token()
@@ -115,7 +115,7 @@ pub fn initialize_token_request<W: WalletAnchor>(
 }
 
 pub fn initialize_game_request<W: WalletAnchor>(
-	program_client: &BitflipProgramClient<W>,
+	program_client: &BitflipLegacyProgramClient<W>,
 	access_signer: Pubkey,
 	refresh_signer: Pubkey,
 	game_index: u8,
@@ -148,7 +148,7 @@ pub fn initialize_game_request<W: WalletAnchor>(
 /// The request that is returned from this method still needs to be signed by
 /// the backend wih the `access_signer`.
 pub fn unlock_section_request<W: WalletAnchor>(
-	program_client: &BitflipProgramClient<W>,
+	program_client: &BitflipLegacyProgramClient<W>,
 	access_signer: Pubkey,
 	game_index: u8,
 	section_index: u8,
@@ -221,7 +221,7 @@ pub async fn get_game_nonce_account(
 /// The request will still need to be signed on the backend by the
 /// `access_signer`.
 pub fn start_game_request<W: WalletAnchor>(
-	program_client: &BitflipProgramClient<W>,
+	program_client: &BitflipLegacyProgramClient<W>,
 	access_signer: Pubkey,
 	game_index: u8,
 ) -> StartGameRequest<'_, W> {
@@ -243,7 +243,7 @@ pub fn start_game_request<W: WalletAnchor>(
 }
 
 pub fn flip_bits_request<W: WalletAnchor>(
-	program_client: &BitflipProgramClient<W>,
+	program_client: &BitflipLegacyProgramClient<W>,
 	game_index: u8,
 	section_index: u8,
 	array_index: u16,
@@ -298,7 +298,7 @@ player_token_account: {player_token_account}"
 
 /// The player should be the wallet's pubkey included in the `program_client`.
 pub fn create_derived_player_request<W: WalletAnchor>(
-	program_client: &BitflipProgramClient<W>,
+	program_client: &BitflipLegacyProgramClient<W>,
 ) -> CreateDerivedPlayerRequest<'_, W> {
 	let config = get_pda_config().0;
 	let mint = get_pda_mint().0;
@@ -328,7 +328,7 @@ pub fn create_derived_player_request<W: WalletAnchor>(
 ///
 /// The refresh signer must be included as a signer in the transaction.
 pub fn refresh_access_signer_request<'a, W: WalletAnchor>(
-	program_client: &'a BitflipProgramClient<W>,
+	program_client: &'a BitflipLegacyProgramClient<W>,
 	game_index: u8,
 	access_signer_keypair: &'a Keypair,
 ) -> RefreshAccessSignerRequest<'a, W> {
@@ -353,7 +353,7 @@ pub fn refresh_access_signer_request<'a, W: WalletAnchor>(
 /// signer in the transaction when submitted. Submitting the transaction without
 /// manually signing will not succeed.
 pub fn update_authority_request<W: WalletAnchor>(
-	program_client: &BitflipProgramClient<W>,
+	program_client: &BitflipLegacyProgramClient<W>,
 	new_authority: Pubkey,
 ) -> UpdateAuthorityRequest<'_, W> {
 	let config = get_pda_config().0;

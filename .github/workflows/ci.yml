@@ -51,10 +51,10 @@ jobs:
           deno-cache: /tmp/denocache
 
       - name: test client with banks
-        run: cargo test_bitflip_client
+        run: cargo test_bitflip_legacy_client
         shell: bash
 
-  build_bitflip_program:
+  build_bitflip_legacy_program:
     timeout-minutes: 60
     runs-on: "ubuntu-latest"
     steps:
@@ -74,7 +74,7 @@ jobs:
 
   test_validator:
     timeout-minutes: 60
-    needs: [build_bitflip_program]
+    needs: [build_bitflip_legacy_program]
     runs-on: "ubuntu-latest"
     steps:
       - name: checkout repository
@@ -88,7 +88,7 @@ jobs:
           deno-cache: /tmp/denocache
 
       - name: test
-        run: cargo test_bitflip_client_validator
+        run: cargo test_bitflip_legacy_client_validator
         shell: bash
 
   build_bitflip_website:

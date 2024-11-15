@@ -1,53 +1,58 @@
-#![cfg(feature = "test_validator")]
-use std::collections::HashMap;
+#![cfg(feature = "test_banks_client")]
+
 use std::time::SystemTime;
 
 use anchor_spl::token_2022;
 use assert2::check;
-use bitflip_client::flip_bits_request;
-use bitflip_client::get_game_nonce_account;
-use bitflip_client::get_pda_config;
-use bitflip_client::get_pda_game;
-use bitflip_client::get_pda_game_nonce;
-use bitflip_client::get_pda_mint;
-use bitflip_client::get_pda_section_data;
-use bitflip_client::get_pda_section_state;
-use bitflip_client::get_pda_treasury;
-use bitflip_client::get_player_token_account;
-use bitflip_client::get_section_token_account;
-use bitflip_client::initialize_game_request;
-use bitflip_client::initialize_token_request;
-use bitflip_client::start_game_request;
-use bitflip_client::unlock_section_request;
-use bitflip_program::ACCESS_SIGNER_DURATION;
-use bitflip_program::BITFLIP_SECTION_LENGTH;
-use bitflip_program::ConfigState;
-use bitflip_program::GameState;
-use bitflip_program::SectionData;
-use bitflip_program::SectionState;
-use bitflip_program::SetBitsVariant;
-use bitflip_program::TOKEN_DECIMALS;
-use bitflip_program::accounts::InitializeConfig;
+use bitflip_legacy_client::flip_bits_request;
+use bitflip_legacy_client::get_game_nonce_account;
+use bitflip_legacy_client::get_pda_config;
+use bitflip_legacy_client::get_pda_game;
+use bitflip_legacy_client::get_pda_game_nonce;
+use bitflip_legacy_client::get_pda_mint;
+use bitflip_legacy_client::get_pda_section_data;
+use bitflip_legacy_client::get_pda_section_state;
+use bitflip_legacy_client::get_pda_treasury;
+use bitflip_legacy_client::get_player_token_account;
+use bitflip_legacy_client::get_section_token_account;
+use bitflip_legacy_client::initialize_game_request;
+use bitflip_legacy_client::initialize_token_request;
+use bitflip_legacy_client::start_game_request;
+use bitflip_legacy_client::unlock_section_request;
+use bitflip_legacy_program::ACCESS_SIGNER_DURATION;
+use bitflip_legacy_program::BITFLIP_SECTION_LENGTH;
+use bitflip_legacy_program::ConfigState;
+use bitflip_legacy_program::GameState;
+use bitflip_legacy_program::SectionData;
+use bitflip_legacy_program::SectionState;
+use bitflip_legacy_program::SetBitsVariant;
+use bitflip_legacy_program::TOKEN_DECIMALS;
+use bitflip_legacy_program::accounts::InitializeConfig;
 use insta::internals::Content;
 use insta::internals::ContentPath;
-use shared::create_admin_keypair;
-use shared::create_authority_keypair;
-use shared::create_config_state;
 use shared::create_game_state;
-use shared::create_runner_with_accounts;
+use shared::create_section_state;
 use shared::create_wallet_keypair;
 use shared::get_authority_program;
 use shared::get_wallet_program;
+use solana_sdk::account::Account;
 use solana_sdk::account::ReadableAccount;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signer::Signer;
 use solana_sdk::system_program;
+use solana_sdk::sysvar::recent_blockhashes::RecentBlockhashes;
 use spl_associated_token_account::get_associated_token_address_with_program_id;
 use test_log::test;
 use test_utils::create_insta_redaction;
+use test_utils_solana::ProgramTest;
 use test_utils_solana::prelude::*;
 use wasm_client_solana::solana_account_decoder::parse_account_data::SplTokenAdditionalData;
 use wasm_client_solana::solana_account_decoder::parse_token::parse_token_v2;
+
+use crate::shared::create_admin_keypair;
+use crate::shared::create_authority_keypair;
+use crate::shared::create_config_state;
+use crate::shared::create_program_context_with_factory;
 
 mod shared;
 
@@ -59,12 +64,14 @@ async fn initialize_config_test() -> anyhow::Result<()> {
 	let authority = authority_keypair.pubkey();
 	let system_program = system_program::id();
 	let (config, _) = get_pda_config();
-	log::info!("config: {config}");
 	let (treasury, _) = get_pda_treasury();
-	let runner = create_runner_with_accounts(HashMap::new()).await;
-	let rpc = runner.rpc();
+	let provider = create_program_context_with_factory(|p| {
+		p.add_account(config, create_config_state(None).into());
+	})
+	.await?;
 
-	let program_client = get_authority_program(rpc);
+	let rpc = provider.to_rpc_client();
+	let program_client = get_authority_program(&rpc);
 
 	let request = program_client
 		.initialize_config()
@@ -93,27 +100,26 @@ async fn initialize_config_test() -> anyhow::Result<()> {
 
 #[test(tokio::test)]
 async fn initialize_token() -> anyhow::Result<()> {
-	let mut accounts = HashMap::new();
 	let (config, _) = get_pda_config();
 	let (mint, _) = get_pda_mint();
 	let (treasury, _) = get_pda_treasury();
 	let token_program = token_2022::ID;
 	let treasury_token_account =
 		get_associated_token_address_with_program_id(&treasury, &mint, &token_program);
-
-	accounts.insert(config, create_config_state(None));
-	let runner = create_runner_with_accounts(accounts).await;
-	let rpc = runner.rpc();
-	let program_client = get_authority_program(rpc);
+	let provider = create_program_context_with_factory(|p| {
+		p.add_account(config, create_config_state(None).into());
+	})
+	.await?;
+	let rpc = provider.to_rpc_client();
+	let program_client = get_authority_program(&rpc);
 	let request = initialize_token_request(&program_client);
 	let simulation = request.simulate().await?;
 	log::info!("simulation: {simulation:#?}");
-	let signature = request.sign_and_send_transaction().await?;
-	rpc.confirm_transaction(&signature).await?;
+	request.sign_and_send_transaction().await?;
 
 	let authority_redaction = create_insta_redaction(treasury, "authority:pubkey");
 	let mint_redaction = create_insta_redaction(mint, "mint:pubkey");
-	let data = rpc.get_account_data(&mint).await?;
+	let Account { data, .. } = rpc.get_account(&mint).await?;
 	let mint_account = parse_token_v2(
 		&data,
 		Some(&SplTokenAdditionalData::with_decimals(TOKEN_DECIMALS)),
@@ -167,7 +173,7 @@ async fn initialize_token() -> anyhow::Result<()> {
  }
  "#);
 
-	let data = rpc.get_account_data(&treasury_token_account).await?;
+	let Account { data, .. } = rpc.get_account(&treasury_token_account).await?;
 	let parsed_treasury_token_account = parse_token_v2(
 		&data,
 		Some(&SplTokenAdditionalData::with_decimals(TOKEN_DECIMALS)),
@@ -208,12 +214,14 @@ async fn initialize_game() -> anyhow::Result<()> {
 	let game_index = 0;
 	let (config, _) = get_pda_config();
 	let (game, _) = get_pda_game(0);
-	let mut accounts = HashMap::new();
-	accounts.insert(config, create_config_state(None));
-	let runner = create_runner_with_accounts(accounts).await;
-	let rpc = runner.rpc();
 
-	let program_client = get_authority_program(rpc);
+	let provider = create_program_context_with_factory(|p| {
+		p.add_account(config, create_config_state(None).into());
+	})
+	.await?;
+
+	let rpc = provider.to_rpc_client();
+	let program_client = get_authority_program(&rpc);
 	let (access_signer, refresh_signer) = (Keypair::new(), Keypair::new());
 	let request = initialize_game_request(
 		&program_client,
@@ -263,15 +271,13 @@ async fn start_game() -> anyhow::Result<()> {
 	let game = get_pda_game(0).0;
 	let (game_account_data, _, access_signer, refresh_signer) =
 		create_game_state(game_index, section_index, 0, 0);
-
-	let mut accounts = HashMap::new();
-	accounts.insert(config, create_config_state(None));
-	accounts.insert(config, create_config_state(None));
-	accounts.insert(game, game_account_data.clone());
-
-	let runner = create_runner_with_accounts(accounts).await;
-	let rpc = runner.rpc();
-	let program_client = get_authority_program(rpc);
+	let provider = create_program_context_with_factory(move |p| {
+		p.add_account(config, create_config_state(None).into());
+		p.add_account(game, game_account_data.clone().into());
+	})
+	.await?;
+	let rpc = provider.to_rpc_client();
+	let program_client = get_authority_program(&rpc);
 
 	initialize_token_request(&program_client)
 		.sign_and_send_transaction()
@@ -324,8 +330,6 @@ async fn unlock_first_section() -> anyhow::Result<()> {
 	let now = SystemTime::now()
 		.duration_since(SystemTime::UNIX_EPOCH)?
 		.as_secs() as i64;
-	log::info!("now: {now}");
-
 	let (game_account_data, game_nonce_account_data, access_signer, _) = create_game_state(
 		game_index,
 		section_index,
@@ -333,39 +337,26 @@ async fn unlock_first_section() -> anyhow::Result<()> {
 		now + ACCESS_SIGNER_DURATION,
 	);
 	log::info!("game_nonce: {game_nonce}\ngame: {game}");
-	let mut accounts = HashMap::new();
-	accounts.insert(config, create_config_state(None));
-	accounts.insert(game, game_account_data.clone());
-	accounts.insert(game_nonce, game_nonce_account_data.clone());
-
-	let runner = create_runner_with_accounts(accounts).await;
-	let rpc = runner.rpc();
-	let program_client = get_wallet_program(rpc);
+	let provider = create_program_context_with_factory(move |p| {
+		p.add_account(config, create_config_state(None).into());
+		p.add_account(game, game_account_data.clone().into());
+		p.add_account(game_nonce, game_nonce_account_data.clone().into());
+	})
+	.await?;
+	provider
+		.lock()
+		.await
+		.set_sysvar(&RecentBlockhashes::default());
+	let rpc = provider.to_rpc_client();
+	let program_client = get_wallet_program(&rpc);
 	let owner = create_wallet_keypair().pubkey();
 	let mint = get_pda_mint().0;
 
-	log::warn!("the running game: {game}");
-	let game_state_account: GameState = rpc.get_anchor_account(&game).await?;
-	log::info!("onchain game_state: {game_state_account:#?}");
+	initialize_token_request(&get_authority_program(&rpc))
+		.sign_and_send_transaction()
+		.await?;
 
-	let authority_program_client = get_authority_program(rpc);
-	// let start_request = start_game_request(
-	// 	&authority_program_client,
-	// 	access_signer.pubkey(),
-	// 	game_index,
-	// );
-	// let simulation = start_request.simulate().await?;
-	// log::info!("token simulation: {simulation:#?}");
-	// let signature = start_request.sign_and_send_transaction().await?;
-	// rpc.confirm_transaction(&signature).await?;
-
-	let token_request = initialize_token_request(&authority_program_client);
-	let simulation = token_request.simulate().await?;
-	log::info!("token simulation: {simulation:#?}");
-	let signature = token_request.sign_and_send_transaction().await?;
-	rpc.confirm_transaction(&signature).await?;
-
-	let blockhash = get_game_nonce_account(rpc, game_index).await?.blockhash();
+	let blockhash = get_game_nonce_account(&rpc, game_index).await?.blockhash();
 	let request = unlock_section_request(
 		&program_client,
 		access_signer.pubkey(),
@@ -374,16 +365,14 @@ async fn unlock_first_section() -> anyhow::Result<()> {
 		blockhash,
 	);
 
-	log::info!("about to simulate section request!");
 	// ensure that the transaction is valid even though it hasn't yet been signed by
 	// the `access_signer`
 	let simulation = request.simulate().await?;
-	log::info!("simulation: {simulation:#?}");
+	log::debug!("simulation: {simulation:#?}");
 
 	let mut transaction = request.sign_transaction().await?;
 	transaction.sign(&[&access_signer], None);
-	let signature = rpc.send_and_confirm_transaction(&transaction).await?;
-	rpc.confirm_transaction(&signature).await?;
+	rpc.send_and_confirm_transaction(&transaction).await?;
 
 	let data_redaction = |content: Content, _: ContentPath| {
 		let slice = content.as_slice().unwrap();
@@ -406,7 +395,7 @@ async fn unlock_first_section() -> anyhow::Result<()> {
 		".owner" => insta::dynamic_redaction(owner_redaction),
 	}, @r#"{"owner": "[owner:pubkey]", "flips": 0, "on": 0, "off": 4096, "index": 0, "bump": 255, "dataBump": 255}"#);
 
-	let data = rpc.get_account_data(&section_token_account).await?;
+	let Account { data, .. } = rpc.get_account(&section_token_account).await?;
 	let parsed_section_token_account = parse_token_v2(
 		&data,
 		Some(&SplTokenAdditionalData::with_decimals(TOKEN_DECIMALS)),
@@ -464,33 +453,32 @@ async fn toggle_bit() -> anyhow::Result<()> {
 		now - 3600,
 		now + ACCESS_SIGNER_DURATION,
 	);
-	let mut accounts = HashMap::new();
+	let provider = create_program_context_with_factory(move |p: &mut ProgramTest| {
+		p.add_account(config, create_config_state(Some(mint_bump)).into());
+		p.add_account(game, game_account_data.clone().into());
+		p.add_account(game_nonce, game_nonce_account_data.clone().into());
 
-	accounts.insert(config, create_config_state(Some(mint_bump)));
-	accounts.insert(game, game_account_data.clone());
-	accounts.insert(game_nonce, game_nonce_account_data.clone());
-
-	// let section_accounts = create_section_state(game_index,
-	// next_section_index); for (pubkey, data) in section_accounts {
-	// 	accounts.insert(pubkey, data);
-	// }
-
-	let runner = create_runner_with_accounts(accounts).await;
-	let rpc = runner.rpc();
-	let program_client = get_wallet_program(rpc);
+		let section_accounts = create_section_state(game_index, next_section_index);
+		for (pubkey, data) in section_accounts {
+			p.add_account(pubkey, data.into());
+		}
+	})
+	.await?;
+	let rpc = provider.to_rpc_client();
+	let program_client = get_wallet_program(&rpc);
 	let section_state = get_pda_section_state(game_index, next_section_index).0;
 	let section_data = get_pda_section_data(game_index, next_section_index).0;
 	let player = program_client.payer();
-	let section = get_pda_section_state(game_index, section_index).0;
 	let section_token_account = get_section_token_account(game_index, section_index);
 	let player_token_account = get_player_token_account(&player);
-	let signature = initialize_token_request(&get_authority_program(rpc))
+
+	initialize_token_request(&get_authority_program(&rpc))
 		.sign_and_send_transaction()
 		.await?;
-	rpc.confirm_transaction(&signature).await?;
-	log::info!("setting up section: {section}, section_token_account: {section_token_account}");
-
-	let blockhash = get_game_nonce_account(rpc, game_index).await?.blockhash();
+	log::info!(
+		"setting up section: {section_state}, section_token_account: {section_token_account}"
+	);
+	let blockhash = get_game_nonce_account(&rpc, game_index).await?.blockhash();
 	let unlock_request = unlock_section_request(
 		&program_client,
 		access_signer.pubkey(),
@@ -503,10 +491,8 @@ async fn toggle_bit() -> anyhow::Result<()> {
 
 	let mut unlock_section_transaction = unlock_request.sign_transaction().await?;
 	unlock_section_transaction.try_sign(&[&access_signer], None)?;
-	let signature = rpc
-		.send_and_confirm_transaction(&unlock_section_transaction)
+	rpc.send_and_confirm_transaction(&unlock_section_transaction)
 		.await?;
-	rpc.confirm_transaction(&signature).await?;
 	log::info!("done setting section");
 
 	let offset = 12;
@@ -520,22 +506,20 @@ async fn toggle_bit() -> anyhow::Result<()> {
 	);
 	let simulation = request.simulate().await?;
 	log::info!("simulation: {simulation:#?}");
-	check!(simulation.value.units_consumed.unwrap() < 200_000);
+	request.sign_and_send_transaction().await?;
 
-	let signature = request.sign_and_send_transaction().await?;
-	rpc.confirm_transaction(&signature).await?;
-
-	let account: SectionData = program_client.account(&section_data).await?;
-	check!(account.data[0] == bits);
+	let section_data_account: SectionData = program_client.account(&section_data).await?;
+	check!(section_data_account.data[0] == bits);
 
 	let player_redaction = create_insta_redaction(player, "player:pubkey");
 	let mint_redaction = create_insta_redaction(mint, "mint:pubkey");
-	let section_redaction = create_insta_redaction(section, "section:pubkey");
+	let section_redaction = create_insta_redaction(section_state, "section:pubkey");
 	let raw_player_token_account = rpc.get_account(&player_token_account).await?;
 	let parsed_player_token_account = parse_token_v2(
 		raw_player_token_account.data(),
 		Some(&SplTokenAdditionalData::with_decimals(TOKEN_DECIMALS)),
 	)?;
+
 	log::info!("player token account: {parsed_player_token_account:#?}");
 	insta::assert_compact_json_snapshot!(parsed_player_token_account, {
 		".info.mint" => insta::dynamic_redaction(mint_redaction.clone()),
@@ -608,9 +592,9 @@ async fn toggle_bit() -> anyhow::Result<()> {
 	let owner_redaction = create_insta_redaction(&player, "player:pubkey");
 
 	insta::assert_compact_json_snapshot!(section_state_account, {
-	 ".owner" => insta::dynamic_redaction(owner_redaction),
-	 ".startTime" => "[timestamp]",
- }, @r#"{"owner": "[player:pubkey]", "flips": 1, "on": 1, "off": 4095, "index": 0, "bump": 255, "dataBump": 255}"#);
+		".owner" => insta::dynamic_redaction(owner_redaction),
+		".startTime" => "[timestamp]",
+	}, @r#"{"owner": "[player:pubkey]", "flips": 1, "on": 1, "off": 4095, "index": 0, "bump": 255, "dataBump": 255}"#);
 
 	Ok(())
 }

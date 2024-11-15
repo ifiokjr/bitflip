@@ -1,12 +1,12 @@
 [workspace]
-members = ["bitflip", "bitflip_client", "bitflip_program", "bitflip_steel_program"]
+members = ["bitflip", "bitflip_legacy_client", "bitflip_legacy_program", "bitflip_program"]
 resolver = "2"
 
 [workspace.package]
 version = "0.0.0"
 authors = ["Ifiok Jr. <ifiokotung@gmail.com>"]
 edition = "2021"
-homepage = "https://millionbitcanvas.com"
+homepage = "https://bitflip.art"
 license = "Apache-2.0"
 repository = "https://github.com/ifiokjr/bitflip"
 rust-version = "1.71.0"
@@ -149,9 +149,9 @@ wasm_client_solana = "0.6"
 web-sys = "0.3"
 
 # internal crates
-bitflip_client = { path = "./bitflip_client", version = "0.0.0" }
+bitflip_legacy_client = { path = "./bitflip_legacy_client", version = "0.0.0" }
+bitflip_legacy_program = { path = "./bitflip_legacy_program", version = "0.0.0" }
 bitflip_program = { path = "./bitflip_program", version = "0.0.0" }
-bitflip_steel_program = { path = "./bitflip_steel_program", version = "0.0.0" }
 
 [patch.crates-io.curve25519-dalek]
 git = "https://github.com/anza-xyz/curve25519-dalek.git"
@@ -172,7 +172,7 @@ steel-cli = { version = "2.1.1", bins = ["steel"], git = "https://github.com/ifi
 insta.opt-level = 3
 similar.opt-level = 3
 
-[profile.release.package.bitflip_program]
+[profile.release.package.bitflip_legacy_program]
 overflow-checks = true
 codegen-units = 1
 incremental = false

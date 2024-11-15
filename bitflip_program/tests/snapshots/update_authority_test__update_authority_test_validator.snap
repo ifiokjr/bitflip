@@ -1,0 +1,6 @@
+---
+source: bitflip_program/tests/update_authority_test.rs
+expression: "format!(\"{rounded_compute_units} CU\")"
+snapshot_kind: text
+---
+10000 CU

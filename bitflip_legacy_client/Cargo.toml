@@ -1,5 +1,5 @@
 [package]
-name = "bitflip_client"
+name = "bitflip_legacy_client"
 version = { workspace = true }
 authors = { workspace = true }
 edition = { workspace = true }
@@ -14,13 +14,13 @@ workspace = true
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "bitflip_client"
+name = "bitflip_legacy_client"
 
 [dependencies]
 anchor-lang = { workspace = true }
 anchor-spl = { workspace = true }
 async-trait = { workspace = true }
-bitflip_program = { workspace = true, features = ["client"] }
+bitflip_legacy_program = { workspace = true, features = ["client"] }
 bytemuck = { workspace = true }
 derive_more = { workspace = true, features = ["debug", "deref", "deref_mut"] }
 futures = { workspace = true }
@@ -55,7 +55,7 @@ ssr = ["wasm_client_solana/ssr"]
 js = [
 	"wasm_client_solana/js",
 	"wasm_client_anchor/js",
-	"bitflip_program/no-entrypoint",
+	"bitflip_legacy_program/no-entrypoint",
 ]
 test_validator = ["test_utils_solana/test_validator"]
 test_banks_client = []
