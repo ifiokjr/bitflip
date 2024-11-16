@@ -6,11 +6,11 @@ use assert2::check;
 use bitflip_program::BitflipError;
 use bitflip_program::ConfigState;
 use bitflip_program::TOKEN_DECIMALS;
+use bitflip_program::config_initialize;
 use bitflip_program::get_pda_config;
 use bitflip_program::get_pda_mint_bit;
 use bitflip_program::get_pda_treasury;
 use bitflip_program::get_treasury_bit_token_account;
-use bitflip_program::initialize;
 use shared::ToRpcClient;
 use shared::create_admin_keypair;
 use shared::create_authority_keypair;
@@ -30,15 +30,15 @@ use wasm_client_solana::solana_account_decoder::parse_token::parse_token_v2;
 mod shared;
 
 #[test_log::test(tokio::test)]
-async fn initialize_config_test() -> anyhow::Result<()> {
-	shared_initialize_config_test(create_banks_client_rpc).await?;
+async fn config_initialize_test() -> anyhow::Result<()> {
+	shared_config_initialize_test(create_banks_client_rpc).await?;
 	Ok(())
 }
 
 #[cfg(feature = "test_validator")]
 #[test_log::test(tokio::test)]
-async fn initialize_config_test_validator() -> anyhow::Result<()> {
-	let compute_units = shared_initialize_config_test(create_validator_rpc).await?;
+async fn config_initialize_test_validator() -> anyhow::Result<()> {
+	let compute_units = shared_config_initialize_test(create_validator_rpc).await?;
 	let rounded_compute_units = bitflip_program::round_compute_units_up(compute_units);
 
 	check!(rounded_compute_units <= 400_000);
@@ -48,25 +48,25 @@ async fn initialize_config_test_validator() -> anyhow::Result<()> {
 }
 
 #[test_log::test(tokio::test)]
-async fn invalid_admin_initialize_config_test() -> anyhow::Result<()> {
-	shared_invalid_admin_initialize_config_test(create_banks_client_rpc).await
+async fn invalid_admin_config_initialize_test() -> anyhow::Result<()> {
+	shared_invalid_admin_config_initialize_test(create_banks_client_rpc).await
 }
 
 #[cfg(feature = "test_validator")]
 #[test_log::test(tokio::test)]
-async fn invalid_admin_initialize_config_test_validator() -> anyhow::Result<()> {
-	shared_invalid_admin_initialize_config_test(create_validator_rpc).await
+async fn invalid_admin_config_initialize_test_validator() -> anyhow::Result<()> {
+	shared_invalid_admin_config_initialize_test(create_validator_rpc).await
 }
 
 #[test_log::test(tokio::test)]
-async fn duplicate_authority_initialize_config_test() -> anyhow::Result<()> {
-	shared_duplicate_authority_initialize_config_test(create_banks_client_rpc).await
+async fn duplicate_authority_config_initialize_test() -> anyhow::Result<()> {
+	shared_duplicate_authority_config_initialize_test(create_banks_client_rpc).await
 }
 
 #[cfg(feature = "test_validator")]
 #[test_log::test(tokio::test)]
-async fn duplicate_authority_initialize_config_test_validator() -> anyhow::Result<()> {
-	shared_duplicate_authority_initialize_config_test(create_validator_rpc).await
+async fn duplicate_authority_config_initialize_test_validator() -> anyhow::Result<()> {
+	shared_duplicate_authority_config_initialize_test(create_validator_rpc).await
 }
 
 #[cfg(feature = "test_validator")]
@@ -81,7 +81,7 @@ async fn create_banks_client_rpc() -> anyhow::Result<impl ToRpcClient> {
 	Ok(provider)
 }
 
-async fn shared_initialize_config_test<
+async fn shared_config_initialize_test<
 	T: ToRpcClient,
 	Fut: Future<Output = anyhow::Result<T>>,
 	Create: FnOnce() -> Fut,
@@ -99,7 +99,7 @@ async fn shared_initialize_config_test<
 	let mint_bit = get_pda_mint_bit().0;
 	let treasury_bit_token_account = get_treasury_bit_token_account();
 	let recent_blockhash = rpc.get_latest_blockhash().await?;
-	let instruction = initialize(&admin, &authority);
+	let instruction = config_initialize(&admin, &authority);
 	let compute_limit_instruction = ComputeBudgetInstruction::set_compute_unit_limit(1_400_000);
 	let mut transaction = VersionedTransaction::new_unsigned_v0(
 		&authority,
@@ -242,7 +242,7 @@ async fn shared_initialize_config_test<
 	Ok(compute_units)
 }
 
-async fn shared_invalid_admin_initialize_config_test<
+async fn shared_invalid_admin_config_initialize_test<
 	T: ToRpcClient,
 	Fut: Future<Output = anyhow::Result<T>>,
 	Create: FnOnce() -> Fut,
@@ -256,7 +256,7 @@ async fn shared_invalid_admin_initialize_config_test<
 	let authority_keypair = create_authority_keypair();
 	let authority = authority_keypair.pubkey();
 	let recent_blockhash = rpc.get_latest_blockhash().await?;
-	let ix = initialize(&admin, &authority);
+	let ix = config_initialize(&admin, &authority);
 	let transaction =
 		VersionedTransaction::new_unsigned_v0(&authority, &[ix], &[], recent_blockhash)?;
 
@@ -274,7 +274,7 @@ async fn shared_invalid_admin_initialize_config_test<
 	Ok(())
 }
 
-async fn shared_duplicate_authority_initialize_config_test<
+async fn shared_duplicate_authority_config_initialize_test<
 	T: ToRpcClient,
 	Fut: Future<Output = anyhow::Result<T>>,
 	Create: FnOnce() -> Fut,
@@ -288,7 +288,7 @@ async fn shared_duplicate_authority_initialize_config_test<
 	let authority_keypair = create_admin_keypair();
 	let authority = authority_keypair.pubkey();
 	let recent_blockhash = rpc.get_latest_blockhash().await?;
-	let ix = initialize(&admin, &authority);
+	let ix = config_initialize(&admin, &authority);
 	let transaction =
 		VersionedTransaction::new_unsigned_v0(&authority, &[ix], &[], recent_blockhash)?;
 

@@ -1,8 +1,10 @@
 use steel::*;
 
-use crate::Initialize;
-use crate::UpdateAuthority;
+use crate::ConfigInitialize;
+use crate::ConfigUpdateAuthority;
+use crate::GameInitialize;
 use crate::get_pda_config;
+use crate::get_pda_game;
 use crate::get_pda_mint_bit;
 use crate::get_pda_mint_gibibit;
 use crate::get_pda_mint_kibibit;
@@ -20,7 +22,7 @@ use crate::get_treasury_token_account;
 ///
 /// When using this instruction in a transaction you will need to make sure both
 /// the admin and authority are signers for the transaction.
-pub fn initialize(admin: &Pubkey, authority: &Pubkey) -> Instruction {
+pub fn config_initialize(admin: &Pubkey, authority: &Pubkey) -> Instruction {
 	let config = get_pda_config().0;
 	let treasury = get_pda_treasury().0;
 	let mint_bit = get_pda_mint_bit().0;
@@ -54,7 +56,30 @@ pub fn initialize(admin: &Pubkey, authority: &Pubkey) -> Instruction {
 			AccountMeta::new_readonly(token_program, false),
 			AccountMeta::new_readonly(system_program, false),
 		],
-		data: Initialize {}.to_bytes(),
+		data: ConfigInitialize {}.to_bytes(),
+	}
+}
+
+pub fn game_initialize(
+	game_index: u8,
+	authority: &Pubkey,
+	access_signer: &Pubkey,
+	refresh_signer: &Pubkey,
+) -> Instruction {
+	let config = get_pda_config().0;
+	let game = get_pda_game(game_index).0;
+
+	Instruction {
+		program_id: crate::ID,
+		accounts: vec![
+			AccountMeta::new(*authority, true),
+			AccountMeta::new_readonly(*access_signer, true),
+			AccountMeta::new_readonly(*refresh_signer, true),
+			AccountMeta::new(config, false),
+			AccountMeta::new(game, false),
+			AccountMeta::new_readonly(system_program::ID, false),
+		],
+		data: GameInitialize {}.to_bytes(),
 	}
 }
 
@@ -64,7 +89,7 @@ pub fn initialize(admin: &Pubkey, authority: &Pubkey) -> Instruction {
 ///
 /// * `authority` - The current authority: must be a signer.
 /// * `new_authority` - The new authority: must be a signer.
-pub fn update_authority(authority: &Pubkey, new_authority: &Pubkey) -> Instruction {
+pub fn config_update_authority(authority: &Pubkey, new_authority: &Pubkey) -> Instruction {
 	let config = get_pda_config().0;
 
 	Instruction {
@@ -74,6 +99,6 @@ pub fn update_authority(authority: &Pubkey, new_authority: &Pubkey) -> Instructi
 			AccountMeta::new(*authority, true),
 			AccountMeta::new(*new_authority, true),
 		],
-		data: UpdateAuthority {}.to_bytes(),
+		data: ConfigUpdateAuthority {}.to_bytes(),
 	}
 }

@@ -6,13 +6,13 @@ use crate::ConfigState;
 use crate::ID;
 use crate::create_pda_config;
 
-pub fn process_update_authority(accounts: &[AccountInfo]) -> ProgramResult {
+pub fn process_config_update_authority(accounts: &[AccountInfo]) -> ProgramResult {
 	let [config_info, authority_info, new_authority_info] = accounts else {
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};
 
 	// validate accounts
-	config_info.is_writable()?.has_owner(&ID)?;
+	config_info.is_writable()?.is_type::<ConfigState>(&ID)?;
 	authority_info
 		.is_signer()?
 		.is_writable()?
@@ -47,12 +47,15 @@ pub fn process_update_authority(accounts: &[AccountInfo]) -> ProgramResult {
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Pod, Zeroable)]
-pub struct UpdateAuthority {}
+pub struct ConfigUpdateAuthority {}
 
-instruction!(BitflipInstruction, UpdateAuthority);
+instruction!(BitflipInstruction, ConfigUpdateAuthority);
 
 #[cfg(test)]
 mod tests {
+	use std::cell::RefCell;
+	use std::rc::Rc;
+
 	use assert2::check;
 	use solana_sdk::clock::Epoch;
 	use solana_sdk::sysvar::rent::Rent;
@@ -69,7 +72,7 @@ mod tests {
 	#[test_log::test]
 	fn should_pass() -> anyhow::Result<()> {
 		let accounts = create_account_infos();
-		process_update_authority(&accounts)?;
+		process_config_update_authority(&accounts)?;
 
 		let config_info = &accounts[0];
 		let config_state = config_info.as_account::<ConfigState>(&ID)?;
@@ -81,7 +84,7 @@ mod tests {
 	#[test_log::test]
 	fn should_have_enough_accounts() -> anyhow::Result<()> {
 		let accounts = create_account_infos();
-		let result = process_update_authority(&accounts[0..2]);
+		let result = process_config_update_authority(&accounts[0..2]);
 
 		check!(result.unwrap_err() == ProgramError::NotEnoughAccountKeys);
 
@@ -89,83 +92,84 @@ mod tests {
 	}
 
 	#[test_log::test]
-	fn config_must_not_be_empty() -> anyhow::Result<()> {
-		let accounts = create_account_infos();
-		accounts[0].realloc(0, true)?;
+	fn config_should_be_valid_data() -> anyhow::Result<()> {
+		let mut accounts = create_account_infos();
+		let config_info = &mut accounts[0];
+		config_info.data = Rc::new(RefCell::new(leak(vec![1u8; 8])));
 
-		let result = process_update_authority(&accounts);
-		check!(result.unwrap_err() == ProgramError::AccountDataTooSmall);
+		let result = process_config_update_authority(&accounts);
+		check!(result.unwrap_err() == ProgramError::InvalidAccountData);
 
 		Ok(())
 	}
 
 	#[test_log::test]
-	fn config_must_be_writeable() -> anyhow::Result<()> {
+	fn config_should_be_writeable() -> anyhow::Result<()> {
 		let mut accounts = create_account_infos();
 		let config_info = &mut accounts[0];
 		config_info.is_writable = false;
 
-		let result = process_update_authority(&accounts);
+		let result = process_config_update_authority(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
 
 		Ok(())
 	}
 
 	#[test_log::test]
-	fn config_must_be_pda() -> anyhow::Result<()> {
+	fn config_should_be_pda() -> anyhow::Result<()> {
 		let mut accounts = create_account_infos();
 		let config_info = &mut accounts[0];
 		config_info.key = leak(Pubkey::new_unique());
 
-		let result = process_update_authority(&accounts);
+		let result = process_config_update_authority(&accounts);
 		check!(result.unwrap_err() == ProgramError::InvalidSeeds);
 
 		Ok(())
 	}
 
 	#[test_log::test]
-	fn authority_must_be_signer() -> anyhow::Result<()> {
+	fn authority_should_be_signer() -> anyhow::Result<()> {
 		let mut accounts = create_account_infos();
 		let authority_info = &mut accounts[1];
 		authority_info.is_signer = false;
 
-		let result = process_update_authority(&accounts);
+		let result = process_config_update_authority(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
 
 		Ok(())
 	}
 
 	#[test_log::test]
-	fn authority_must_be_writable() -> anyhow::Result<()> {
+	fn authority_should_be_writable() -> anyhow::Result<()> {
 		let mut accounts = create_account_infos();
 		let authority_info = &mut accounts[1];
 		authority_info.is_writable = false;
 
-		let result = process_update_authority(&accounts);
+		let result = process_config_update_authority(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
 
 		Ok(())
 	}
 
 	#[test_log::test]
-	fn authority_must_be_from_config() -> anyhow::Result<()> {
+	fn authority_should_be_from_config() -> anyhow::Result<()> {
 		let mut accounts = create_account_infos();
 		let authority_info = &mut accounts[1];
 		authority_info.key = leak(Pubkey::new_unique());
 
-		let result = process_update_authority(&accounts);
+		let result = process_config_update_authority(&accounts);
 		check!(result.unwrap_err() == ProgramError::Custom(BitflipError::Unauthorized.into()));
 
 		Ok(())
 	}
 	#[test_log::test]
-	fn new_authority_must_change() -> anyhow::Result<()> {
+	fn new_authority_should_change() -> anyhow::Result<()> {
 		let mut accounts = create_account_infos();
 		let authority_key = *accounts[1].key;
 		let new_authority_info = &mut accounts[2];
 		new_authority_info.key = leak(authority_key);
 
-		let result = process_update_authority(&accounts);
+		let result = process_config_update_authority(&accounts);
 		check!(
 			result.unwrap_err() == ProgramError::Custom(BitflipError::DuplicateAuthority.into())
 		);
@@ -174,12 +178,12 @@ mod tests {
 	}
 
 	#[test_log::test]
-	fn new_authority_must_be_signer() -> anyhow::Result<()> {
+	fn new_authority_should_be_signer() -> anyhow::Result<()> {
 		let mut accounts = create_account_infos();
 		let new_authority_info = &mut accounts[2];
 		new_authority_info.is_signer = false;
 
-		let result = process_update_authority(&accounts);
+		let result = process_config_update_authority(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
 
 		Ok(())

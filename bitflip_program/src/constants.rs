@@ -13,7 +13,7 @@ use steel::Pubkey;
 pub const ADMIN_PUBKEY: Pubkey = str_to_pubkey(env!("ADMIN_PUBKEY"));
 
 /// The total number of bits on the canvas
-pub const BITFLIP_TOTAL_BITS: usize = u16::BITS.pow(5) as usize;
+pub const BITFLIP_TOTAL_BITS: usize = 16usize.pow(5);
 /// The number of sections the canvas is split into.
 pub const BITFLIP_TOTAL_SECTIONS: usize = u16::BITS.pow(2) as usize;
 /// The number of u16's in each section.
@@ -49,6 +49,8 @@ pub const TOKENS_PER_SECTION: u64 = TOTAL_TOKENS / 8;
 pub const SEED_PREFIX: &[u8] = b"bitflip";
 /// The PDA seed for the player PDA.
 pub const SEED_PLAYER: &[u8] = b"player";
+/// The PDA seed for an onchain nonce account.
+pub const SEED_NONCE: &[u8] = b"nonce";
 /// The PDA seed for the configuration account.
 pub const SEED_CONFIG: &[u8] = b"config";
 /// The PDA seed for BIT mint token account.
@@ -64,8 +66,6 @@ pub const SEED_GIBIBIT_MINT: &[u8] = b"mint_gibibit";
 pub const SEED_TREASURY: &[u8] = b"treasury";
 /// The PDA seed for an instance of the game.
 pub const SEED_GAME: &[u8] = b"game";
-/// The PDA seed for the game instance nonce account.
-pub const SEED_GAME_NONCE: &[u8] = b"nonce";
 /// The PDA seed for a section within the game. Each game has 256 sections.
 pub const SEED_SECTION: &[u8] = b"section";
 

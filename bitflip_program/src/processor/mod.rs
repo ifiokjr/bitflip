@@ -1,17 +1,20 @@
-mod initialize;
-mod update_authority;
+mod config_initialize;
+mod config_update_authority;
+mod game_initialize;
 
 use steel::*;
 
-pub use self::initialize::*;
-pub use self::update_authority::*;
+pub use self::config_initialize::*;
+pub use self::config_update_authority::*;
+pub use self::game_initialize::*;
 use crate::ID;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, TryFromPrimitive)]
 pub enum BitflipInstruction {
-	Initialize = 0,
-	UpdateAuthority = 1,
+	ConfigInitialize = 0,
+	GameInitialize = 1,
+	ConfigUpdateAuthority = 2,
 }
 
 pub fn process_instruction(
@@ -22,8 +25,9 @@ pub fn process_instruction(
 	let (ix, _data) = parse_instruction(&ID, program_id, data)?;
 
 	match ix {
-		BitflipInstruction::Initialize => process_initialize(accounts)?,
-		BitflipInstruction::UpdateAuthority => process_update_authority(accounts)?,
+		BitflipInstruction::ConfigInitialize => process_config_initialize(accounts)?,
+		BitflipInstruction::GameInitialize => process_game_initialize(accounts)?,
+		BitflipInstruction::ConfigUpdateAuthority => process_config_update_authority(accounts)?,
 	}
 
 	Ok(())

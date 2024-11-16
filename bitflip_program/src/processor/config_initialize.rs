@@ -36,8 +36,8 @@ use crate::cpi::initialize_mint2;
 use crate::cpi::metadata_pointer_initialize;
 use crate::cpi::mint_close_authority_initialize;
 use crate::cpi::mint_to;
-use crate::cpi::token_group_initialize;
-use crate::cpi::token_group_member_initialize;
+// use crate::cpi::token_group_initialize;
+// use crate::cpi::token_group_member_initialize;
 use crate::cpi::token_metadata_initialize;
 use crate::get_pda_config;
 use crate::get_pda_mint_bit;
@@ -48,7 +48,15 @@ use crate::get_pda_treasury;
 use crate::get_token_amount;
 use crate::get_treasury_token_account;
 
-pub fn process_initialize(accounts: &[AccountInfo<'_>]) -> ProgramResult {
+/// Initialize the program.
+///
+/// This creates the config account and the treasury account.
+///
+/// It also initializes the mint accounts for each token type.
+///
+/// TODO: [`crate::cpi::token_group_initialize`] is failing in the tests. Find a
+/// way to fix.
+pub fn process_config_initialize(accounts: &[AccountInfo<'_>]) -> ProgramResult {
 	// load accounts
 	let [
 		admin_info,
@@ -277,7 +285,7 @@ pub fn process_initialize(accounts: &[AccountInfo<'_>]) -> ProgramResult {
 	)?;
 
 	initialize_member_mint(
-		mint_bit_info,
+		// mint_bit_info,
 		mint_kibibit_info,
 		treasury_kibibit_token_account_info,
 		authority_info,
@@ -293,7 +301,7 @@ pub fn process_initialize(accounts: &[AccountInfo<'_>]) -> ProgramResult {
 		treasury_seeds,
 	)?;
 	initialize_member_mint(
-		mint_bit_info,
+		// mint_bit_info,
 		mint_mebibit_info,
 		treasury_mebibit_token_account_info,
 		authority_info,
@@ -310,7 +318,7 @@ pub fn process_initialize(accounts: &[AccountInfo<'_>]) -> ProgramResult {
 	)?;
 
 	initialize_member_mint(
-		mint_bit_info,
+		// mint_bit_info,
 		mint_gibibit_info,
 		treasury_gibibit_token_account_info,
 		authority_info,
@@ -331,7 +339,7 @@ pub fn process_initialize(accounts: &[AccountInfo<'_>]) -> ProgramResult {
 
 #[allow(clippy::too_many_arguments)]
 fn initialize_member_mint<'info>(
-	group_info: &AccountInfo<'info>,
+	// group_info: &AccountInfo<'info>,
 	mint_info: &AccountInfo<'info>,
 	treasury_token_account_info: &AccountInfo<'info>,
 	payer_info: &AccountInfo<'info>,
@@ -431,15 +439,17 @@ fn initialize_member_mint<'info>(
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
-pub struct Initialize {}
+pub struct ConfigInitialize {}
 
-instruction!(BitflipInstruction, Initialize);
+instruction!(BitflipInstruction, ConfigInitialize);
 
 mod modname {}
 
 #[cfg(test)]
 mod tests {
 	use assert2::check;
+	use solana_sdk::bpf_loader_upgradeable;
+	use solana_sdk::native_loader;
 
 	use super::*;
 	use crate::get_pda_config;
@@ -455,7 +465,7 @@ mod tests {
 	#[test_log::test]
 	fn should_have_enough_accounts() -> anyhow::Result<()> {
 		let accounts = create_account_infos();
-		let result = process_initialize(&accounts[0..8]);
+		let result = process_config_initialize(&accounts[0..8]);
 		check!(result.unwrap_err() == ProgramError::NotEnoughAccountKeys);
 
 		Ok(())
@@ -467,7 +477,7 @@ mod tests {
 		let admin_info = &mut accounts[0];
 		admin_info.key = leak(Pubkey::new_unique());
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::Custom(BitflipError::UnauthorizedAdmin.into()));
 
 		Ok(())
@@ -479,7 +489,7 @@ mod tests {
 		let admin_info = &mut accounts[0];
 		admin_info.is_signer = false;
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
 
 		Ok(())
@@ -491,7 +501,7 @@ mod tests {
 		let authority_info = &mut accounts[1];
 		authority_info.key = leak(ADMIN_PUBKEY);
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(
 			result.unwrap_err() == ProgramError::Custom(BitflipError::DuplicateAuthority.into())
 		);
@@ -505,7 +515,7 @@ mod tests {
 		let authority_info = &mut accounts[1];
 		authority_info.is_signer = false;
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
 
 		Ok(())
@@ -517,7 +527,7 @@ mod tests {
 		let authority_info = &mut accounts[1];
 		authority_info.is_writable = false;
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
 
 		Ok(())
@@ -529,7 +539,7 @@ mod tests {
 		let config_info = &mut accounts[2];
 		config_info.key = leak(Pubkey::new_unique());
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::InvalidSeeds);
 
 		Ok(())
@@ -541,7 +551,7 @@ mod tests {
 		let config_info = &mut accounts[2];
 		config_info.is_writable = false;
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
 
 		Ok(())
@@ -553,7 +563,7 @@ mod tests {
 		let treasury_info = &mut accounts[3];
 		treasury_info.key = leak(Pubkey::new_unique());
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::InvalidSeeds);
 
 		Ok(())
@@ -565,7 +575,7 @@ mod tests {
 		let treasury_info = &mut accounts[3];
 		treasury_info.is_writable = false;
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
 
 		Ok(())
@@ -577,7 +587,7 @@ mod tests {
 		let treasury_info = &mut accounts[3];
 		treasury_info.owner = &ID;
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::InvalidAccountOwner);
 
 		Ok(())
@@ -589,7 +599,7 @@ mod tests {
 		let mint_bit_info = &mut accounts[4];
 		mint_bit_info.key = leak(Pubkey::new_unique());
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::InvalidSeeds);
 
 		Ok(())
@@ -601,7 +611,7 @@ mod tests {
 		let mint_bit_info = &mut accounts[4];
 		mint_bit_info.is_writable = false;
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
 
 		Ok(())
@@ -613,7 +623,7 @@ mod tests {
 		let treasury_bit_token_account_info = &mut accounts[5];
 		treasury_bit_token_account_info.key = leak(Pubkey::new_unique());
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::InvalidSeeds);
 
 		Ok(())
@@ -625,7 +635,7 @@ mod tests {
 		let treasury_bit_token_account_info = &mut accounts[5];
 		treasury_bit_token_account_info.is_writable = false;
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
 
 		Ok(())
@@ -637,7 +647,7 @@ mod tests {
 		let mint_kibibit_info = &mut accounts[6];
 		mint_kibibit_info.key = leak(Pubkey::new_unique());
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::InvalidSeeds);
 
 		Ok(())
@@ -649,7 +659,7 @@ mod tests {
 		let mint_kibibit_info = &mut accounts[6];
 		mint_kibibit_info.is_writable = false;
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
 
 		Ok(())
@@ -661,7 +671,7 @@ mod tests {
 		let treasury_kibibit_token_account_info = &mut accounts[7];
 		treasury_kibibit_token_account_info.key = leak(Pubkey::new_unique());
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::InvalidSeeds);
 
 		Ok(())
@@ -673,7 +683,7 @@ mod tests {
 		let treasury_kibibit_token_account_info = &mut accounts[7];
 		treasury_kibibit_token_account_info.is_writable = false;
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
 
 		Ok(())
@@ -685,7 +695,7 @@ mod tests {
 		let mint_mebibit_info = &mut accounts[8];
 		mint_mebibit_info.key = leak(Pubkey::new_unique());
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::InvalidSeeds);
 
 		Ok(())
@@ -697,7 +707,7 @@ mod tests {
 		let mint_mebibit_info = &mut accounts[8];
 		mint_mebibit_info.is_writable = false;
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
 
 		Ok(())
@@ -709,7 +719,7 @@ mod tests {
 		let treasury_mebibit_token_account_info = &mut accounts[9];
 		treasury_mebibit_token_account_info.key = leak(Pubkey::new_unique());
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::InvalidSeeds);
 
 		Ok(())
@@ -721,7 +731,7 @@ mod tests {
 		let treasury_mebibit_token_account_info = &mut accounts[9];
 		treasury_mebibit_token_account_info.is_writable = false;
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
 
 		Ok(())
@@ -733,7 +743,7 @@ mod tests {
 		let mint_gibibit_info = &mut accounts[10];
 		mint_gibibit_info.key = leak(Pubkey::new_unique());
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::InvalidSeeds);
 
 		Ok(())
@@ -745,7 +755,7 @@ mod tests {
 		let mint_gibibit_info = &mut accounts[10];
 		mint_gibibit_info.is_writable = false;
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
 
 		Ok(())
@@ -757,7 +767,7 @@ mod tests {
 		let treasury_gibibit_token_account_info = &mut accounts[11];
 		treasury_gibibit_token_account_info.key = leak(Pubkey::new_unique());
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::InvalidSeeds);
 
 		Ok(())
@@ -769,7 +779,7 @@ mod tests {
 		let treasury_gibibit_token_account_info = &mut accounts[11];
 		treasury_gibibit_token_account_info.is_writable = false;
 
-		let result = process_initialize(&accounts);
+		let result = process_config_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
 
 		Ok(())
@@ -947,7 +957,7 @@ mod tests {
 			false,
 			associated_token_program_lamports,
 			associated_token_program_data,
-			&spl_associated_token_account::ID,
+			&bpf_loader_upgradeable::ID,
 			true,
 			u64::MAX,
 		);
@@ -957,7 +967,7 @@ mod tests {
 			false,
 			token_program_lamports,
 			token_program_data,
-			&spl_token_2022::ID,
+			&bpf_loader_upgradeable::ID,
 			true,
 			u64::MAX,
 		);
@@ -967,7 +977,7 @@ mod tests {
 			false,
 			system_program_lamports,
 			system_program_data,
-			&system_program::ID,
+			&native_loader::ID,
 			true,
 			u64::MAX,
 		);

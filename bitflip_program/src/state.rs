@@ -106,21 +106,13 @@ pub struct GameState {
 	pub section_index: u8,
 	/// The bump for this account.
 	pub bump: u8,
-	/// The bump for the nonce account.
-	pub nonce_bump: u8,
 	/// Padding to make the size of the struct a multiple of 8.
 	#[cfg_attr(feature = "client", builder(default))]
-	pub _padding: [u8; 4],
+	pub _padding: [u8; 5],
 }
 
 impl GameState {
-	pub fn new(
-		access_signer: Pubkey,
-		refresh_signer: Pubkey,
-		index: u8,
-		bump: u8,
-		nonce_bump: u8,
-	) -> Self {
+	pub fn new(access_signer: Pubkey, refresh_signer: Pubkey, index: u8, bump: u8) -> Self {
 		Self {
 			refresh_signer,
 			access_signer,
@@ -129,8 +121,7 @@ impl GameState {
 			section_index: 0,
 			game_index: index,
 			bump,
-			nonce_bump,
-			_padding: [0; 4],
+			_padding: [0; 5],
 		}
 	}
 

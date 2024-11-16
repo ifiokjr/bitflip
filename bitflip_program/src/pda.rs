@@ -6,10 +6,10 @@ use crate::ID;
 use crate::SEED_BIT_MINT;
 use crate::SEED_CONFIG;
 use crate::SEED_GAME;
-use crate::SEED_GAME_NONCE;
 use crate::SEED_GIBIBIT_MINT;
 use crate::SEED_KIBIBIT_MINT;
 use crate::SEED_MEBIBIT_MINT;
+use crate::SEED_NONCE;
 use crate::SEED_PLAYER;
 use crate::SEED_PREFIX;
 use crate::SEED_SECTION;
@@ -31,6 +31,16 @@ pub fn get_pda_derived_player(player: &Pubkey) -> (Pubkey, u8) {
 pub fn create_pda_derived_player(player: &Pubkey, bump: u8) -> Result<Pubkey, ProgramError> {
 	let pubkey =
 		Pubkey::create_program_address(&[SEED_PREFIX, SEED_PLAYER, player.as_ref(), &[bump]], &ID)?;
+	Ok(pubkey)
+}
+
+pub fn get_pda_nonce(address: &Pubkey) -> (Pubkey, u8) {
+	Pubkey::find_program_address(&[SEED_PREFIX, SEED_NONCE, address.as_ref()], &ID)
+}
+
+pub fn create_pda_nonce(address: &Pubkey, bump: u8) -> Result<Pubkey, ProgramError> {
+	let pubkey =
+		Pubkey::create_program_address(&[SEED_PREFIX, SEED_NONCE, address.as_ref(), &[bump]], &ID)?;
 	Ok(pubkey)
 }
 
@@ -137,7 +147,7 @@ pub fn get_pda_game_nonce(game_index: u8) -> (Pubkey, u8) {
 			SEED_PREFIX,
 			SEED_GAME,
 			&game_index.to_le_bytes(),
-			SEED_GAME_NONCE,
+			SEED_NONCE,
 		],
 		&ID,
 	)
@@ -149,7 +159,7 @@ pub fn create_pda_game_nonce(game_index: u8, bump: u8) -> Result<Pubkey, Program
 			SEED_PREFIX,
 			SEED_GAME,
 			&game_index.to_le_bytes(),
-			SEED_GAME_NONCE,
+			SEED_NONCE,
 			&[bump],
 		],
 		&ID,

@@ -5,8 +5,8 @@ use std::future::Future;
 use assert2::check;
 use bitflip_program::BitflipError;
 use bitflip_program::ConfigState;
+use bitflip_program::config_update_authority;
 use bitflip_program::get_pda_config;
-use bitflip_program::update_authority;
 use shared::ToRpcClient;
 use shared::create_authority_keypair;
 use shared::create_config_state;
@@ -22,15 +22,15 @@ use test_utils_solana::prelude::*;
 mod shared;
 
 #[test_log::test(tokio::test)]
-async fn update_authority_test() -> anyhow::Result<()> {
-	shared_update_authority_test(create_banks_client_rpc).await?;
+async fn config_update_authority_test() -> anyhow::Result<()> {
+	shared_config_update_authority_test(create_banks_client_rpc).await?;
 	Ok(())
 }
 
 #[cfg(feature = "test_validator")]
 #[test_log::test(tokio::test)]
-async fn update_authority_test_validator() -> anyhow::Result<()> {
-	let compute_units = shared_update_authority_test(create_validator_rpc).await?;
+async fn config_update_authority_test_validator() -> anyhow::Result<()> {
+	let compute_units = shared_config_update_authority_test(create_validator_rpc).await?;
 	let rounded_compute_units = bitflip_program::round_compute_units_up(compute_units);
 
 	check!(rounded_compute_units == 10_000);
@@ -73,7 +73,7 @@ async fn create_validator_rpc() -> anyhow::Result<impl ToRpcClient> {
 	Ok(runner)
 }
 
-async fn shared_update_authority_test<
+async fn shared_config_update_authority_test<
 	T: ToRpcClient,
 	Fut: Future<Output = anyhow::Result<T>>,
 	Create: FnOnce() -> Fut,
@@ -88,7 +88,7 @@ async fn shared_update_authority_test<
 	let new_authority = new_authority_keypair.pubkey();
 	let config = get_pda_config().0;
 	let recent_blockhash = rpc.get_latest_blockhash().await?;
-	let ix = update_authority(&authority, &new_authority);
+	let ix = config_update_authority(&authority, &new_authority);
 	let mut transaction =
 		VersionedTransaction::new_unsigned_v0(&authority, &[ix], &[], recent_blockhash)?;
 
@@ -136,7 +136,7 @@ async fn shared_authority_must_change_test<
 	let authority_keypair = create_authority_keypair();
 	let authority = authority_keypair.pubkey();
 	let recent_blockhash = rpc.get_latest_blockhash().await?;
-	let ix = update_authority(&authority, &authority);
+	let ix = config_update_authority(&authority, &authority);
 	let transaction =
 		VersionedTransaction::new_unsigned_v0(&authority, &[ix], &[], recent_blockhash)?;
 	let simulation = rpc.simulate_transaction(&transaction).await?;

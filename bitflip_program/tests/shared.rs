@@ -202,7 +202,6 @@ pub fn create_game_state(
 		.start_time(start_time)
 		.game_index(game_index)
 		.bump(game_bump)
-		.nonce_bump(game_nonce_bump)
 		.access_expiry(access_expiry)
 		.section_index(section_index)
 		.build();
