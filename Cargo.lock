@@ -1010,8 +1010,7 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "axum 0.7.7",
- "bitflip_legacy_client",
- "bitflip_legacy_program",
+ "bitflip_program",
  "codee",
  "console_error_panic_hook",
  "console_log 1.0.0",

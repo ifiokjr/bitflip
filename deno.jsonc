@@ -31,5 +31,6 @@
 		"rules": {
 			"tags": ["recommended"]
 		}
-	}
+	},
+	"workspace": []
 }

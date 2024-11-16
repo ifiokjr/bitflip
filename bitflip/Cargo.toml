@@ -12,7 +12,6 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 anyhow = { workspace = true }
 axum = { workspace = true, optional = true }
-bitflip_client = { workspace = true }
 bitflip_program = { workspace = true, features = ["serde", "no-entrypoint", "client"] }
 codee = { workspace = true }
 console_error_panic_hook.workspace = true
@@ -43,10 +42,9 @@ wasm_client_solana = { workspace = true }
 web-sys = { workspace = true, features = ["CanvasRenderingContext2d", "Document", "Element", "HtmlCanvasElement", "ImageData", "Window"] }
 
 [features]
-csr = ["bitflip_client/js", "leptos/csr", "wasm_client_solana/js", "codee/json_serde_wasm"]
-hydrate = ["bitflip_client/js", "leptos/hydrate", "wasm_client_solana/js", "codee/json_serde_wasm"]
+csr = ["leptos/csr", "wasm_client_solana/js", "codee/json_serde_wasm"]
+hydrate = ["leptos/hydrate", "wasm_client_solana/js", "codee/json_serde_wasm"]
 ssr = [
-	"bitflip_client/ssr",
 	"dep:axum",
 	"dep:rust-embed",
 	"dep:tokio",
