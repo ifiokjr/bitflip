@@ -13,7 +13,6 @@ use bitflip_program::TOKEN_DECIMALS;
 use bitflip_program::TOKENS_PER_SECTION;
 use bitflip_program::get_pda_config;
 use bitflip_program::get_pda_game;
-use bitflip_program::get_pda_game_nonce;
 use bitflip_program::get_pda_mint_bit;
 use bitflip_program::get_pda_mint_gibibit;
 use bitflip_program::get_pda_mint_kibibit;
@@ -24,12 +23,8 @@ use bitflip_program::get_section_bit_token_account;
 use bitflip_program::get_token_amount;
 use solana_sdk::account::AccountSharedData;
 use solana_sdk::account::WritableAccount;
-use solana_sdk::account_utils::StateMut;
 use solana_sdk::commitment_config::CommitmentLevel;
-use solana_sdk::hash::Hash;
 use solana_sdk::native_token::sol_to_lamports;
-use solana_sdk::nonce;
-use solana_sdk::nonce::state::DurableNonce;
 use solana_sdk::program_pack::Pack;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::rent::Rent;
@@ -187,14 +182,20 @@ pub fn create_config_state() -> AccountSharedData {
 	.to_account_shared_data()
 }
 
+pub struct CreatedGameState {
+	pub game_state_account: AccountSharedData,
+	pub access_signer: Keypair,
+	pub refresh_signer: Keypair,
+	pub refresh_signer_account: AccountSharedData,
+}
+
 pub fn create_game_state(
 	game_index: u8,
 	section_index: u8,
 	start_time: i64,
 	access_expiry: i64,
-) -> (AccountSharedData, AccountSharedData, Keypair, Keypair) {
+) -> CreatedGameState {
 	let game_bump = get_pda_game(game_index).1;
-	let game_nonce_bump = get_pda_game_nonce(game_index).1;
 	let (access_signer, refresh_signer) = (Keypair::new(), Keypair::new());
 	let game_state = GameState::builder()
 		.access_signer(access_signer.pubkey())
@@ -206,25 +207,15 @@ pub fn create_game_state(
 		.section_index(section_index)
 		.build();
 
-	let state = nonce::State::new_initialized(
-		&access_signer.pubkey(),
-		DurableNonce::from_blockhash(&Hash::default()),
-		100_000,
-	);
-	log::info!("game_state: {game_state:#?}");
-	let versioned_state = nonce::state::Versions::new(state);
-	let space = nonce::State::size();
-	let rent_sysvar = Rent::default();
-	let lamports = rent_sysvar.minimum_balance(space);
-	let mut game_nonce_account = AccountSharedData::new(lamports, space, &system_program::ID);
-	game_nonce_account.set_state(&versioned_state).unwrap();
+	let lamports = Rent::default().minimum_balance(0) + 5_000_000;
+	let refresh_signer_account = AccountSharedData::new(500_000_000, 0, &system_program::ID);
 
-	(
-		game_state.to_account_shared_data(),
-		game_nonce_account,
+	CreatedGameState {
+		game_state_account: game_state.to_account_shared_data(),
 		access_signer,
 		refresh_signer,
-	)
+		refresh_signer_account,
+	}
 }
 
 pub fn create_section_state(

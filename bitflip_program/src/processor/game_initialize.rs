@@ -1,4 +1,5 @@
 use steel::*;
+use sysvar::rent::Rent;
 
 use super::BitflipInstruction;
 use crate::BitflipError;
@@ -7,6 +8,7 @@ use crate::GameState;
 use crate::ID;
 use crate::SEED_GAME;
 use crate::SEED_PREFIX;
+use crate::TRANSACTION_FEE;
 use crate::create_pda_config;
 use crate::get_pda_game;
 
@@ -28,7 +30,7 @@ pub fn process_game_initialize(accounts: &[AccountInfo]) -> ProgramResult {
 		.is_writable()?
 		.has_owner(&system_program::ID)?;
 	access_signer_info.is_empty()?.is_signer()?;
-	refresh_signer_info.is_empty()?.is_signer()?;
+	refresh_signer_info.is_empty()?.is_signer()?.is_writable()?;
 	config_info.is_type::<ConfigState>(&ID)?;
 	game_info.is_empty()?.is_writable()?;
 	system_program_info.is_program(&system_program::ID)?;
@@ -62,6 +64,14 @@ pub fn process_game_initialize(accounts: &[AccountInfo]) -> ProgramResult {
 		config.game_index,
 		game_bump,
 	);
+
+	// store lamports in the refresh signer
+	let rent_sysvar = Rent::get()?;
+	let refresh_signer_lamports = rent_sysvar
+		.minimum_balance(0)
+		.checked_add(TRANSACTION_FEE.checked_mul(1000).unwrap())
+		.unwrap();
+	refresh_signer_info.collect(refresh_signer_lamports, authority_info)?;
 
 	Ok(())
 }
@@ -154,6 +164,18 @@ mod tests {
 	}
 
 	#[test_log::test]
+	fn refresh_signer_should_be_writable() -> anyhow::Result<()> {
+		let mut accounts = create_account_infos();
+		let refresh_signer_info = &mut accounts[2];
+		refresh_signer_info.is_writable = false;
+
+		let result = process_game_initialize(&accounts);
+		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
+
+		Ok(())
+	}
+
+	#[test_log::test]
 	fn config_should_be_pda() -> anyhow::Result<()> {
 		let mut accounts = create_account_infos();
 		let config_info = &mut accounts[3];
@@ -219,6 +241,9 @@ mod tests {
 		let game_info = &mut accounts[4];
 		game_info.is_writable = false;
 
+		let result = process_game_initialize(&accounts);
+		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
+
 		Ok(())
 	}
 
@@ -283,7 +308,7 @@ mod tests {
 		let refresh_signer_info = AccountInfo::new(
 			refresh_signer_key,
 			true,
-			false,
+			true,
 			refresh_signer_lamports,
 			refresh_signer_data,
 			&system_program::ID,

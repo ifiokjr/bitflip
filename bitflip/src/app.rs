@@ -21,6 +21,7 @@ use leptos_router::components::Route;
 use leptos_router::components::Router;
 use leptos_router::path;
 use rand::Rng;
+use reactive_stores::Store;
 use solana_sdk::pubkey::Pubkey;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;

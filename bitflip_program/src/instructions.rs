@@ -3,6 +3,7 @@ use steel::*;
 use crate::ConfigInitialize;
 use crate::ConfigUpdateAuthority;
 use crate::GameInitialize;
+use crate::GameRefreshSigner;
 use crate::get_pda_config;
 use crate::get_pda_game;
 use crate::get_pda_mint_bit;
@@ -74,7 +75,7 @@ pub fn game_initialize(
 		accounts: vec![
 			AccountMeta::new(*authority, true),
 			AccountMeta::new_readonly(*access_signer, true),
-			AccountMeta::new_readonly(*refresh_signer, true),
+			AccountMeta::new(*refresh_signer, true),
 			AccountMeta::new(config, false),
 			AccountMeta::new(game, false),
 			AccountMeta::new_readonly(system_program::ID, false),
@@ -100,5 +101,23 @@ pub fn config_update_authority(authority: &Pubkey, new_authority: &Pubkey) -> In
 			AccountMeta::new(*new_authority, true),
 		],
 		data: ConfigUpdateAuthority {}.to_bytes(),
+	}
+}
+
+pub fn game_refresh_signer(
+	game_index: u8,
+	access_signer: &Pubkey,
+	refresh_signer: &Pubkey,
+) -> Instruction {
+	let accounts = vec![
+		AccountMeta::new_readonly(*access_signer, true), // Access signer must sign
+		AccountMeta::new(*refresh_signer, true),         // Refresh signer must sign
+		AccountMeta::new(get_pda_game(game_index).0, false), // Game account to be modified
+	];
+
+	Instruction {
+		program_id: crate::ID,
+		accounts,
+		data: GameRefreshSigner {}.to_bytes(),
 	}
 }

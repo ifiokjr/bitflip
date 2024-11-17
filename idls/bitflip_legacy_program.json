@@ -1,0 +1,2539 @@
+{
+	"address": "5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM",
+	"metadata": {
+		"name": "bitflip_legacy_program",
+		"version": "0.0.0",
+		"spec": "0.1.0",
+		"description": "Created with Anchor"
+	},
+	"instructions": [
+		{
+			"name": "create_derived_player",
+			"docs": [
+				"Create a player pda account. This account can be used to make actions on",
+				"behalf of the player. They will transfer a minimum amount of lamports to",
+				"the created token account."
+			],
+			"discriminator": [
+				148,
+				242,
+				250,
+				252,
+				143,
+				243,
+				146,
+				27
+			],
+			"accounts": [
+				{
+					"name": "config",
+					"docs": [
+						"The program configuration."
+					],
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									99,
+									111,
+									110,
+									102,
+									105,
+									103
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "mint",
+					"docs": [
+						"The token mint account"
+					],
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									109,
+									105,
+									110,
+									116
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "derived_player",
+					"docs": [
+						"The PDA account that will be created to act on behalf of the player"
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									112,
+									108,
+									97,
+									121,
+									101,
+									114
+								]
+							},
+							{
+								"kind": "account",
+								"path": "player"
+							}
+						]
+					}
+				},
+				{
+					"name": "derived_player_token_account",
+					"docs": [
+						"The associated token account for the onchain player PDA"
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "account",
+								"path": "derived_player"
+							},
+							{
+								"kind": "account",
+								"path": "token_program"
+							},
+							{
+								"kind": "account",
+								"path": "mint"
+							}
+						],
+						"program": {
+							"kind": "const",
+							"value": [
+								140,
+								151,
+								37,
+								143,
+								78,
+								36,
+								137,
+								241,
+								187,
+								61,
+								16,
+								41,
+								20,
+								142,
+								13,
+								131,
+								11,
+								90,
+								19,
+								153,
+								218,
+								255,
+								16,
+								132,
+								4,
+								142,
+								123,
+								216,
+								219,
+								233,
+								248,
+								89
+							]
+						}
+					}
+				},
+				{
+					"name": "player",
+					"docs": [
+						"The player who is creating the account and paying for initialization"
+					],
+					"writable": true,
+					"signer": true
+				},
+				{
+					"name": "associated_token_program",
+					"docs": [
+						"Required for creating the associated token account"
+					],
+					"address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+				},
+				{
+					"name": "token_program",
+					"docs": [
+						"Required for token operations"
+					],
+					"address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+				},
+				{
+					"name": "system_program",
+					"docs": [
+						"Required for account creation"
+					],
+					"address": "11111111111111111111111111111111"
+				}
+			],
+			"args": []
+		},
+		{
+			"name": "flip_bits",
+			"docs": [
+				"Flip bits based on the provided props."
+			],
+			"discriminator": [
+				50,
+				176,
+				32,
+				7,
+				225,
+				130,
+				43,
+				168
+			],
+			"accounts": [
+				{
+					"name": "config",
+					"docs": [
+						"The program configuration."
+					],
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									99,
+									111,
+									110,
+									102,
+									105,
+									103
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "mint",
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									109,
+									105,
+									110,
+									116
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "game",
+					"docs": [
+						"The meta data for the full bits state."
+					],
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									103,
+									97,
+									109,
+									101
+								]
+							},
+							{
+								"kind": "account",
+								"path": "game.game_index",
+								"account": "GameState"
+							}
+						]
+					}
+				},
+				{
+					"name": "section",
+					"docs": [
+						"The data for this section of the bit canvas."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									103,
+									97,
+									109,
+									101
+								]
+							},
+							{
+								"kind": "account",
+								"path": "game.game_index",
+								"account": "GameState"
+							},
+							{
+								"kind": "const",
+								"value": [
+									115,
+									101,
+									99,
+									116,
+									105,
+									111,
+									110,
+									95,
+									115,
+									116,
+									97,
+									116,
+									101
+								]
+							},
+							{
+								"kind": "arg",
+								"path": "props.section_index"
+							}
+						]
+					}
+				},
+				{
+					"name": "section_data",
+					"docs": [
+						"The data for this section of the bit canvas."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									103,
+									97,
+									109,
+									101
+								]
+							},
+							{
+								"kind": "account",
+								"path": "game.game_index",
+								"account": "GameState"
+							},
+							{
+								"kind": "const",
+								"value": [
+									115,
+									101,
+									99,
+									116,
+									105,
+									111,
+									110,
+									95,
+									100,
+									97,
+									116,
+									97
+								]
+							},
+							{
+								"kind": "arg",
+								"path": "props.section_index"
+							}
+						]
+					}
+				},
+				{
+					"name": "section_token_account",
+					"writable": true
+				},
+				{
+					"name": "player",
+					"docs": [
+						"The player of the bit games"
+					],
+					"writable": true,
+					"signer": true
+				},
+				{
+					"name": "player_token_account",
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "account",
+								"path": "player"
+							},
+							{
+								"kind": "account",
+								"path": "token_program"
+							},
+							{
+								"kind": "account",
+								"path": "mint"
+							}
+						],
+						"program": {
+							"kind": "const",
+							"value": [
+								140,
+								151,
+								37,
+								143,
+								78,
+								36,
+								137,
+								241,
+								187,
+								61,
+								16,
+								41,
+								20,
+								142,
+								13,
+								131,
+								11,
+								90,
+								19,
+								153,
+								218,
+								255,
+								16,
+								132,
+								4,
+								142,
+								123,
+								216,
+								219,
+								233,
+								248,
+								89
+							]
+						}
+					}
+				},
+				{
+					"name": "associated_token_program",
+					"docs": [
+						"The program for associated tokens"
+					],
+					"address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+				},
+				{
+					"name": "token_program",
+					"docs": [
+						"The token program."
+					],
+					"address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+				},
+				{
+					"name": "system_program",
+					"docs": [
+						"Needed for cpi payment instructions instructions."
+					],
+					"address": "11111111111111111111111111111111"
+				}
+			],
+			"args": [
+				{
+					"name": "props",
+					"type": {
+						"defined": {
+							"name": "FlipBitsProps"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "initialize_config",
+			"docs": [
+				"Initialize the configuration for the program."
+			],
+			"discriminator": [
+				208,
+				127,
+				21,
+				1,
+				194,
+				190,
+				196,
+				70
+			],
+			"accounts": [
+				{
+					"name": "config",
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									99,
+									111,
+									110,
+									102,
+									105,
+									103
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "admin",
+					"docs": [
+						"The hard-coded account that is used to initialize the program config",
+						"once."
+					],
+					"signer": true,
+					"address": "4z5X2suocz9szaQnSshj2AW8tuLgUVmYUxiW9hhPaRHs"
+				},
+				{
+					"name": "treasury",
+					"docs": [
+						"The treasury which stores all tokens created."
+					],
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									116,
+									114,
+									101,
+									97,
+									115,
+									117,
+									114,
+									121
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "authority",
+					"docs": [
+						"The authority which needs to also sign for the transaction to prove",
+						"ownership and make payment."
+					],
+					"writable": true,
+					"signer": true
+				},
+				{
+					"name": "system_program",
+					"docs": [
+						"This is needed for initializing the bit state."
+					],
+					"address": "11111111111111111111111111111111"
+				}
+			],
+			"args": []
+		},
+		{
+			"name": "initialize_game",
+			"docs": [
+				"This will initialize the meta state for the bits."
+			],
+			"discriminator": [
+				44,
+				62,
+				102,
+				247,
+				126,
+				208,
+				130,
+				215
+			],
+			"accounts": [
+				{
+					"name": "config",
+					"docs": [
+						"The program configuration."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									99,
+									111,
+									110,
+									102,
+									105,
+									103
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "game",
+					"docs": [
+						"Can't initialize the full state at one time, must incrementally add the",
+						"state."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									103,
+									97,
+									109,
+									101
+								]
+							},
+							{
+								"kind": "account",
+								"path": "config.game_index",
+								"account": "ConfigState"
+							}
+						]
+					}
+				},
+				{
+					"name": "game_nonce",
+					"docs": [
+						"The game nonce account which is used to create new sections by storing",
+						"signed transactions and allowing the backend to pick the one to use.",
+						"",
+						"The nonce account for this game. Which is a durable nonce account."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									103,
+									97,
+									109,
+									101
+								]
+							},
+							{
+								"kind": "account",
+								"path": "config.game_index",
+								"account": "ConfigState"
+							},
+							{
+								"kind": "const",
+								"value": [
+									110,
+									111,
+									110,
+									99,
+									101
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "authority",
+					"docs": [
+						"The authority that is able to sign for updates to the config and",
+						"initiate new games."
+					],
+					"writable": true,
+					"signer": true,
+					"relations": [
+						"config"
+					]
+				},
+				{
+					"name": "access_signer",
+					"docs": [
+						"The `access_signer` is created by the backend and used for on chain",
+						"operations."
+					],
+					"signer": true
+				},
+				{
+					"name": "refresh_signer",
+					"docs": [
+						"The `refresh_signer`. The `access_token` expires every 24 hours. In",
+						"order to create a new one this is ."
+					],
+					"signer": true
+				},
+				{
+					"name": "recent_blockhashes",
+					"address": "SysvarRecentB1ockHashes11111111111111111111"
+				},
+				{
+					"name": "rent",
+					"address": "SysvarRent111111111111111111111111111111111"
+				},
+				{
+					"name": "system_program",
+					"docs": [
+						"The system program."
+					],
+					"address": "11111111111111111111111111111111"
+				}
+			],
+			"args": []
+		},
+		{
+			"name": "initialize_token",
+			"docs": [
+				"Initialize the token account. This must be called before the first game",
+				"starts to generate the reward token."
+			],
+			"discriminator": [
+				38,
+				209,
+				150,
+				50,
+				190,
+				117,
+				16,
+				54
+			],
+			"accounts": [
+				{
+					"name": "config",
+					"docs": [
+						"The program configuration."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									99,
+									111,
+									110,
+									102,
+									105,
+									103
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "authority",
+					"writable": true,
+					"signer": true,
+					"relations": [
+						"config"
+					]
+				},
+				{
+					"name": "mint",
+					"docs": [
+						"The token mint account."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									109,
+									105,
+									110,
+									116
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "treasury",
+					"docs": [
+						"The treasury account."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									116,
+									114,
+									101,
+									97,
+									115,
+									117,
+									114,
+									121
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "treasury_token_account",
+					"docs": [
+						"minted tokens and is created in this instruction."
+					],
+					"writable": true
+				},
+				{
+					"name": "associated_token_program",
+					"docs": [
+						"The program for associated tokens"
+					],
+					"address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+				},
+				{
+					"name": "token_program",
+					"docs": [
+						"The token program."
+					],
+					"address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+				},
+				{
+					"name": "system_program",
+					"docs": [
+						"Needed in case a reallocation is required for the project memory."
+					],
+					"address": "11111111111111111111111111111111"
+				}
+			],
+			"args": [
+				{
+					"name": "props",
+					"type": {
+						"defined": {
+							"name": "InitializeTokenProps"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "refresh_access_signer",
+			"docs": [
+				"Refresh the access signer.",
+				"This will be called by the backend to create a new one."
+			],
+			"discriminator": [
+				192,
+				95,
+				253,
+				160,
+				77,
+				121,
+				65,
+				221
+			],
+			"accounts": [
+				{
+					"name": "config",
+					"docs": [
+						"The program configuration."
+					],
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									99,
+									111,
+									110,
+									102,
+									105,
+									103
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "game",
+					"docs": [
+						"The meta data for the full bits state."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									103,
+									97,
+									109,
+									101
+								]
+							},
+							{
+								"kind": "account",
+								"path": "game.game_index",
+								"account": "GameState"
+							}
+						]
+					}
+				},
+				{
+					"name": "access_signer",
+					"docs": [
+						"The new `access_signer` is created by the backend and used for on chain",
+						"operations."
+					],
+					"signer": true
+				},
+				{
+					"name": "refresh_signer",
+					"docs": [
+						"The `refresh_signer`. The `access_token` expires every 24 hours. In",
+						"order to create a new one this is used."
+					],
+					"signer": true,
+					"relations": [
+						"game"
+					]
+				}
+			],
+			"args": []
+		},
+		{
+			"name": "start_game",
+			"docs": [
+				"Start the game.",
+				"",
+				"This will automatically create the initial section and set the tokens",
+				"that can be used to manage accounts."
+			],
+			"discriminator": [
+				249,
+				47,
+				252,
+				172,
+				184,
+				162,
+				245,
+				14
+			],
+			"accounts": [
+				{
+					"name": "config",
+					"docs": [
+						"The program configuration."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									99,
+									111,
+									110,
+									102,
+									105,
+									103
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "game",
+					"docs": [
+						"The meta data account for the game."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									103,
+									97,
+									109,
+									101
+								]
+							},
+							{
+								"kind": "account",
+								"path": "config.game_index",
+								"account": "ConfigState"
+							}
+						]
+					}
+				},
+				{
+					"name": "authority",
+					"docs": [
+						"The authority that is able to sign for updates to the config and",
+						"initiate new games. It also is the payer for this transaction."
+					],
+					"writable": true,
+					"signer": true,
+					"relations": [
+						"config"
+					]
+				},
+				{
+					"name": "access_signer",
+					"docs": [
+						"The `access_signer` is created by the backend and used for on chain",
+						"operations."
+					],
+					"signer": true,
+					"relations": [
+						"game"
+					]
+				},
+				{
+					"name": "system_program",
+					"docs": [
+						"The system program."
+					],
+					"address": "11111111111111111111111111111111"
+				}
+			],
+			"args": []
+		},
+		{
+			"name": "unlock_section",
+			"docs": [
+				"This will unlock a single section of the bits data.",
+				"",
+				"Each section has an owner who pays the costs for creation. The section",
+				"only becomes avaiable when the previous section reaches a certain",
+				"threshold."
+			],
+			"discriminator": [
+				44,
+				41,
+				136,
+				79,
+				106,
+				183,
+				227,
+				71
+			],
+			"accounts": [
+				{
+					"name": "config",
+					"docs": [
+						"The program configuration."
+					],
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									99,
+									111,
+									110,
+									102,
+									105,
+									103
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "mint",
+					"docs": [
+						"The token mint account."
+					],
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									109,
+									105,
+									110,
+									116
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "treasury",
+					"docs": [
+						"The treasury account."
+					],
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									116,
+									114,
+									101,
+									97,
+									115,
+									117,
+									114,
+									121
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "treasury_token_account",
+					"docs": [
+						"The associated token account for the treasury which will hold the minted",
+						"tokens."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "account",
+								"path": "treasury"
+							},
+							{
+								"kind": "account",
+								"path": "token_program"
+							},
+							{
+								"kind": "account",
+								"path": "mint"
+							}
+						],
+						"program": {
+							"kind": "const",
+							"value": [
+								140,
+								151,
+								37,
+								143,
+								78,
+								36,
+								137,
+								241,
+								187,
+								61,
+								16,
+								41,
+								20,
+								142,
+								13,
+								131,
+								11,
+								90,
+								19,
+								153,
+								218,
+								255,
+								16,
+								132,
+								4,
+								142,
+								123,
+								216,
+								219,
+								233,
+								248,
+								89
+							]
+						}
+					}
+				},
+				{
+					"name": "game",
+					"docs": [
+						"The meta data for the full bits state."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									103,
+									97,
+									109,
+									101
+								]
+							},
+							{
+								"kind": "account",
+								"path": "game.game_index",
+								"account": "GameState"
+							}
+						]
+					}
+				},
+				{
+					"name": "section",
+					"docs": [
+						"This is a section of the bits data being initialized."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									103,
+									97,
+									109,
+									101
+								]
+							},
+							{
+								"kind": "account",
+								"path": "config.game_index",
+								"account": "ConfigState"
+							},
+							{
+								"kind": "const",
+								"value": [
+									115,
+									101,
+									99,
+									116,
+									105,
+									111,
+									110,
+									95,
+									115,
+									116,
+									97,
+									116,
+									101
+								]
+							},
+							{
+								"kind": "account",
+								"path": "game.section_index",
+								"account": "GameState"
+							}
+						]
+					}
+				},
+				{
+					"name": "section_data",
+					"docs": [
+						"This is a section of the bits data being initialized."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									103,
+									97,
+									109,
+									101
+								]
+							},
+							{
+								"kind": "account",
+								"path": "config.game_index",
+								"account": "ConfigState"
+							},
+							{
+								"kind": "const",
+								"value": [
+									115,
+									101,
+									99,
+									116,
+									105,
+									111,
+									110,
+									95,
+									100,
+									97,
+									116,
+									97
+								]
+							},
+							{
+								"kind": "account",
+								"path": "game.section_index",
+								"account": "GameState"
+							}
+						]
+					}
+				},
+				{
+					"name": "section_token_account",
+					"docs": [
+						"The token account which holds the section tokens."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "account",
+								"path": "section"
+							},
+							{
+								"kind": "account",
+								"path": "token_program"
+							},
+							{
+								"kind": "account",
+								"path": "mint"
+							}
+						],
+						"program": {
+							"kind": "const",
+							"value": [
+								140,
+								151,
+								37,
+								143,
+								78,
+								36,
+								137,
+								241,
+								187,
+								61,
+								16,
+								41,
+								20,
+								142,
+								13,
+								131,
+								11,
+								90,
+								19,
+								153,
+								218,
+								255,
+								16,
+								132,
+								4,
+								142,
+								123,
+								216,
+								219,
+								233,
+								248,
+								89
+							]
+						}
+					}
+				},
+				{
+					"name": "previous_section",
+					"docs": [
+						"The previous account which is checked for passing a certain threshold",
+						"before the next section can be created."
+					],
+					"optional": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									103,
+									97,
+									109,
+									101
+								]
+							},
+							{
+								"kind": "account",
+								"path": "config.game_index",
+								"account": "ConfigState"
+							},
+							{
+								"kind": "const",
+								"value": [
+									115,
+									101,
+									99,
+									116,
+									105,
+									111,
+									110,
+									95,
+									115,
+									116,
+									97,
+									116,
+									101
+								]
+							},
+							{
+								"kind": "account",
+								"path": "game.section_index.saturating_sub(1)",
+								"account": "GameState"
+							}
+						]
+					}
+				},
+				{
+					"name": "access_signer",
+					"docs": [
+						"The backend signer to authorise this."
+					],
+					"signer": true,
+					"relations": [
+						"game"
+					]
+				},
+				{
+					"name": "player",
+					"docs": [
+						"The player of the bit games is also responsible for paying all the",
+						"costs."
+					],
+					"writable": true,
+					"signer": true
+				},
+				{
+					"name": "player_token_account",
+					"docs": [
+						"The associated token account for the main authority."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "account",
+								"path": "player"
+							},
+							{
+								"kind": "account",
+								"path": "token_program"
+							},
+							{
+								"kind": "account",
+								"path": "mint"
+							}
+						],
+						"program": {
+							"kind": "const",
+							"value": [
+								140,
+								151,
+								37,
+								143,
+								78,
+								36,
+								137,
+								241,
+								187,
+								61,
+								16,
+								41,
+								20,
+								142,
+								13,
+								131,
+								11,
+								90,
+								19,
+								153,
+								218,
+								255,
+								16,
+								132,
+								4,
+								142,
+								123,
+								216,
+								219,
+								233,
+								248,
+								89
+							]
+						}
+					}
+				},
+				{
+					"name": "associated_token_program",
+					"docs": [
+						"The program for associated tokens"
+					],
+					"address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+				},
+				{
+					"name": "token_program",
+					"docs": [
+						"The token program."
+					],
+					"address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+				},
+				{
+					"name": "system_program",
+					"docs": [
+						"Needed for cpi payment instructions instructions."
+					],
+					"address": "11111111111111111111111111111111"
+				}
+			],
+			"args": []
+		},
+		{
+			"name": "update_authority",
+			"docs": [
+				"Update the authority for the program.",
+				"This will required updating the mint authority for the treasury."
+			],
+			"discriminator": [
+				32,
+				46,
+				64,
+				28,
+				149,
+				75,
+				243,
+				88
+			],
+			"accounts": [
+				{
+					"name": "config",
+					"docs": [
+						"The program configuration."
+					],
+					"writable": true,
+					"pda": {
+						"seeds": [
+							{
+								"kind": "const",
+								"value": [
+									98,
+									105,
+									116,
+									102,
+									108,
+									105,
+									112
+								]
+							},
+							{
+								"kind": "const",
+								"value": [
+									99,
+									111,
+									110,
+									102,
+									105,
+									103
+								]
+							}
+						]
+					}
+				},
+				{
+					"name": "authority",
+					"docs": [
+						"The current authority which must sign to update the authority."
+					],
+					"writable": true,
+					"signer": true,
+					"relations": [
+						"config"
+					]
+				},
+				{
+					"name": "new_authority",
+					"docs": [
+						"The new authority that will be set, must be a signer to prove ownership."
+					],
+					"signer": true
+				}
+			],
+			"args": []
+		}
+	],
+	"accounts": [
+		{
+			"name": "ConfigState",
+			"discriminator": [
+				193,
+				77,
+				160,
+				128,
+				208,
+				254,
+				180,
+				135
+			]
+		},
+		{
+			"name": "GameState",
+			"discriminator": [
+				144,
+				94,
+				208,
+				172,
+				248,
+				99,
+				134,
+				120
+			]
+		},
+		{
+			"name": "SectionData",
+			"discriminator": [
+				51,
+				109,
+				67,
+				25,
+				77,
+				210,
+				1,
+				102
+			]
+		},
+		{
+			"name": "SectionState",
+			"discriminator": [
+				107,
+				220,
+				84,
+				121,
+				192,
+				93,
+				205,
+				156
+			]
+		}
+	],
+	"events": [
+		{
+			"name": "UnlockSectionEvent",
+			"discriminator": [
+				66,
+				190,
+				152,
+				15,
+				138,
+				171,
+				11,
+				102
+			]
+		}
+	],
+	"errors": [
+		{
+			"code": 6000,
+			"name": "IncorrectSectionInitialized",
+			"msg": "The incorrect section is being initialized. The sections must be initialized sequentially"
+		},
+		{
+			"code": 6001,
+			"name": "BitsIncreaseSpaceInvalid",
+			"msg": "The space is already fully initialized"
+		},
+		{
+			"code": 6002,
+			"name": "BitsUnchanged",
+			"msg": "No update recorded"
+		},
+		{
+			"code": 6003,
+			"name": "Invalid256BitsDataSectionIndex",
+			"msg": "The data section index must be a multiple of 16"
+		},
+		{
+			"code": 6004,
+			"name": "InvalidAccount",
+			"msg": "The provided account was invalid"
+		},
+		{
+			"code": 6005,
+			"name": "InvalidBitChanges",
+			"msg": "There are invalid bit changes. This should not be possible"
+		},
+		{
+			"code": 6006,
+			"name": "InvalidBitOffset",
+			"msg": "The bit offset is invalid and must be less than 16"
+		},
+		{
+			"code": 6007,
+			"name": "InvalidSectionRequested",
+			"msg": "Invalid section requested"
+		},
+		{
+			"code": 6008,
+			"name": "InvalidSectionIndex",
+			"msg": "Invalid section index requested"
+		},
+		{
+			"code": 6009,
+			"name": "InvalidBitsDataSectionLength",
+			"msg": "Invalid bits data section array length"
+		},
+		{
+			"code": 6010,
+			"name": "InvalidBitsDataSectionOrder",
+			"msg": "Data sections initialized out of order"
+		},
+		{
+			"code": 6011,
+			"name": "InvalidBitsLength",
+			"msg": "The bits array is an invalid length"
+		},
+		{
+			"code": 6012,
+			"name": "InvalidFlippedBits",
+			"msg": "An invalid number of flipped bits was provided"
+		},
+		{
+			"code": 6013,
+			"name": "GameNotRunning",
+			"msg": "The current `GameState` is not running"
+		},
+		{
+			"code": 6014,
+			"name": "TokenNotInitialized",
+			"msg": "The token is not yet initialized"
+		},
+		{
+			"code": 6015,
+			"name": "UnauthorizedAdmin",
+			"msg": "The admin used was incorrect"
+		},
+		{
+			"code": 6016,
+			"name": "MinimumFlipThreshold",
+			"msg": "The previous section does not meet the minimum flips threshold"
+		},
+		{
+			"code": 6017,
+			"name": "SectionOwnerDuplicate",
+			"msg": "The same account cannot own consecutive sections"
+		},
+		{
+			"code": 6018,
+			"name": "AccessSignerNotUpdated",
+			"msg": "The access signer has not been updated"
+		}
+	],
+	"types": [
+		{
+			"name": "ConfigState",
+			"type": {
+				"kind": "struct",
+				"fields": [
+					{
+						"name": "authority",
+						"docs": [
+							"The authority which can update this config."
+						],
+						"type": "pubkey"
+					},
+					{
+						"name": "bump",
+						"docs": [
+							"Store the bump to save compute units."
+						],
+						"type": "u8"
+					},
+					{
+						"name": "treasury_bump",
+						"docs": [
+							"The treasury account bump where fees are sent and where the minted",
+							"tokens are transferred."
+						],
+						"type": "u8"
+					},
+					{
+						"name": "mint_bump",
+						"docs": [
+							"The mint account bump."
+						],
+						"type": "u8"
+					},
+					{
+						"name": "game_index",
+						"docs": [
+							"There will be a maximum of 256 games."
+						],
+						"type": "u8"
+					}
+				]
+			}
+		},
+		{
+			"name": "FlipBitsProps",
+			"type": {
+				"kind": "struct",
+				"fields": [
+					{
+						"name": "section_index",
+						"docs": [
+							"The data section being updated."
+						],
+						"type": "u8"
+					},
+					{
+						"name": "array_index",
+						"docs": [
+							"The index of the `u16` value in the array."
+						],
+						"type": "u16"
+					},
+					{
+						"name": "variant",
+						"docs": [
+							"The new bit values."
+						],
+						"type": {
+							"defined": {
+								"name": "SetBitsVariant"
+							}
+						}
+					}
+				]
+			}
+		},
+		{
+			"name": "GameState",
+			"docs": [
+				"Adding [`BitState::on`] to [`BitState::off`] should always equal `1_000_000`"
+			],
+			"type": {
+				"kind": "struct",
+				"fields": [
+					{
+						"name": "refresh_signer",
+						"docs": [
+							"This is a refresh signer created and maintained by the backend. It needs",
+							"to be provided to update the access signer. It will need to be updated",
+							"after every game."
+						],
+						"type": "pubkey"
+					},
+					{
+						"name": "access_signer",
+						"docs": [
+							"This is an access signer created and maintained by the backend. Which is",
+							"allowed to sign certain transactions and expires daily."
+						],
+						"type": "pubkey"
+					},
+					{
+						"name": "access_expiry",
+						"docs": [
+							"The timestamp that the access expiry will end."
+						],
+						"type": "i64"
+					},
+					{
+						"name": "start_time",
+						"docs": [
+							"The start time. If 0 then it hasn't started yet. Using an `Option` here",
+							"would waste an extra byte."
+						],
+						"type": "i64"
+					},
+					{
+						"name": "game_index",
+						"docs": [
+							"The index of this currently played game."
+						],
+						"type": "u8"
+					},
+					{
+						"name": "section_index",
+						"docs": [
+							"The most recent section which was unlocked. This will be updated every",
+							"time a new section is initialized."
+						],
+						"type": "u8"
+					},
+					{
+						"name": "bump",
+						"docs": [
+							"The bump for this account."
+						],
+						"type": "u8"
+					},
+					{
+						"name": "nonce_bump",
+						"docs": [
+							"The bump for the nonce account."
+						],
+						"type": "u8"
+					}
+				]
+			}
+		},
+		{
+			"name": "InitializeTokenProps",
+			"type": {
+				"kind": "struct",
+				"fields": [
+					{
+						"name": "name",
+						"type": "string"
+					},
+					{
+						"name": "symbol",
+						"type": "string"
+					},
+					{
+						"name": "uri",
+						"type": "string"
+					}
+				]
+			}
+		},
+		{
+			"name": "SectionData",
+			"docs": [
+				"The total data is split into 16",
+				"sections and this is one of the sections."
+			],
+			"serialization": "bytemuck",
+			"repr": {
+				"kind": "c"
+			},
+			"type": {
+				"kind": "struct",
+				"fields": [
+					{
+						"name": "data",
+						"docs": [
+							"The state of the bits that are represented as flippable bits on the",
+							"frontend."
+						],
+						"type": {
+							"array": [
+								"u16",
+								256
+							]
+						}
+					}
+				]
+			}
+		},
+		{
+			"name": "SectionState",
+			"docs": [
+				"The state for each section of game.",
+				"",
+				"This will also store the lamports that are accumulated by this game section."
+			],
+			"type": {
+				"kind": "struct",
+				"fields": [
+					{
+						"name": "owner",
+						"docs": [
+							"The owner of this section."
+						],
+						"type": "pubkey"
+					},
+					{
+						"name": "flips",
+						"docs": [
+							"The number of bit flips that have occurred."
+						],
+						"type": "u32"
+					},
+					{
+						"name": "on",
+						"docs": [
+							"The number of bits that are on."
+						],
+						"type": "u32"
+					},
+					{
+						"name": "off",
+						"docs": [
+							"The number of bits that are off."
+						],
+						"type": "u32"
+					},
+					{
+						"name": "index",
+						"docs": [
+							"The index for this section state."
+						],
+						"type": "u8"
+					},
+					{
+						"name": "bump",
+						"docs": [
+							"The bump for this section state."
+						],
+						"type": "u8"
+					},
+					{
+						"name": "data_bump",
+						"docs": [
+							"The bump for the section data."
+						],
+						"type": "u8"
+					}
+				]
+			}
+		},
+		{
+			"name": "SetBitsVariant",
+			"type": {
+				"kind": "enum",
+				"variants": [
+					{
+						"name": "On",
+						"fields": [
+							"u16"
+						]
+					},
+					{
+						"name": "Off",
+						"fields": [
+							"u16"
+						]
+					},
+					{
+						"name": "Bit16",
+						"fields": [
+							"u16"
+						]
+					},
+					{
+						"name": "Bits256",
+						"fields": [
+							{
+								"vec": "u16"
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			"name": "UnlockSectionEvent",
+			"type": {
+				"kind": "struct",
+				"fields": [
+					{
+						"name": "owner",
+						"type": "pubkey"
+					},
+					{
+						"name": "section_index",
+						"type": "u8"
+					}
+				]
+			}
+		}
+	],
+	"constants": [
+		{
+			"name": "ACCESS_SIGNER_DURATION",
+			"docs": [
+				"The access signer duration.",
+				"",
+				"24hrs"
+			],
+			"type": "i64",
+			"value": "86400"
+		},
+		{
+			"name": "ADMIN_PUBKEY",
+			"docs": [
+				"The admin pubkey to initialize the configuration for this program.",
+				"",
+				"This is required to prevent a frontrunning attack. If the program is",
+				"deployed it would be possible for someone to maliciously run the",
+				"`launchpad_config_initialize` method which would give them full control of",
+				"the authority and treasury of the program. By setting ths admin pubkey, this",
+				"action can only be performed by the environment variable (provided) at build",
+				"time. The build will fail if this is not provided at build time."
+			],
+			"type": "pubkey",
+			"value": "4z5X2suocz9szaQnSshj2AW8tuLgUVmYUxiW9hhPaRHs"
+		},
+		{
+			"name": "BITFLIP_SECTION_TOTAL_BITS",
+			"docs": [
+				"The total number of bits within a section of the game."
+			],
+			"type": "u32",
+			"value": "4096"
+		},
+		{
+			"name": "LAMPORTS_PER_BIT",
+			"docs": [
+				"Assuming a price of 100USD per sol. This is approximately 1 cent."
+			],
+			"type": "u64",
+			"value": "100000"
+		},
+		{
+			"name": "MAXIMUM_FLIPS",
+			"docs": [
+				"The number of flips before a game is closed. Depending on how the game is",
+				"going this can be increased or reduced."
+			],
+			"type": "u64",
+			"value": "50000000"
+		},
+		{
+			"name": "MINIMUM_FLIPS_PER_SECTION",
+			"docs": [
+				"The minimum number of flips the previous section must have before the next",
+				"section can be flipped."
+			],
+			"type": "u32",
+			"value": "1024"
+		},
+		{
+			"name": "SEED_BIT_CREATOR",
+			"type": "bytes",
+			"value": "[98, 105, 116, 95, 99, 114, 101, 97, 116, 111, 114]"
+		},
+		{
+			"name": "SEED_CONFIG",
+			"docs": [
+				"The PDA seed for the configuration account."
+			],
+			"type": "bytes",
+			"value": "[99, 111, 110, 102, 105, 103]"
+		},
+		{
+			"name": "SEED_GAME",
+			"docs": [
+				"The PDA seed for an instance of the game."
+			],
+			"type": "bytes",
+			"value": "[103, 97, 109, 101]"
+		},
+		{
+			"name": "SEED_GAME_NONCE",
+			"docs": [
+				"The PDA seed for the game instance nonce account."
+			],
+			"type": "bytes",
+			"value": "[110, 111, 110, 99, 101]"
+		},
+		{
+			"name": "SEED_MINT",
+			"docs": [
+				"The PDA seed for BIT mint token account."
+			],
+			"type": "bytes",
+			"value": "[109, 105, 110, 116]"
+		},
+		{
+			"name": "SEED_PLAYER",
+			"docs": [
+				"The PDA seed for the player PDA."
+			],
+			"type": "bytes",
+			"value": "[112, 108, 97, 121, 101, 114]"
+		},
+		{
+			"name": "SEED_PREFIX",
+			"docs": [
+				"All PDA accounts start with this seed for consistency."
+			],
+			"type": "bytes",
+			"value": "[98, 105, 116, 102, 108, 105, 112]"
+		},
+		{
+			"name": "SEED_SECTION_DATA",
+			"docs": [
+				"The PDA seed for the section data of each the game. Each game has 256",
+				"sections."
+			],
+			"type": "bytes",
+			"value": "[115, 101, 99, 116, 105, 111, 110, 95, 100, 97, 116, 97]"
+		},
+		{
+			"name": "SEED_SECTION_STATE",
+			"docs": [
+				"The PDA seed for a section within the game. Each game has 256 sections."
+			],
+			"type": "bytes",
+			"value": "[115, 101, 99, 116, 105, 111, 110, 95, 115, 116, 97, 116, 101]"
+		},
+		{
+			"name": "SEED_TREASURY",
+			"docs": [
+				"The treasury account which is also the authority for the `mint` token",
+				"account."
+			],
+			"type": "bytes",
+			"value": "[116, 114, 101, 97, 115, 117, 114, 121]"
+		},
+		{
+			"name": "SESSION_DURATION",
+			"docs": [
+				"How long a session of the bits canvas game lasts. This can be reduced after",
+				"the game starts."
+			],
+			"type": "i64",
+			"value": "2419200"
+		},
+		{
+			"name": "TOKENS_PER_GAME",
+			"docs": [
+				"The number of tokens assigned to each game."
+			],
+			"type": "u64",
+			"value": "134217728"
+		},
+		{
+			"name": "TOKENS_PER_SECTION",
+			"docs": [
+				"Number of tokens assigned to each section treasury."
+			],
+			"type": "u64",
+			"value": "262144"
+		},
+		{
+			"name": "TOKEN_DECIMALS",
+			"docs": [
+				"The number of decimals for this token."
+			],
+			"type": "u8",
+			"value": "0"
+		},
+		{
+			"name": "TOTAL_TOKENS",
+			"docs": [
+				"The total number of minted tokens."
+			],
+			"type": "u64",
+			"value": "1073741824"
+		}
+	]
+}

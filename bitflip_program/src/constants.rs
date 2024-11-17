@@ -13,14 +13,13 @@ use steel::Pubkey;
 pub const ADMIN_PUBKEY: Pubkey = str_to_pubkey(env!("ADMIN_PUBKEY"));
 
 /// The total number of bits on the canvas
-pub const BITFLIP_TOTAL_BITS: usize = 16usize.pow(5);
+pub const BITFLIP_TOTAL_BITS: usize = 1024 * 1024;
 /// The number of sections the canvas is split into.
-pub const BITFLIP_TOTAL_SECTIONS: usize = u16::BITS.pow(2) as usize;
+pub const BITFLIP_TOTAL_SECTIONS: usize = 256;
 /// The number of u16's in each section.
-pub const BITFLIP_SECTION_LENGTH: usize =
-	BITFLIP_TOTAL_BITS / BITFLIP_TOTAL_SECTIONS / (u16::BITS as usize);
+pub const BITFLIP_SECTION_LENGTH: usize = BITFLIP_TOTAL_BITS / BITFLIP_TOTAL_SECTIONS / 16;
 /// The total number of bits within a section of the game.
-pub const BITFLIP_SECTION_TOTAL_BITS: u32 = BITFLIP_SECTION_LENGTH as u32 * u16::BITS;
+pub const BITFLIP_SECTION_TOTAL_BITS: u32 = BITFLIP_SECTION_LENGTH as u32 * 16;
 
 /// The minimum number of flips the previous section must have before the next
 /// section can be flipped.
@@ -44,6 +43,8 @@ pub const TOTAL_TOKENS: u64 = 1024u64.pow(3) * 8;
 pub const TOKENS_PER_GAME: u64 = TOTAL_TOKENS / 8;
 /// Number of tokens assigned to each section treasury.
 pub const TOKENS_PER_SECTION: u64 = TOTAL_TOKENS / 8;
+/// The transaction fee for a basic transaction.
+pub const TRANSACTION_FEE: u64 = 5_000;
 
 /// All PDA accounts start with this seed for consistency.
 pub const SEED_PREFIX: &[u8] = b"bitflip";

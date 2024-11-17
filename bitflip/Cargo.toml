@@ -25,6 +25,7 @@ leptos_router = { workspace = true, features = ["nightly"] }
 log = { workspace = true }
 mime_guess = { workspace = true, optional = true }
 rand = { workspace = true }
+reactive_stores = { workspace = true }
 rust-embed = { workspace = true, features = ["axum", "mime_guess", "tokio"], optional = true }
 serde = { workspace = true, features = ["derive"] }
 simple_logger = { workspace = true }
