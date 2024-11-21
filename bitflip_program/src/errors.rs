@@ -11,16 +11,14 @@ pub enum BitflipError {
 		"The incorrect section is being initialized. The sections must be initialized sequentially"
 	)]
 	IncorrectSectionInitialized,
-	#[error("The space is already fully initialized")]
-	BitsIncreaseSpaceInvalid,
 	#[error("No update recorded")]
 	BitsUnchanged,
-	#[error("The data section index must be a multiple of 16")]
-	Invalid256BitsDataSectionIndex,
+	#[error("The game index request is invalid")]
+	InvalidGameIndex,
 	#[error("The provided account was invalid")]
 	InvalidAccount,
-	#[error("There are invalid bit changes. This should not be possible")]
-	InvalidBitChanges,
+	#[error("The value set must be `0` or `1`")]
+	InvalidPlayValue,
 	#[error("The bit offset is invalid and must be less than 16")]
 	InvalidBitOffset,
 	#[error("Invalid section requested")]
@@ -59,14 +57,6 @@ error!(BitflipError);
 pub fn validate_section_index(index: u16) -> ProgramResult {
 	if usize::from(index) >= BITFLIP_SECTION_LENGTH {
 		return Err(BitflipError::InvalidSectionIndex.into());
-	}
-
-	Ok(())
-}
-
-pub fn validate_256bit_data_section_index(index: u16) -> ProgramResult {
-	if index % 16 != 0 {
-		return Err(BitflipError::Invalid256BitsDataSectionIndex.into());
 	}
 
 	Ok(())

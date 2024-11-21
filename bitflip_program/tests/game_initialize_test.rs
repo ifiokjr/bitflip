@@ -5,11 +5,10 @@ use std::future::Future;
 use assert2::check;
 use bitflip_program::GameState;
 use bitflip_program::game_initialize;
-use bitflip_program::get_pda_config;
 use bitflip_program::get_pda_game;
 use shared::ToRpcClient;
 use shared::create_authority_keypair;
-use shared::create_config_state;
+use shared::create_config_accounts;
 use shared::create_program_context_with_factory;
 use solana_sdk::signature::Keypair;
 use solana_sdk::transaction::VersionedTransaction;
@@ -39,9 +38,11 @@ async fn game_initialize_test_validator() -> anyhow::Result<()> {
 
 async fn create_banks_client_rpc() -> anyhow::Result<impl ToRpcClient> {
 	let provider = create_program_context_with_factory(|p| {
-		let config = get_pda_config().0;
-		let config_state_account = create_config_state();
-		p.add_account(config, config_state_account.into());
+		let config_state_accounts = create_config_accounts();
+
+		for (key, account) in config_state_accounts {
+			p.add_account(key, account.into());
+		}
 	})
 	.await?;
 
@@ -50,11 +51,7 @@ async fn create_banks_client_rpc() -> anyhow::Result<impl ToRpcClient> {
 
 #[cfg(feature = "test_validator")]
 async fn create_validator_rpc() -> anyhow::Result<impl ToRpcClient> {
-	let mut accounts = std::collections::HashMap::new();
-	let config = get_pda_config().0;
-	let config_state_account = create_config_state();
-	accounts.insert(config, config_state_account);
-
+	let accounts = create_config_accounts();
 	let runner = shared::create_runner_with_accounts(accounts).await;
 
 	Ok(runner)
@@ -78,7 +75,7 @@ async fn shared_game_initialize_test<
 	let refresh_signer = refresh_signer_keypair.pubkey();
 	let game = get_pda_game(game_index).0;
 	let recent_blockhash = rpc.get_latest_blockhash().await?;
-	let ix = game_initialize(game_index, &authority, &access_signer, &refresh_signer);
+	let ix = game_initialize(&authority, &access_signer, &refresh_signer, game_index);
 	let mut transaction =
 		VersionedTransaction::new_unsigned_v0(&authority, &[ix], &[], recent_blockhash)?;
 

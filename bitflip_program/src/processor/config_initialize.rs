@@ -10,34 +10,14 @@ use crate::BIT_TOKEN_SYMBOL;
 use crate::BIT_TOKEN_URI;
 use crate::BitflipError;
 use crate::ConfigState;
-use crate::GIBIBIT_TOKEN_NAME;
-use crate::GIBIBIT_TOKEN_SYMBOL;
-use crate::GIBIBIT_TOKEN_URI;
 use crate::ID;
-use crate::KIBIBIT_TOKEN_NAME;
-use crate::KIBIBIT_TOKEN_SYMBOL;
-use crate::KIBIBIT_TOKEN_URI;
-use crate::MEBIBIT_TOKEN_NAME;
-use crate::MEBIBIT_TOKEN_SYMBOL;
-use crate::MEBIBIT_TOKEN_URI;
-use crate::SEED_BIT_MINT;
-use crate::SEED_CONFIG;
-use crate::SEED_GIBIBIT_MINT;
-use crate::SEED_KIBIBIT_MINT;
-use crate::SEED_MEBIBIT_MINT;
-use crate::SEED_PREFIX;
-use crate::SEED_TREASURY;
-use crate::TOKEN_DECIMALS;
-use crate::TOTAL_TOKENS;
+use crate::constants::*;
 use crate::cpi::create_associated_token_account;
-use crate::cpi::group_member_pointer_initialize;
 use crate::cpi::group_pointer_initialize;
 use crate::cpi::initialize_mint2;
 use crate::cpi::metadata_pointer_initialize;
 use crate::cpi::mint_close_authority_initialize;
 use crate::cpi::mint_to;
-// use crate::cpi::token_group_initialize;
-// use crate::cpi::token_group_member_initialize;
 use crate::cpi::token_metadata_initialize;
 use crate::get_pda_config;
 use crate::get_pda_mint_bit;
@@ -47,6 +27,9 @@ use crate::get_pda_mint_mebibit;
 use crate::get_pda_treasury;
 use crate::get_token_amount;
 use crate::get_treasury_token_account;
+// use crate::cpi::group_member_pointer_initialize;
+// use crate::cpi::token_group_initialize;
+// use crate::cpi::token_group_member_initialize;
 
 /// Initialize the program.
 ///
@@ -180,20 +163,11 @@ pub fn process_config_initialize(accounts: &[AccountInfo<'_>]) -> ProgramResult 
 		.ok_or(ProgramError::ArithmeticOverflow)?;
 	treasury_info.collect(extra_lamports, authority_info)?;
 
-	msg!("get mint account size");
-	// get mint account size
-	let extension_types = vec![
-		ExtensionType::MetadataPointer,
-		ExtensionType::MintCloseAuthority,
-		ExtensionType::GroupPointer,
-	];
-	let mint_space =
-		ExtensionType::try_calculate_account_len::<spl_token_2022::state::Mint>(&extension_types)?;
 	allocate_account_with_bump(
 		mint_bit_info,
 		system_program_info,
 		authority_info,
-		mint_space,
+		get_mint_space()?,
 		token_program_info.key,
 		&[SEED_PREFIX, SEED_BIT_MINT],
 		mint_bit_bump,
@@ -280,161 +254,187 @@ pub fn process_config_initialize(accounts: &[AccountInfo<'_>]) -> ProgramResult 
 		treasury_bit_token_account_info,
 		treasury_info,
 		token_program_info,
-		get_token_amount(TOTAL_TOKENS, TOKEN_DECIMALS)?,
+		get_token_amount(TOTAL_BIT_TOKENS, TOKEN_DECIMALS)?,
 		&[&treasury_seeds[..]],
 	)?;
 
-	initialize_member_mint(
-		// mint_bit_info,
-		mint_kibibit_info,
-		treasury_kibibit_token_account_info,
-		authority_info,
-		treasury_info,
-		token_program_info,
-		system_program_info,
-		&rent_sysvar,
-		KIBIBIT_TOKEN_NAME,
-		KIBIBIT_TOKEN_SYMBOL,
-		KIBIBIT_TOKEN_URI,
-		mint_kibibit_bump,
-		&[SEED_PREFIX, SEED_KIBIBIT_MINT],
-		treasury_seeds,
-	)?;
-	initialize_member_mint(
-		// mint_bit_info,
-		mint_mebibit_info,
-		treasury_mebibit_token_account_info,
-		authority_info,
-		treasury_info,
-		token_program_info,
-		system_program_info,
-		&rent_sysvar,
-		MEBIBIT_TOKEN_NAME,
-		MEBIBIT_TOKEN_SYMBOL,
-		MEBIBIT_TOKEN_URI,
-		mint_mebibit_bump,
-		&[SEED_PREFIX, SEED_MEBIBIT_MINT],
-		treasury_seeds,
-	)?;
-
-	initialize_member_mint(
-		// mint_bit_info,
-		mint_gibibit_info,
-		treasury_gibibit_token_account_info,
-		authority_info,
-		treasury_info,
-		token_program_info,
-		system_program_info,
-		&rent_sysvar,
-		GIBIBIT_TOKEN_NAME,
-		GIBIBIT_TOKEN_SYMBOL,
-		GIBIBIT_TOKEN_URI,
-		mint_gibibit_bump,
-		&[SEED_PREFIX, SEED_GIBIBIT_MINT],
-		treasury_seeds,
-	)?;
+	// initialize_member_mint(
+	// 	// mint_bit_info,
+	// 	mint_kibibit_info,
+	// 	treasury_kibibit_token_account_info,
+	// 	authority_info,
+	// 	treasury_info,
+	// 	token_program_info,
+	// 	system_program_info,
+	// 	&rent_sysvar,
+	// 	KIBIBIT_TOKEN_NAME,
+	// 	KIBIBIT_TOKEN_SYMBOL,
+	// 	KIBIBIT_TOKEN_URI,
+	// 	mint_kibibit_bump,
+	// 	&[SEED_PREFIX, SEED_KIBIBIT_MINT],
+	// 	treasury_seeds,
+	// )?;
+	// initialize_member_mint(
+	// 	// mint_bit_info,
+	// 	mint_mebibit_info,
+	// 	treasury_mebibit_token_account_info,
+	// 	authority_info,
+	// 	treasury_info,
+	// 	token_program_info,
+	// 	system_program_info,
+	// 	&rent_sysvar,
+	// 	MEBIBIT_TOKEN_NAME,
+	// 	MEBIBIT_TOKEN_SYMBOL,
+	// 	MEBIBIT_TOKEN_URI,
+	// 	mint_mebibit_bump,
+	// 	&[SEED_PREFIX, SEED_MEBIBIT_MINT],
+	// 	treasury_seeds,
+	// )?;
+	// initialize_member_mint(
+	// 	// mint_bit_info,
+	// 	mint_gibibit_info,
+	// 	treasury_gibibit_token_account_info,
+	// 	authority_info,
+	// 	treasury_info,
+	// 	token_program_info,
+	// 	system_program_info,
+	// 	&rent_sysvar,
+	// 	GIBIBIT_TOKEN_NAME,
+	// 	GIBIBIT_TOKEN_SYMBOL,
+	// 	GIBIBIT_TOKEN_URI,
+	// 	mint_gibibit_bump,
+	// 	&[SEED_PREFIX, SEED_GIBIBIT_MINT],
+	// 	treasury_seeds,
+	// )?;
 
 	Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
-fn initialize_member_mint<'info>(
-	// group_info: &AccountInfo<'info>,
-	mint_info: &AccountInfo<'info>,
-	treasury_token_account_info: &AccountInfo<'info>,
-	payer_info: &AccountInfo<'info>,
-	treasury_info: &AccountInfo<'info>,
-	token_program_info: &AccountInfo<'info>,
-	system_program_info: &AccountInfo<'info>,
-	rent_sysvar: &Rent,
-	name: &str,
-	symbol: &str,
-	uri: &str,
-	mint_bump: u8,
-	mint_seeds: &[&[u8]],
-	treasury_seeds: &[&[u8]],
-) -> ProgramResult {
-	msg!("{}: get mint account size", name);
-	let extension_types = vec![
-		ExtensionType::MetadataPointer,
-		ExtensionType::MintCloseAuthority,
-		ExtensionType::GroupMemberPointer,
-	];
+// #[allow(clippy::too_many_arguments)]
+// fn initialize_member_mint<'info>(
+// 	// group_info: &AccountInfo<'info>,
+// 	mint_info: &AccountInfo<'info>,
+// 	treasury_token_account_info: &AccountInfo<'info>,
+// 	payer_info: &AccountInfo<'info>,
+// 	treasury_info: &AccountInfo<'info>,
+// 	token_program_info: &AccountInfo<'info>,
+// 	system_program_info: &AccountInfo<'info>,
+// 	rent_sysvar: &Rent,
+// 	name: &str,
+// 	symbol: &str,
+// 	uri: &str,
+// 	mint_bump: u8,
+// 	mint_seeds: &[&[u8]],
+// 	treasury_seeds: &[&[u8]],
+// ) -> ProgramResult {
+// 	msg!("{}: get mint account size", name);
+// 	let extension_types = vec![
+// 		ExtensionType::MetadataPointer,
+// 		ExtensionType::MintCloseAuthority,
+// 		ExtensionType::GroupMemberPointer,
+// 	];
+// 	let mint_space =
+// 		ExtensionType::try_calculate_account_len::<spl_token_2022::state::Mint>(&
+// extension_types)?; 	allocate_account_with_bump(
+// 		mint_info,
+// 		system_program_info,
+// 		payer_info,
+// 		mint_space,
+// 		token_program_info.key,
+// 		mint_seeds,
+// 		mint_bump,
+// 	)?;
+
+// 	msg!("{}: initialize metadata pointer mint extension", name);
+// 	metadata_pointer_initialize(mint_info, treasury_info, token_program_info,
+// &[])?;
+
+// 	msg!("{}: initialize mint close authority mint extension", name);
+// 	mint_close_authority_initialize(mint_info, treasury_info,
+// token_program_info, &[])?;
+
+// 	msg!("{}: initialize group member pointer mint extension", name);
+// 	group_member_pointer_initialize(mint_info, treasury_info,
+// token_program_info, &[])?;
+
+// 	msg!("{}: initialize mint", name);
+// 	initialize_mint2(
+// 		mint_info,
+// 		token_program_info,
+// 		treasury_info,
+// 		TOKEN_DECIMALS,
+// 		&[],
+// 	)?;
+
+// 	msg!("{}: initialize token metadata", name);
+// 	token_metadata_initialize(
+// 		mint_info,
+// 		treasury_info,
+// 		token_program_info,
+// 		name.to_string(),
+// 		symbol.to_string(),
+// 		uri.to_string(),
+// 		&[treasury_seeds],
+// 	)?;
+
+// 	// msg!("{}: initialize group member", name);
+// 	// token_group_member_initialize(
+// 	// 	token_program_info,
+// 	// 	mint_info,
+// 	// 	mint_info,
+// 	// 	treasury_info,
+// 	// 	group_info,
+// 	// 	treasury_info,
+// 	// 	&[treasury_seeds],
+// 	// )?;
+
+// 	msg!("{}: get mint account size", name);
+// 	let extra_lamports = rent_sysvar
+// 		.minimum_balance(mint_info.data_len())
+// 		.checked_sub(mint_info.lamports())
+// 		.ok_or(ProgramError::ArithmeticOverflow)?;
+
+// 	if extra_lamports > 0 {
+// 		msg!("{}: collect extra lamports", name);
+// 		mint_info.collect(extra_lamports, payer_info)?;
+// 	}
+
+// 	msg!("{}: create treasury associated token account", name);
+// 	create_associated_token_account(
+// 		payer_info,
+// 		treasury_token_account_info,
+// 		treasury_info,
+// 		mint_info,
+// 		token_program_info,
+// 		system_program_info,
+// 		&[treasury_seeds],
+// 	)?;
+
+// 	Ok(())
+// }
+
+const EXTENSION_TYPES: &[ExtensionType] = &[
+	ExtensionType::MetadataPointer,
+	ExtensionType::MintCloseAuthority,
+	ExtensionType::GroupPointer,
+];
+const MEMBER_EXTENSION_TYPES: &[ExtensionType] = &[
+	ExtensionType::MetadataPointer,
+	ExtensionType::MintCloseAuthority,
+	ExtensionType::GroupMemberPointer,
+];
+
+pub fn get_mint_space() -> Result<usize, ProgramError> {
 	let mint_space =
-		ExtensionType::try_calculate_account_len::<spl_token_2022::state::Mint>(&extension_types)?;
-	allocate_account_with_bump(
-		mint_info,
-		system_program_info,
-		payer_info,
-		mint_space,
-		token_program_info.key,
-		mint_seeds,
-		mint_bump,
+		ExtensionType::try_calculate_account_len::<spl_token_2022::state::Mint>(EXTENSION_TYPES)?;
+	Ok(mint_space)
+}
+
+pub fn get_member_mint_space() -> Result<usize, ProgramError> {
+	let mint_space = ExtensionType::try_calculate_account_len::<spl_token_2022::state::Mint>(
+		MEMBER_EXTENSION_TYPES,
 	)?;
-
-	msg!("{}: initialize metadata pointer mint extension", name);
-	metadata_pointer_initialize(mint_info, treasury_info, token_program_info, &[])?;
-
-	msg!("{}: initialize mint close authority mint extension", name);
-	mint_close_authority_initialize(mint_info, treasury_info, token_program_info, &[])?;
-
-	msg!("{}: initialize group member pointer mint extension", name);
-	group_member_pointer_initialize(mint_info, treasury_info, token_program_info, &[])?;
-
-	msg!("{}: initialize mint", name);
-	initialize_mint2(
-		mint_info,
-		token_program_info,
-		treasury_info,
-		TOKEN_DECIMALS,
-		&[],
-	)?;
-
-	msg!("{}: initialize token metadata", name);
-	token_metadata_initialize(
-		mint_info,
-		treasury_info,
-		token_program_info,
-		name.to_string(),
-		symbol.to_string(),
-		uri.to_string(),
-		&[treasury_seeds],
-	)?;
-
-	// msg!("{}: initialize group member", name);
-	// token_group_member_initialize(
-	// 	token_program_info,
-	// 	mint_info,
-	// 	mint_info,
-	// 	treasury_info,
-	// 	group_info,
-	// 	treasury_info,
-	// 	&[treasury_seeds],
-	// )?;
-
-	msg!("{}: get mint account size", name);
-	let extra_lamports = rent_sysvar
-		.minimum_balance(mint_info.data_len())
-		.checked_sub(mint_info.lamports())
-		.ok_or(ProgramError::ArithmeticOverflow)?;
-
-	if extra_lamports > 0 {
-		msg!("{}: collect extra lamports", name);
-		mint_info.collect(extra_lamports, payer_info)?;
-	}
-
-	msg!("{}: create treasury associated token account", name);
-	create_associated_token_account(
-		payer_info,
-		treasury_token_account_info,
-		treasury_info,
-		mint_info,
-		token_program_info,
-		system_program_info,
-		&[treasury_seeds],
-	)?;
-
-	Ok(())
+	Ok(mint_space)
 }
 
 #[repr(C)]

@@ -1109,6 +1109,7 @@ dependencies = [
  "bytemuck",
  "const_str_to_pubkey",
  "derive_more 1.0.0",
+ "fixed",
  "insta",
  "log",
  "num_enum 0.7.3",
@@ -1121,6 +1122,7 @@ dependencies = [
  "solana-sdk",
  "solana-security-txt",
  "spl-associated-token-account 3.0.4",
+ "spl-pod 0.2.5",
  "spl-token-2022 3.0.4",
  "spl-token-group-interface 0.2.5",
  "spl-token-metadata-interface 0.3.5",
@@ -8460,8 +8462,10 @@ version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c52d84c55efeef8edcc226743dc089d7e3888b8e3474569aa3eff152b37b9996"
 dependencies = [
+ "base64 0.22.1",
  "borsh 1.5.3",
  "bytemuck",
+ "serde",
  "solana-program",
  "solana-zk-token-sdk",
  "spl-program-error 0.4.4",

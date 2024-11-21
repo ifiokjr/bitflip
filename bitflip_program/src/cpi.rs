@@ -211,6 +211,35 @@ pub(crate) fn create_associated_token_account<'info>(
 	)
 }
 
+pub(crate) fn create_associated_token_account_idempotent<'info>(
+	payer_info: &AccountInfo<'info>,
+	associated_token_info: &AccountInfo<'info>,
+	authority_info: &AccountInfo<'info>,
+	mint_info: &AccountInfo<'info>,
+	token_program_info: &AccountInfo<'info>,
+	system_program_info: &AccountInfo<'info>,
+	signers_seeds: &[&[&[u8]]],
+) -> ProgramResult {
+	let ix = spl_associated_token_account::instruction::create_associated_token_account_idempotent(
+		payer_info.key,
+		authority_info.key,
+		mint_info.key,
+		token_program_info.key,
+	);
+	solana_program::program::invoke_signed(
+		&ix,
+		&[
+			payer_info.clone(),
+			associated_token_info.clone(),
+			authority_info.clone(),
+			mint_info.clone(),
+			system_program_info.clone(),
+			token_program_info.clone(),
+		],
+		signers_seeds,
+	)
+}
+
 pub(crate) fn mint_to<'info>(
 	mint_info: &AccountInfo<'info>,
 	account_info: &AccountInfo<'info>,
@@ -230,6 +259,38 @@ pub(crate) fn mint_to<'info>(
 	solana_program::program::invoke_signed(
 		&ix,
 		&[account_info.clone(), mint_info.clone(), owner_info.clone()],
+		signers_seeds,
+	)
+}
+
+pub(crate) fn transfer_checked<'info>(
+	from_info: &AccountInfo<'info>,
+	mint_info: &AccountInfo<'info>,
+	to_info: &AccountInfo<'info>,
+	authority_info: &AccountInfo<'info>,
+	token_program_info: &AccountInfo<'info>,
+	amount: u64,
+	decimals: u8,
+	signers_seeds: &[&[&[u8]]],
+) -> ProgramResult {
+	let ix = spl_token_2022::instruction::transfer_checked(
+		token_program_info.key,
+		from_info.key,
+		mint_info.key,
+		to_info.key,
+		authority_info.key,
+		&[],
+		amount,
+		decimals,
+	)?;
+	solana_program::program::invoke_signed(
+		&ix,
+		&[
+			from_info.clone(),
+			mint_info.clone(),
+			to_info.clone(),
+			authority_info.clone(),
+		],
 		signers_seeds,
 	)
 }

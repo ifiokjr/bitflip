@@ -5,12 +5,14 @@ use std::hash::RandomState;
 
 use anyhow::Result;
 use bitflip_program::ConfigState;
+use bitflip_program::EARNED_TOKENS_PER_SECTION;
 use bitflip_program::GameState;
 use bitflip_program::ID;
 use bitflip_program::MINIMUM_FLIPS_PER_SECTION;
 use bitflip_program::SectionState;
 use bitflip_program::TOKEN_DECIMALS;
-use bitflip_program::TOKENS_PER_SECTION;
+use bitflip_program::TOTAL_BIT_TOKENS;
+use bitflip_program::get_mint_space;
 use bitflip_program::get_pda_config;
 use bitflip_program::get_pda_game;
 use bitflip_program::get_pda_mint_bit;
@@ -21,6 +23,7 @@ use bitflip_program::get_pda_section;
 use bitflip_program::get_pda_treasury;
 use bitflip_program::get_section_bit_token_account;
 use bitflip_program::get_token_amount;
+use bitflip_program::get_treasury_bit_token_account;
 use solana_sdk::account::AccountSharedData;
 use solana_sdk::account::WritableAccount;
 use solana_sdk::commitment_config::CommitmentLevel;
@@ -30,6 +33,18 @@ use solana_sdk::pubkey::Pubkey;
 use solana_sdk::rent::Rent;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signature::Signer;
+use spl_pod::primitives::PodBool;
+use spl_token_2022::extension::BaseStateWithExtensions;
+use spl_token_2022::extension::BaseStateWithExtensionsMut;
+use spl_token_2022::extension::ExtensionType;
+use spl_token_2022::extension::PodStateWithExtensions;
+use spl_token_2022::extension::PodStateWithExtensionsMut;
+use spl_token_2022::extension::group_pointer::GroupPointer;
+use spl_token_2022::extension::metadata_pointer::MetadataPointer;
+use spl_token_2022::extension::mint_close_authority::MintCloseAuthority;
+use spl_token_2022::pod::PodAccount;
+use spl_token_2022::pod::PodCOption;
+use spl_token_2022::pod::PodMint;
 use steel::*;
 use test_utils::SECRET_KEY_ADMIN;
 use test_utils::SECRET_KEY_AUTHORITY;
@@ -161,16 +176,17 @@ pub fn get_wallet(rpc: &SolanaRpcClient, payer: &Keypair) -> MemoryWallet {
 	MemoryWallet::new(rpc.clone(), &[payer.insecure_clone()])
 }
 
-pub fn create_config_state() -> AccountSharedData {
+pub fn create_config_accounts() -> HashMap<Pubkey, AccountSharedData> {
+	let mut map = HashMap::new();
 	let authority = create_authority_keypair().pubkey();
 	let config_bump = get_pda_config().1;
-	let treasury_bump = get_pda_treasury().1;
-	let mint_bit_bump = get_pda_mint_bit().1;
+	let (treasury, treasury_bump) = get_pda_treasury();
+	let (mint_bit, mint_bit_bump) = get_pda_mint_bit();
 	let mint_kibibit_bump = get_pda_mint_kibibit().1;
 	let mint_mebibit_bump = get_pda_mint_mebibit().1;
 	let mint_gibibit_bump = get_pda_mint_gibibit().1;
-
-	ConfigState::new(
+	let config = get_pda_config().0;
+	let config_state_account = ConfigState::new(
 		authority,
 		config_bump,
 		treasury_bump,
@@ -179,7 +195,97 @@ pub fn create_config_state() -> AccountSharedData {
 		mint_mebibit_bump,
 		mint_gibibit_bump,
 	)
-	.to_account_shared_data()
+	.to_account_shared_data();
+
+	let mint_bit_data = {
+		let mint_bit_state = PodMint {
+			mint_authority: PodCOption::some(treasury),
+			supply: TOTAL_BIT_TOKENS.into(),
+			decimals: TOKEN_DECIMALS,
+			is_initialized: PodBool::from_bool(true),
+			freeze_authority: PodCOption::some(treasury),
+		};
+		let mut mint_data = vec![0u8; get_mint_space().unwrap()];
+		let mut mint =
+			PodStateWithExtensionsMut::<PodMint>::unpack_uninitialized(&mut mint_data).unwrap();
+		let metadata_pointer = mint.init_extension::<MetadataPointer>(true).unwrap();
+		metadata_pointer.metadata_address = Some(mint_bit).try_into().unwrap();
+		metadata_pointer.authority = Some(treasury).try_into().unwrap();
+
+		let mint_close_pointer = mint.init_extension::<MintCloseAuthority>(true).unwrap();
+		mint_close_pointer.close_authority = Some(treasury).try_into().unwrap();
+
+		let group_pointer = mint.init_extension::<GroupPointer>(true).unwrap();
+		group_pointer.group_address = Some(mint_bit).try_into().unwrap();
+		group_pointer.authority = Some(treasury).try_into().unwrap();
+
+		*mint.base = mint_bit_state;
+
+		mint.init_account_type().unwrap();
+		mint_data
+	};
+
+	let token_amount = get_token_amount(TOTAL_BIT_TOKENS, TOKEN_DECIMALS).unwrap();
+	let treasury_bit_token_account = get_treasury_bit_token_account();
+	let treasury_bit_token_account_state = PodAccount {
+		mint: mint_bit,
+		owner: treasury,
+		amount: token_amount.into(),
+		delegate: PodCOption::none(),
+		state: spl_token_2022::state::AccountState::Initialized.into(),
+		is_native: PodCOption::none(),
+		delegated_amount: 0.into(),
+		close_authority: PodCOption::some(treasury),
+	};
+	let treasury_bit_token_account_data = {
+		let mint = PodStateWithExtensions::<PodMint>::unpack(&mint_bit_data).unwrap();
+		let mint_extensions = mint.get_extension_types().unwrap();
+		let mut account_extensions =
+			ExtensionType::get_required_init_account_extensions(&mint_extensions);
+		account_extensions.extend_from_slice(&[ExtensionType::ImmutableOwner]);
+
+		let account_space = ExtensionType::try_calculate_account_len::<
+			spl_token_2022::state::Account,
+		>(&account_extensions)
+		.unwrap();
+		let mut account_data = vec![0u8; account_space];
+		let mut account =
+			PodStateWithExtensionsMut::<PodAccount>::unpack_uninitialized(&mut account_data)
+				.unwrap();
+
+		for extension in account_extensions {
+			log::info!("extension: {:?}", extension);
+			account.init_account_extension_from_type(extension).unwrap();
+		}
+
+		*account.base = treasury_bit_token_account_state;
+		account.init_account_type().unwrap();
+		account_data
+	};
+
+	map.insert(config, config_state_account);
+	map.insert(
+		mint_bit,
+		AccountSharedData::create(
+			Rent::default().minimum_balance(mint_bit_data.len()),
+			mint_bit_data,
+			spl_token_2022::ID,
+			false,
+			u64::MAX,
+		),
+	);
+	map.insert(
+		treasury_bit_token_account,
+		AccountSharedData::create(
+			Rent::default().minimum_balance(treasury_bit_token_account_data.len()),
+			treasury_bit_token_account_data,
+			spl_token_2022::ID,
+			false,
+			u64::MAX,
+		),
+	);
+
+	map
 }
 
 pub struct CreatedGameState {
@@ -208,7 +314,7 @@ pub fn create_game_state(
 		.build();
 
 	let lamports = Rent::default().minimum_balance(0) + 5_000_000;
-	let refresh_signer_account = AccountSharedData::new(500_000_000, 0, &system_program::ID);
+	let refresh_signer_account = AccountSharedData::new(lamports, 0, &system_program::ID);
 
 	CreatedGameState {
 		game_state_account: game_state.to_account_shared_data(),
@@ -219,8 +325,10 @@ pub fn create_game_state(
 }
 
 pub fn create_section_state(
+	owner: Pubkey,
 	game_index: u8,
 	next_section_index: u8,
+	set_minimum_flips: bool,
 ) -> HashMap<Pubkey, AccountSharedData> {
 	let mint = get_pda_mint_bit().0;
 	let mut map = HashMap::new();
@@ -229,12 +337,15 @@ pub fn create_section_state(
 		let (section, section_bump) = get_pda_section(game_index, section_index);
 		let section_token_account = get_section_bit_token_account(game_index, section_index);
 
-		let mut section_state =
-			SectionState::new(Pubkey::new_unique(), section_index, section_bump);
-		section_state.flips = MINIMUM_FLIPS_PER_SECTION;
+		let mut section_state = SectionState::new(owner, game_index, section_index, section_bump);
+
+		if set_minimum_flips {
+			section_state.flips = MINIMUM_FLIPS_PER_SECTION;
+		}
+
 		map.insert(section, section_state.to_account_shared_data());
 
-		let amount = get_token_amount(TOKENS_PER_SECTION, TOKEN_DECIMALS).unwrap();
+		let amount = get_token_amount(EARNED_TOKENS_PER_SECTION, TOKEN_DECIMALS).unwrap();
 		let token_account_state = spl_token_2022::state::Account {
 			mint,
 			owner: section,
@@ -282,7 +393,7 @@ impl<T: Pod + Discriminator> IntoAccountSharedData for T {
 
 		let rent = Rent::default().minimum_balance(bytes.len());
 
-		AccountSharedData::create(rent, bytes, ID, false, 0)
+		AccountSharedData::create(rent, bytes, ID, false, u64::MAX)
 	}
 
 	fn to_account(&self) -> Account {

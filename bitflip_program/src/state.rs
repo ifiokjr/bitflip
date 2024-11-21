@@ -1,8 +1,15 @@
+use fixed::traits::Fixed;
+use fixed::types::U64F64;
+// use fixed_math::Sqrt;
 use solana_program::msg;
 use steel::*;
 
+use crate::BASE_LAMPORTS_PER_BIT;
 use crate::BITFLIP_SECTION_LENGTH;
 use crate::BITFLIP_SECTION_TOTAL_BITS;
+use crate::EARNED_TOKENS_PER_SECTION;
+use crate::FlipBit;
+use crate::MIN_LAMPORTS_PER_BIT;
 use crate::SESSION_DURATION;
 
 #[repr(u8)]
@@ -125,26 +132,35 @@ impl GameState {
 		}
 	}
 
+	/// The end time of the game.
 	pub fn end_time(&self) -> i64 {
 		self.start_time.saturating_add(SESSION_DURATION)
 	}
 
-	pub fn started(&self) -> bool {
+	/// The remaining time of the game.
+	pub fn remaining_time(&self, current_time: i64) -> i64 {
+		self.end_time().saturating_sub(current_time)
+	}
+
+	/// Whether the game has started.
+	pub fn has_started(&self) -> bool {
 		msg!("start_time: {}", self.start_time);
 		self.start_time > 0
 	}
 
-	pub fn ended(&self, current_time: i64) -> bool {
+	/// Whether the game has ended.
+	pub fn has_ended(&self, current_time: i64) -> bool {
 		msg!(
 			"current_time: {}, end_time: {}",
 			current_time,
 			self.end_time()
 		);
-		self.started() && current_time > self.end_time()
+		self.has_started() && current_time > self.end_time()
 	}
 
-	pub fn running(&self, current_time: i64) -> bool {
-		self.started() && !self.ended(current_time)
+	/// Whether the game is running.
+	pub fn is_running(&self, current_time: i64) -> bool {
+		self.has_started() && !self.has_ended(current_time)
 	}
 }
 
@@ -169,21 +185,19 @@ pub struct SectionState {
 	pub on: u32,
 	/// The number of bits that are off.
 	pub off: u32,
+	/// The index for this game this section is a part of.
+	pub game_index: u8,
 	/// The index for this section state.
-	pub index: u8,
+	pub section_index: u8,
 	/// The bump for this section state.
 	pub bump: u8,
 	/// Padding to make the size of the struct a multiple of 8.
-	#[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
-	pub _padding: [u8; 2],
-	// /// Extra space in case we need more fields in the future.
-	// #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
-	// pub extra_space: [u8; 64],
+	pub _padding: [u8; 1],
 }
 
 impl SectionState {
 	/// Create a new section state in the client. Useful for testing.
-	pub fn new(owner: Pubkey, index: u8, bump: u8) -> Self {
+	pub fn new(owner: Pubkey, game_index: u8, section_index: u8, bump: u8) -> Self {
 		Self {
 			data: [0; BITFLIP_SECTION_LENGTH],
 			owner,
@@ -191,8 +205,9 @@ impl SectionState {
 			on: 0,
 			off: BITFLIP_SECTION_TOTAL_BITS,
 			bump,
-			index,
-			_padding: [0; 2],
+			game_index,
+			section_index,
+			_padding: [0; 1],
 		}
 	}
 
@@ -200,10 +215,10 @@ impl SectionState {
 	/// compute units.
 	pub fn init(&mut self, owner: Pubkey, index: u8, bump: u8) {
 		self.owner = owner;
-		self.index = index;
+		self.section_index = index;
 		self.bump = bump;
-		self.on = BITFLIP_SECTION_TOTAL_BITS;
-		self.off = 0;
+		self.on = 0;
+		self.off = BITFLIP_SECTION_TOTAL_BITS;
 		self.flips = 0;
 	}
 
@@ -240,8 +255,72 @@ impl SectionState {
 
 		Ok(())
 	}
+
+	/// Set a bit to the value specified in the `PlaySetBit` instruction.
+	///
+	/// Returns true if the bit was toggled.
+	pub fn set_bit(&mut self, args: &FlipBit) -> Result<bool, ProgramError> {
+		msg!("set_bit: {:?}", args);
+
+		let index = args.array_index as usize;
+		let current = self.data[index];
+		let bit = 1 << args.offset;
+		let updated = if args.on() {
+			current | bit
+		} else {
+			current & !bit
+		};
+
+		msg!("current: {}, bit: {}, updated: {}", current, bit, updated);
+
+		if updated == current {
+			return Ok(false);
+		}
+
+		self.data[index..=index].copy_from_slice(&[updated]);
+		Ok(true)
+	}
+
+	/// Get the price of a bit in lamports.
+	pub fn get_token_price_in_lamports(&self, remaining_time: i64) -> u64 {
+		let flips = self.flips as u64;
+		let remaining_flips = EARNED_TOKENS_PER_SECTION - flips;
+		let elapsed_time = SESSION_DURATION - remaining_time;
+		let Some(static_price) = U64F64::from_num(flips)
+			.checked_sqrt()
+			.and_then(|val| val.checked_mul_int(512))
+			.and_then(|val| val.checked_add(BASE_LAMPORTS_PER_BIT.into()))
+		else {
+			return BASE_LAMPORTS_PER_BIT;
+		};
+		let Some(current_rate) = U64F64::from_num(flips).checked_div((elapsed_time as u64).into())
+		else {
+			return static_price.to_num();
+		};
+		let Some(required_rate) =
+			U64F64::from_num(remaining_flips).checked_div((remaining_time as u64).into())
+		else {
+			return static_price.to_num();
+		};
+		// let diff = current_rate.abs_diff(required_rate);
+		let Some(ratio) = current_rate.checked_div(required_rate) else {
+			return static_price.to_num();
+		};
+
+		static_price
+			.checked_mul(ratio)
+			.and_then(|val| val.checked_mul(ratio))
+			.unwrap_or(static_price)
+			.to_num::<u64>()
+			.max(MIN_LAMPORTS_PER_BIT)
+	}
 }
 
 account!(BitflipAccount, ConfigState);
 account!(BitflipAccount, GameState);
 account!(BitflipAccount, SectionState);
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+}

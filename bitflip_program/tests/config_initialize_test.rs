@@ -165,7 +165,7 @@ async fn shared_config_initialize_test<
    "type": "mint",
    "info": {
      "mintAuthority": "[treasury:pubkey]",
-     "supply": "8589934592",
+     "supply": "1073741824",
      "decimals": 0,
      "isInitialized": true,
      "freezeAuthority": "[treasury:pubkey]",
@@ -223,10 +223,10 @@ async fn shared_config_initialize_test<
      "mint": "[mint_bit:pubkey]",
      "owner": "[treasury:pubkey]",
      "tokenAmount": {
-       "uiAmount": 8589934592.0,
+       "uiAmount": 1073741824.0,
        "decimals": 0,
-       "amount": "8589934592",
-       "uiAmountString": "8589934592"
+       "amount": "1073741824",
+       "uiAmountString": "1073741824"
      },
      "state": "initialized",
      "isNative": false,

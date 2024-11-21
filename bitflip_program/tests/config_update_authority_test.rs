@@ -9,7 +9,7 @@ use bitflip_program::config_update_authority;
 use bitflip_program::get_pda_config;
 use shared::ToRpcClient;
 use shared::create_authority_keypair;
-use shared::create_config_state;
+use shared::create_config_accounts;
 use shared::create_program_context_with_factory;
 use solana_sdk::instruction::InstructionError;
 use solana_sdk::signature::Keypair;
@@ -52,9 +52,11 @@ async fn authority_must_change_test_validator() -> anyhow::Result<()> {
 
 async fn create_banks_client_rpc() -> anyhow::Result<impl ToRpcClient> {
 	let provider = create_program_context_with_factory(|p| {
-		let config = get_pda_config().0;
-		let config_state_account = create_config_state();
-		p.add_account(config, config_state_account.into());
+		let config_state_accounts = create_config_accounts();
+
+		for (key, account) in config_state_accounts {
+			p.add_account(key, account.into());
+		}
 	})
 	.await?;
 
@@ -63,12 +65,9 @@ async fn create_banks_client_rpc() -> anyhow::Result<impl ToRpcClient> {
 
 #[cfg(feature = "test_validator")]
 async fn create_validator_rpc() -> anyhow::Result<impl ToRpcClient> {
-	let mut accounts = std::collections::HashMap::new();
-	let config = get_pda_config().0;
-	let config_state_account = create_config_state();
-	accounts.insert(config, config_state_account);
+	let config_state_accounts = create_config_accounts();
 
-	let runner = shared::create_runner_with_accounts(accounts).await;
+	let runner = shared::create_runner_with_accounts(config_state_accounts).await;
 
 	Ok(runner)
 }

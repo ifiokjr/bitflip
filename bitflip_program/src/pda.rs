@@ -5,6 +5,7 @@ use steel::ProgramError;
 use crate::ID;
 use crate::SEED_BIT_MINT;
 use crate::SEED_CONFIG;
+use crate::SEED_EVENT;
 use crate::SEED_GAME;
 use crate::SEED_GIBIBIT_MINT;
 use crate::SEED_KIBIBIT_MINT;
@@ -21,6 +22,15 @@ pub fn get_pda_config() -> (Pubkey, u8) {
 
 pub fn create_pda_config(bump: u8) -> Result<Pubkey, ProgramError> {
 	let pubkey = Pubkey::create_program_address(&[SEED_PREFIX, SEED_CONFIG, &[bump]], &ID)?;
+	Ok(pubkey)
+}
+
+pub fn get_pda_event() -> (Pubkey, u8) {
+	Pubkey::find_program_address(&[SEED_PREFIX, SEED_EVENT], &ID)
+}
+
+pub fn create_pda_event(bump: u8) -> Result<Pubkey, ProgramError> {
+	let pubkey = Pubkey::create_program_address(&[SEED_PREFIX, SEED_EVENT, &[bump]], &ID)?;
 	Ok(pubkey)
 }
 

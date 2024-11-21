@@ -1,11 +1,7 @@
 use std::collections::HashSet;
 
-use bitflip_program::AnchorResult;
 use bitflip_program::BITFLIP_SECTION_LENGTH;
-use bitflip_program::FlipBitsProps;
-use bitflip_program::FlipBitsSectionData;
 use bitflip_program::SectionState;
-use bitflip_program::SetBitsVariant;
 use bitflip_program::get_pda_section;
 use js_sys::Reflect;
 use leptos::html::Canvas;

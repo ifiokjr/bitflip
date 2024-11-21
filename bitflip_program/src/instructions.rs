@@ -2,6 +2,7 @@ use steel::*;
 
 use crate::ConfigInitialize;
 use crate::ConfigUpdateAuthority;
+use crate::FlipBit;
 use crate::GameInitialize;
 use crate::GameRefreshSigner;
 use crate::get_pda_config;
@@ -10,7 +11,10 @@ use crate::get_pda_mint_bit;
 use crate::get_pda_mint_gibibit;
 use crate::get_pda_mint_kibibit;
 use crate::get_pda_mint_mebibit;
+use crate::get_pda_section;
 use crate::get_pda_treasury;
+use crate::get_player_token_account;
+use crate::get_section_token_account;
 use crate::get_treasury_token_account;
 
 /// Create an instruction to initialize the mint, treasury and [`ConfigState`].
@@ -62,10 +66,10 @@ pub fn config_initialize(admin: &Pubkey, authority: &Pubkey) -> Instruction {
 }
 
 pub fn game_initialize(
-	game_index: u8,
 	authority: &Pubkey,
 	access_signer: &Pubkey,
 	refresh_signer: &Pubkey,
+	game_index: u8,
 ) -> Instruction {
 	let config = get_pda_config().0;
 	let game = get_pda_game(game_index).0;
@@ -104,10 +108,17 @@ pub fn config_update_authority(authority: &Pubkey, new_authority: &Pubkey) -> In
 	}
 }
 
+/// Create an instruction to refresh the signer of the game.
+///
+/// ### Arguments
+///
+/// * `access_signer` - The access signer: must be a signer.
+/// * `refresh_signer` - The refresh signer: must be a signer.
+/// * `game_index` - The index of the game.
 pub fn game_refresh_signer(
-	game_index: u8,
 	access_signer: &Pubkey,
 	refresh_signer: &Pubkey,
+	game_index: u8,
 ) -> Instruction {
 	let accounts = vec![
 		AccountMeta::new_readonly(*access_signer, true), // Access signer must sign
@@ -119,5 +130,53 @@ pub fn game_refresh_signer(
 		program_id: crate::ID,
 		accounts,
 		data: GameRefreshSigner {}.to_bytes(),
+	}
+}
+
+/// Create an instruction to set a bit on the player's bit token account.
+///
+/// ### Arguments
+///
+/// * `player` - The player account: must be a signer.
+pub fn flip_bit(
+	player: &Pubkey,
+	game_index: u8,
+	section_index: u8,
+	array_index: u8,
+	offset: u8,
+	value: u8,
+) -> Instruction {
+	let mint_bit = get_pda_mint_bit().0;
+	let player_bit_token_account = get_player_token_account(player, &mint_bit);
+	let config = get_pda_config().0;
+	let game = get_pda_game(game_index).0;
+	let section = get_pda_section(game_index, section_index).0;
+	let section_bit_token_account = get_section_token_account(&section, &mint_bit);
+	let associated_token_program = spl_associated_token_account::ID;
+	let token_program = spl_token_2022::ID;
+	let system_program = system_program::ID;
+	let data = FlipBit::builder()
+		.section_index(section_index)
+		.array_index(array_index)
+		.offset(offset)
+		.value(value)
+		.build()
+		.to_bytes();
+
+	Instruction {
+		program_id: crate::ID,
+		accounts: vec![
+			AccountMeta::new(*player, true),
+			AccountMeta::new(player_bit_token_account, false),
+			AccountMeta::new_readonly(config, false),
+			AccountMeta::new_readonly(game, false),
+			AccountMeta::new_readonly(mint_bit, false),
+			AccountMeta::new(section, false),
+			AccountMeta::new(section_bit_token_account, false),
+			AccountMeta::new_readonly(associated_token_program, false),
+			AccountMeta::new_readonly(token_program, false),
+			AccountMeta::new_readonly(system_program, false),
+		],
+		data,
 	}
 }
