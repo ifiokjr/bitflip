@@ -36,6 +36,7 @@ console_log = "1"
 const_str_to_pubkey = "0.1"
 crossbeam-channel = "0.5"
 cuid2 = "0.1"
+default-env = "0.1"
 derive-where = "1"
 derive_more = "1"
 dom_testing_library = "0.1"
@@ -164,14 +165,19 @@ cargo-llvm-cov = { version = "0.6.14" }
 cargo-make = { version = "0.37.23" }
 cargo-nextest = { version = "0.9.82" }
 leptosfmt = { version = "0.1.32", bins = ["leptosfmt"] }
-solana-verify = { version = "0.2.14", bins = ["solana-verify"] }
-steel-cli = { version = "2.1.1", bins = ["steel"], git = "https://github.com/ifiokjr/steel", branch = "master" }
+query-security-txt = { version = "1.1.1", bins = ["query-security-txt"] }
+solana-verify = { version = "0.3.0", bins = ["solana-verify"] }
 
 [profile.dev.package]
 insta.opt-level = 3
 similar.opt-level = 3
 
 [profile.release.package.bitflip_legacy_program]
+overflow-checks = true
+codegen-units = 1
+incremental = false
+
+[profile.release.package.bitflip_program]
 overflow-checks = true
 codegen-units = 1
 incremental = false
@@ -183,7 +189,6 @@ codegen-units = 1
 
 [profile.release]
 lto = "fat"
-overflow-checks = true
 
 [workspace.lints.rust]
 # Group lints

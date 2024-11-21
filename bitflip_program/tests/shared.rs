@@ -346,13 +346,11 @@ pub fn create_section_state(
 	set_minimum_flips: bool,
 ) -> HashMap<Pubkey, AccountSharedData> {
 	let mint_bit = get_pda_mint_bit().0;
-	let treasury = get_pda_treasury().0;
 	let mut map = HashMap::new();
 
 	for section_index in 0..next_section_index {
 		let (section, section_bump) = get_pda_section(game_index, section_index);
 		let section_token_account = get_section_bit_token_account(game_index, section_index);
-
 		let mut section_state = SectionState::new(owner, game_index, section_index, section_bump);
 
 		if set_minimum_flips {

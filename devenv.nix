@@ -43,6 +43,20 @@
     '';
     description = "The `anchor` executable";
   };
+  scripts."query-security-txt" = {
+    exec = ''
+      set -e
+      cargo bin query-security-txt $@
+    '';
+    description = "The `anchor` executable";
+  };
+  scripts."solana-verify" = {
+    exec = ''
+      set -e
+      cargo bin solana-verify $@
+    '';
+    description = "The `solana-verify` executable";
+  };
   scripts."install:all" = {
     exec = ''
       set -e
@@ -120,6 +134,7 @@
       fix:clippy
       fix:deno
       fix:format
+			lint:security-txt
     '';
     description = "Fix all autofixable problems.";
   };
@@ -150,6 +165,7 @@
       lint:clippy
       lint:deno
       lint:format
+			lint:security-txt
     '';
     description = "Run all checks.";
   };
@@ -173,6 +189,13 @@
       deno lint
     '';
     description = "Check lints for all JS / TS files.";
+  };
+  scripts."lint:security-txt" = {
+    exec = ''
+      set -e
+      query-security-txt $DEVENV_ROOT/target/deploy/bitflip_program.so
+    '';
+    description = "Check security.txt.";
   };
   scripts."setup:vscode" = {
     exec = ''
@@ -315,6 +338,14 @@
 		exec = ''
 			set -e
 			cargo build-sbf --manifest-path $DEVENV_ROOT/bitflip_program/Cargo.toml --arch sbfv1
+		'';
+		description = "Build the steel program.";
+	};
+	scripts."build:program:verified" = {
+		exec = ''
+			set -e
+			solana-verify build --library-name bitflip_program
+			solana-verify get-executable-hash $DEVENV_ROOT/target/deploy/bitflip_program.so > $DEVENV_ROOT/bitflip_program/program_hash.txt
 		'';
 		description = "Build the steel program.";
 	};

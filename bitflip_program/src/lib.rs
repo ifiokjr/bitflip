@@ -26,20 +26,22 @@ declare_id!("5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM");
 #[cfg(not(feature = "no-entrypoint"))]
 entrypoint!(process_instruction);
 
-#[cfg(not(feature = "no-entrypoint"))]
+// #[cfg(not(feature = "no-entrypoint"))]
 solana_security_txt::security_txt! {
 	// Required fields
 	name: "Bitflip",
 	project_url: "https://bitflip.art",
-	contacts: "link:https://github.com/ifiokjr/bitflip/security/advisories/new,mailto:security@kickjump.co,discord:https://bitflip.art/discord",
+	contacts: "link:https://github.com/ifiokjr/bitflip/security/advisories/new,email:security@kickjump.co,discord:https://bitflip.art/discord",
 	policy: "https://github.com/ifiokjr/bitflip/blob/main/security.md",
 
 	// Optional Fields
 	preferred_languages: "en",
 	source_code: "https://github.com/ifiokjr/bitflip/tree/main/bitflip_program/",
-	source_revision: "",
-	source_release: "bitflip_program-v0.1.0",
-	auditors: "https://github.com/solana-labs/security-audits#token-2022"
+	source_revision: default_env::default_env!("GITHUB_SHA", ""),
+	source_release: default_env::default_env!("GITHUB_REF_NAME", ""),
+	auditors: concat!("Verifier pubkey: ", default_env::default_env!("GITHUB_SHA", "")),
+	encryption: "",
+	acknowledgements: "Thank you to our bug bounty degens!"
 }
 
 #[cfg(test)]
