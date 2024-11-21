@@ -313,27 +313,33 @@ impl SectionState {
 		else {
 			return BASE_LAMPORTS_PER_BIT;
 		};
+
+		if elapsed_time == 0 || remaining_time == 0 {
+			return static_price.to_num();
+		}
+
 		let Some(current_rate) =
-			U64F64::from_num(flips.max(1)).checked_div((elapsed_time as u64).into())
+			U64F64::from_num(flips.max(1)).checked_div((elapsed_time.max(1) as u64).into())
 		else {
 			return static_price.to_num();
 		};
+
 		let Some(required_rate) =
 			U64F64::from_num(remaining_flips).checked_div((remaining_time as u64).into())
 		else {
 			return static_price.to_num();
 		};
-		// let diff = current_rate.abs_diff(required_rate);
+
 		let Some(ratio) = current_rate.checked_div(required_rate) else {
 			return static_price.to_num();
 		};
 
-		static_price
-			.checked_mul(ratio)
-			.and_then(|val| val.checked_mul(ratio))
+		let price = static_price
+			.checked_mul(ratio.sqrt())
 			.unwrap_or(static_price)
-			.to_num::<u64>()
-			.max(MIN_LAMPORTS_PER_BIT)
+			.to_num::<u64>();
+
+		price.max(MIN_LAMPORTS_PER_BIT)
 	}
 }
 
@@ -376,7 +382,6 @@ account!(BitflipAccount, SectionState);
 mod tests {
 	use std::thread;
 
-	use assert2::check;
 	use rstest::fixture;
 	use rstest::rstest;
 
@@ -398,18 +403,26 @@ mod tests {
 			.split("::")
 			.last()
 			.unwrap()
+			.split("_")
+			.skip(2)
+			.collect::<Vec<&str>>()
+			.join("_")
 			.to_string()
 	}
 
 	#[rstest]
-	#[case::no_flips(0, SESSION_DURATION, 100_000)] // no flips
-	// #[case::first_flip(1, SESSION_DURATION / 2, 100_000)] // 1 flip
-	#[case::max_flips(EARNED_TOKENS_PER_SECTION as u32, 1, 362_144)]
+	#[case::no_flips(0, SESSION_DURATION)]
+	#[case::no_flips_no_time(0, 1)]
+	#[case::first_flips(5, SESSION_DURATION - 100)]
+	#[case::first_flips_more_time(5, SESSION_DURATION - 200)]
+	#[case::first_flips_even_more_time(5, SESSION_DURATION - 400)]
+	#[case::first_flips_most_time(5, SESSION_DURATION - 1000)]
+	#[case::flips_doubled(10, SESSION_DURATION - 1000)]
+	#[case::max_flips(EARNED_TOKENS_PER_SECTION as u32, 1)]
 	fn test_token_price_calculation(
 		testname: String,
 		#[case] flips: u32,
 		#[case] remaining_time: i64,
-		#[case] expected_price: u64,
 	) {
 		set_snapshot_suffix!("{}", testname);
 		let section = SectionState {
@@ -423,10 +436,9 @@ mod tests {
 			bump: 0,
 		};
 
-		let price = section.get_token_price_in_lamports(remaining_time);
-		check!(price == expected_price);
-
-		// insta::assert_snapshot!(format!("price: {}", price));
-		// assert_eq!(price, expected_price);
+		let lamports = section.get_token_price_in_lamports(remaining_time);
+		insta::assert_snapshot!(format!(
+			"flips: {flips}\nremaining_time: {remaining_time}\nlamports: {lamports}",
+		));
 	}
 }

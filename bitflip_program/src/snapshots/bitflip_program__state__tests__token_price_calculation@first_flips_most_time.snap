@@ -1,0 +1,8 @@
+---
+source: bitflip_program/src/state.rs
+expression: "format!(\"flips: {flips}\\nremaining_time: {remaining_time}\\nlamports: {lamports}\",)"
+snapshot_kind: text
+---
+flips: 5
+remaining_time: 5183000
+lamports: 31801
