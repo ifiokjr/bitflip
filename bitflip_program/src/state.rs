@@ -1,11 +1,8 @@
 use fixed::types::U64F64;
 use solana_program::msg;
-use spl_pod::primitives::PodBool;
 use spl_pod::primitives::PodI64;
 use spl_pod::primitives::PodU16;
 use spl_pod::primitives::PodU32;
-use spl_pod::primitives::PodU64;
-use spl_token_2022::pod::PodCOption;
 use steel::*;
 
 use crate::BASE_LAMPORTS_PER_BIT;
@@ -337,27 +334,6 @@ impl SectionState {
 			.to_num::<u64>()
 			.max(MIN_LAMPORTS_PER_BIT)
 	}
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
-pub struct PodMint {
-	/// Optional authority used to mint new tokens. The mint authority may only
-	/// be provided during mint creation. If no mint authority is present
-	/// then the mint has a fixed supply and no further tokens may be
-	/// minted.
-	pub mint_authority: PodCOption<Pubkey>,
-	// /// Total supply of tokens.
-	// pub supply: PodU64,
-	/// Number of base 10 digits to the right of the decimal place.
-	pub decimals: u8,
-	/// Number of base 10 digits to the right of the decimal place.
-	pub sdecimals: u8,
-	pub sadecimals: u8,
-	// /// If `true`, this structure has been initialized
-	// pub is_initialized: PodBool,
-	// /// Optional authority to freeze token accounts.
-	// pub freeze_authority: PodCOption<Pubkey>,
 }
 
 #[repr(C)]
