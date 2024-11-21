@@ -313,7 +313,8 @@ impl SectionState {
 		else {
 			return BASE_LAMPORTS_PER_BIT;
 		};
-		let Some(current_rate) = U64F64::from_num(flips).checked_div((elapsed_time as u64).into())
+		let Some(current_rate) =
+			U64F64::from_num(flips.max(1)).checked_div((elapsed_time as u64).into())
 		else {
 			return static_price.to_num();
 		};
@@ -373,5 +374,59 @@ account!(BitflipAccount, SectionState);
 
 #[cfg(test)]
 mod tests {
+	use std::thread;
+
+	use assert2::check;
+	use rstest::fixture;
+	use rstest::rstest;
+
 	use super::*;
+
+	macro_rules! set_snapshot_suffix {
+    ($($expr:expr),*) => {
+        let mut settings = insta::Settings::clone_current();
+        settings.set_snapshot_suffix(format!($($expr,)*));
+        let _guard = settings.bind_to_scope();
+		}
+	}
+
+	#[fixture]
+	pub fn testname() -> String {
+		thread::current()
+			.name()
+			.unwrap()
+			.split("::")
+			.last()
+			.unwrap()
+			.to_string()
+	}
+
+	#[rstest]
+	#[case::no_flips(0, SESSION_DURATION, 100_000)] // no flips
+	// #[case::first_flip(1, SESSION_DURATION / 2, 100_000)] // 1 flip
+	#[case::max_flips(EARNED_TOKENS_PER_SECTION as u32, 1, 362_144)]
+	fn test_token_price_calculation(
+		testname: String,
+		#[case] flips: u32,
+		#[case] remaining_time: i64,
+		#[case] expected_price: u64,
+	) {
+		set_snapshot_suffix!("{}", testname);
+		let section = SectionState {
+			data: [PodU16::from(0); BITFLIP_SECTION_LENGTH],
+			owner: Pubkey::default(),
+			flips: PodU32::from(flips),
+			on: PodU32::from(0),
+			off: PodU32::from(BITFLIP_SECTION_TOTAL_BITS),
+			game_index: 0,
+			section_index: 0,
+			bump: 0,
+		};
+
+		let price = section.get_token_price_in_lamports(remaining_time);
+		check!(price == expected_price);
+
+		// insta::assert_snapshot!(format!("price: {}", price));
+		// assert_eq!(price, expected_price);
+	}
 }
