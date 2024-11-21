@@ -354,7 +354,7 @@ pub fn create_section_state(
 		let mut section_state = SectionState::new(owner, game_index, section_index, section_bump);
 
 		if set_minimum_flips {
-			section_state.flips = MINIMUM_FLIPS_PER_SECTION;
+			section_state.flips = MINIMUM_FLIPS_PER_SECTION.into();
 		}
 
 		map.insert(section, section_state.to_account_shared_data());

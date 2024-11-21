@@ -149,14 +149,7 @@ async fn shared_game_refresh_signer_test<
    "startTime": 0,
    "gameIndex": 0,
    "sectionIndex": 0,
-   "bump": 253,
-   "padding": [
-     0,
-     0,
-     0,
-     0,
-     0
-   ]
+   "bump": 253
  }
  "#);
 

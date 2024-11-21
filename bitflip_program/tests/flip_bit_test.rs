@@ -183,10 +183,7 @@ async fn shared_flip_bit_test<
    "off": 4095,
    "gameIndex": 0,
    "sectionIndex": 0,
-   "bump": 254,
-   "padding": [
-     0
-   ]
+   "bump": 254
  }
  "#);
 

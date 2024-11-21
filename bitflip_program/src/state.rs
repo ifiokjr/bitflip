@@ -1,5 +1,11 @@
 use fixed::types::U64F64;
 use solana_program::msg;
+use spl_pod::primitives::PodBool;
+use spl_pod::primitives::PodI64;
+use spl_pod::primitives::PodU16;
+use spl_pod::primitives::PodU32;
+use spl_pod::primitives::PodU64;
+use spl_token_2022::pod::PodCOption;
 use steel::*;
 
 use crate::BASE_LAMPORTS_PER_BIT;
@@ -98,12 +104,12 @@ pub struct GameState {
 	#[cfg_attr(feature = "client", builder(default))]
 	pub access_signer: Pubkey,
 	/// The timestamp that the access expiry will end.
-	#[cfg_attr(feature = "client", builder(default))]
-	pub access_expiry: i64,
+	#[cfg_attr(feature = "client", builder(default, setter(into)))]
+	pub access_expiry: PodI64,
 	/// The start time. If 0 then it hasn't started yet. Using an `Option` here
 	/// would waste an extra byte.
-	#[cfg_attr(feature = "client", builder(default))]
-	pub start_time: i64,
+	#[cfg_attr(feature = "client", builder(default, setter(into)))]
+	pub start_time: PodI64,
 	/// The index of this currently played game.
 	pub game_index: u8,
 	/// The most recent section which was unlocked. This will be updated every
@@ -111,9 +117,6 @@ pub struct GameState {
 	pub section_index: u8,
 	/// The bump for this account.
 	pub bump: u8,
-	/// Padding to make the size of the struct a multiple of 8.
-	#[cfg_attr(feature = "client", builder(default))]
-	pub _padding: [u8; 5],
 }
 
 impl GameState {
@@ -121,18 +124,25 @@ impl GameState {
 		Self {
 			refresh_signer,
 			access_signer,
-			access_expiry: 0,
-			start_time: 0,
+			access_expiry: 0.into(),
+			start_time: 0.into(),
 			section_index: 0,
 			game_index: index,
 			bump,
-			_padding: [0; 5],
 		}
+	}
+
+	pub fn start_time(&self) -> i64 {
+		self.start_time.into()
+	}
+
+	pub fn access_expiry(&self) -> i64 {
+		self.access_expiry.into()
 	}
 
 	/// The end time of the game.
 	pub fn end_time(&self) -> i64 {
-		self.start_time.saturating_add(SESSION_DURATION)
+		self.start_time().saturating_add(SESSION_DURATION)
 	}
 
 	/// The remaining time of the game.
@@ -142,8 +152,8 @@ impl GameState {
 
 	/// Whether the game has started.
 	pub fn has_started(&self) -> bool {
-		msg!("start_time: {}", self.start_time);
-		self.start_time > 0
+		msg!("start_time: {}", self.start_time());
+		self.start_time() > 0
 	}
 
 	/// Whether the game has ended.
@@ -170,7 +180,7 @@ pub struct SectionState {
 	/// The state of the bits that are represented as flippable bits on the
 	/// frontend.
 	#[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
-	pub data: [u16; BITFLIP_SECTION_LENGTH],
+	pub data: [PodU16; BITFLIP_SECTION_LENGTH],
 	/// The owner of this section.
 	#[cfg_attr(
 		feature = "serde",
@@ -178,34 +188,31 @@ pub struct SectionState {
 	)]
 	pub owner: Pubkey,
 	/// The number of bit flips that have occurred.
-	pub flips: u32,
+	pub flips: PodU32,
 	/// The number of bits that are on.
-	pub on: u32,
+	pub on: PodU32,
 	/// The number of bits that are off.
-	pub off: u32,
+	pub off: PodU32,
 	/// The index for this game this section is a part of.
 	pub game_index: u8,
 	/// The index for this section state.
 	pub section_index: u8,
 	/// The bump for this section state.
 	pub bump: u8,
-	/// Padding to make the size of the struct a multiple of 8.
-	pub _padding: [u8; 1],
 }
 
 impl SectionState {
 	/// Create a new section state in the client. Useful for testing.
 	pub fn new(owner: Pubkey, game_index: u8, section_index: u8, bump: u8) -> Self {
 		Self {
-			data: [0; BITFLIP_SECTION_LENGTH],
+			data: [0.into(); BITFLIP_SECTION_LENGTH],
 			owner,
-			flips: 0,
-			on: 0,
-			off: BITFLIP_SECTION_TOTAL_BITS,
+			flips: 0.into(),
+			on: 0.into(),
+			off: BITFLIP_SECTION_TOTAL_BITS.into(),
 			bump,
 			game_index,
 			section_index,
-			_padding: [0; 1],
 		}
 	}
 
@@ -215,41 +222,59 @@ impl SectionState {
 		self.owner = owner;
 		self.section_index = index;
 		self.bump = bump;
-		self.on = 0;
-		self.off = BITFLIP_SECTION_TOTAL_BITS;
-		self.flips = 0;
+		self.on = 0.into();
+		self.off = BITFLIP_SECTION_TOTAL_BITS.into();
+		self.flips = 0.into();
+	}
+
+	pub fn on(&self) -> u32 {
+		self.on.into()
+	}
+
+	pub fn off(&self) -> u32 {
+		self.off.into()
+	}
+
+	pub fn flips(&self) -> u32 {
+		self.flips.into()
 	}
 
 	pub fn flip_on(&mut self, changed_bits: u32) -> ProgramResult {
 		self.on = self
-			.on
+			.on()
 			.checked_add(changed_bits)
-			.ok_or(ProgramError::ArithmeticOverflow)?;
+			.ok_or(ProgramError::ArithmeticOverflow)?
+			.into();
 		self.off = self
-			.off
+			.off()
 			.checked_sub(changed_bits)
-			.ok_or(ProgramError::ArithmeticOverflow)?;
+			.ok_or(ProgramError::ArithmeticOverflow)?
+			.into();
 		self.flips = self
-			.flips
+			.flips()
 			.checked_add(changed_bits)
-			.ok_or(ProgramError::ArithmeticOverflow)?;
+			.ok_or(ProgramError::ArithmeticOverflow)?
+			.into();
 
 		Ok(())
 	}
 
 	pub fn flip_off(&mut self, changed_bits: u32) -> ProgramResult {
 		self.off = self
-			.off
+			.off()
 			.checked_add(changed_bits)
-			.ok_or(ProgramError::ArithmeticOverflow)?;
+			.ok_or(ProgramError::ArithmeticOverflow)?
+			.into();
 		self.on = self
-			.on
+			.on()
 			.checked_sub(changed_bits)
-			.ok_or(ProgramError::ArithmeticOverflow)?;
+			.ok_or(ProgramError::ArithmeticOverflow)?
+			.into();
 		self.flips = self
-			.flips
+			.flips()
 			.checked_add(changed_bits)
-			.ok_or(ProgramError::ArithmeticOverflow)?;
+			.ok_or(ProgramError::ArithmeticOverflow)?
+			.into();
 
 		Ok(())
 	}
@@ -261,7 +286,7 @@ impl SectionState {
 		msg!("set_bit: {:?}", args);
 
 		let index = args.array_index as usize;
-		let current = self.data[index];
+		let current: u16 = self.data[index].into();
 		let bit = 1 << args.offset;
 		let updated = if args.on() {
 			current | bit
@@ -275,13 +300,13 @@ impl SectionState {
 			return Ok(false);
 		}
 
-		self.data[index..=index].copy_from_slice(&[updated]);
+		self.data[index..=index].copy_from_slice(&[updated.into()]);
 		Ok(true)
 	}
 
 	/// Get the price of a bit in lamports.
 	pub fn get_token_price_in_lamports(&self, remaining_time: i64) -> u64 {
-		let flips = self.flips as u64;
+		let flips: u64 = self.flips().into();
 		let remaining_flips = EARNED_TOKENS_PER_SECTION - flips;
 		let elapsed_time = SESSION_DURATION - remaining_time;
 		let Some(static_price) = U64F64::from_num(flips)
@@ -312,6 +337,58 @@ impl SectionState {
 			.to_num::<u64>()
 			.max(MIN_LAMPORTS_PER_BIT)
 	}
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
+pub struct PodMint {
+	/// Optional authority used to mint new tokens. The mint authority may only
+	/// be provided during mint creation. If no mint authority is present
+	/// then the mint has a fixed supply and no further tokens may be
+	/// minted.
+	pub mint_authority: PodCOption<Pubkey>,
+	// /// Total supply of tokens.
+	// pub supply: PodU64,
+	/// Number of base 10 digits to the right of the decimal place.
+	pub decimals: u8,
+	/// Number of base 10 digits to the right of the decimal place.
+	pub sdecimals: u8,
+	pub sadecimals: u8,
+	// /// If `true`, this structure has been initialized
+	// pub is_initialized: PodBool,
+	// /// Optional authority to freeze token accounts.
+	// pub freeze_authority: PodCOption<Pubkey>,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Pod, Zeroable)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
+pub struct TempState {
+	/// The state of the bits that are represented as flippable bits on the
+	/// frontend.
+	#[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
+	pub data: [PodU16; BITFLIP_SECTION_LENGTH],
+	/// The owner of this section.
+	#[cfg_attr(
+		feature = "serde",
+		serde(with = "::serde_with::As::<serde_with::DisplayFromStr>")
+	)]
+	pub owner: Pubkey,
+	/// The number of bit flips that have occurred.
+	pub flips: PodU32,
+	/// The number of bits that are on.
+	pub on: PodU32,
+	/// The number of bits that are off.
+	pub off: PodU32,
+	/// The index for this game this section is a part of.
+	pub game_index: u8,
+	/// The index for this section state.
+	pub section_index: u8,
+	/// The bump for this section state.
+	pub bump: u8,
+	// /// Padding to make the size of the struct a multiple of 8.
+	// pub _padding: [u8; 1],
 }
 
 account!(BitflipAccount, ConfigState);
