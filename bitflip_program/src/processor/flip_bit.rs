@@ -1,3 +1,4 @@
+use solana_program::msg;
 use steel::*;
 
 use super::BitflipInstruction;
@@ -91,6 +92,8 @@ pub fn process_flip_bit(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
 		return Err(BitflipError::GameNotRunning.into());
 	}
 
+	msg!("game is running");
+
 	let remaining_time = game_state.remaining_time(current_time);
 	// TODO: check robustness of bonding curve
 	let token_price = section_state.get_token_price_in_lamports(remaining_time);
@@ -107,8 +110,12 @@ pub fn process_flip_bit(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
 		1
 	};
 
+	msg!("flips: {}", flips);
+	msg!("token price: {}", token_price);
+
 	let lamports_to_transfer = token_price.saturating_mul(flips);
 
+	msg!("creating associated token account");
 	create_associated_token_account_idempotent(
 		player_info,
 		player_bit_token_account_info,
@@ -118,7 +125,11 @@ pub fn process_flip_bit(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
 		system_program_info,
 		&[],
 	)?;
+
+	msg!("transferring lamports to section: {}", lamports_to_transfer);
 	transfer_lamports_to_section(section_info, player_info, lamports_to_transfer)?;
+
+	msg!("transferring tokens from section");
 	transfer_tokens_from_section(
 		mint_bit_info,
 		section_info,
@@ -150,6 +161,7 @@ pub fn transfer_tokens_from_section<'info>(
 	section_state: &SectionState,
 	tokens: u64,
 ) -> ProgramResult {
+	msg!("transferring tokens from section: {}", tokens);
 	let signer = &[
 		SEED_PREFIX,
 		SEED_GAME,
@@ -168,6 +180,7 @@ pub fn transfer_tokens_from_section<'info>(
 		TOKEN_DECIMALS,
 		&[&signer[..]],
 	)?;
+
 	Ok(())
 }
 

@@ -1,6 +1,4 @@
-use fixed::traits::Fixed;
 use fixed::types::U64F64;
-// use fixed_math::Sqrt;
 use solana_program::msg;
 use steel::*;
 

@@ -28,16 +28,13 @@ use solana_sdk::account::AccountSharedData;
 use solana_sdk::account::WritableAccount;
 use solana_sdk::commitment_config::CommitmentLevel;
 use solana_sdk::native_token::sol_to_lamports;
-use solana_sdk::program_pack::Pack;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::rent::Rent;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signature::Signer;
 use spl_pod::primitives::PodBool;
-use spl_token_2022::extension::BaseStateWithExtensions;
 use spl_token_2022::extension::BaseStateWithExtensionsMut;
 use spl_token_2022::extension::ExtensionType;
-use spl_token_2022::extension::PodStateWithExtensions;
 use spl_token_2022::extension::PodStateWithExtensionsMut;
 use spl_token_2022::extension::group_pointer::GroupPointer;
 use spl_token_2022::extension::metadata_pointer::MetadataPointer;
@@ -197,71 +194,13 @@ pub fn create_config_accounts() -> HashMap<Pubkey, AccountSharedData> {
 	)
 	.to_account_shared_data();
 
-	let mint_bit_data = {
-		let mint_bit_state = PodMint {
-			mint_authority: PodCOption::some(treasury),
-			supply: TOTAL_BIT_TOKENS.into(),
-			decimals: TOKEN_DECIMALS,
-			is_initialized: PodBool::from_bool(true),
-			freeze_authority: PodCOption::some(treasury),
-		};
-		let mut mint_data = vec![0u8; get_mint_space().unwrap()];
-		let mut mint =
-			PodStateWithExtensionsMut::<PodMint>::unpack_uninitialized(&mut mint_data).unwrap();
-		let metadata_pointer = mint.init_extension::<MetadataPointer>(true).unwrap();
-		metadata_pointer.metadata_address = Some(mint_bit).try_into().unwrap();
-		metadata_pointer.authority = Some(treasury).try_into().unwrap();
-
-		let mint_close_pointer = mint.init_extension::<MintCloseAuthority>(true).unwrap();
-		mint_close_pointer.close_authority = Some(treasury).try_into().unwrap();
-
-		let group_pointer = mint.init_extension::<GroupPointer>(true).unwrap();
-		group_pointer.group_address = Some(mint_bit).try_into().unwrap();
-		group_pointer.authority = Some(treasury).try_into().unwrap();
-
-		*mint.base = mint_bit_state;
-
-		mint.init_account_type().unwrap();
-		mint_data
-	};
-
+	let mint_bit_data = create_bit_mint_data(treasury, mint_bit);
 	let token_amount = get_token_amount(TOTAL_BIT_TOKENS, TOKEN_DECIMALS).unwrap();
 	let treasury_bit_token_account = get_treasury_bit_token_account();
-	let treasury_bit_token_account_state = PodAccount {
-		mint: mint_bit,
-		owner: treasury,
-		amount: token_amount.into(),
-		delegate: PodCOption::none(),
-		state: spl_token_2022::state::AccountState::Initialized.into(),
-		is_native: PodCOption::none(),
-		delegated_amount: 0.into(),
-		close_authority: PodCOption::some(treasury),
-	};
-	let treasury_bit_token_account_data = {
-		let mint = PodStateWithExtensions::<PodMint>::unpack(&mint_bit_data).unwrap();
-		let mint_extensions = mint.get_extension_types().unwrap();
-		let mut account_extensions =
-			ExtensionType::get_required_init_account_extensions(&mint_extensions);
-		account_extensions.extend_from_slice(&[ExtensionType::ImmutableOwner]);
 
-		let account_space = ExtensionType::try_calculate_account_len::<
-			spl_token_2022::state::Account,
-		>(&account_extensions)
-		.unwrap();
-		let mut account_data = vec![0u8; account_space];
-		let mut account =
-			PodStateWithExtensionsMut::<PodAccount>::unpack_uninitialized(&mut account_data)
-				.unwrap();
-
-		for extension in account_extensions {
-			log::info!("extension: {:?}", extension);
-			account.init_account_extension_from_type(extension).unwrap();
-		}
-
-		*account.base = treasury_bit_token_account_state;
-		account.init_account_type().unwrap();
-		account_data
-	};
+	let treasury_bit_token_account_data =
+		// create_associated_token_account_data(mint_bit, treasury, token_amount, &mint_bit_data);
+		create_associated_token_account_data(mint_bit, treasury, token_amount);
 
 	map.insert(config, config_state_account);
 	map.insert(
@@ -286,6 +225,82 @@ pub fn create_config_accounts() -> HashMap<Pubkey, AccountSharedData> {
 	);
 
 	map
+}
+
+fn create_associated_token_account_data(
+	mint_bit: Pubkey,
+	treasury: Pubkey,
+	token_amount: u64,
+	// mint_bit_data: &[u8],
+) -> Vec<u8> {
+	let treasury_bit_token_account_state = PodAccount {
+		mint: mint_bit,
+		owner: treasury,
+		amount: token_amount.into(),
+		delegate: PodCOption::none(),
+		state: spl_token_2022::state::AccountState::Initialized.into(),
+		is_native: PodCOption::none(),
+		delegated_amount: 0.into(),
+		close_authority: PodCOption::some(treasury),
+	};
+	// let mint = PodStateWithExtensions::<PodMint>::unpack(mint_bit_data).unwrap();
+	// let mint_extensions = mint.get_extension_types().unwrap();
+	// let mut account_extensions =
+	// 	ExtensionType::get_required_init_account_extensions(&mint_extensions);
+	// account_extensions.extend_from_slice(&[ExtensionType::ImmutableOwner]);
+	// let account_space =
+	// ExtensionType::try_calculate_account_len::<spl_token_2022::state::Account>(
+	// 	&account_extensions,
+	// )
+	// .unwrap();
+	let account_space =
+		ExtensionType::try_calculate_account_len::<spl_token_2022::state::Account>(&[
+			ExtensionType::ImmutableOwner,
+		])
+		.unwrap();
+	let mut account_data = vec![0u8; account_space];
+	let mut account =
+		PodStateWithExtensionsMut::<PodAccount>::unpack_uninitialized(&mut account_data).unwrap();
+
+	// for extension in account_extensions {
+	// 	log::info!("extension: {:?}", extension);
+	// 	account.init_account_extension_from_type(extension).unwrap();
+	// }
+	account
+		.init_account_extension_from_type(ExtensionType::ImmutableOwner)
+		.unwrap();
+
+	*account.base = treasury_bit_token_account_state;
+	account.init_account_type().unwrap();
+	account_data
+}
+
+fn create_bit_mint_data(treasury: Pubkey, mint_bit: Pubkey) -> Vec<u8> {
+	let mint_bit_state = PodMint {
+		mint_authority: PodCOption::some(treasury),
+		supply: TOTAL_BIT_TOKENS.into(),
+		decimals: TOKEN_DECIMALS,
+		is_initialized: PodBool::from_bool(true),
+		freeze_authority: PodCOption::some(treasury),
+	};
+	let mut mint_data = vec![0u8; get_mint_space().unwrap()];
+	let mut mint =
+		PodStateWithExtensionsMut::<PodMint>::unpack_uninitialized(&mut mint_data).unwrap();
+	let metadata_pointer = mint.init_extension::<MetadataPointer>(true).unwrap();
+	metadata_pointer.metadata_address = Some(mint_bit).try_into().unwrap();
+	metadata_pointer.authority = Some(treasury).try_into().unwrap();
+
+	let mint_close_pointer = mint.init_extension::<MintCloseAuthority>(true).unwrap();
+	mint_close_pointer.close_authority = Some(treasury).try_into().unwrap();
+
+	let group_pointer = mint.init_extension::<GroupPointer>(true).unwrap();
+	group_pointer.group_address = Some(mint_bit).try_into().unwrap();
+	group_pointer.authority = Some(treasury).try_into().unwrap();
+
+	*mint.base = mint_bit_state;
+
+	mint.init_account_type().unwrap();
+	mint_data
 }
 
 pub struct CreatedGameState {
@@ -330,7 +345,8 @@ pub fn create_section_state(
 	next_section_index: u8,
 	set_minimum_flips: bool,
 ) -> HashMap<Pubkey, AccountSharedData> {
-	let mint = get_pda_mint_bit().0;
+	let mint_bit = get_pda_mint_bit().0;
+	let treasury = get_pda_treasury().0;
 	let mut map = HashMap::new();
 
 	for section_index in 0..next_section_index {
@@ -345,28 +361,16 @@ pub fn create_section_state(
 
 		map.insert(section, section_state.to_account_shared_data());
 
-		let amount = get_token_amount(EARNED_TOKENS_PER_SECTION, TOKEN_DECIMALS).unwrap();
-		let token_account_state = spl_token_2022::state::Account {
-			mint,
-			owner: section,
-			amount,
-			delegate: None.into(),
-			state: spl_token_2022::state::AccountState::Initialized,
-			is_native: None.into(),
-			delegated_amount: 0,
-			close_authority: None.into(),
-		};
-		let token_account_data = {
-			let mut buf = vec![0u8; spl_token_2022::state::Account::LEN];
-			token_account_state.pack_into_slice(&mut buf[..]);
-			buf
-		};
-		let lamports = Rent::default().minimum_balance(token_account_data.len());
+		let token_amount = get_token_amount(EARNED_TOKENS_PER_SECTION, TOKEN_DECIMALS).unwrap();
+		let section_token_account_data =
+			create_associated_token_account_data(mint_bit, section, token_amount);
+
+		let lamports = Rent::default().minimum_balance(section_token_account_data.len());
 		map.insert(
 			section_token_account,
 			AccountSharedData::create(
 				lamports,
-				token_account_data,
+				section_token_account_data,
 				spl_token_2022::ID,
 				false,
 				u64::MAX,

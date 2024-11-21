@@ -10,7 +10,7 @@ pub fn get_token_amount(tokens: u64, decimals: u8) -> Result<u64, ProgramError> 
 #[cfg(feature = "client")]
 pub fn round_up(amount: u64, significant_digits: u8) -> u64 {
 	let multiplier = 10u64.pow(significant_digits.into());
-	((amount + multiplier) / multiplier) * multiplier
+	((amount + (multiplier * 120 / 100)) / multiplier) * multiplier
 }
 
 #[cfg(feature = "client")]

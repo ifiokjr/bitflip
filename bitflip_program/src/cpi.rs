@@ -263,6 +263,7 @@ pub(crate) fn mint_to<'info>(
 	)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn transfer_checked<'info>(
 	from_info: &AccountInfo<'info>,
 	mint_info: &AccountInfo<'info>,
