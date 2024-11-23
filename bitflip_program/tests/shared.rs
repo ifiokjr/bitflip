@@ -1,8 +1,11 @@
 #![cfg(feature = "client")]
 
 use std::collections::HashMap;
+use std::fs;
 use std::hash::RandomState;
+use std::path::Path;
 
+use anyhow::Context;
 use anyhow::Result;
 use bitflip_program::ConfigState;
 use bitflip_program::EARNED_TOKENS_PER_SECTION;
@@ -24,6 +27,9 @@ use bitflip_program::get_pda_treasury;
 use bitflip_program::get_section_bit_token_account;
 use bitflip_program::get_token_amount;
 use bitflip_program::get_treasury_bit_token_account;
+use rstest::fixture;
+use serde::Deserialize;
+use serde::Serialize;
 use solana_sdk::account::AccountSharedData;
 use solana_sdk::account::WritableAccount;
 use solana_sdk::commitment_config::CommitmentLevel;
@@ -194,15 +200,26 @@ pub fn create_config_accounts() -> HashMap<Pubkey, AccountSharedData> {
 	)
 	.to_account_shared_data();
 
+	map.insert(config, config_state_account);
+
+	map
+}
+
+pub fn create_token_group_accounts() -> HashMap<Pubkey, AccountSharedData> {
+	let mut map = HashMap::new();
+	let treasury = get_pda_treasury().0;
+	let mint_bit = get_pda_mint_bit().0;
 	let mint_bit_data = create_bit_mint_data(treasury, mint_bit);
 	let token_amount = get_token_amount(TOTAL_BIT_TOKENS, TOKEN_DECIMALS).unwrap();
 	let treasury_bit_token_account = get_treasury_bit_token_account();
 
 	let treasury_bit_token_account_data =
-		// create_associated_token_account_data(mint_bit, treasury, token_amount, &mint_bit_data);
 		create_associated_token_account_data(mint_bit, treasury, token_amount);
 
-	map.insert(config, config_state_account);
+	map.insert(
+		treasury,
+		AccountSharedData::new(Rent::default().minimum_balance(0), 0, &system_program::ID),
+	);
 	map.insert(
 		mint_bit,
 		AccountSharedData::create(
@@ -401,4 +418,93 @@ impl<T: Pod + Discriminator> IntoAccountSharedData for T {
 	fn to_account(&self) -> Account {
 		self.to_account_shared_data().into()
 	}
+}
+
+#[cfg(feature = "test_validator")]
+#[derive(Debug, Serialize, Deserialize)]
+struct ComputeUnits {
+	instructions: HashMap<String, InstructionMetrics>,
+	version: String,
+}
+
+#[cfg(feature = "test_validator")]
+#[derive(Debug, Serialize, Deserialize)]
+struct InstructionMetrics {
+	compute_units: u64,
+	rounded_compute_units: u64,
+	description: String,
+}
+
+#[cfg(feature = "test_validator")]
+pub fn save_compute_units(name: &str, compute_units: u64, description: &str) -> anyhow::Result<()> {
+	let path = "compute_units.json";
+
+	// Read existing or create new
+	let mut data: ComputeUnits = fs::read_to_string(path)
+		.context("could not read file")
+		.and_then(|s| serde_json::from_str(&s).context("could not parse JSON"))
+		.unwrap_or(ComputeUnits {
+			instructions: HashMap::new(),
+			version: "0.0.0".to_string(),
+		});
+
+	data.instructions
+		.insert(name.to_string(), InstructionMetrics {
+			compute_units,
+			rounded_compute_units: bitflip_program::round_compute_units_up(compute_units),
+			description: description.to_string(),
+		});
+
+	// Write back to file
+	fs::write(path, serde_json::to_string_pretty(&data)?)?;
+
+	Ok(())
+}
+
+#[cfg(feature = "test_validator")]
+pub fn generate_compute_constants() -> std::io::Result<()> {
+	let data: ComputeUnits = serde_json::from_str(&fs::read_to_string("compute_units.json")?)?;
+
+	let mut output = String::from("// Auto-generated compute unit constants\n\n");
+
+	for (name, metrics) in data.instructions {
+		let const_name = name.to_uppercase();
+		output.push_str(&format!(
+			"pub const {}_COMPUTE_UNITS: u64 = {};\n",
+			const_name, metrics.rounded_compute_units
+		));
+	}
+
+	fs::write(
+		Path::new(&std::env::var("OUT_DIR").unwrap()).join("compute_units.rs"),
+		output,
+	)?;
+
+	Ok(())
+}
+
+#[cfg(feature = "test_validator")]
+#[macro_export]
+macro_rules! set_snapshot_suffix {
+	($($expr:expr),*) => {
+			let mut settings = insta::Settings::clone_current();
+			settings.set_snapshot_suffix(format!($($expr,)*));
+			let _guard = settings.bind_to_scope();
+	}
+}
+
+#[cfg(feature = "test_validator")]
+#[fixture]
+pub fn testname() -> String {
+	std::thread::current()
+		.name()
+		.unwrap()
+		.split("::")
+		.last()
+		.unwrap()
+		.split("_")
+		.skip(2)
+		.collect::<Vec<&str>>()
+		.join("_")
+		.to_string()
 }

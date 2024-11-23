@@ -1,5 +1,5 @@
 mod constants;
-pub(crate) mod cpi;
+pub mod cpi;
 mod errors;
 mod events;
 #[cfg(feature = "client")]

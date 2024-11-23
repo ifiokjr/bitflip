@@ -19,6 +19,7 @@ use shared::create_config_accounts;
 use shared::create_game_state;
 use shared::create_program_context_with_factory;
 use shared::create_section_state;
+use shared::create_token_group_accounts;
 use shared::create_wallet_keypair;
 use solana_sdk::account::ReadableAccount;
 use solana_sdk::transaction::VersionedTransaction;
@@ -58,6 +59,11 @@ async fn flip_bit_test_validator() -> anyhow::Result<()> {
 
 	check!(rounded_compute_units <= 100_000);
 	insta::assert_snapshot!(format!("{rounded_compute_units} CU"));
+	shared::save_compute_units(
+		"flip_bit_test",
+		compute_units,
+		"Flip a single bit from `0` to `1`",
+	)?;
 
 	Ok(())
 }
@@ -67,7 +73,8 @@ async fn create_banks_client_rpc(
 	section_index: u8,
 ) -> anyhow::Result<impl ToRpcClient> {
 	let provider = create_program_context_with_factory(|p| {
-		let config_state_accounts = create_config_accounts();
+		let mut config_state_accounts = create_config_accounts();
+		config_state_accounts.extend(create_token_group_accounts());
 
 		for (key, account) in config_state_accounts {
 			p.add_account(key, account.into());
@@ -103,6 +110,7 @@ async fn create_validator_rpc(
 	section_index: u8,
 ) -> anyhow::Result<impl ToRpcClient> {
 	let mut accounts = create_config_accounts();
+	accounts.extend(create_token_group_accounts());
 
 	let now = SystemTime::now()
 		.duration_since(SystemTime::UNIX_EPOCH)

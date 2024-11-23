@@ -11,6 +11,7 @@ use shared::ToRpcClient;
 use shared::create_authority_keypair;
 use shared::create_config_accounts;
 use shared::create_program_context_with_factory;
+use shared::create_token_group_accounts;
 use solana_sdk::instruction::InstructionError;
 use solana_sdk::signature::Keypair;
 use solana_sdk::transaction::TransactionError;
@@ -35,6 +36,11 @@ async fn config_update_authority_test_validator() -> anyhow::Result<()> {
 
 	check!(rounded_compute_units == 10_000);
 	insta::assert_snapshot!(format!("{rounded_compute_units} CU"));
+	shared::save_compute_units(
+		"config_update_authority",
+		compute_units,
+		"Update the authority of the config",
+	)?;
 
 	Ok(())
 }
@@ -52,7 +58,8 @@ async fn authority_must_change_test_validator() -> anyhow::Result<()> {
 
 async fn create_banks_client_rpc() -> anyhow::Result<impl ToRpcClient> {
 	let provider = create_program_context_with_factory(|p| {
-		let config_state_accounts = create_config_accounts();
+		let mut config_state_accounts = create_config_accounts();
+		config_state_accounts.extend(create_token_group_accounts());
 
 		for (key, account) in config_state_accounts {
 			p.add_account(key, account.into());
@@ -65,7 +72,8 @@ async fn create_banks_client_rpc() -> anyhow::Result<impl ToRpcClient> {
 
 #[cfg(feature = "test_validator")]
 async fn create_validator_rpc() -> anyhow::Result<impl ToRpcClient> {
-	let config_state_accounts = create_config_accounts();
+	let mut config_state_accounts = create_config_accounts();
+	config_state_accounts.extend(create_token_group_accounts());
 
 	let runner = shared::create_runner_with_accounts(config_state_accounts).await;
 

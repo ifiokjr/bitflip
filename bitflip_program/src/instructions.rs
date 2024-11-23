@@ -5,12 +5,13 @@ use crate::ConfigUpdateAuthority;
 use crate::FlipBit;
 use crate::GameInitialize;
 use crate::GameRefreshSigner;
+use crate::ID;
+use crate::TokenGroupInitialize;
+use crate::TokenMember;
+use crate::TokenMemberInitialize;
 use crate::get_pda_config;
 use crate::get_pda_game;
 use crate::get_pda_mint_bit;
-use crate::get_pda_mint_gibibit;
-use crate::get_pda_mint_kibibit;
-use crate::get_pda_mint_mebibit;
 use crate::get_pda_section;
 use crate::get_pda_treasury;
 use crate::get_player_token_account;
@@ -29,17 +30,6 @@ use crate::get_treasury_token_account;
 /// the admin and authority are signers for the transaction.
 pub fn config_initialize(admin: &Pubkey, authority: &Pubkey) -> Instruction {
 	let config = get_pda_config().0;
-	let treasury = get_pda_treasury().0;
-	let mint_bit = get_pda_mint_bit().0;
-	let treasury_bit_token_account = get_treasury_token_account(&treasury, &mint_bit);
-	let mint_kibibit = get_pda_mint_kibibit().0;
-	let treasury_kibibit_token_account = get_treasury_token_account(&treasury, &mint_kibibit);
-	let mint_mebibit = get_pda_mint_mebibit().0;
-	let treasury_mebibit_token_account = get_treasury_token_account(&treasury, &mint_mebibit);
-	let mint_gibibit = get_pda_mint_gibibit().0;
-	let treasury_gibibit_token_account = get_treasury_token_account(&treasury, &mint_gibibit);
-	let associated_token_program = spl_associated_token_account::ID;
-	let token_program = spl_token_2022::ID;
 	let system_program = system_program::ID;
 
 	Instruction {
@@ -48,43 +38,9 @@ pub fn config_initialize(admin: &Pubkey, authority: &Pubkey) -> Instruction {
 			AccountMeta::new_readonly(*admin, true),
 			AccountMeta::new(*authority, true),
 			AccountMeta::new(config, false),
-			AccountMeta::new(treasury, false),
-			AccountMeta::new(mint_bit, false),
-			AccountMeta::new(treasury_bit_token_account, false),
-			AccountMeta::new(mint_kibibit, false),
-			AccountMeta::new(treasury_kibibit_token_account, false),
-			AccountMeta::new(mint_mebibit, false),
-			AccountMeta::new(treasury_mebibit_token_account, false),
-			AccountMeta::new(mint_gibibit, false),
-			AccountMeta::new(treasury_gibibit_token_account, false),
-			AccountMeta::new_readonly(associated_token_program, false),
-			AccountMeta::new_readonly(token_program, false),
 			AccountMeta::new_readonly(system_program, false),
 		],
 		data: ConfigInitialize {}.to_bytes(),
-	}
-}
-
-pub fn game_initialize(
-	authority: &Pubkey,
-	access_signer: &Pubkey,
-	refresh_signer: &Pubkey,
-	game_index: u8,
-) -> Instruction {
-	let config = get_pda_config().0;
-	let game = get_pda_game(game_index).0;
-
-	Instruction {
-		program_id: crate::ID,
-		accounts: vec![
-			AccountMeta::new(*authority, true),
-			AccountMeta::new_readonly(*access_signer, true),
-			AccountMeta::new(*refresh_signer, true),
-			AccountMeta::new(config, false),
-			AccountMeta::new(game, false),
-			AccountMeta::new_readonly(system_program::ID, false),
-		],
-		data: GameInitialize {}.to_bytes(),
 	}
 }
 
@@ -105,6 +61,99 @@ pub fn config_update_authority(authority: &Pubkey, new_authority: &Pubkey) -> In
 			AccountMeta::new(*new_authority, true),
 		],
 		data: ConfigUpdateAuthority {}.to_bytes(),
+	}
+}
+
+/// Create an instruction to initialize the token group.
+///
+/// ### Arguments
+///
+/// * `authority` - The authority account: must be a signer.
+pub fn token_group_initialize(authority: &Pubkey) -> Instruction {
+	let config = get_pda_config().0;
+	let treasury = get_pda_treasury().0;
+	let mint_bit = get_pda_mint_bit().0;
+	let treasury_bit_token_account = get_treasury_token_account(&treasury, &mint_bit);
+	let associated_token_program = spl_associated_token_account::ID;
+	let token_program = spl_token_2022::ID;
+	let system_program = system_program::ID;
+
+	Instruction {
+		program_id: crate::ID,
+		accounts: vec![
+			AccountMeta::new(*authority, true),
+			AccountMeta::new_readonly(config, false),
+			AccountMeta::new(treasury, false),
+			AccountMeta::new(mint_bit, false),
+			AccountMeta::new(treasury_bit_token_account, false),
+			AccountMeta::new_readonly(associated_token_program, false),
+			AccountMeta::new_readonly(token_program, false),
+			AccountMeta::new_readonly(system_program, false),
+		],
+		data: TokenGroupInitialize {}.to_bytes(),
+	}
+}
+
+/// Create an instruction to initialize the token member.
+///
+/// ### Arguments
+///
+/// * `authority` - The authority account: must be a signer.
+/// * `member` - The member to initialize.
+pub fn token_member_initialize(authority: &Pubkey, member: TokenMember) -> Instruction {
+	let config = get_pda_config().0;
+	let treasury = get_pda_treasury().0;
+	let mint_group = get_pda_mint_bit().0;
+	let mint_member = Pubkey::find_program_address(&member.seeds(), &ID).0;
+	let treasury_member_token_account = get_treasury_token_account(&treasury, &mint_member);
+	let associated_token_program = spl_associated_token_account::ID;
+	let token_program = spl_token_2022::ID;
+	let system_program = system_program::ID;
+
+	Instruction {
+		program_id: crate::ID,
+		accounts: vec![
+			AccountMeta::new(*authority, true),
+			AccountMeta::new_readonly(config, false),
+			AccountMeta::new_readonly(treasury, false),
+			AccountMeta::new(mint_group, false),
+			AccountMeta::new(mint_member, false),
+			AccountMeta::new(treasury_member_token_account, false),
+			AccountMeta::new_readonly(associated_token_program, false),
+			AccountMeta::new_readonly(token_program, false),
+			AccountMeta::new_readonly(system_program, false),
+		],
+		data: TokenMemberInitialize::new(member).to_bytes(),
+	}
+}
+
+/// Create an instruction to initialize the game.
+///
+/// ### Arguments
+///
+/// * `authority` - The authority account: must be a signer.
+/// * `access_signer` - The access signer account: must be a signer.
+/// * `refresh_signer` - The refresh signer account: must be a signer.
+pub fn game_initialize(
+	authority: &Pubkey,
+	access_signer: &Pubkey,
+	refresh_signer: &Pubkey,
+	game_index: u8,
+) -> Instruction {
+	let config = get_pda_config().0;
+	let game = get_pda_game(game_index).0;
+
+	Instruction {
+		program_id: crate::ID,
+		accounts: vec![
+			AccountMeta::new(*authority, true),
+			AccountMeta::new_readonly(*access_signer, true),
+			AccountMeta::new(*refresh_signer, true),
+			AccountMeta::new(config, false),
+			AccountMeta::new(game, false),
+			AccountMeta::new_readonly(system_program::ID, false),
+		],
+		data: GameInitialize {}.to_bytes(),
 	}
 }
 

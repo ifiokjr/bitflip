@@ -11,6 +11,7 @@ use shared::ToRpcClient;
 use shared::create_config_accounts;
 use shared::create_game_state;
 use shared::create_program_context_with_factory;
+use shared::create_token_group_accounts;
 use solana_sdk::signature::Keypair;
 use solana_sdk::transaction::VersionedTransaction;
 use steel::*;
@@ -44,7 +45,7 @@ async fn game_refresh_signer_test_validator() -> anyhow::Result<()> {
 
 	check!(rounded_compute_units == 10_000);
 	insta::assert_snapshot!(format!("{rounded_compute_units} CU"));
-
+	shared::save_compute_units("game_refresh_signer", compute_units, "Refresh the signer")?;
 	Ok(())
 }
 
@@ -57,7 +58,8 @@ async fn create_banks_client_rpc(
 	}: &CreatedGameState,
 ) -> anyhow::Result<impl ToRpcClient> {
 	let provider = create_program_context_with_factory(|p| {
-		let config_state_accounts = create_config_accounts();
+		let mut config_state_accounts = create_config_accounts();
+		config_state_accounts.extend(create_token_group_accounts());
 
 		for (key, account) in config_state_accounts {
 			p.add_account(key, account.into());

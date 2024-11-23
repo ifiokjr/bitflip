@@ -21,7 +21,7 @@ use crate::get_player_token_account;
 use crate::get_section_token_account;
 
 pub fn process_flip_bit(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
-	// Parse the instruction data.
+	// parse the instruction data.
 	let args = FlipBit::try_from_bytes(data)?;
 	args.validate()?;
 

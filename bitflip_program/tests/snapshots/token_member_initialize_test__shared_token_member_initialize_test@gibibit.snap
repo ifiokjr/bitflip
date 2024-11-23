@@ -1,0 +1,48 @@
+---
+source: bitflip_program/tests/token_member_initialize_test.rs
+expression: mint_member_account
+snapshot_kind: text
+---
+{
+  "type": "mint",
+  "info": {
+    "mintAuthority": "[treasury:pubkey]",
+    "supply": "0",
+    "decimals": 0,
+    "isInitialized": true,
+    "freezeAuthority": "[treasury:pubkey]",
+    "extensions": [
+      {
+        "extension": "metadataPointer",
+        "state": {
+          "authority": "[treasury:pubkey]",
+          "metadataAddress": "[mint_member:pubkey]"
+        }
+      },
+      {
+        "extension": "mintCloseAuthority",
+        "state": {
+          "closeAuthority": "[treasury:pubkey]"
+        }
+      },
+      {
+        "extension": "groupMemberPointer",
+        "state": {
+          "authority": "[treasury:pubkey]",
+          "memberAddress": "Brzs3yy89SRmqX2d3f5WSXC2iqzJAGWv4RxCwdm2F6Ci"
+        }
+      },
+      {
+        "extension": "tokenMetadata",
+        "state": {
+          "updateAuthority": "[treasury:pubkey]",
+          "mint": "[mint_member:pubkey]",
+          "name": "GibiBit",
+          "symbol": "GiB",
+          "uri": "https://bitflip.art/gbit-meta.json",
+          "additionalMetadata": []
+        }
+      }
+    ]
+  }
+}

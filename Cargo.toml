@@ -116,6 +116,7 @@ spl-token-group-interface = "0.2"
 spl-token-metadata-interface = "0.3"
 spl-transfer-hook-interface = "0.6"
 spl-type-length-value = "0.4"
+static_assertions = "1"
 steel = { git = "https://github.com/ifiokjr/steel", branch = "master" }
 strum = "0.26"
 surrealdb = "2"

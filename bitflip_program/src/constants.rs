@@ -63,7 +63,7 @@ pub const SEED_BIT_CREATOR: &[u8] = b"bit_creator";
 pub const SPACE_DISCRIMINATOR: usize = 8;
 pub const SPACE_U32: usize = 4;
 
-// Token Metadata
+/// Token Metadata
 pub const BIT_TOKEN_NAME: &str = "Bit";
 pub const BIT_TOKEN_SYMBOL: &str = "B";
 pub const BIT_TOKEN_URI: &str = "https://bitflip.art/bit-meta.json";

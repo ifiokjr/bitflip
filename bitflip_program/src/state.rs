@@ -3,6 +3,7 @@ use solana_program::msg;
 use spl_pod::primitives::PodI64;
 use spl_pod::primitives::PodU16;
 use spl_pod::primitives::PodU32;
+use static_assertions::const_assert;
 use steel::*;
 
 use crate::BASE_LAMPORTS_PER_BIT;
@@ -20,6 +21,14 @@ pub enum BitflipAccount {
 	GameState = 1,
 	SectionState = 2,
 }
+
+const_assert!(std::mem::size_of::<ConfigState>() == 39);
+const_assert!(std::mem::size_of::<GameState>() == 83);
+const_assert!(std::mem::size_of::<SectionState>() == 559);
+
+account!(BitflipAccount, ConfigState);
+account!(BitflipAccount, GameState);
+account!(BitflipAccount, SectionState);
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Pod, Zeroable)]
@@ -342,41 +351,6 @@ impl SectionState {
 		price.max(MIN_LAMPORTS_PER_BIT)
 	}
 }
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, Pod, Zeroable)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
-pub struct TempState {
-	/// The state of the bits that are represented as flippable bits on the
-	/// frontend.
-	#[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
-	pub data: [PodU16; BITFLIP_SECTION_LENGTH],
-	/// The owner of this section.
-	#[cfg_attr(
-		feature = "serde",
-		serde(with = "::serde_with::As::<serde_with::DisplayFromStr>")
-	)]
-	pub owner: Pubkey,
-	/// The number of bit flips that have occurred.
-	pub flips: PodU32,
-	/// The number of bits that are on.
-	pub on: PodU32,
-	/// The number of bits that are off.
-	pub off: PodU32,
-	/// The index for this game this section is a part of.
-	pub game_index: u8,
-	/// The index for this section state.
-	pub section_index: u8,
-	/// The bump for this section state.
-	pub bump: u8,
-	// /// Padding to make the size of the struct a multiple of 8.
-	// pub _padding: [u8; 1],
-}
-
-account!(BitflipAccount, ConfigState);
-account!(BitflipAccount, GameState);
-account!(BitflipAccount, SectionState);
 
 #[cfg(test)]
 mod tests {

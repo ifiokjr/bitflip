@@ -1,6 +1,6 @@
 use steel::*;
 
-pub(crate) fn metadata_pointer_initialize<'info>(
+pub fn metadata_pointer_initialize<'info>(
 	mint_info: &AccountInfo<'info>,
 	authority_info: &AccountInfo<'info>,
 	token_program_info: &AccountInfo<'info>,
@@ -19,7 +19,7 @@ pub(crate) fn metadata_pointer_initialize<'info>(
 	)
 }
 
-pub(crate) fn initialize_mint2<'info>(
+pub fn initialize_mint<'info>(
 	mint_info: &AccountInfo<'info>,
 	token_program_info: &AccountInfo<'info>,
 	authority_info: &AccountInfo<'info>,
@@ -36,7 +36,7 @@ pub(crate) fn initialize_mint2<'info>(
 	solana_program::program::invoke_signed(&ix, &[mint_info.clone()], signers_seeds)
 }
 
-pub(crate) fn token_metadata_initialize<'info>(
+pub fn token_metadata_initialize<'info>(
 	mint_info: &AccountInfo<'info>,
 	authority_info: &AccountInfo<'info>,
 	token_program_info: &AccountInfo<'info>,
@@ -68,7 +68,7 @@ pub(crate) fn token_metadata_initialize<'info>(
 	)
 }
 
-pub(crate) fn group_pointer_initialize<'info>(
+pub fn group_pointer_initialize<'info>(
 	mint_info: &AccountInfo<'info>,
 	authority_info: &AccountInfo<'info>,
 	token_program_info: &AccountInfo<'info>,
@@ -87,7 +87,7 @@ pub(crate) fn group_pointer_initialize<'info>(
 	)
 }
 
-pub(crate) fn token_group_initialize<'info>(
+pub fn token_group_initialize<'info>(
 	token_program_info: &AccountInfo<'info>,
 	group_info: &AccountInfo<'info>,
 	mint_info: &AccountInfo<'info>,
@@ -114,7 +114,7 @@ pub(crate) fn token_group_initialize<'info>(
 	)
 }
 
-pub(crate) fn group_member_pointer_initialize<'info>(
+pub fn group_member_pointer_initialize<'info>(
 	mint_info: &AccountInfo<'info>,
 	authority_info: &AccountInfo<'info>,
 	token_program_info: &AccountInfo<'info>,
@@ -133,7 +133,7 @@ pub(crate) fn group_member_pointer_initialize<'info>(
 	)
 }
 
-pub(crate) fn token_group_member_initialize<'info>(
+pub fn token_group_member_initialize<'info>(
 	token_program_info: &AccountInfo<'info>,
 	member_info: &AccountInfo<'info>,
 	member_mint_info: &AccountInfo<'info>,
@@ -164,7 +164,7 @@ pub(crate) fn token_group_member_initialize<'info>(
 	)
 }
 
-pub(crate) fn mint_close_authority_initialize<'info>(
+pub fn mint_close_authority_initialize<'info>(
 	mint_info: &AccountInfo<'info>,
 	authority_info: &AccountInfo<'info>,
 	token_program_info: &AccountInfo<'info>,
@@ -182,7 +182,7 @@ pub(crate) fn mint_close_authority_initialize<'info>(
 	)
 }
 
-pub(crate) fn create_associated_token_account<'info>(
+pub fn create_associated_token_account<'info>(
 	payer_info: &AccountInfo<'info>,
 	associated_token_info: &AccountInfo<'info>,
 	authority_info: &AccountInfo<'info>,
@@ -211,7 +211,7 @@ pub(crate) fn create_associated_token_account<'info>(
 	)
 }
 
-pub(crate) fn create_associated_token_account_idempotent<'info>(
+pub fn create_associated_token_account_idempotent<'info>(
 	payer_info: &AccountInfo<'info>,
 	associated_token_info: &AccountInfo<'info>,
 	authority_info: &AccountInfo<'info>,
@@ -240,7 +240,7 @@ pub(crate) fn create_associated_token_account_idempotent<'info>(
 	)
 }
 
-pub(crate) fn mint_to<'info>(
+pub fn mint_to<'info>(
 	mint_info: &AccountInfo<'info>,
 	account_info: &AccountInfo<'info>,
 	owner_info: &AccountInfo<'info>,
@@ -264,7 +264,7 @@ pub(crate) fn mint_to<'info>(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn transfer_checked<'info>(
+pub fn transfer_checked<'info>(
 	from_info: &AccountInfo<'info>,
 	mint_info: &AccountInfo<'info>,
 	to_info: &AccountInfo<'info>,

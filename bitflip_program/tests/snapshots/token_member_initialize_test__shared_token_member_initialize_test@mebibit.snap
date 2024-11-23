@@ -1,0 +1,48 @@
+---
+source: bitflip_program/tests/token_member_initialize_test.rs
+expression: mint_member_account
+snapshot_kind: text
+---
+{
+  "type": "mint",
+  "info": {
+    "mintAuthority": "[treasury:pubkey]",
+    "supply": "0",
+    "decimals": 0,
+    "isInitialized": true,
+    "freezeAuthority": "[treasury:pubkey]",
+    "extensions": [
+      {
+        "extension": "metadataPointer",
+        "state": {
+          "authority": "[treasury:pubkey]",
+          "metadataAddress": "[mint_member:pubkey]"
+        }
+      },
+      {
+        "extension": "mintCloseAuthority",
+        "state": {
+          "closeAuthority": "[treasury:pubkey]"
+        }
+      },
+      {
+        "extension": "groupMemberPointer",
+        "state": {
+          "authority": "[treasury:pubkey]",
+          "memberAddress": "J1vzUFgdmM9PejxcJVv9Y6vkNhEXUU1HpFfup8VwRdyn"
+        }
+      },
+      {
+        "extension": "tokenMetadata",
+        "state": {
+          "updateAuthority": "[treasury:pubkey]",
+          "mint": "[mint_member:pubkey]",
+          "name": "MebiBit",
+          "symbol": "MiB",
+          "uri": "https://bitflip.art/mbit-meta.json",
+          "additionalMetadata": []
+        }
+      }
+    ]
+  }
+}
