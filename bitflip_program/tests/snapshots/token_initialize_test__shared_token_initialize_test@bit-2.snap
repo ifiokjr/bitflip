@@ -1,18 +1,18 @@
 ---
-source: bitflip_program/tests/token_member_initialize_test.rs
+source: bitflip_program/tests/token_initialize_test.rs
 expression: parsed_treasury_member_token_account
 snapshot_kind: text
 ---
 {
   "type": "account",
   "info": {
-    "mint": "[mint_member:pubkey]",
+    "mint": "[mint:pubkey]",
     "owner": "[treasury:pubkey]",
     "tokenAmount": {
-      "uiAmount": 0.0,
+      "uiAmount": 1073741824.0,
       "decimals": 0,
-      "amount": "0",
-      "uiAmountString": "0"
+      "amount": "1073741824",
+      "uiAmountString": "1073741824"
     },
     "state": "initialized",
     "isNative": false,

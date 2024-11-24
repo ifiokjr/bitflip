@@ -1,18 +1,17 @@
+use solana_program::msg;
 use steel::*;
+use sysvar::rent::Rent;
 
 use super::BitflipInstruction;
 use crate::ADMIN_PUBKEY;
 use crate::BitflipError;
 use crate::ConfigState;
 use crate::ID;
+use crate::TokenMember;
 use crate::constants::*;
 use crate::get_pda_config;
-use crate::get_pda_mint_bit;
-use crate::get_pda_mint_gibibit;
-use crate::get_pda_mint_kibibit;
-use crate::get_pda_mint_mebibit;
+use crate::get_pda_mint;
 use crate::get_pda_treasury;
-
 /// Initialize the program.
 ///
 /// This creates the config account and the treasury account.
@@ -23,7 +22,14 @@ use crate::get_pda_treasury;
 /// way to fix.
 pub fn process_config_initialize(accounts: &[AccountInfo<'_>]) -> ProgramResult {
 	// load accounts
-	let [admin_info, authority_info, config_info, system_program_info] = accounts else {
+	let [
+		admin_info,
+		authority_info,
+		config_info,
+		treasury_info,
+		system_program_info,
+	] = accounts
+	else {
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};
 
@@ -35,19 +41,23 @@ pub fn process_config_initialize(accounts: &[AccountInfo<'_>]) -> ProgramResult 
 		return Err(BitflipError::DuplicateAuthority.into());
 	}
 
-	config_info.is_empty()?.is_writable()?;
 	admin_info.is_signer()?;
 	authority_info.is_signer()?.is_writable()?;
+	config_info.is_empty()?.is_writable()?;
+	treasury_info
+		.is_empty()?
+		.is_writable()?
+		.has_owner(&system_program::ID)?;
 	system_program_info.is_program(&system_program::ID)?;
 
 	let (config_key, config_bump) = get_pda_config();
-	let treasury_bump = get_pda_treasury().1;
-	let mint_bit_bump = get_pda_mint_bit().1;
-	let mint_kibibit_bump = get_pda_mint_kibibit().1;
-	let mint_mebibit_bump = get_pda_mint_mebibit().1;
-	let mint_gibibit_bump = get_pda_mint_gibibit().1;
+	let (treasury_key, treasury_bump) = get_pda_treasury();
+	let mint_bit_bump = get_pda_mint(TokenMember::Bit).1;
+	let mint_kibibit_bump = get_pda_mint(TokenMember::Kibibit).1;
+	let mint_mebibit_bump = get_pda_mint(TokenMember::Mebibit).1;
+	let mint_gibibit_bump = get_pda_mint(TokenMember::Gibibit).1;
 
-	if config_info.key.ne(&config_key) {
+	if config_key.ne(config_info.key) || treasury_key.ne(treasury_info.key) {
 		return Err(ProgramError::InvalidSeeds);
 	}
 
@@ -72,6 +82,14 @@ pub fn process_config_initialize(accounts: &[AccountInfo<'_>]) -> ProgramResult 
 		mint_mebibit_bump,
 		mint_gibibit_bump,
 	);
+
+	msg!("transfer sol to treasury for rent exemption");
+	let rent_sysvar = Rent::get()?;
+	let extra_lamports = rent_sysvar
+		.minimum_balance(treasury_info.data_len())
+		.checked_sub(treasury_info.lamports())
+		.ok_or(ProgramError::ArithmeticOverflow)?;
+	treasury_info.collect(extra_lamports, authority_info)?;
 
 	Ok(())
 }
@@ -186,7 +204,7 @@ mod tests {
 		Ok(())
 	}
 
-	fn create_account_infos() -> [AccountInfo<'static>; 4] {
+	fn create_account_infos() -> [AccountInfo<'static>; 5] {
 		let admin_lamports = leak(0);
 		let admin_data = leak(vec![]);
 		let authority_key = leak(Pubkey::new_unique());
@@ -195,6 +213,9 @@ mod tests {
 		let config_key = leak(get_pda_config().0);
 		let config_lamports = leak(0);
 		let config_data = leak(vec![]);
+		let treasury_key = leak(get_pda_treasury().0);
+		let treasury_lamports = leak(0);
+		let treasury_data = leak(vec![]);
 		let system_program_lamports = leak(1_000_000_000);
 		let system_program_data = leak(vec![]);
 
@@ -228,6 +249,16 @@ mod tests {
 			false,
 			u64::MAX,
 		);
+		let treasury_info = AccountInfo::new(
+			treasury_key,
+			false,
+			true,
+			treasury_lamports,
+			treasury_data,
+			&system_program::ID,
+			false,
+			u64::MAX,
+		);
 		let system_program_info = AccountInfo::new(
 			&system_program::ID,
 			false,
@@ -239,6 +270,12 @@ mod tests {
 			u64::MAX,
 		);
 
-		[admin_info, authority_info, config_info, system_program_info]
+		[
+			admin_info,
+			authority_info,
+			config_info,
+			treasury_info,
+			system_program_info,
+		]
 	}
 }

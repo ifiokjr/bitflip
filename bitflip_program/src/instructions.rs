@@ -5,18 +5,15 @@ use crate::ConfigUpdateAuthority;
 use crate::FlipBit;
 use crate::GameInitialize;
 use crate::GameRefreshSigner;
-use crate::ID;
 use crate::TokenGroupInitialize;
+use crate::TokenInitialize;
 use crate::TokenMember;
-use crate::TokenMemberInitialize;
 use crate::get_pda_config;
 use crate::get_pda_game;
-use crate::get_pda_mint_bit;
+use crate::get_pda_mint;
 use crate::get_pda_section;
 use crate::get_pda_treasury;
-use crate::get_player_token_account;
-use crate::get_section_token_account;
-use crate::get_treasury_token_account;
+use crate::get_token_account;
 
 /// Create an instruction to initialize the mint, treasury and [`ConfigState`].
 ///
@@ -31,6 +28,7 @@ use crate::get_treasury_token_account;
 pub fn config_initialize(admin: &Pubkey, authority: &Pubkey) -> Instruction {
 	let config = get_pda_config().0;
 	let system_program = system_program::ID;
+	let treasury = get_pda_treasury().0;
 
 	Instruction {
 		program_id: crate::ID,
@@ -38,6 +36,7 @@ pub fn config_initialize(admin: &Pubkey, authority: &Pubkey) -> Instruction {
 			AccountMeta::new_readonly(*admin, true),
 			AccountMeta::new(*authority, true),
 			AccountMeta::new(config, false),
+			AccountMeta::new(treasury, false),
 			AccountMeta::new_readonly(system_program, false),
 		],
 		data: ConfigInitialize {}.to_bytes(),
@@ -64,7 +63,38 @@ pub fn config_update_authority(authority: &Pubkey, new_authority: &Pubkey) -> In
 	}
 }
 
-/// Create an instruction to initialize the token group.
+/// Create an instruction to initialize the token member.
+///
+/// ### Arguments
+///
+/// * `authority` - The authority account: must be a signer.
+/// * `member` - The member to initialize.
+pub fn token_initialize(authority: &Pubkey, member: TokenMember) -> Instruction {
+	let config = get_pda_config().0;
+	let treasury = get_pda_treasury().0;
+	let mint = get_pda_mint(member).0;
+	let treasury_token_account = get_token_account(&treasury, &mint);
+	let associated_token_program = spl_associated_token_account::ID;
+	let token_program = spl_token_2022::ID;
+	let system_program = system_program::ID;
+
+	Instruction {
+		program_id: crate::ID,
+		accounts: vec![
+			AccountMeta::new(*authority, true),
+			AccountMeta::new_readonly(config, false),
+			AccountMeta::new_readonly(treasury, false),
+			AccountMeta::new(mint, false),
+			AccountMeta::new(treasury_token_account, false),
+			AccountMeta::new_readonly(associated_token_program, false),
+			AccountMeta::new_readonly(token_program, false),
+			AccountMeta::new_readonly(system_program, false),
+		],
+		data: TokenInitialize::new(member).to_bytes(),
+	}
+}
+
+/// Create an instruction to initialize the token group and its members.
 ///
 /// ### Arguments
 ///
@@ -72,8 +102,10 @@ pub fn config_update_authority(authority: &Pubkey, new_authority: &Pubkey) -> In
 pub fn token_group_initialize(authority: &Pubkey) -> Instruction {
 	let config = get_pda_config().0;
 	let treasury = get_pda_treasury().0;
-	let mint_bit = get_pda_mint_bit().0;
-	let treasury_bit_token_account = get_treasury_token_account(&treasury, &mint_bit);
+	let mint_bit = get_pda_mint(TokenMember::Bit).0;
+	let mint_kibibit = get_pda_mint(TokenMember::Kibibit).0;
+	let mint_mebibit = get_pda_mint(TokenMember::Mebibit).0;
+	let mint_gibibit = get_pda_mint(TokenMember::Gibibit).0;
 	let associated_token_program = spl_associated_token_account::ID;
 	let token_program = spl_token_2022::ID;
 	let system_program = system_program::ID;
@@ -85,45 +117,14 @@ pub fn token_group_initialize(authority: &Pubkey) -> Instruction {
 			AccountMeta::new_readonly(config, false),
 			AccountMeta::new(treasury, false),
 			AccountMeta::new(mint_bit, false),
-			AccountMeta::new(treasury_bit_token_account, false),
+			AccountMeta::new(mint_kibibit, false),
+			AccountMeta::new(mint_mebibit, false),
+			AccountMeta::new(mint_gibibit, false),
 			AccountMeta::new_readonly(associated_token_program, false),
 			AccountMeta::new_readonly(token_program, false),
 			AccountMeta::new_readonly(system_program, false),
 		],
 		data: TokenGroupInitialize {}.to_bytes(),
-	}
-}
-
-/// Create an instruction to initialize the token member.
-///
-/// ### Arguments
-///
-/// * `authority` - The authority account: must be a signer.
-/// * `member` - The member to initialize.
-pub fn token_member_initialize(authority: &Pubkey, member: TokenMember) -> Instruction {
-	let config = get_pda_config().0;
-	let treasury = get_pda_treasury().0;
-	let mint_group = get_pda_mint_bit().0;
-	let mint_member = Pubkey::find_program_address(&member.seeds(), &ID).0;
-	let treasury_member_token_account = get_treasury_token_account(&treasury, &mint_member);
-	let associated_token_program = spl_associated_token_account::ID;
-	let token_program = spl_token_2022::ID;
-	let system_program = system_program::ID;
-
-	Instruction {
-		program_id: crate::ID,
-		accounts: vec![
-			AccountMeta::new(*authority, true),
-			AccountMeta::new_readonly(config, false),
-			AccountMeta::new_readonly(treasury, false),
-			AccountMeta::new(mint_group, false),
-			AccountMeta::new(mint_member, false),
-			AccountMeta::new(treasury_member_token_account, false),
-			AccountMeta::new_readonly(associated_token_program, false),
-			AccountMeta::new_readonly(token_program, false),
-			AccountMeta::new_readonly(system_program, false),
-		],
-		data: TokenMemberInitialize::new(member).to_bytes(),
 	}
 }
 
@@ -195,12 +196,12 @@ pub fn flip_bit(
 	offset: u8,
 	value: u8,
 ) -> Instruction {
-	let mint_bit = get_pda_mint_bit().0;
-	let player_bit_token_account = get_player_token_account(player, &mint_bit);
+	let mint = get_pda_mint(TokenMember::Bit).0;
+	let player_token_account = get_token_account(player, &mint);
 	let config = get_pda_config().0;
 	let game = get_pda_game(game_index).0;
 	let section = get_pda_section(game_index, section_index).0;
-	let section_bit_token_account = get_section_token_account(&section, &mint_bit);
+	let section_token_account = get_token_account(&section, &mint);
 	let associated_token_program = spl_associated_token_account::ID;
 	let token_program = spl_token_2022::ID;
 	let system_program = system_program::ID;
@@ -216,12 +217,12 @@ pub fn flip_bit(
 		program_id: crate::ID,
 		accounts: vec![
 			AccountMeta::new(*player, true),
-			AccountMeta::new(player_bit_token_account, false),
+			AccountMeta::new(player_token_account, false),
 			AccountMeta::new_readonly(config, false),
 			AccountMeta::new_readonly(game, false),
-			AccountMeta::new_readonly(mint_bit, false),
+			AccountMeta::new_readonly(mint, false),
 			AccountMeta::new(section, false),
-			AccountMeta::new(section_bit_token_account, false),
+			AccountMeta::new(section_token_account, false),
 			AccountMeta::new_readonly(associated_token_program, false),
 			AccountMeta::new_readonly(token_program, false),
 			AccountMeta::new_readonly(system_program, false),

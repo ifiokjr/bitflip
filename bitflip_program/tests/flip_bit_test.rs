@@ -8,21 +8,23 @@ use bitflip_program::ACCESS_SIGNER_DURATION;
 use bitflip_program::BITFLIP_SECTION_LENGTH;
 use bitflip_program::SectionState;
 use bitflip_program::TOKEN_DECIMALS;
+use bitflip_program::TokenMember;
 use bitflip_program::flip_bit;
 use bitflip_program::get_pda_game;
-use bitflip_program::get_pda_mint_bit;
+use bitflip_program::get_pda_mint;
 use bitflip_program::get_pda_section;
-use bitflip_program::get_player_bit_token_account;
-use bitflip_program::get_section_bit_token_account;
+use bitflip_program::get_player_token_account;
+use bitflip_program::get_section_token_account;
 use shared::ToRpcClient;
 use shared::create_config_accounts;
 use shared::create_game_state;
 use shared::create_program_context_with_factory;
 use shared::create_section_state;
-use shared::create_token_group_accounts;
+use shared::create_token_accounts;
 use shared::create_wallet_keypair;
 use solana_sdk::account::ReadableAccount;
 use solana_sdk::transaction::VersionedTransaction;
+use spl_pod::primitives::PodU16;
 use steel::*;
 use test_utils::create_insta_redaction;
 use test_utils_solana::prelude::*;
@@ -73,10 +75,10 @@ async fn create_banks_client_rpc(
 	section_index: u8,
 ) -> anyhow::Result<impl ToRpcClient> {
 	let provider = create_program_context_with_factory(|p| {
-		let mut config_state_accounts = create_config_accounts();
-		config_state_accounts.extend(create_token_group_accounts());
+		let mut accounts = create_config_accounts();
+		accounts.extend(create_token_accounts()?);
 
-		for (key, account) in config_state_accounts {
+		for (key, account) in accounts {
 			p.add_account(key, account.into());
 		}
 
@@ -93,11 +95,13 @@ async fn create_banks_client_rpc(
 			game_index,
 			section_index.saturating_add(1),
 			false,
-		);
+		)?;
 
 		for (section, section_account) in section_accounts {
 			p.add_account(section, section_account.into());
 		}
+
+		Ok(())
 	})
 	.await?;
 
@@ -110,7 +114,7 @@ async fn create_validator_rpc(
 	section_index: u8,
 ) -> anyhow::Result<impl ToRpcClient> {
 	let mut accounts = create_config_accounts();
-	accounts.extend(create_token_group_accounts());
+	accounts.extend(create_token_accounts()?);
 
 	let now = SystemTime::now()
 		.duration_since(SystemTime::UNIX_EPOCH)
@@ -125,7 +129,7 @@ async fn create_validator_rpc(
 		game_index,
 		section_index.saturating_add(1),
 		false,
-	);
+	)?;
 	accounts.extend(section_accounts);
 
 	let runner = shared::create_runner_with_accounts(accounts).await;
@@ -149,9 +153,11 @@ async fn shared_flip_bit_test<
 	let rpc = provider.to_rpc();
 	let wallet_keypair = create_wallet_keypair();
 	let player = wallet_keypair.pubkey();
-	let mint_bit = get_pda_mint_bit().0;
-	let player_bit_token_account = get_player_bit_token_account(&player);
-	let section_bit_token_account = get_section_bit_token_account(game_index, section_index);
+	let mint = get_pda_mint(TokenMember::Bit).0;
+	let game = get_pda_game(game_index).0;
+	let player_bit_token_account = get_player_token_account(&player, TokenMember::Bit);
+	let section_bit_token_account =
+		get_section_token_account(game_index, section_index, TokenMember::Bit);
 	let section = get_pda_section(game_index, section_index).0;
 	let recent_blockhash = rpc.get_latest_blockhash().await?;
 	let ix = flip_bit(
@@ -175,9 +181,9 @@ async fn shared_flip_bit_test<
 
 	let section_data = rpc.get_account_data(&section).await?;
 	let section_state = SectionState::try_from_bytes(&section_data)?;
-	let mut expected_data = [0u16; BITFLIP_SECTION_LENGTH];
-	expected_data[0] = 1 << offset;
-	// check!(&section_state.data == &expected_data);
+	let mut expected_data = [PodU16::from(0); BITFLIP_SECTION_LENGTH];
+	expected_data[0] = PodU16::from(1u16 << offset);
+	check!(&section_state.data == &expected_data);
 	insta::assert_compact_json_snapshot!(section_state, {
 		".data" => "[data]",
 		".owner" => "[owner:pubkey]",
@@ -195,8 +201,9 @@ async fn shared_flip_bit_test<
  }
  "#);
 
-	let mint_redaction = create_insta_redaction(mint_bit, "mint:pubkey");
+	let mint_redaction = create_insta_redaction(mint, "mint:pubkey");
 	let section_redaction = create_insta_redaction(section, "section:pubkey");
+	let game_redaction = create_insta_redaction(game, "game:pubkey");
 	let raw_player_token_account = rpc.get_account(&player_bit_token_account).await?;
 	let parsed_player_token_account = parse_token_v2(
 		raw_player_token_account.data(),
@@ -239,6 +246,7 @@ async fn shared_flip_bit_test<
 	insta::assert_compact_json_snapshot!(parsed_section_token_account, {
 		".info.mint" => insta::dynamic_redaction(mint_redaction),
 		".info.owner" => insta::dynamic_redaction(section_redaction),
+		".info.closeAuthority" => insta::dynamic_redaction(game_redaction),
 	}, @r#"
  {
    "type": "account",
@@ -253,7 +261,7 @@ async fn shared_flip_bit_test<
      },
      "state": "initialized",
      "isNative": false,
-     "closeAuthority": "EkxzLviVZsDkDLvNT4v8q1WPNYdzJLJgH9ehwLzdPV7P",
+     "closeAuthority": "[game:pubkey]",
      "extensions": [
        {
          "extension": "immutableOwner"

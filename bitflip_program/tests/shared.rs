@@ -6,27 +6,21 @@ use std::hash::RandomState;
 use std::path::Path;
 
 use anyhow::Context;
-use anyhow::Result;
 use bitflip_program::ConfigState;
 use bitflip_program::EARNED_TOKENS_PER_SECTION;
 use bitflip_program::GameState;
 use bitflip_program::ID;
 use bitflip_program::MINIMUM_FLIPS_PER_SECTION;
 use bitflip_program::SectionState;
-use bitflip_program::TOKEN_DECIMALS;
-use bitflip_program::TOTAL_BIT_TOKENS;
-use bitflip_program::get_mint_space;
+use bitflip_program::TokenMember;
 use bitflip_program::get_pda_config;
 use bitflip_program::get_pda_game;
-use bitflip_program::get_pda_mint_bit;
-use bitflip_program::get_pda_mint_gibibit;
-use bitflip_program::get_pda_mint_kibibit;
-use bitflip_program::get_pda_mint_mebibit;
+use bitflip_program::get_pda_mint;
 use bitflip_program::get_pda_section;
 use bitflip_program::get_pda_treasury;
-use bitflip_program::get_section_bit_token_account;
+use bitflip_program::get_section_token_account;
 use bitflip_program::get_token_amount;
-use bitflip_program::get_treasury_bit_token_account;
+use bitflip_program::get_treasury_token_account;
 use rstest::fixture;
 use serde::Deserialize;
 use serde::Serialize;
@@ -42,6 +36,7 @@ use spl_pod::primitives::PodBool;
 use spl_token_2022::extension::BaseStateWithExtensionsMut;
 use spl_token_2022::extension::ExtensionType;
 use spl_token_2022::extension::PodStateWithExtensionsMut;
+use spl_token_2022::extension::group_member_pointer::GroupMemberPointer;
 use spl_token_2022::extension::group_pointer::GroupPointer;
 use spl_token_2022::extension::metadata_pointer::MetadataPointer;
 use spl_token_2022::extension::mint_close_authority::MintCloseAuthority;
@@ -133,12 +128,14 @@ pub async fn create_runner_with_accounts(
 	test_utils_solana::TestValidatorRunner::run(props).await
 }
 
-pub(crate) async fn create_program_context_with_factory<F: Fn(&mut ProgramTest)>(
+pub(crate) async fn create_program_context_with_factory<
+	F: Fn(&mut ProgramTest) -> anyhow::Result<()>,
+>(
 	factory: F,
-) -> Result<TestRpcProvider> {
+) -> anyhow::Result<TestRpcProvider> {
 	let mut program_test = create_program_test();
 
-	factory(&mut program_test);
+	factory(&mut program_test)?;
 	program_test.add_account(create_admin_keypair().pubkey(), Account {
 		lamports: sol_to_lamports(10.0),
 		..Account::default()
@@ -155,10 +152,6 @@ pub(crate) async fn create_program_context_with_factory<F: Fn(&mut ProgramTest)>
 	let context = program_test.start_with_context().await;
 
 	Ok(context.into())
-}
-
-pub async fn create_program_context() -> Result<TestRpcProvider> {
-	create_program_context_with_factory(|_| {}).await
 }
 
 /// The program client using the admin wallet account
@@ -184,10 +177,10 @@ pub fn create_config_accounts() -> HashMap<Pubkey, AccountSharedData> {
 	let authority = create_authority_keypair().pubkey();
 	let config_bump = get_pda_config().1;
 	let (treasury, treasury_bump) = get_pda_treasury();
-	let (mint_bit, mint_bit_bump) = get_pda_mint_bit();
-	let mint_kibibit_bump = get_pda_mint_kibibit().1;
-	let mint_mebibit_bump = get_pda_mint_mebibit().1;
-	let mint_gibibit_bump = get_pda_mint_gibibit().1;
+	let (_, mint_bit_bump) = get_pda_mint(TokenMember::Bit);
+	let (_, mint_kibibit_bump) = get_pda_mint(TokenMember::Kibibit);
+	let (_, mint_mebibit_bump) = get_pda_mint(TokenMember::Mebibit);
+	let (_, mint_gibibit_bump) = get_pda_mint(TokenMember::Gibibit);
 	let config = get_pda_config().0;
 	let config_state_account = ConfigState::new(
 		authority,
@@ -200,124 +193,117 @@ pub fn create_config_accounts() -> HashMap<Pubkey, AccountSharedData> {
 	)
 	.to_account_shared_data();
 
+	map.insert(
+		treasury,
+		AccountSharedData::new(Rent::default().minimum_balance(0), 0, &system_program::ID),
+	);
 	map.insert(config, config_state_account);
 
 	map
 }
 
-pub fn create_token_group_accounts() -> HashMap<Pubkey, AccountSharedData> {
+pub fn create_token_accounts() -> anyhow::Result<HashMap<Pubkey, AccountSharedData>> {
 	let mut map = HashMap::new();
 	let treasury = get_pda_treasury().0;
-	let mint_bit = get_pda_mint_bit().0;
-	let mint_bit_data = create_bit_mint_data(treasury, mint_bit);
-	let token_amount = get_token_amount(TOTAL_BIT_TOKENS, TOKEN_DECIMALS).unwrap();
-	let treasury_bit_token_account = get_treasury_bit_token_account();
+	for ii in 0..4 {
+		let member = TokenMember::try_from(ii)?;
+		let mint = get_pda_mint(member).0;
+		let mint_data = create_mint_data(member, treasury)?;
+		map.insert(
+			mint,
+			AccountSharedData::create(
+				Rent::default().minimum_balance(mint_data.len()),
+				mint_data,
+				spl_token_2022::ID,
+				false,
+				u64::MAX,
+			),
+		);
 
-	let treasury_bit_token_account_data =
-		create_associated_token_account_data(mint_bit, treasury, token_amount);
+		let token_amount = get_token_amount(member.supply(), member.decimals())?;
+		let treasury_token_account = get_treasury_token_account(member);
+		let treasury_token_account_data =
+			create_token_account_data(member, treasury, treasury, token_amount)?;
+		map.insert(
+			treasury_token_account,
+			AccountSharedData::create(
+				Rent::default().minimum_balance(treasury_token_account_data.len()),
+				treasury_token_account_data,
+				spl_token_2022::ID,
+				false,
+				u64::MAX,
+			),
+		);
+	}
 
-	map.insert(
-		treasury,
-		AccountSharedData::new(Rent::default().minimum_balance(0), 0, &system_program::ID),
-	);
-	map.insert(
-		mint_bit,
-		AccountSharedData::create(
-			Rent::default().minimum_balance(mint_bit_data.len()),
-			mint_bit_data,
-			spl_token_2022::ID,
-			false,
-			u64::MAX,
-		),
-	);
-	map.insert(
-		treasury_bit_token_account,
-		AccountSharedData::create(
-			Rent::default().minimum_balance(treasury_bit_token_account_data.len()),
-			treasury_bit_token_account_data,
-			spl_token_2022::ID,
-			false,
-			u64::MAX,
-		),
-	);
-
-	map
+	Ok(map)
 }
 
-fn create_associated_token_account_data(
-	mint_bit: Pubkey,
-	treasury: Pubkey,
-	token_amount: u64,
-	// mint_bit_data: &[u8],
-) -> Vec<u8> {
+fn create_mint_data(member: TokenMember, treasury: Pubkey) -> anyhow::Result<Vec<u8>> {
+	let mint = get_pda_mint(member).0;
+	let mut mint_data = vec![0u8; member.initial_mint_space()?];
+	let mut mint_state =
+		PodStateWithExtensionsMut::<PodMint>::unpack_uninitialized(&mut mint_data)?;
+	let metadata_pointer = mint_state.init_extension::<MetadataPointer>(true)?;
+	metadata_pointer.metadata_address = Some(mint).try_into()?;
+	metadata_pointer.authority = Some(treasury).try_into()?;
+
+	let mint_close_pointer = mint_state.init_extension::<MintCloseAuthority>(true)?;
+	mint_close_pointer.close_authority = Some(treasury).try_into()?;
+
+	if member.parent().is_none() {
+		let group_pointer = mint_state.init_extension::<GroupPointer>(true)?;
+		group_pointer.group_address = Some(mint).try_into()?;
+		group_pointer.authority = Some(treasury).try_into()?;
+	} else {
+		let member_pointer = mint_state.init_extension::<GroupMemberPointer>(true)?;
+		member_pointer.member_address = Some(mint).try_into()?;
+		member_pointer.authority = Some(treasury).try_into()?;
+	}
+
+	*mint_state.base = PodMint {
+		mint_authority: PodCOption::some(treasury),
+		supply: member.supply().into(),
+		decimals: member.decimals(),
+		is_initialized: PodBool::from_bool(true),
+		freeze_authority: PodCOption::some(treasury),
+	};
+	mint_state.init_account_type()?;
+
+	Ok(mint_data)
+}
+
+fn create_token_account_data(
+	member: TokenMember,
+	owner: Pubkey,
+	close_authority: Pubkey,
+	amount: u64,
+) -> anyhow::Result<Vec<u8>> {
+	let mint = get_pda_mint(member).0;
 	let treasury_bit_token_account_state = PodAccount {
-		mint: mint_bit,
-		owner: treasury,
-		amount: token_amount.into(),
+		mint,
+		owner,
+		amount: amount.into(),
 		delegate: PodCOption::none(),
 		state: spl_token_2022::state::AccountState::Initialized.into(),
 		is_native: PodCOption::none(),
 		delegated_amount: 0.into(),
-		close_authority: PodCOption::some(treasury),
+		close_authority: PodCOption::some(close_authority),
 	};
-	// let mint = PodStateWithExtensions::<PodMint>::unpack(mint_bit_data).unwrap();
-	// let mint_extensions = mint.get_extension_types().unwrap();
-	// let mut account_extensions =
-	// 	ExtensionType::get_required_init_account_extensions(&mint_extensions);
-	// account_extensions.extend_from_slice(&[ExtensionType::ImmutableOwner]);
-	// let account_space =
-	// ExtensionType::try_calculate_account_len::<spl_token_2022::state::Account>(
-	// 	&account_extensions,
-	// )
-	// .unwrap();
 	let account_space =
 		ExtensionType::try_calculate_account_len::<spl_token_2022::state::Account>(&[
 			ExtensionType::ImmutableOwner,
-		])
-		.unwrap();
+		])?;
 	let mut account_data = vec![0u8; account_space];
 	let mut account =
-		PodStateWithExtensionsMut::<PodAccount>::unpack_uninitialized(&mut account_data).unwrap();
+		PodStateWithExtensionsMut::<PodAccount>::unpack_uninitialized(&mut account_data)?;
 
-	// for extension in account_extensions {
-	// 	log::info!("extension: {:?}", extension);
-	// 	account.init_account_extension_from_type(extension).unwrap();
-	// }
-	account
-		.init_account_extension_from_type(ExtensionType::ImmutableOwner)
-		.unwrap();
+	account.init_account_extension_from_type(ExtensionType::ImmutableOwner)?;
 
 	*account.base = treasury_bit_token_account_state;
-	account.init_account_type().unwrap();
-	account_data
-}
+	account.init_account_type()?;
 
-fn create_bit_mint_data(treasury: Pubkey, mint_bit: Pubkey) -> Vec<u8> {
-	let mint_bit_state = PodMint {
-		mint_authority: PodCOption::some(treasury),
-		supply: TOTAL_BIT_TOKENS.into(),
-		decimals: TOKEN_DECIMALS,
-		is_initialized: PodBool::from_bool(true),
-		freeze_authority: PodCOption::some(treasury),
-	};
-	let mut mint_data = vec![0u8; get_mint_space().unwrap()];
-	let mut mint =
-		PodStateWithExtensionsMut::<PodMint>::unpack_uninitialized(&mut mint_data).unwrap();
-	let metadata_pointer = mint.init_extension::<MetadataPointer>(true).unwrap();
-	metadata_pointer.metadata_address = Some(mint_bit).try_into().unwrap();
-	metadata_pointer.authority = Some(treasury).try_into().unwrap();
-
-	let mint_close_pointer = mint.init_extension::<MintCloseAuthority>(true).unwrap();
-	mint_close_pointer.close_authority = Some(treasury).try_into().unwrap();
-
-	let group_pointer = mint.init_extension::<GroupPointer>(true).unwrap();
-	group_pointer.group_address = Some(mint_bit).try_into().unwrap();
-	group_pointer.authority = Some(treasury).try_into().unwrap();
-
-	*mint.base = mint_bit_state;
-
-	mint.init_account_type().unwrap();
-	mint_data
+	Ok(account_data)
 }
 
 pub struct CreatedGameState {
@@ -361,13 +347,14 @@ pub fn create_section_state(
 	game_index: u8,
 	next_section_index: u8,
 	set_minimum_flips: bool,
-) -> HashMap<Pubkey, AccountSharedData> {
-	let mint_bit = get_pda_mint_bit().0;
+) -> anyhow::Result<HashMap<Pubkey, AccountSharedData>> {
 	let mut map = HashMap::new();
+	let game = get_pda_game(game_index).0;
 
 	for section_index in 0..next_section_index {
 		let (section, section_bump) = get_pda_section(game_index, section_index);
-		let section_token_account = get_section_bit_token_account(game_index, section_index);
+		let section_token_account =
+			get_section_token_account(game_index, section_index, TokenMember::Bit);
 		let mut section_state = SectionState::new(owner, game_index, section_index, section_bump);
 
 		if set_minimum_flips {
@@ -376,10 +363,10 @@ pub fn create_section_state(
 
 		map.insert(section, section_state.to_account_shared_data());
 
-		let token_amount = get_token_amount(EARNED_TOKENS_PER_SECTION, TOKEN_DECIMALS).unwrap();
+		let member = TokenMember::Bit;
+		let token_amount = get_token_amount(EARNED_TOKENS_PER_SECTION, member.decimals()).unwrap();
 		let section_token_account_data =
-			create_associated_token_account_data(mint_bit, section, token_amount);
-
+			create_token_account_data(member, section, game, token_amount)?;
 		let lamports = Rent::default().minimum_balance(section_token_account_data.len());
 		map.insert(
 			section_token_account,
@@ -393,7 +380,7 @@ pub fn create_section_state(
 		);
 	}
 
-	map
+	Ok(map)
 }
 
 pub trait IntoAccountSharedData: Pod + Discriminator {
@@ -423,7 +410,7 @@ impl<T: Pod + Discriminator> IntoAccountSharedData for T {
 #[cfg(feature = "test_validator")]
 #[derive(Debug, Serialize, Deserialize)]
 struct ComputeUnits {
-	instructions: HashMap<String, InstructionMetrics>,
+	instructions: indexmap::IndexMap<String, InstructionMetrics>,
 	version: String,
 }
 
@@ -444,7 +431,7 @@ pub fn save_compute_units(name: &str, compute_units: u64, description: &str) -> 
 		.context("could not read file")
 		.and_then(|s| serde_json::from_str(&s).context("could not parse JSON"))
 		.unwrap_or(ComputeUnits {
-			instructions: HashMap::new(),
+			instructions: indexmap::indexmap! {},
 			version: "0.0.0".to_string(),
 		});
 
@@ -454,6 +441,8 @@ pub fn save_compute_units(name: &str, compute_units: u64, description: &str) -> 
 			rounded_compute_units: bitflip_program::round_compute_units_up(compute_units),
 			description: description.to_string(),
 		});
+
+	data.instructions.sort_unstable_keys();
 
 	// Write back to file
 	fs::write(path, serde_json::to_string_pretty(&data)?)?;
@@ -483,7 +472,6 @@ pub fn generate_compute_constants() -> std::io::Result<()> {
 	Ok(())
 }
 
-#[cfg(feature = "test_validator")]
 #[macro_export]
 macro_rules! set_snapshot_suffix {
 	($($expr:expr),*) => {
@@ -493,7 +481,6 @@ macro_rules! set_snapshot_suffix {
 	}
 }
 
-#[cfg(feature = "test_validator")]
 #[fixture]
 pub fn testname() -> String {
 	std::thread::current()

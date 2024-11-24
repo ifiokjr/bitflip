@@ -7,6 +7,7 @@ use bitflip_program::BitflipError;
 use bitflip_program::ConfigState;
 use bitflip_program::config_initialize;
 use bitflip_program::get_pda_config;
+use bitflip_program::get_pda_treasury;
 use shared::ToRpcClient;
 use shared::create_admin_keypair;
 use shared::create_authority_keypair;
@@ -17,6 +18,7 @@ use solana_sdk::signature::Keypair;
 use solana_sdk::transaction::TransactionError;
 use solana_sdk::transaction::VersionedTransaction;
 use steel::*;
+use sysvar::rent::Rent;
 use test_utils::create_insta_redaction;
 use test_utils_solana::prelude::*;
 
@@ -71,7 +73,7 @@ async fn create_validator_rpc() -> anyhow::Result<impl ToRpcClient> {
 }
 
 async fn create_banks_client_rpc() -> anyhow::Result<impl ToRpcClient> {
-	let provider = create_program_context_with_factory(|_| {}).await?;
+	let provider = create_program_context_with_factory(|_| Ok(())).await?;
 	Ok(provider)
 }
 
@@ -89,6 +91,7 @@ async fn shared_config_initialize_test<
 	let authority_keypair = create_authority_keypair();
 	let authority = authority_keypair.pubkey();
 	let config = get_pda_config().0;
+	let treasury = get_pda_treasury().0;
 	let recent_blockhash = rpc.get_latest_blockhash().await?;
 	let instruction = config_initialize(&admin, &authority);
 	let compute_limit_instruction = ComputeBudgetInstruction::set_compute_unit_limit(1_400_000);
@@ -110,6 +113,9 @@ async fn shared_config_initialize_test<
 
 	let signature = rpc.send_and_confirm_transaction(&transaction).await?;
 	rpc.confirm_transaction(&signature).await?;
+
+	let treasury_lamports = rpc.get_balance(&treasury).await?;
+	check!(treasury_lamports == Rent::default().minimum_balance(0));
 
 	let config_state_data = rpc.get_account_data(&config).await?;
 	let config_state_account = ConfigState::try_from_bytes(&config_state_data)?;

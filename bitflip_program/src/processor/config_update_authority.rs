@@ -61,11 +61,9 @@ mod tests {
 	use solana_sdk::sysvar::rent::Rent;
 
 	use super::*;
+	use crate::TokenMember;
 	use crate::get_pda_config;
-	use crate::get_pda_mint_bit;
-	use crate::get_pda_mint_gibibit;
-	use crate::get_pda_mint_kibibit;
-	use crate::get_pda_mint_mebibit;
+	use crate::get_pda_mint;
 	use crate::get_pda_treasury;
 	use crate::leak;
 
@@ -192,10 +190,10 @@ mod tests {
 	fn create_account_infos() -> [AccountInfo<'static>; 3] {
 		let (config_key, config_bump) = leak(get_pda_config());
 		let treasury_bump = get_pda_treasury().1;
-		let mint_bit_bump = get_pda_mint_bit().1;
-		let mint_kibibit_bump = get_pda_mint_kibibit().1;
-		let mint_mebibit_bump = get_pda_mint_mebibit().1;
-		let mint_gibibit_bump = get_pda_mint_gibibit().1;
+		let mint_bit_bump = get_pda_mint(TokenMember::Bit).1;
+		let mint_kibibit_bump = get_pda_mint(TokenMember::Kibibit).1;
+		let mint_mebibit_bump = get_pda_mint(TokenMember::Mebibit).1;
+		let mint_gibibit_bump = get_pda_mint(TokenMember::Gibibit).1;
 		let authority_lamports = leak(1_000_000_000);
 		let new_authority_lamports = leak(1_000_000_000);
 		let authority_key = leak(Pubkey::new_unique());

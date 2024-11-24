@@ -3,7 +3,7 @@ use steel::ProgramError;
 #[inline(always)]
 pub fn get_token_amount(tokens: u64, decimals: u8) -> Result<u64, ProgramError> {
 	tokens
-		.checked_mul(10u64.pow(decimals.into()))
+		.checked_mul(10u64.pow(decimals as u32))
 		.ok_or(ProgramError::ArithmeticOverflow)
 }
 

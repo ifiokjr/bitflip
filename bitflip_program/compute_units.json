@@ -1,40 +1,55 @@
 {
-  "instructions": {
-    "token_member_initialize:MiB": {
-      "compute_units": 79142,
-      "rounded_compute_units": 90000,
-      "description": "Initialize a token member"
-    },
-    "config_update_authority": {
-      "compute_units": 2468,
-      "rounded_compute_units": 10000,
-      "description": "Update the authority of the config"
-    },
-    "flip_bit_test": {
-      "compute_units": 76929,
-      "rounded_compute_units": 80000,
-      "description": "Flip a single bit from `0` to `1`"
-    },
-    "game_initialize": {
-      "compute_units": 12766,
-      "rounded_compute_units": 20000,
-      "description": "Initialize the game"
-    },
-    "game_refresh_signer": {
-      "compute_units": 2391,
-      "rounded_compute_units": 10000,
-      "description": "Refresh the signer"
-    },
-    "config_initialize": {
-      "compute_units": 14614,
-      "rounded_compute_units": 20000,
-      "description": "Initialize the config"
-    },
-    "token_group_initialize": {
-      "compute_units": 86591,
-      "rounded_compute_units": 90000,
-      "description": "Initialize the token group"
-    }
-  },
-  "version": "0.0.0"
+	"instructions": {
+		"config_initialize": {
+			"compute_units": 17220,
+			"rounded_compute_units": 20000,
+			"description": "Initialize the config"
+		},
+		"config_update_authority": {
+			"compute_units": 2471,
+			"rounded_compute_units": 10000,
+			"description": "Update the authority of the config"
+		},
+		"flip_bit_test": {
+			"compute_units": 76933,
+			"rounded_compute_units": 80000,
+			"description": "Flip a single bit from `0` to `1`"
+		},
+		"game_initialize": {
+			"compute_units": 12767,
+			"rounded_compute_units": 20000,
+			"description": "Initialize the game"
+		},
+		"game_refresh_signer": {
+			"compute_units": 2392,
+			"rounded_compute_units": 10000,
+			"description": "Refresh the signer"
+		},
+		"token_group_initialize": {
+			"compute_units": 86591,
+			"rounded_compute_units": 90000,
+			"description": "Initialize the token group"
+		},
+		"token_initialize:bit": {
+			"compute_units": 84407,
+			"rounded_compute_units": 90000,
+			"description": "Initialize group token: Bit"
+		},
+		"token_initialize:gibibit": {
+			"compute_units": 76902,
+			"rounded_compute_units": 80000,
+			"description": "Initialize member token: GibiBit"
+		},
+		"token_initialize:kibibit": {
+			"compute_units": 76901,
+			"rounded_compute_units": 80000,
+			"description": "Initialize member token: KibiBit"
+		},
+		"token_initialize:mebibit": {
+			"compute_units": 76898,
+			"rounded_compute_units": 80000,
+			"description": "Initialize member token: MebiBit"
+		}
+	},
+	"version": "0.0.0"
 }

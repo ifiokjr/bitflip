@@ -11,14 +11,14 @@ use crate::SEED_PREFIX;
 use crate::SEED_SECTION;
 use crate::SectionState;
 use crate::TOKEN_DECIMALS;
+use crate::TokenMember;
 use crate::cpi::create_associated_token_account_idempotent;
 use crate::cpi::transfer_checked;
 use crate::create_pda_config;
 use crate::create_pda_game;
-use crate::create_pda_mint_bit;
+use crate::create_pda_mint;
 use crate::create_pda_section;
-use crate::get_player_token_account;
-use crate::get_section_token_account;
+use crate::get_token_account;
 
 pub fn process_flip_bit(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 	// parse the instruction data.
@@ -64,17 +64,16 @@ pub fn process_flip_bit(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
 		return Err(BitflipError::InvalidSectionIndex.into());
 	}
 
-	let player_bit_token_account_key = get_player_token_account(player_info.key, mint_bit_info.key);
+	let player_bit_token_account_key = get_token_account(player_info.key, mint_bit_info.key);
 	let config_key = create_pda_config(config_state.bump)?;
 	let game_key = create_pda_game(game_state.game_index, game_state.bump)?;
-	let mint_bit_key = create_pda_mint_bit(config_state.mint_bit_bump)?;
+	let mint_bit_key = create_pda_mint(TokenMember::Bit, config_state.mint_bit_bump)?;
 	let section_key = create_pda_section(
 		game_state.game_index,
 		section_state.section_index,
 		section_state.bump,
 	)?;
-	let section_bit_token_account_key =
-		get_section_token_account(section_info.key, mint_bit_info.key);
+	let section_bit_token_account_key = get_token_account(section_info.key, mint_bit_info.key);
 
 	if player_bit_token_account_key.ne(player_bit_token_account_info.key)
 		|| config_key.ne(config_info.key)
@@ -235,8 +234,8 @@ mod tests {
 	use super::*;
 	use crate::get_pda_config;
 	use crate::get_pda_game;
-	use crate::get_pda_mint_bit;
-	use crate::get_player_bit_token_account;
+	use crate::get_pda_mint;
+	use crate::get_player_token_account;
 	use crate::leak;
 
 	#[test_log::test]
@@ -543,7 +542,8 @@ mod tests {
 		let player_key = leak(Pubkey::new_unique());
 		let player_lamports = leak(0);
 		let player_data = leak(vec![]);
-		let player_bit_token_account_key = leak(get_player_bit_token_account(player_key));
+		let player_bit_token_account_key =
+			leak(get_player_token_account(player_key, TokenMember::Bit));
 		let player_bit_token_account_lamports = leak(0);
 		let player_bit_token_account_data = leak(vec![]);
 		let config_key = leak(get_pda_config().0);
@@ -551,7 +551,7 @@ mod tests {
 		let config_data = {
 			let config_bump = get_pda_config().1;
 			let mut data = vec![0u8; 8];
-			let mint_bit_bump = get_pda_mint_bit().1;
+			let mint_bit_bump = get_pda_mint(TokenMember::Bit).1;
 			data[0] = ConfigState::discriminator();
 			data.append(
 				&mut ConfigState::new(
@@ -586,7 +586,7 @@ mod tests {
 			);
 			leak(data)
 		};
-		let mint_bit_key = leak(get_pda_mint_bit().0);
+		let mint_bit_key = leak(get_pda_mint(TokenMember::Bit).0);
 		let mint_bit_lamports = leak(0);
 		let mint_bit_data = leak(vec![]);
 		let section_key = leak(Pubkey::new_unique());

@@ -132,10 +132,6 @@ pub(crate) async fn create_program_context_with_factory<F: Fn(&mut ProgramTest)>
 	Ok(context.into())
 }
 
-pub async fn create_program_context() -> Result<TestRpcProvider> {
-	create_program_context_with_factory(|_| {}).await
-}
-
 /// The program client using the admin wallet account
 pub fn get_admin_program(rpc: &SolanaRpcClient) -> TestBitflipLegacyProgramClient {
 	get_program(rpc, &create_admin_keypair())

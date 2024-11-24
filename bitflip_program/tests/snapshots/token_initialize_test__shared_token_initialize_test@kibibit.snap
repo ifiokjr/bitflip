@@ -1,6 +1,6 @@
 ---
-source: bitflip_program/tests/token_member_initialize_test.rs
-expression: mint_member_account
+source: bitflip_program/tests/token_initialize_test.rs
+expression: mint_account
 snapshot_kind: text
 ---
 {
@@ -16,7 +16,7 @@ snapshot_kind: text
         "extension": "metadataPointer",
         "state": {
           "authority": "[treasury:pubkey]",
-          "metadataAddress": "[mint_member:pubkey]"
+          "metadataAddress": "[mint:pubkey]"
         }
       },
       {
@@ -29,14 +29,14 @@ snapshot_kind: text
         "extension": "groupMemberPointer",
         "state": {
           "authority": "[treasury:pubkey]",
-          "memberAddress": "GdTMLV8p7vx4uQVjbFVzSWYVsgNr75Ty7NW4XuLwZSKp"
+          "memberAddress": "[mint:pubkey]"
         }
       },
       {
         "extension": "tokenMetadata",
         "state": {
           "updateAuthority": "[treasury:pubkey]",
-          "mint": "[mint_member:pubkey]",
+          "mint": "[mint:pubkey]",
           "name": "KibiBit",
           "symbol": "KiB",
           "uri": "https://bitflip.art/kbit-meta.json",

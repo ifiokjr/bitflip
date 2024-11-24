@@ -11,7 +11,7 @@ use shared::ToRpcClient;
 use shared::create_config_accounts;
 use shared::create_game_state;
 use shared::create_program_context_with_factory;
-use shared::create_token_group_accounts;
+use shared::create_token_accounts;
 use solana_sdk::signature::Keypair;
 use solana_sdk::transaction::VersionedTransaction;
 use steel::*;
@@ -59,7 +59,7 @@ async fn create_banks_client_rpc(
 ) -> anyhow::Result<impl ToRpcClient> {
 	let provider = create_program_context_with_factory(|p| {
 		let mut config_state_accounts = create_config_accounts();
-		config_state_accounts.extend(create_token_group_accounts());
+		config_state_accounts.extend(create_token_accounts()?);
 
 		for (key, account) in config_state_accounts {
 			p.add_account(key, account.into());
@@ -72,6 +72,8 @@ async fn create_banks_client_rpc(
 			refresh_signer.pubkey(),
 			refresh_signer_account.clone().into(),
 		);
+
+		Ok(())
 	})
 	.await?;
 

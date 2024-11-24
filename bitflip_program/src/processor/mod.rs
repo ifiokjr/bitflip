@@ -5,7 +5,7 @@ mod flip_bit;
 mod game_initialize;
 mod game_refresh_signer;
 mod token_group_initialize;
-mod token_member_initialize;
+mod token_initialize;
 use steel::*;
 
 pub use self::config_initialize::*;
@@ -15,7 +15,7 @@ pub use self::flip_bit::*;
 pub use self::game_initialize::*;
 pub use self::game_refresh_signer::*;
 pub use self::token_group_initialize::*;
-pub use self::token_member_initialize::*;
+pub use self::token_initialize::*;
 use crate::ID;
 
 #[repr(u8)]
@@ -24,8 +24,8 @@ pub enum BitflipInstruction {
 	EventCpi = 0,
 	ConfigInitialize = 1,
 	ConfigUpdateAuthority = 2,
-	TokenGroupInitialize = 3,
-	TokenMemberInitialize = 4,
+	TokenInitialize = 3,
+	TokenGroupInitialize = 4,
 	GameInitialize = 5,
 	GameRefreshSigner = 6,
 	FlipBit = 20,
@@ -43,9 +43,7 @@ pub fn process_instruction(
 		BitflipInstruction::ConfigInitialize => process_config_initialize(accounts)?,
 		BitflipInstruction::ConfigUpdateAuthority => process_config_update_authority(accounts)?,
 		BitflipInstruction::TokenGroupInitialize => process_token_group_initialize(accounts)?,
-		BitflipInstruction::TokenMemberInitialize => {
-			process_token_member_initialize(accounts, data)?
-		}
+		BitflipInstruction::TokenInitialize => process_token_initialize(accounts, data)?,
 		BitflipInstruction::GameInitialize => process_game_initialize(accounts)?,
 		BitflipInstruction::GameRefreshSigner => process_game_refresh_signer(accounts)?,
 		BitflipInstruction::FlipBit => process_flip_bit(accounts, data)?,

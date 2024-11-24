@@ -4,6 +4,7 @@ mod errors;
 mod events;
 #[cfg(feature = "client")]
 mod instructions;
+mod loaders;
 mod pda;
 mod processor;
 mod state;
@@ -16,6 +17,7 @@ pub use crate::errors::*;
 pub use crate::events::*;
 #[cfg(feature = "client")]
 pub use crate::instructions::*;
+pub use crate::loaders::*;
 pub use crate::pda::*;
 pub use crate::processor::*;
 pub use crate::state::*;
