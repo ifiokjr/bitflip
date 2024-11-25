@@ -122,18 +122,7 @@ async fn shared_config_initialize_test<
 	let authority_redaction = create_insta_redaction(authority, "treasury");
 	insta::assert_compact_json_snapshot!(config_state_account,{
 		".authority" => insta::dynamic_redaction(authority_redaction),
-	}, @r#"
- {
-   "authority": "[treasury]",
-   "bump": 254,
-   "treasuryBump": 255,
-   "mintBitBump": 255,
-   "mintKibibitBump": 255,
-   "mintMebibitBump": 255,
-   "mintGibibitBump": 255,
-   "gameIndex": 0
- }
- "#);
+	});
 
 	Ok(compute_units)
 }

@@ -3,15 +3,15 @@
 use std::future::Future;
 
 use assert2::check;
-use bitflip_program::BitflipError;
-use bitflip_program::ConfigState;
 use bitflip_program::config_update_authority;
 use bitflip_program::get_pda_config;
-use shared::ToRpcClient;
+use bitflip_program::BitflipError;
+use bitflip_program::ConfigState;
 use shared::create_authority_keypair;
 use shared::create_config_accounts;
 use shared::create_program_context_with_factory;
 use shared::create_token_accounts;
+use shared::ToRpcClient;
 use solana_sdk::instruction::InstructionError;
 use solana_sdk::signature::Keypair;
 use solana_sdk::transaction::TransactionError;
@@ -59,7 +59,7 @@ async fn authority_must_change_test_validator() -> anyhow::Result<()> {
 async fn create_banks_client_rpc() -> anyhow::Result<impl ToRpcClient> {
 	let provider = create_program_context_with_factory(|p| {
 		let mut accounts = create_config_accounts();
-		accounts.extend(create_token_accounts()?);
+		accounts.extend(create_token_accounts(false)?);
 
 		for (key, account) in accounts {
 			p.add_account(key, account.into());
@@ -75,7 +75,7 @@ async fn create_banks_client_rpc() -> anyhow::Result<impl ToRpcClient> {
 #[cfg(feature = "test_validator")]
 async fn create_validator_rpc() -> anyhow::Result<impl ToRpcClient> {
 	let mut config_state_accounts = create_config_accounts();
-	config_state_accounts.extend(create_token_accounts()?);
+	config_state_accounts.extend(create_token_accounts(false)?);
 
 	let runner = shared::create_runner_with_accounts(config_state_accounts).await;
 
@@ -117,18 +117,7 @@ async fn shared_config_update_authority_test<
 	let authority_redaction = create_insta_redaction(new_authority, "new_authority:pubkey");
 	insta::assert_compact_json_snapshot!(config_state_account,{
 		".authority" => insta::dynamic_redaction(authority_redaction),
-	}, @r#"
- {
-   "authority": "[new_authority:pubkey]",
-   "bump": 254,
-   "treasuryBump": 255,
-   "mintBitBump": 255,
-   "mintKibibitBump": 255,
-   "mintMebibitBump": 255,
-   "mintGibibitBump": 255,
-   "gameIndex": 0
- }
- "#);
+	});
 
 	Ok(compute_units)
 }

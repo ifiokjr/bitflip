@@ -6,13 +6,6 @@ use std::hash::RandomState;
 use std::path::Path;
 
 use anyhow::Context;
-use bitflip_program::ConfigState;
-use bitflip_program::EARNED_TOKENS_PER_SECTION;
-use bitflip_program::GameState;
-use bitflip_program::ID;
-use bitflip_program::MINIMUM_FLIPS_PER_SECTION;
-use bitflip_program::SectionState;
-use bitflip_program::TokenMember;
 use bitflip_program::get_pda_config;
 use bitflip_program::get_pda_game;
 use bitflip_program::get_pda_mint;
@@ -21,6 +14,13 @@ use bitflip_program::get_pda_treasury;
 use bitflip_program::get_section_token_account;
 use bitflip_program::get_token_amount;
 use bitflip_program::get_treasury_token_account;
+use bitflip_program::ConfigState;
+use bitflip_program::GameState;
+use bitflip_program::SectionState;
+use bitflip_program::TokenMember;
+use bitflip_program::EARNED_TOKENS_PER_SECTION;
+use bitflip_program::ID;
+use bitflip_program::MINIMUM_FLIPS_PER_SECTION;
 use rstest::fixture;
 use serde::Deserialize;
 use serde::Serialize;
@@ -32,26 +32,32 @@ use solana_sdk::pubkey::Pubkey;
 use solana_sdk::rent::Rent;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signature::Signer;
+use spl_pod::bytemuck::pod_get_packed_len;
 use spl_pod::primitives::PodBool;
-use spl_token_2022::extension::BaseStateWithExtensionsMut;
-use spl_token_2022::extension::ExtensionType;
-use spl_token_2022::extension::PodStateWithExtensionsMut;
 use spl_token_2022::extension::group_member_pointer::GroupMemberPointer;
 use spl_token_2022::extension::group_pointer::GroupPointer;
 use spl_token_2022::extension::metadata_pointer::MetadataPointer;
 use spl_token_2022::extension::mint_close_authority::MintCloseAuthority;
+use spl_token_2022::extension::BaseStateWithExtensions;
+use spl_token_2022::extension::BaseStateWithExtensionsMut;
+use spl_token_2022::extension::ExtensionType;
+use spl_token_2022::extension::PodStateWithExtensionsMut;
 use spl_token_2022::pod::PodAccount;
 use spl_token_2022::pod::PodCOption;
 use spl_token_2022::pod::PodMint;
+use spl_token_group_interface::state::TokenGroup;
+use spl_token_group_interface::state::TokenGroupMember;
+use spl_token_metadata_interface::state::TokenMetadata;
+use spl_type_length_value::variable_len_pack::VariableLenPack;
 use steel::*;
 use test_utils::SECRET_KEY_ADMIN;
 use test_utils::SECRET_KEY_AUTHORITY;
 use test_utils::SECRET_KEY_TREASURY;
 use test_utils::SECRET_KEY_WALLET;
-use test_utils_solana::ProgramTest;
-use test_utils_solana::TestRpcProvider;
 use test_utils_solana::processor;
 use test_utils_solana::solana_sdk::account::Account;
+use test_utils_solana::ProgramTest;
+use test_utils_solana::TestRpcProvider;
 use wallet_standard_wallets::MemoryWallet;
 use wasm_client_solana::SolanaRpcClient;
 
@@ -136,18 +142,27 @@ pub(crate) async fn create_program_context_with_factory<
 	let mut program_test = create_program_test();
 
 	factory(&mut program_test)?;
-	program_test.add_account(create_admin_keypair().pubkey(), Account {
-		lamports: sol_to_lamports(10.0),
-		..Account::default()
-	});
-	program_test.add_account(create_authority_keypair().pubkey(), Account {
-		lamports: sol_to_lamports(10.0),
-		..Account::default()
-	});
-	program_test.add_account(create_wallet_keypair().pubkey(), Account {
-		lamports: sol_to_lamports(10.0),
-		..Account::default()
-	});
+	program_test.add_account(
+		create_admin_keypair().pubkey(),
+		Account {
+			lamports: sol_to_lamports(10.0),
+			..Account::default()
+		},
+	);
+	program_test.add_account(
+		create_authority_keypair().pubkey(),
+		Account {
+			lamports: sol_to_lamports(10.0),
+			..Account::default()
+		},
+	);
+	program_test.add_account(
+		create_wallet_keypair().pubkey(),
+		Account {
+			lamports: sol_to_lamports(10.0),
+			..Account::default()
+		},
+	);
 
 	let context = program_test.start_with_context().await;
 
@@ -202,13 +217,15 @@ pub fn create_config_accounts() -> HashMap<Pubkey, AccountSharedData> {
 	map
 }
 
-pub fn create_token_accounts() -> anyhow::Result<HashMap<Pubkey, AccountSharedData>> {
+pub fn create_token_accounts(
+	with_group: bool,
+) -> anyhow::Result<HashMap<Pubkey, AccountSharedData>> {
 	let mut map = HashMap::new();
 	let treasury = get_pda_treasury().0;
 	for ii in 0..4 {
 		let member = TokenMember::try_from(ii)?;
 		let mint = get_pda_mint(member).0;
-		let mint_data = create_mint_data(member, treasury)?;
+		let mint_data = create_mint_data(member, treasury, with_group)?;
 		map.insert(
 			mint,
 			AccountSharedData::create(
@@ -239,9 +256,31 @@ pub fn create_token_accounts() -> anyhow::Result<HashMap<Pubkey, AccountSharedDa
 	Ok(map)
 }
 
-fn create_mint_data(member: TokenMember, treasury: Pubkey) -> anyhow::Result<Vec<u8>> {
+fn create_mint_data(
+	member: TokenMember,
+	treasury: Pubkey,
+	with_group: bool,
+) -> anyhow::Result<Vec<u8>> {
 	let mint = get_pda_mint(member).0;
-	let mut mint_data = vec![0u8; member.initial_mint_space()?];
+	let token_metadata = TokenMetadata {
+		name: member.name().into(),
+		symbol: member.symbol().into(),
+		uri: member.uri().into(),
+		update_authority: Some(treasury).try_into()?,
+		mint,
+		additional_metadata: vec![],
+	};
+	let mut mint_space = member.initial_mint_space()? + 4 + token_metadata.get_packed_len()?;
+
+	if with_group {
+		mint_space += if member.parent().is_none() {
+			pod_get_packed_len::<TokenGroup>()
+		} else {
+			pod_get_packed_len::<TokenGroupMember>()
+		};
+	}
+
+	let mut mint_data = vec![0u8; mint_space];
 	let mut mint_state =
 		PodStateWithExtensionsMut::<PodMint>::unpack_uninitialized(&mut mint_data)?;
 	let metadata_pointer = mint_state.init_extension::<MetadataPointer>(true)?;
@@ -259,6 +298,25 @@ fn create_mint_data(member: TokenMember, treasury: Pubkey) -> anyhow::Result<Vec
 		let member_pointer = mint_state.init_extension::<GroupMemberPointer>(true)?;
 		member_pointer.member_address = Some(mint).try_into()?;
 		member_pointer.authority = Some(treasury).try_into()?;
+	}
+
+	// token metadata
+	mint_state.init_variable_len_extension(&token_metadata, false)?;
+
+	if with_group {
+		if let Some(parent) = member.parent() {
+			// token group member
+			let parent_mint = get_pda_mint(parent).0;
+			let member_number: u64 = ((member as u8) - 1) as u64;
+			let new_extension = TokenGroupMember::new(&mint, &parent_mint, member_number);
+			let extension = mint_state.init_extension::<TokenGroupMember>(true)?;
+			*extension = new_extension;
+		} else {
+			// token group
+			let new_extension = TokenGroup::new(&mint, Some(treasury).try_into()?, 8);
+			let extension = mint_state.init_extension::<TokenGroup>(true)?;
+			*extension = new_extension;
+		}
 	}
 
 	*mint_state.base = PodMint {
@@ -435,12 +493,14 @@ pub fn save_compute_units(name: &str, compute_units: u64, description: &str) -> 
 			version: "0.0.0".to_string(),
 		});
 
-	data.instructions
-		.insert(name.to_string(), InstructionMetrics {
+	data.instructions.insert(
+		name.to_string(),
+		InstructionMetrics {
 			compute_units,
 			rounded_compute_units: bitflip_program::round_compute_units_up(compute_units),
 			description: description.to_string(),
-		});
+		},
+	);
 
 	data.instructions.sort_unstable_keys();
 

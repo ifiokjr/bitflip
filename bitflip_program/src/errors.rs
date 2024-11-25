@@ -1,4 +1,5 @@
 use steel::*;
+use thiserror::Error;
 
 use crate::BITFLIP_SECTION_LENGTH;
 

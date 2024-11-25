@@ -3,33 +3,23 @@ use steel::*;
 use sysvar::rent::Rent;
 
 use super::BitflipInstruction;
-use crate::BitflipError;
-use crate::ConfigState;
-use crate::ID;
-use crate::SEED_PREFIX;
-use crate::SEED_TREASURY;
-use crate::TokenMember;
-use crate::cpi::token_group_initialize;
-use crate::cpi::token_group_member_initialize;
+use crate::cpi::initialize_token_group;
+use crate::cpi::initialize_token_group_member;
 use crate::create_pda_config;
 use crate::create_pda_mint;
 use crate::create_pda_treasury;
+use crate::BitflipError;
+use crate::ConfigState;
+use crate::TokenMember;
+use crate::ID;
+use crate::SEED_PREFIX;
+use crate::SEED_TREASURY;
 
 pub fn process_token_group_initialize(accounts: &[AccountInfo]) -> ProgramResult {
 	use TokenMember::*;
 	// load accounts
-	let [
-		authority_info,
-		config_info,
-		treasury_info,
-		mint_bit_info,
-		mint_kibibit_info,
-		mint_mebibit_info,
-		mint_gibibit_info,
-		associated_token_program_info,
-		token_program_info,
-		system_program_info,
-	] = accounts
+	let [authority_info, config_info, treasury_info, mint_bit_info, mint_kibibit_info, mint_mebibit_info, mint_gibibit_info, associated_token_program_info, token_program_info, system_program_info] =
+		accounts
 	else {
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};
@@ -71,12 +61,13 @@ pub fn process_token_group_initialize(accounts: &[AccountInfo]) -> ProgramResult
 	let rent_sysvar = Rent::get()?;
 
 	msg!("{}: initialize group", Bit.name());
-	token_group_initialize(
+	initialize_token_group(
 		token_program_info,
 		mint_bit_info,
 		mint_bit_info,
 		treasury_info,
 		&[&treasury_seeds[..]],
+		8,
 	)?;
 
 	for (info, member) in [
@@ -85,7 +76,7 @@ pub fn process_token_group_initialize(accounts: &[AccountInfo]) -> ProgramResult
 		(mint_gibibit_info, Gibibit),
 	] {
 		msg!("{}: initialize group member", member.name());
-		token_group_member_initialize(
+		initialize_token_group_member(
 			token_program_info,
 			info,
 			info,
@@ -131,11 +122,11 @@ mod tests {
 	use solana_sdk::native_loader;
 
 	use super::*;
-	use crate::BitflipError;
 	use crate::get_pda_config;
 	use crate::get_pda_mint;
 	use crate::get_pda_treasury;
 	use crate::leak;
+	use crate::BitflipError;
 
 	#[test_log::test]
 	fn validation_should_pass() -> anyhow::Result<()> {

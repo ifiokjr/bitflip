@@ -87,12 +87,13 @@ pub fn group_pointer_initialize<'info>(
 	)
 }
 
-pub fn token_group_initialize<'info>(
+pub fn initialize_token_group<'info>(
 	token_program_info: &AccountInfo<'info>,
 	group_info: &AccountInfo<'info>,
 	mint_info: &AccountInfo<'info>,
 	mint_authority_info: &AccountInfo<'info>,
 	signers_seeds: &[&[&[u8]]],
+	max_size: u64,
 ) -> ProgramResult {
 	let ix = spl_token_group_interface::instruction::initialize_group(
 		token_program_info.key,
@@ -100,7 +101,7 @@ pub fn token_group_initialize<'info>(
 		mint_info.key,
 		mint_authority_info.key,
 		Some(*mint_authority_info.key),
-		8,
+		max_size,
 	);
 	solana_program::program::invoke_signed(
 		&ix,
@@ -133,7 +134,7 @@ pub fn group_member_pointer_initialize<'info>(
 	)
 }
 
-pub fn token_group_member_initialize<'info>(
+pub fn initialize_token_group_member<'info>(
 	token_program_info: &AccountInfo<'info>,
 	member_info: &AccountInfo<'info>,
 	member_mint_info: &AccountInfo<'info>,

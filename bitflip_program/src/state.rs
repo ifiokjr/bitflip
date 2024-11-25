@@ -22,13 +22,22 @@ pub enum BitflipAccount {
 	SectionState = 2,
 }
 
-const_assert!(std::mem::size_of::<ConfigState>() == 39);
-const_assert!(std::mem::size_of::<GameState>() == 83);
-const_assert!(std::mem::size_of::<SectionState>() == 559);
+const_assert!(ConfigState::space() == 80);
+const_assert!(GameState::space() == 124);
+const_assert!(SectionState::space() == 600);
 
 account!(BitflipAccount, ConfigState);
 account!(BitflipAccount, GameState);
 account!(BitflipAccount, SectionState);
+
+pub trait AccountVersion: Pod {
+	/// The latest version of the account which should be used as the migration
+	/// target and the default value for creating new accounts.
+	const VERSION: u8;
+
+	/// Migrate the account to the latest version.
+	fn migrate(&mut self) -> Result<(), ProgramError>;
+}
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Pod, Zeroable)]
@@ -36,6 +45,9 @@ account!(BitflipAccount, SectionState);
 #[cfg_attr(feature = "client", derive(typed_builder::TypedBuilder))]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct ConfigState {
+	/// The version of the state.
+	#[cfg_attr(feature = "client", builder(default = ConfigState::VERSION))]
+	pub version: u8,
 	/// The authority which can update this config.
 	#[cfg_attr(
 		feature = "serde",
@@ -55,15 +67,22 @@ pub struct ConfigState {
 	pub mint_mebibit_bump: u8,
 	/// The mint account bump for GIBIBIT.
 	pub mint_gibibit_bump: u8,
-	/// There will be a maximum of 256 games.
+	/// There will be a maximum of 8 games.
 	pub game_index: u8,
+	/// Extra space for future use.
+	#[cfg_attr(feature = "client", builder(default))]
+	pub _padding: [u8; 32],
+}
+
+impl AccountVersion for ConfigState {
+	const VERSION: u8 = 0;
+
+	fn migrate(&mut self) -> Result<(), ProgramError> {
+		Ok(())
+	}
 }
 
 impl ConfigState {
-	pub const fn space() -> usize {
-		8 + std::mem::size_of::<Self>()
-	}
-
 	pub fn new(
 		authority: Pubkey,
 		bump: u8,
@@ -74,6 +93,7 @@ impl ConfigState {
 		mint_gibibit_bump: u8,
 	) -> ConfigState {
 		ConfigState {
+			version: Self::VERSION,
 			authority,
 			bump,
 			treasury_bump,
@@ -82,6 +102,7 @@ impl ConfigState {
 			mint_mebibit_bump,
 			mint_gibibit_bump,
 			game_index: 0,
+			_padding: [0; 32],
 		}
 	}
 }
@@ -92,6 +113,9 @@ impl ConfigState {
 #[cfg_attr(feature = "client", derive(typed_builder::TypedBuilder))]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct GameState {
+	/// The version of the state.
+	#[cfg_attr(feature = "client", builder(default = GameState::VERSION))]
+	pub version: u8,
 	/// This is a refresh signer created and maintained by the backend. It needs
 	/// to be provided to update the access signer. It will need to be updated
 	/// after every game.
@@ -123,11 +147,23 @@ pub struct GameState {
 	pub section_index: u8,
 	/// The bump for this account.
 	pub bump: u8,
+	/// Extra space for future use.
+	#[cfg_attr(feature = "client", builder(default))]
+	pub _padding: [u8; 32],
+}
+
+impl AccountVersion for GameState {
+	const VERSION: u8 = 0;
+
+	fn migrate(&mut self) -> Result<(), ProgramError> {
+		Ok(())
+	}
 }
 
 impl GameState {
 	pub fn new(access_signer: Pubkey, refresh_signer: Pubkey, index: u8, bump: u8) -> Self {
 		Self {
+			version: GameState::VERSION,
 			refresh_signer,
 			access_signer,
 			access_expiry: 0.into(),
@@ -135,6 +171,7 @@ impl GameState {
 			section_index: 0,
 			game_index: index,
 			bump,
+			_padding: [0; 32],
 		}
 	}
 
@@ -183,6 +220,8 @@ impl GameState {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct SectionState {
+	/// The version of the state.
+	pub version: u8,
 	/// The state of the bits that are represented as flippable bits on the
 	/// frontend.
 	#[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
@@ -205,12 +244,23 @@ pub struct SectionState {
 	pub section_index: u8,
 	/// The bump for this section state.
 	pub bump: u8,
+	/// Extra space for future versions.
+	pub _padding: [u8; 32],
+}
+
+impl AccountVersion for SectionState {
+	const VERSION: u8 = 0;
+
+	fn migrate(&mut self) -> Result<(), ProgramError> {
+		Ok(())
+	}
 }
 
 impl SectionState {
 	/// Create a new section state in the client. Useful for testing.
 	pub fn new(owner: Pubkey, game_index: u8, section_index: u8, bump: u8) -> Self {
 		Self {
+			version: SectionState::VERSION,
 			data: [0.into(); BITFLIP_SECTION_LENGTH],
 			owner,
 			flips: 0.into(),
@@ -219,12 +269,14 @@ impl SectionState {
 			bump,
 			game_index,
 			section_index,
+			_padding: [0; 32],
 		}
 	}
 
 	/// Initialize the section state without touching the data to prevent using
 	/// compute units.
 	pub fn init(&mut self, owner: Pubkey, index: u8, bump: u8) {
+		self.version = SectionState::VERSION;
 		self.owner = owner;
 		self.section_index = index;
 		self.bump = bump;
@@ -400,6 +452,7 @@ mod tests {
 	) {
 		set_snapshot_suffix!("{}", testname);
 		let section = SectionState {
+			version: 0,
 			data: [PodU16::from(0); BITFLIP_SECTION_LENGTH],
 			owner: Pubkey::default(),
 			flips: PodU32::from(flips),
@@ -408,6 +461,7 @@ mod tests {
 			game_index: 0,
 			section_index: 0,
 			bump: 0,
+			_padding: [0; 32],
 		};
 
 		let lamports = section.get_token_price_in_lamports(remaining_time);

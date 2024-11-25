@@ -1,0 +1,50 @@
+---
+source: bitflip_program/tests/flip_bit_test.rs
+expression: section_state
+snapshot_kind: text
+---
+{
+  "version": 0,
+  "data": "[data]",
+  "owner": "[owner:pubkey]",
+  "flips": 1,
+  "on": 1,
+  "off": 4095,
+  "gameIndex": 0,
+  "sectionIndex": 0,
+  "bump": 254,
+  "padding": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ]
+}

@@ -1,0 +1,57 @@
+---
+source: bitflip_program/tests/token_group_initialize_test.rs
+expression: mint_account
+snapshot_kind: text
+---
+{
+  "type": "mint",
+  "info": {
+    "mintAuthority": "[treasury:pubkey]",
+    "supply": "1073741824",
+    "decimals": 0,
+    "isInitialized": true,
+    "freezeAuthority": "[treasury:pubkey]",
+    "extensions": [
+      {
+        "extension": "metadataPointer",
+        "state": {
+          "authority": "[treasury:pubkey]",
+          "metadataAddress": "[mint:pubkey]"
+        }
+      },
+      {
+        "extension": "mintCloseAuthority",
+        "state": {
+          "closeAuthority": "[treasury:pubkey]"
+        }
+      },
+      {
+        "extension": "groupPointer",
+        "state": {
+          "authority": "[treasury:pubkey]",
+          "groupAddress": "[mint:pubkey]"
+        }
+      },
+      {
+        "extension": "tokenMetadata",
+        "state": {
+          "updateAuthority": "[treasury:pubkey]",
+          "mint": "[mint:pubkey]",
+          "name": "Bit",
+          "symbol": "B",
+          "uri": "https://bitflip.art/bit-meta.json",
+          "additionalMetadata": []
+        }
+      },
+      {
+        "extension": "tokenGroup",
+        "state": {
+          "updateAuthority": "[treasury:pubkey]",
+          "mint": "[mint:pubkey]",
+          "size": 3,
+          "maxSize": 8
+        }
+      }
+    ]
+  }
+}

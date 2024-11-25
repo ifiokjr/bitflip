@@ -39,8 +39,9 @@
     "jsr:@std/path@*": "1.0.6",
     "jsr:@std/path@0.221": "0.221.0",
     "jsr:@std/path@0.221.0": "0.221.0",
-    "jsr:@std/path@1": "1.0.6",
-    "jsr:@std/path@^1.0.6": "1.0.6",
+    "jsr:@std/path@1": "1.0.8",
+    "jsr:@std/path@^1.0.6": "1.0.8",
+    "jsr:@std/path@^1.0.8": "1.0.8",
     "jsr:@std/semver@1": "1.0.3",
     "jsr:@std/semver@~0.224.3": "0.224.3",
     "jsr:@std/streams@0.221.0": "0.221.0",
@@ -48,19 +49,18 @@
     "jsr:@std/testing@0.225": "0.225.3",
     "jsr:@std/text@1.0.0-rc.1": "1.0.0-rc.1",
     "npm:@conventional-commits/parser@~0.4.1": "0.4.1",
-    "npm:@egoist/tailwindcss-icons@^1.8.1": "1.8.1_tailwindcss@3.4.13__postcss@8.4.47",
-    "npm:@iconify/json@^2.2.252": "2.2.252",
+    "npm:@egoist/tailwindcss-icons@^1.8.1": "1.8.1_tailwindcss@3.4.1__postcss@8.4.47",
+    "npm:@iconify/json@^2.2.276": "2.2.276",
     "npm:@octokit/rest@21": "21.0.2_@octokit+core@6.1.2",
-    "npm:@playwright/test@^1.47.1": "1.47.2",
-    "npm:@solana/web3.js@^1.95.3": "1.95.3",
-    "npm:@tailwindcss/typography@~0.5.15": "0.5.15_tailwindcss@3.4.13__postcss@8.4.47",
-    "npm:@types/node@*": "22.5.4",
+    "npm:@playwright/test@^1.49.0": "1.49.0",
+    "npm:@solana/web3.js@^1.95.5": "1.95.5",
+    "npm:@tailwindcss/typography@~0.5.15": "0.5.15_tailwindcss@3.4.1__postcss@8.4.47",
     "npm:bs58@6": "6.0.0",
-    "npm:daisyui@^4.12.10": "4.12.10",
-    "npm:playwright@^1.47.2": "1.47.2",
-    "npm:tailwindcss-animated@^1.1.2": "1.1.2_tailwindcss@3.4.13__postcss@8.4.47",
+    "npm:daisyui@^4.12.14": "4.12.14",
+    "npm:playwright@^1.49.0": "1.49.0",
+    "npm:tailwindcss-animated@^1.1.2": "1.1.2_tailwindcss@3.4.1__postcss@8.4.47",
     "npm:tailwindcss@3.4.1": "3.4.1_postcss@8.4.47",
-    "npm:tailwindcss@^3.4.13": "3.4.13_postcss@8.4.47",
+    "npm:tailwindcss@^3.4.15": "3.4.15_postcss@8.4.47",
     "npm:ts-toolbelt@9.6.0": "9.6.0",
     "npm:unzipper@~0.12.3": "0.12.3"
   },
@@ -266,6 +266,9 @@
     "@std/path@1.0.6": {
       "integrity": "ab2c55f902b380cf28e0eec501b4906e4c1960d13f00e11cfbcd21de15f18fed"
     },
+    "@std/path@1.0.8": {
+      "integrity": "548fa456bb6a04d3c1a1e7477986b6cffbce95102d0bb447c67c4ee70e0364be"
+    },
     "@std/semver@0.224.3": {
       "integrity": "7bb34b5ad46de2c0c73de0ca3e30081ef64b4361f66abd57c84ff1011c6a1233"
     },
@@ -308,8 +311,8 @@
     "@antfu/utils@0.7.10": {
       "integrity": "sha512-+562v9k4aI80m1+VuMHehNJWLOFjBnXn3tdOitzD0il5b7smkSBal4+a3oKiQTbrwMmN/TBUMDvbdoWDehgOww=="
     },
-    "@babel/runtime@7.25.6": {
-      "integrity": "sha512-VBj9MYyDb9tuLq7yzqjgzt6Q+IBQLrGZfdjOekyEirZPHxXWoTSGUTMrpsfi58Up73d13NfYLv8HT9vmznjzhQ==",
+    "@babel/runtime@7.26.0": {
+      "integrity": "sha512-FDSOghenHTiToteC/QRlv2q3DhPZ/oOXTBoirfWNx1Cx3TMVcGWQtMMmQcSvb/JjpNeGzx8Pq/b4fKEJuWm1sw==",
       "dependencies": [
         "regenerator-runtime"
       ]
@@ -321,15 +324,15 @@
         "unist-util-visit-parents"
       ]
     },
-    "@egoist/tailwindcss-icons@1.8.1_tailwindcss@3.4.13__postcss@8.4.47": {
+    "@egoist/tailwindcss-icons@1.8.1_tailwindcss@3.4.1__postcss@8.4.47": {
       "integrity": "sha512-hqZeASrhT6BOeaBHYDPB0yBH/zgMKqmm7y2Rsq0c4iRnNVv1RWEiXMBMJB38JsDMTHME450FKa/wvdaIhED+Iw==",
       "dependencies": [
         "@iconify/utils",
-        "tailwindcss@3.4.13_postcss@8.4.47"
+        "tailwindcss@3.4.1_postcss@8.4.47"
       ]
     },
-    "@iconify/json@2.2.252": {
-      "integrity": "sha512-AtdDjLhN4aBEncnWghiw9JdBRxKAXFcaQmwDFDWPL1UF/cPuuC8BADZzfHIoVcVlEvEbv69tFrzmhj1z/+PGlA==",
+    "@iconify/json@2.2.276": {
+      "integrity": "sha512-YXCcFQSgFTj/3rlK6Vlv9T5suFjWBQu5dt9k/aYbje/U21jNp7P2xf0CPiAn8iItU/9uDj9mi3UsITMShqeCug==",
       "dependencies": [
         "@iconify/types",
         "pathe"
@@ -385,14 +388,17 @@
         "@jridgewell/sourcemap-codec"
       ]
     },
-    "@noble/curves@1.6.0": {
-      "integrity": "sha512-TlaHRXDehJuRNR9TfZDNQ45mMEd5dwUwmicsafcIX4SsNiqnCHKjE/1alYPd/lDRVhxdhUAlv8uEhMCI5zjIJQ==",
+    "@noble/curves@1.7.0": {
+      "integrity": "sha512-UTMhXK9SeDhFJVrHeUJ5uZlI6ajXg10O6Ddocf9S6GjbSBVZsJo88HzKwXznNfGpMTRDyJkqMjNDPYgf0qFWnw==",
       "dependencies": [
-        "@noble/hashes"
+        "@noble/hashes@1.6.0"
       ]
     },
-    "@noble/hashes@1.5.0": {
-      "integrity": "sha512-1j6kQFb7QRru7eKN3ZDvRcP13rugwdxZqCjbiAVZfIJwgj2A65UmT4TgARXGlXgnRkORLTDTrO19ZErt7+QXgA=="
+    "@noble/hashes@1.6.0": {
+      "integrity": "sha512-YUULf0Uk4/mAA89w+k3+yUYh6NrEvxZa5T6SY3wlMvE2chHkxFUUIDI8/XW1QSC357iA5pSnqt7XEhvFOqmDyQ=="
+    },
+    "@noble/hashes@1.6.1": {
+      "integrity": "sha512-pq5D8h10hHBjyqX+cfBm0i8JUXJ0UhczFc4r74zbuT9XgewFo2E3J1cOaGtdZynILNmQ685YWGzGE1Zv6io50w=="
     },
     "@nodelib/fs.scandir@2.1.5": {
       "integrity": "sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==",
@@ -497,8 +503,8 @@
     "@pkgjs/parseargs@0.11.0": {
       "integrity": "sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg=="
     },
-    "@playwright/test@1.47.2": {
-      "integrity": "sha512-jTXRsoSPONAs8Za9QEQdyjFn+0ZQFjCiIztAIF6bi1HqhBzG9Ma7g1WotyiGqFSBRZjIEqMdT8RUlbk1QVhzCQ==",
+    "@playwright/test@1.49.0": {
+      "integrity": "sha512-DMulbwQURa8rNIQrf94+jPJQ4FmOVdpE5ZppRNvWVjvhC+6sOeo28r8MgIpQRYouXRtt/FCCXU7zn20jnHR4Qw==",
       "dependencies": [
         "playwright"
       ]
@@ -509,12 +515,12 @@
         "buffer"
       ]
     },
-    "@solana/web3.js@1.95.3": {
-      "integrity": "sha512-O6rPUN0w2fkNqx/Z3QJMB9L225Ex10PRDH8bTaIUPZXMPV0QP8ZpPvjQnXK+upUczlRgzHzd6SjKIha1p+I6og==",
+    "@solana/web3.js@1.95.5": {
+      "integrity": "sha512-hU9cBrbg1z6gEjLH9vwIckGBVB78Ijm0iZFNk4ocm5OD82piPwuk3MeQ1rfiKD9YQtr95krrcaopb49EmQJlRg==",
       "dependencies": [
         "@babel/runtime",
         "@noble/curves",
-        "@noble/hashes",
+        "@noble/hashes@1.6.1",
         "@solana/buffer-layout",
         "agentkeepalive",
         "bigint-buffer",
@@ -529,20 +535,20 @@
         "superstruct"
       ]
     },
-    "@swc/helpers@0.5.13": {
-      "integrity": "sha512-UoKGxQ3r5kYI9dALKJapMmuK+1zWM/H17Z1+iwnNmzcJRnfFuevZs375TA5rW31pu4BS4NoSy1fRsexDXfWn5w==",
+    "@swc/helpers@0.5.15": {
+      "integrity": "sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==",
       "dependencies": [
         "tslib"
       ]
     },
-    "@tailwindcss/typography@0.5.15_tailwindcss@3.4.13__postcss@8.4.47": {
+    "@tailwindcss/typography@0.5.15_tailwindcss@3.4.1__postcss@8.4.47": {
       "integrity": "sha512-AqhlCXl+8grUz8uqExv5OTtgpjuVIwFTSXTrh8y9/pw6q2ek7fJ+Y8ZEVw7EB2DCcuCOtEjf9w3+J3rzts01uA==",
       "dependencies": [
         "lodash.castarray",
         "lodash.isplainobject",
         "lodash.merge",
         "postcss-selector-parser@6.0.10",
-        "tailwindcss@3.4.13_postcss@8.4.47"
+        "tailwindcss@3.4.1_postcss@8.4.47"
       ]
     },
     "@types/connect@3.4.38": {
@@ -572,8 +578,8 @@
         "@types/node@22.5.4"
       ]
     },
-    "@types/ws@8.5.12": {
-      "integrity": "sha512-3tPRkv1EtkDpzlgyKyI8pGsGZAGPEaXeu0DOj5DI25Ja91bdAYddYHbADRYVrZMRbfW+1l5YwXVDKohDJNQxkQ==",
+    "@types/ws@8.5.13": {
+      "integrity": "sha512-osM/gWBTPKgHV8XkTunnegTRIsvF6owmf5w+JtAfOw472dptdm0dlGv4xCt6GwQRcC2XVOvvRE/0bAoQcL2QkA==",
       "dependencies": [
         "@types/node@22.5.4"
       ]
@@ -585,8 +591,8 @@
         "through"
       ]
     },
-    "acorn@8.12.1": {
-      "integrity": "sha512-tcpGyI9zbizT9JbV6oYE477V6mTlXvvi0T0G3SNIYE2apm/G5huBa1+K89VGeovbg+jycCrfhl3ADxErOuO6Jg=="
+    "acorn@8.14.0": {
+      "integrity": "sha512-cl669nCJTZBsL97OF4kUQm5g5hC2uihk0NxY3WENAC0TYdILVkAyHymAntgxGkl7K+t0cXIrH5siy5S4XkFycA=="
     },
     "agentkeepalive@4.5.0": {
       "integrity": "sha512-5GG/5IbQQpC9FpkRGsSvZI5QYeSCzlJHdpBQntCsuTOxhKD8lqKhrleg2Yi7yvMIf82Ycmmqln9U8V9qwEiJew==",
@@ -628,7 +634,7 @@
     "base-x@3.0.10": {
       "integrity": "sha512-7d0s06rR9rYaIWHkpfLIFICM/tkSVdoPC9qYAQRpxn9DdKNWNsKC0uk++akckyLq16Tx2WIinnZ6WRriAt6njQ==",
       "dependencies": [
-        "safe-buffer@5.2.1"
+        "safe-buffer"
       ]
     },
     "base-x@5.0.0": {
@@ -737,8 +743,8 @@
     "commander@4.1.1": {
       "integrity": "sha512-NOKm8xhkzAjzFx8B2v5OAHT+u5pRQc2UCa2Vq9jYL/31o2wi9mxBA7LIFs3sV5VSC49z6pEhfbMULvShKj26WA=="
     },
-    "confbox@0.1.7": {
-      "integrity": "sha512-uJcB/FKZtBMCJpK8MQji6bJHgu1tixKPxRLeGkNzBoOZzpnZUJm0jm2/sBDWcuBx1dYgxV4JU+g5hmNxCyAmdA=="
+    "confbox@0.1.8": {
+      "integrity": "sha512-RMtmw0iFkeR4YV+fUOSucriAQNb9g8zFR52MWCtl+cCZOFRNL6zeB395vPzFhEjjn4fMxXudmELnl/KF/WrK6w=="
     },
     "core-util-is@1.0.3": {
       "integrity": "sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ=="
@@ -764,12 +770,12 @@
     "culori@3.3.0": {
       "integrity": "sha512-pHJg+jbuFsCjz9iclQBqyL3B2HLCBF71BwVNujUYEvCeQMvV97R59MNK3R2+jgJ3a1fcZgI9B3vYgz8lzr/BFQ=="
     },
-    "daisyui@4.12.10": {
-      "integrity": "sha512-jp1RAuzbHhGdXmn957Z2XsTZStXGHzFfF0FgIOZj3Wv9sH7OZgLfXTRZNfKVYxltGUOBsG1kbWAdF5SrqjebvA==",
+    "daisyui@4.12.14": {
+      "integrity": "sha512-hA27cdBasdwd4/iEjn+aidoCrRroDuo3G5W9NDKaVCJI437Mm/3eSL/2u7MkZ0pt8a+TrYF3aT2pFVemTS3how==",
       "dependencies": [
         "css-selector-tokenizer",
         "culori",
-        "picocolors",
+        "picocolors@1.1.0",
         "postcss-js"
       ]
     },
@@ -1005,8 +1011,8 @@
     "lines-and-columns@1.2.4": {
       "integrity": "sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg=="
     },
-    "local-pkg@0.5.0": {
-      "integrity": "sha512-ok6z3qlYyCDS4ZEU27HaU6x/xZa9Whf8jD4ptH5UZTQYZVYeb9bnZ3ojVhiJNLiXK1Hfc0GNbLXcmZ5plLDDBg==",
+    "local-pkg@0.5.1": {
+      "integrity": "sha512-9rrA30MRRP3gBD3HTGnC6cDFpaE1kVDWxWgqWJUN0RvDNAo+Nz/9GxB+nHOH0ifbVFy0hSA1V6vFDvnx54lTEQ==",
       "dependencies": [
         "mlly",
         "pkg-types"
@@ -1043,8 +1049,8 @@
     "minipass@7.1.2": {
       "integrity": "sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw=="
     },
-    "mlly@1.7.1": {
-      "integrity": "sha512-rrVRZRELyQzrIUAVMHxP97kv+G786pHmOKzuFII8zDYahFBS7qnHh2AlYSl1GAHhaMPCz6/oHjVMcfFYgFYHgA==",
+    "mlly@1.7.3": {
+      "integrity": "sha512-xUsx5n/mN0uQf4V548PKQ+YShA4/IW0KI1dZhrNrPCLG+xizETbHTkOa1f8/xut9JRPp8kQuMnz0oqwkTiLo/A==",
       "dependencies": [
         "acorn",
         "pathe",
@@ -1072,8 +1078,8 @@
         "whatwg-url"
       ]
     },
-    "node-gyp-build@4.8.2": {
-      "integrity": "sha512-IRUxE4BVsHWXkV/SFOut4qTlagw2aM8T5/vnTsmrHJvVoKueJHRc/JaFND7QDDc61kLYUJ6qlZM3sqTSyx2dTw=="
+    "node-gyp-build@4.8.4": {
+      "integrity": "sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ=="
     },
     "node-int64@0.4.0": {
       "integrity": "sha512-O5lz91xSOeoXP6DulyHfllpq+Eg00MWitZIbtPfoSEvqIHdl5gfcY6hYzDWnj0qD5tz52PI08u9qUvSVeUBeHw=="
@@ -1090,8 +1096,8 @@
     "package-json-from-dist@1.0.0": {
       "integrity": "sha512-dATvCeZN/8wQsGywez1mzHtTlP22H8OEfPrVMLNr4/eGa+ijtLn/6M5f0dY8UKNrC2O9UCU6SSoG3qRKnt7STw=="
     },
-    "package-manager-detector@0.2.0": {
-      "integrity": "sha512-E385OSk9qDcXhcM9LNSe4sdhx8a9mAPrZ4sMLW+tmxl5ZuGtPUcdFu+MPP2jbgiWAZ6Pfe5soGFMd+0Db5Vrog=="
+    "package-manager-detector@0.2.5": {
+      "integrity": "sha512-3dS7y28uua+UDbRCLBqltMBrbI+A5U2mI9YuxHRxIWYmLj3DwntEBmERYzIAQ4DMeuCUOBSak7dBHHoXKpOTYQ=="
     },
     "path-key@3.1.1": {
       "integrity": "sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q=="
@@ -1112,6 +1118,9 @@
     "picocolors@1.1.0": {
       "integrity": "sha512-TQ92mBOW0l3LeMeyLV6mzy/kWr8lkd/hp3mTg7wYK7zJhuBStmGMBG0BdeDZS/dZx1IukaX6Bk11zcln25o1Aw=="
     },
+    "picocolors@1.1.1": {
+      "integrity": "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA=="
+    },
     "picomatch@2.3.1": {
       "integrity": "sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA=="
     },
@@ -1121,19 +1130,19 @@
     "pirates@4.0.6": {
       "integrity": "sha512-saLsH7WeYYPiD25LDuLRRY/i+6HaPYr6G1OUlN39otzkSTxKnubR9RTxS3/Kk50s1g2JTgFwWQDQyplC5/SHZg=="
     },
-    "pkg-types@1.2.0": {
-      "integrity": "sha512-+ifYuSSqOQ8CqP4MbZA5hDpb97n3E8SVWdJe+Wms9kj745lmd3b7EZJiqvmLwAlmRfjrI7Hi5z3kdBJ93lFNPA==",
+    "pkg-types@1.2.1": {
+      "integrity": "sha512-sQoqa8alT3nHjGuTjuKgOnvjo4cljkufdtLMnO2LBP/wRwuDlo1tkaEdMxCRhyGRPacv/ztlZgDPm2b7FAmEvw==",
       "dependencies": [
         "confbox",
         "mlly",
         "pathe"
       ]
     },
-    "playwright-core@1.47.2": {
-      "integrity": "sha512-3JvMfF+9LJfe16l7AbSmU555PaTl2tPyQsVInqm3id16pdDfvZ8TTZ/pyzmkbDrZTQefyzU7AIHlZqQnxpqHVQ=="
+    "playwright-core@1.49.0": {
+      "integrity": "sha512-R+3KKTQF3npy5GTiKH/T+kdhoJfJojjHESR1YEWhYuEKRVfVaxH3+4+GvXE5xyCngCxhxnykk0Vlah9v8fs3jA=="
     },
-    "playwright@1.47.2": {
-      "integrity": "sha512-nx1cLMmQWqmA3UsnjaaokyoUpdVaaDhJhMoxX2qj3McpjnsqFHs516QAKYhqHAgOP+oCFTEOCOAaD1RgD/RQfA==",
+    "playwright@1.49.0": {
+      "integrity": "sha512-eKpmys0UFDnfNb3vfsf8Vx2LEOtflgRebl0Im2eQQnYMA4Aqd+Zw8bEOB+7ZKvN76901mRnqdsiOGKxzVTbi7A==",
       "dependencies": [
         "fsevents",
         "playwright-core"
@@ -1191,7 +1200,7 @@
       "integrity": "sha512-56rxCq7G/XfB4EkXq9Egn5GCqugWvDFjafDOThIdMBsI15iqPqR5r15TfSr1YPYeEI19YeaXMCbY6u88Y76GLQ==",
       "dependencies": [
         "nanoid",
-        "picocolors",
+        "picocolors@1.1.0",
         "source-map-js"
       ]
     },
@@ -1214,7 +1223,7 @@
         "inherits",
         "isarray",
         "process-nextick-args",
-        "safe-buffer@5.1.2",
+        "safe-buffer",
         "string_decoder",
         "util-deprecate"
       ]
@@ -1239,12 +1248,12 @@
     "reusify@1.0.4": {
       "integrity": "sha512-U9nH88a3fc/ekCF1l0/UP1IosiuIjyTh7hBvXVMHYgVcfGvt897Xguj2UOLDeI5BG2m7/uwyaLVT6fbtCwTyzw=="
     },
-    "rpc-websockets@9.0.2_bufferutil@4.0.8_utf-8-validate@5.0.10": {
-      "integrity": "sha512-YzggvfItxMY3Lwuax5rC18inhbjJv9Py7JXRHxTIi94JOLrqBsSsUUc5bbl5W6c11tXhdfpDPK0KzBhoGe8jjw==",
+    "rpc-websockets@9.0.4_bufferutil@4.0.8_utf-8-validate@5.0.10": {
+      "integrity": "sha512-yWZWN0M+bivtoNLnaDbtny4XchdAIF5Q4g/ZsC5UC61Ckbp0QczwO8fg44rV3uYmY4WHd+EZQbn90W1d8ojzqQ==",
       "dependencies": [
         "@swc/helpers",
         "@types/uuid",
-        "@types/ws@8.5.12",
+        "@types/ws@8.5.13",
         "buffer",
         "bufferutil",
         "eventemitter3",
@@ -1261,9 +1270,6 @@
     },
     "safe-buffer@5.1.2": {
       "integrity": "sha512-Gd2UZBJDkXlY7GbJxfsE8/nvKkUEU1G38c1siN6QP6a9PT9MmHB8GnpscSmMJSoF8LOIrt8ud/wPtojys4G6+g=="
-    },
-    "safe-buffer@5.2.1": {
-      "integrity": "sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ=="
     },
     "shebang-command@2.0.0": {
       "integrity": "sha512-kHxr2zZpYtdmrN1qDjrrX/Z1rR1kG8Dx+gkpK1G4eXmvXswmcE1hTWBWYUzlraYw1/yZp6YuDY77YtvbN0dmDA==",
@@ -1299,7 +1305,7 @@
     "string_decoder@1.1.1": {
       "integrity": "sha512-n/ShnvDi6FHbbVfviro+WojiFzv+s8MPMHBczVePfUpDJLwoLT0ht1l4YwBCbi8pJAveEEdnkHyPyTP/mzRfwg==",
       "dependencies": [
-        "safe-buffer@5.1.2"
+        "safe-buffer"
       ]
     },
     "strip-ansi@6.0.1": {
@@ -1332,14 +1338,14 @@
     "supports-preserve-symlinks-flag@1.0.0": {
       "integrity": "sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w=="
     },
-    "tailwindcss-animated@1.1.2_tailwindcss@3.4.13__postcss@8.4.47": {
+    "tailwindcss-animated@1.1.2_tailwindcss@3.4.1__postcss@8.4.47": {
       "integrity": "sha512-SI4owS5ojserhgEYIZA/uFVdNjU2GMB2P3sjtjmFA52VxoUi+Hht6oR5+RdT+CxrX9cNNYEa+vbTWHvN9zbj3w==",
       "dependencies": [
-        "tailwindcss@3.4.13_postcss@8.4.47"
+        "tailwindcss@3.4.1_postcss@8.4.47"
       ]
     },
-    "tailwindcss@3.4.13_postcss@8.4.47": {
-      "integrity": "sha512-KqjHOJKogOUt5Bs752ykCeiwvi0fKVkr5oqsFNt/8px/tA8scFPIlkygsf6jXrfCqGHz7VflA6+yytWuM+XhFw==",
+    "tailwindcss@3.4.15_postcss@8.4.47": {
+      "integrity": "sha512-r4MeXnfBmSOuKUWmXe6h2CcyfzJCEk4F0pptO5jlnYSIViUkVmsawj80N5h2lO3gwcmSb4n3PuN+e+GC1Guylw==",
       "dependencies": [
         "@alloc/quick-lru",
         "arg",
@@ -1354,7 +1360,7 @@
         "micromatch",
         "normalize-path",
         "object-hash",
-        "picocolors",
+        "picocolors@1.1.1",
         "postcss",
         "postcss-import",
         "postcss-js",
@@ -1381,7 +1387,7 @@
         "micromatch",
         "normalize-path",
         "object-hash",
-        "picocolors",
+        "picocolors@1.1.0",
         "postcss",
         "postcss-import",
         "postcss-js",
@@ -1410,8 +1416,8 @@
     "through@2.3.8": {
       "integrity": "sha512-w89qg7PI8wAdvX60bMDP+bFoD5Dvhm9oLheFp5O4a2QF0cSBGsBX4qZmadPMvVqlLJBBci+WqGGOAPvcDeNSVg=="
     },
-    "tinyexec@0.3.0": {
-      "integrity": "sha512-tVGE0mVJPGb0chKhqmsoosjsS+qUnJVGJpZgsHYQcGoPlG3B51R3PouqTgEGH2Dc9jjFyOqOpix6ZHNMXp1FZg=="
+    "tinyexec@0.3.1": {
+      "integrity": "sha512-WiCJLEECkO18gwqIp6+hJg0//p23HXp4S+gGtAKu3mI2F2/sXC4FvHvXvB0zJVVaTPhx1/tOwdbRsa1sOBIKqQ=="
     },
     "to-regex-range@5.0.1": {
       "integrity": "sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==",
@@ -1428,8 +1434,8 @@
     "ts-toolbelt@9.6.0": {
       "integrity": "sha512-nsZd8ZeNUzukXPlJmTBwUAuABDe/9qtVDelJeT/qW0ow3ZS3BsQJtNkan1802aM9Uf68/Y8ljw86Hu0h5IUW3w=="
     },
-    "tslib@2.7.0": {
-      "integrity": "sha512-gLXCKdN1/j47AiHiOkJN69hJmcbGTHI0ImLmbYLHykhgeN0jVGola9yVjFgzCUklsZQMW55o+dW7IXv3RCXDzA=="
+    "tslib@2.8.1": {
+      "integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="
     },
     "ufo@1.5.4": {
       "integrity": "sha512-UsUk3byDzKd04EyoZ7U4DOlxQaD14JUKQl6/P7wiX4FNvUfm3XL246n9W5AmqwW5RSFJ27NAuM0iLscAOYUiGQ=="
@@ -1537,17 +1543,17 @@
   "workspace": {
     "dependencies": [
       "jsr:@molt/cli@~0.19.8",
-      "jsr:@std/path@^1.0.6",
+      "jsr:@std/path@^1.0.8",
       "npm:@egoist/tailwindcss-icons@^1.8.1",
-      "npm:@iconify/json@^2.2.252",
-      "npm:@playwright/test@^1.47.1",
-      "npm:@solana/web3.js@^1.95.3",
+      "npm:@iconify/json@^2.2.276",
+      "npm:@playwright/test@^1.49.0",
+      "npm:@solana/web3.js@^1.95.5",
       "npm:@tailwindcss/typography@~0.5.15",
       "npm:bs58@6",
-      "npm:daisyui@^4.12.10",
-      "npm:playwright@^1.47.2",
+      "npm:daisyui@^4.12.14",
+      "npm:playwright@^1.49.0",
       "npm:tailwindcss-animated@^1.1.2",
-      "npm:tailwindcss@^3.4.13",
+      "npm:tailwindcss@^3.4.15",
       "npm:unzipper@~0.12.3"
     ]
   }

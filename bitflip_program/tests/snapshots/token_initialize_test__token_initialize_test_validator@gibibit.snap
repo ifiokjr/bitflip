@@ -3,4 +3,4 @@ source: bitflip_program/tests/token_initialize_test.rs
 expression: "format!(\"{rounded_compute_units} CU\")"
 snapshot_kind: text
 ---
-80000 CU
+70000 CU

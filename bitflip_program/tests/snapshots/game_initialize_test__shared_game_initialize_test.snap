@@ -1,0 +1,49 @@
+---
+source: bitflip_program/tests/game_initialize_test.rs
+expression: game_state_account
+snapshot_kind: text
+---
+{
+  "version": 0,
+  "refreshSigner": "[refresh_signer:pubkey]",
+  "accessSigner": "[access_signer:pubkey]",
+  "accessExpiry": 0,
+  "startTime": 0,
+  "gameIndex": 0,
+  "sectionIndex": 0,
+  "bump": 253,
+  "padding": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ]
+}

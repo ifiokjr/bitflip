@@ -23,7 +23,7 @@ pub use crate::processor::*;
 pub use crate::state::*;
 pub use crate::utils::*;
 
-declare_id!("5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM");
+solana_package_metadata::declare_id_with_package_metadata!("solana.program-id");
 
 #[cfg(not(feature = "no-entrypoint"))]
 entrypoint!(process_instruction);

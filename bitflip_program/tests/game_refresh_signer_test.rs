@@ -3,15 +3,15 @@
 use std::future::Future;
 
 use assert2::check;
-use bitflip_program::GameState;
 use bitflip_program::game_refresh_signer;
 use bitflip_program::get_pda_game;
-use shared::CreatedGameState;
-use shared::ToRpcClient;
+use bitflip_program::GameState;
 use shared::create_config_accounts;
 use shared::create_game_state;
 use shared::create_program_context_with_factory;
 use shared::create_token_accounts;
+use shared::CreatedGameState;
+use shared::ToRpcClient;
 use solana_sdk::signature::Keypair;
 use solana_sdk::transaction::VersionedTransaction;
 use steel::*;
@@ -59,7 +59,7 @@ async fn create_banks_client_rpc(
 ) -> anyhow::Result<impl ToRpcClient> {
 	let provider = create_program_context_with_factory(|p| {
 		let mut config_state_accounts = create_config_accounts();
-		config_state_accounts.extend(create_token_accounts()?);
+		config_state_accounts.extend(create_token_accounts(false)?);
 
 		for (key, account) in config_state_accounts {
 			p.add_account(key, account.into());
@@ -144,18 +144,7 @@ async fn shared_game_refresh_signer_test<
 	insta::assert_compact_json_snapshot!(game_state_account,{
 		".accessSigner" => insta::dynamic_redaction(access_signer_redaction),
 		".refreshSigner" => insta::dynamic_redaction(refresh_signer_redaction),
-
-	}, @r#"
- {
-   "refreshSigner": "[refresh_signer:pubkey]",
-   "accessSigner": "[access_signer:pubkey]",
-   "accessExpiry": 0,
-   "startTime": 0,
-   "gameIndex": 0,
-   "sectionIndex": 0,
-   "bump": 253
- }
- "#);
+	});
 
 	Ok(compute_units)
 }

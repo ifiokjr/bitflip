@@ -217,7 +217,7 @@ impl InitializeToken<'_> {
 		signer_seeds: &[&[&[u8]]],
 	) -> AnchorResult {
 		let cpi_accounts = TokenMetadataInitialize {
-			token_program_id: self.token_program.to_account_info(),
+			program_id: self.token_program.to_account_info(),
 			mint: self.mint.to_account_info(),
 			metadata: self.mint.to_account_info(),
 			mint_authority: self.treasury.to_account_info(),

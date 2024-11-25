@@ -1,0 +1,25 @@
+---
+source: bitflip_program/tests/flip_bit_test.rs
+expression: parsed_player_token_account
+snapshot_kind: text
+---
+{
+  "type": "account",
+  "info": {
+    "mint": "[mint:pubkey]",
+    "owner": "[owner:pubkey]",
+    "tokenAmount": {
+      "uiAmount": 1.0,
+      "decimals": 0,
+      "amount": "1",
+      "uiAmountString": "1"
+    },
+    "state": "initialized",
+    "isNative": false,
+    "extensions": [
+      {
+        "extension": "immutableOwner"
+      }
+    ]
+  }
+}
