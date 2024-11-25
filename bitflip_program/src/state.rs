@@ -6,11 +6,11 @@ use spl_pod::primitives::PodU32;
 use static_assertions::const_assert;
 use steel::*;
 
+use crate::FlipBit;
 use crate::BASE_LAMPORTS_PER_BIT;
 use crate::BITFLIP_SECTION_LENGTH;
 use crate::BITFLIP_SECTION_TOTAL_BITS;
 use crate::EARNED_TOKENS_PER_SECTION;
-use crate::FlipBit;
 use crate::MIN_LAMPORTS_PER_BIT;
 use crate::SESSION_DURATION;
 

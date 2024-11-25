@@ -507,6 +507,13 @@ pub fn save_compute_units(name: &str, compute_units: u64, description: &str) -> 
 	// Write back to file
 	fs::write(path, serde_json::to_string_pretty(&data)?)?;
 
+	// Format the JSON file using dprint
+	std::process::Command::new("dprint")
+		.arg("fmt")
+		.arg("compute_units.json")
+		.output()
+		.context("Failed to run dprint fmt command")?;
+
 	Ok(())
 }
 

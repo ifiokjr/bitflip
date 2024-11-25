@@ -3,18 +3,18 @@
 use std::future::Future;
 
 use assert2::check;
-use bitflip_program::TOKEN_DECIMALS;
-use bitflip_program::TokenMember;
 use bitflip_program::get_pda_mint;
 use bitflip_program::get_pda_treasury;
 use bitflip_program::get_token_account;
 use bitflip_program::token_initialize;
+use bitflip_program::TokenMember;
+use bitflip_program::TOKEN_DECIMALS;
 use rstest::rstest;
-use shared::ToRpcClient;
 use shared::create_authority_keypair;
 use shared::create_config_accounts;
 use shared::create_program_context_with_factory;
 use shared::testname;
+use shared::ToRpcClient;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::transaction::VersionedTransaction;
 use test_utils::create_insta_redaction;

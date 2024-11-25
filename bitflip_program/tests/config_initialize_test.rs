@@ -3,15 +3,15 @@
 use std::future::Future;
 
 use assert2::check;
-use bitflip_program::BitflipError;
-use bitflip_program::ConfigState;
 use bitflip_program::config_initialize;
 use bitflip_program::get_pda_config;
 use bitflip_program::get_pda_treasury;
-use shared::ToRpcClient;
+use bitflip_program::BitflipError;
+use bitflip_program::ConfigState;
 use shared::create_admin_keypair;
 use shared::create_authority_keypair;
 use shared::create_program_context_with_factory;
+use shared::ToRpcClient;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::instruction::InstructionError;
 use solana_sdk::signature::Keypair;

@@ -2,11 +2,11 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use anchor_spl::token_2022;
 
+use crate::get_token_amount;
 use crate::SEED_GAME;
 use crate::SEED_PREFIX;
 use crate::SEED_SECTION_STATE;
 use crate::TOKEN_DECIMALS;
-use crate::get_token_amount;
 
 pub trait TransferSolToSection<'info> {
 	fn section(&self) -> AccountInfo<'info>;

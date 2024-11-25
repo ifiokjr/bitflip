@@ -2,6 +2,8 @@ use steel::*;
 use sysvar::rent::Rent;
 
 use super::BitflipInstruction;
+use crate::create_pda_config;
+use crate::get_pda_game;
 use crate::BitflipError;
 use crate::ConfigState;
 use crate::GameState;
@@ -9,18 +11,10 @@ use crate::ID;
 use crate::SEED_GAME;
 use crate::SEED_PREFIX;
 use crate::TRANSACTION_FEE;
-use crate::create_pda_config;
-use crate::get_pda_game;
 
 pub fn process_game_initialize(accounts: &[AccountInfo]) -> ProgramResult {
-	let [
-		authority_info,
-		access_signer_info,
-		refresh_signer_info,
-		config_info,
-		game_info,
-		system_program_info,
-	] = accounts
+	let [authority_info, access_signer_info, refresh_signer_info, config_info, game_info, system_program_info] =
+		accounts
 	else {
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};

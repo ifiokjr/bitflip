@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 use std::hash::RandomState;
 
+use anchor_lang::system_program;
 use anchor_lang::AnchorSerialize;
 use anchor_lang::Discriminator;
-use anchor_lang::system_program;
 use anyhow::Result;
-use bitflip_legacy_client::BitflipLegacyProgramClient;
 use bitflip_legacy_client::get_pda_config;
 use bitflip_legacy_client::get_pda_game;
 use bitflip_legacy_client::get_pda_game_nonce;
@@ -14,16 +13,17 @@ use bitflip_legacy_client::get_pda_section_data;
 use bitflip_legacy_client::get_pda_section_state;
 use bitflip_legacy_client::get_pda_treasury;
 use bitflip_legacy_client::get_section_token_account;
-use bitflip_legacy_program::BITFLIP_SECTION_LENGTH;
+use bitflip_legacy_client::BitflipLegacyProgramClient;
+use bitflip_legacy_program::get_token_amount;
 use bitflip_legacy_program::ConfigState;
 use bitflip_legacy_program::GameState;
-use bitflip_legacy_program::ID_CONST;
-use bitflip_legacy_program::MINIMUM_FLIPS_PER_SECTION;
 use bitflip_legacy_program::SectionData;
 use bitflip_legacy_program::SectionState;
-use bitflip_legacy_program::TOKEN_DECIMALS;
+use bitflip_legacy_program::BITFLIP_SECTION_LENGTH;
+use bitflip_legacy_program::ID_CONST;
+use bitflip_legacy_program::MINIMUM_FLIPS_PER_SECTION;
 use bitflip_legacy_program::TOKENS_PER_SECTION;
-use bitflip_legacy_program::get_token_amount;
+use bitflip_legacy_program::TOKEN_DECIMALS;
 use solana_sdk::account::AccountSharedData;
 use solana_sdk::account::WritableAccount;
 use solana_sdk::account_utils::StateMut;
@@ -41,11 +41,11 @@ use test_utils::SECRET_KEY_ADMIN;
 use test_utils::SECRET_KEY_AUTHORITY;
 use test_utils::SECRET_KEY_TREASURY;
 use test_utils::SECRET_KEY_WALLET;
+use test_utils_solana::anchor_processor;
+use test_utils_solana::solana_sdk::account::Account;
 use test_utils_solana::FromAnchorData;
 use test_utils_solana::ProgramTest;
 use test_utils_solana::TestRpcProvider;
-use test_utils_solana::anchor_processor;
-use test_utils_solana::solana_sdk::account::Account;
 use wallet_standard_wallets::MemoryWallet;
 use wasm_client_anchor::prelude::*;
 use wasm_client_solana::SolanaRpcClient;
@@ -114,18 +114,27 @@ pub(crate) async fn create_program_context_with_factory<F: Fn(&mut ProgramTest)>
 	let mut program_test = create_program_test();
 
 	factory(&mut program_test);
-	program_test.add_account(create_admin_keypair().pubkey(), Account {
-		lamports: sol_to_lamports(10.0),
-		..Account::default()
-	});
-	program_test.add_account(create_authority_keypair().pubkey(), Account {
-		lamports: sol_to_lamports(10.0),
-		..Account::default()
-	});
-	program_test.add_account(create_wallet_keypair().pubkey(), Account {
-		lamports: sol_to_lamports(10.0),
-		..Account::default()
-	});
+	program_test.add_account(
+		create_admin_keypair().pubkey(),
+		Account {
+			lamports: sol_to_lamports(10.0),
+			..Account::default()
+		},
+	);
+	program_test.add_account(
+		create_authority_keypair().pubkey(),
+		Account {
+			lamports: sol_to_lamports(10.0),
+			..Account::default()
+		},
+	);
+	program_test.add_account(
+		create_wallet_keypair().pubkey(),
+		Account {
+			lamports: sol_to_lamports(10.0),
+			..Account::default()
+		},
+	);
 
 	let context = program_test.start_with_context().await;
 

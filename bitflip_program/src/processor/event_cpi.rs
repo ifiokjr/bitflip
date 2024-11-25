@@ -1,8 +1,8 @@
 use steel::*;
 
 use super::BitflipInstruction;
-use crate::ID;
 use crate::get_pda_event;
+use crate::ID;
 
 /// Process the event CPI instruction
 pub fn process_event_cpi(accounts: &[AccountInfo], _: &[u8]) -> ProgramResult {

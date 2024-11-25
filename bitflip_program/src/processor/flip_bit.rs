@@ -2,16 +2,6 @@ use solana_program::msg;
 use steel::*;
 
 use super::BitflipInstruction;
-use crate::BitflipError;
-use crate::ConfigState;
-use crate::GameState;
-use crate::ID;
-use crate::SEED_GAME;
-use crate::SEED_PREFIX;
-use crate::SEED_SECTION;
-use crate::SectionState;
-use crate::TOKEN_DECIMALS;
-use crate::TokenMember;
 use crate::cpi::create_associated_token_account_idempotent;
 use crate::cpi::transfer_checked;
 use crate::create_pda_config;
@@ -19,6 +9,16 @@ use crate::create_pda_game;
 use crate::create_pda_mint;
 use crate::create_pda_section;
 use crate::get_token_account;
+use crate::BitflipError;
+use crate::ConfigState;
+use crate::GameState;
+use crate::SectionState;
+use crate::TokenMember;
+use crate::ID;
+use crate::SEED_GAME;
+use crate::SEED_PREFIX;
+use crate::SEED_SECTION;
+use crate::TOKEN_DECIMALS;
 
 pub fn process_flip_bit(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 	// parse the instruction data.
@@ -26,18 +26,8 @@ pub fn process_flip_bit(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
 	args.validate()?;
 
 	// load accounts
-	let [
-		player_info,
-		player_bit_token_account_info,
-		config_info,
-		game_info,
-		mint_bit_info,
-		section_info,
-		section_bit_token_account_info,
-		associated_token_program_info,
-		token_program_info,
-		system_program_info,
-	] = accounts
+	let [player_info, player_bit_token_account_info, config_info, game_info, mint_bit_info, section_info, section_bit_token_account_info, associated_token_program_info, token_program_info, system_program_info] =
+		accounts
 	else {
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};
@@ -312,8 +302,8 @@ mod tests {
 	}
 
 	#[test_log::test]
-	fn player_bit_token_account_should_be_derived_from_associated_token_program()
-	-> anyhow::Result<()> {
+	fn player_bit_token_account_should_be_derived_from_associated_token_program(
+	) -> anyhow::Result<()> {
 		let mut accounts = create_account_infos(0, 0);
 		let player_bit_token_account_info = &mut accounts[1];
 		player_bit_token_account_info.key = leak(Pubkey::new_unique());

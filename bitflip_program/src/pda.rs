@@ -2,6 +2,7 @@ use solana_program::pubkey::Pubkey;
 use spl_associated_token_account::get_associated_token_address_with_program_id;
 use steel::ProgramError;
 
+use crate::TokenMember;
 use crate::ID;
 use crate::SEED_CONFIG;
 use crate::SEED_EVENT;
@@ -11,7 +12,6 @@ use crate::SEED_PLAYER;
 use crate::SEED_PREFIX;
 use crate::SEED_SECTION;
 use crate::SEED_TREASURY;
-use crate::TokenMember;
 
 pub fn get_token_account(wallet: &Pubkey, mint: &Pubkey) -> Pubkey {
 	get_associated_token_address_with_program_id(wallet, mint, &spl_token_2022::ID)

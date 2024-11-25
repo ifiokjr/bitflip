@@ -3,15 +3,15 @@ use steel::*;
 use sysvar::rent::Rent;
 
 use super::BitflipInstruction;
-use crate::ADMIN_PUBKEY;
-use crate::BitflipError;
-use crate::ConfigState;
-use crate::ID;
-use crate::TokenMember;
 use crate::constants::*;
 use crate::get_pda_config;
 use crate::get_pda_mint;
 use crate::get_pda_treasury;
+use crate::BitflipError;
+use crate::ConfigState;
+use crate::TokenMember;
+use crate::ADMIN_PUBKEY;
+use crate::ID;
 /// Initialize the program.
 ///
 /// This creates the config account and the treasury account.
@@ -22,13 +22,7 @@ use crate::get_pda_treasury;
 /// way to fix.
 pub fn process_config_initialize(accounts: &[AccountInfo<'_>]) -> ProgramResult {
 	// load accounts
-	let [
-		admin_info,
-		authority_info,
-		config_info,
-		treasury_info,
-		system_program_info,
-	] = accounts
+	let [admin_info, authority_info, config_info, treasury_info, system_program_info] = accounts
 	else {
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};

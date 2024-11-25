@@ -1,55 +1,55 @@
 {
-  "instructions": {
-    "config_initialize": {
-      "compute_units": 17781,
-      "rounded_compute_units": 20000,
-      "description": "Initialize the config"
-    },
-    "config_update_authority": {
-      "compute_units": 2464,
-      "rounded_compute_units": 10000,
-      "description": "Update the authority of the config"
-    },
-    "flip_bit_test": {
-      "compute_units": 65231,
-      "rounded_compute_units": 70000,
-      "description": "Flip a single bit from `0` to `1`"
-    },
-    "game_initialize": {
-      "compute_units": 13227,
-      "rounded_compute_units": 20000,
-      "description": "Initialize the game"
-    },
-    "game_refresh_signer": {
-      "compute_units": 2371,
-      "rounded_compute_units": 10000,
-      "description": "Refresh the signer"
-    },
-    "token_group_initialize": {
-      "compute_units": 47820,
-      "rounded_compute_units": 50000,
-      "description": "Initialize the token group"
-    },
-    "token_initialize:bit": {
-      "compute_units": 63507,
-      "rounded_compute_units": 70000,
-      "description": "Initialize group token: Bit"
-    },
-    "token_initialize:gibibit": {
-      "compute_units": 60069,
-      "rounded_compute_units": 70000,
-      "description": "Initialize member token: GibiBit"
-    },
-    "token_initialize:kibibit": {
-      "compute_units": 60068,
-      "rounded_compute_units": 70000,
-      "description": "Initialize member token: KibiBit"
-    },
-    "token_initialize:mebibit": {
-      "compute_units": 60065,
-      "rounded_compute_units": 70000,
-      "description": "Initialize member token: MebiBit"
-    }
-  },
-  "version": "0.0.0"
+	"instructions": {
+		"config_initialize": {
+			"compute_units": 17569,
+			"rounded_compute_units": 20000,
+			"description": "Initialize the config"
+		},
+		"config_update_authority": {
+			"compute_units": 2326,
+			"rounded_compute_units": 10000,
+			"description": "Update the authority of the config"
+		},
+		"flip_bit_test": {
+			"compute_units": 64832,
+			"rounded_compute_units": 70000,
+			"description": "Flip a single bit from `0` to `1`"
+		},
+		"game_initialize": {
+			"compute_units": 12979,
+			"rounded_compute_units": 20000,
+			"description": "Initialize the game"
+		},
+		"game_refresh_signer": {
+			"compute_units": 2232,
+			"rounded_compute_units": 10000,
+			"description": "Refresh the signer"
+		},
+		"token_group_initialize": {
+			"compute_units": 47429,
+			"rounded_compute_units": 50000,
+			"description": "Initialize the token group"
+		},
+		"token_initialize:bit": {
+			"compute_units": 63184,
+			"rounded_compute_units": 70000,
+			"description": "Initialize group token: Bit"
+		},
+		"token_initialize:gibibit": {
+			"compute_units": 59746,
+			"rounded_compute_units": 70000,
+			"description": "Initialize member token: GibiBit"
+		},
+		"token_initialize:kibibit": {
+			"compute_units": 59745,
+			"rounded_compute_units": 70000,
+			"description": "Initialize member token: KibiBit"
+		},
+		"token_initialize:mebibit": {
+			"compute_units": 59742,
+			"rounded_compute_units": 70000,
+			"description": "Initialize member token: MebiBit"
+		}
+	},
+	"version": "0.0.0"
 }

@@ -8,11 +8,11 @@ use anchor_lang::system_program;
 use anchor_spl::associated_token;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_2022;
+use anchor_spl::token_interface::token_metadata_initialize;
 use anchor_spl::token_interface::Mint;
 use anchor_spl::token_interface::Token2022;
 use anchor_spl::token_interface::TokenAccount;
 use anchor_spl::token_interface::TokenMetadataInitialize;
-use anchor_spl::token_interface::token_metadata_initialize;
 
 pub use crate::constants::*;
 pub use crate::errors::*;

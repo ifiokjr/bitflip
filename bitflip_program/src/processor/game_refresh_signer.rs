@@ -1,9 +1,9 @@
 use steel::*;
 
 use super::BitflipInstruction;
+use crate::create_pda_game;
 use crate::GameState;
 use crate::ID;
-use crate::create_pda_game;
 
 pub fn process_game_refresh_signer(accounts: &[AccountInfo]) -> ProgramResult {
 	let [access_signer_info, refresh_signer_info, game_info] = accounts else {

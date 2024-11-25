@@ -1,28 +1,28 @@
 use std::collections::HashSet;
 
-use bitflip_program::BITFLIP_SECTION_LENGTH;
-use bitflip_program::SectionState;
 use bitflip_program::get_pda_section;
+use bitflip_program::SectionState;
+use bitflip_program::BITFLIP_SECTION_LENGTH;
 use js_sys::Reflect;
 use leptos::html::Canvas;
 use leptos::prelude::*;
+use leptos_meta::provide_meta_context;
 use leptos_meta::Html;
 use leptos_meta::MetaTags;
 use leptos_meta::Stylesheet;
 use leptos_meta::Title;
-use leptos_meta::provide_meta_context;
-use leptos_router::components::A;
 use leptos_router::components::FlatRoutes;
 use leptos_router::components::Route;
 use leptos_router::components::Router;
+use leptos_router::components::A;
 use leptos_router::path;
 use rand::Rng;
 use reactive_stores::Store;
 use solana_sdk::pubkey::Pubkey;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
-use web_sys::CanvasRenderingContext2d;
 use web_sys::window;
+use web_sys::CanvasRenderingContext2d;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
 	view! {
