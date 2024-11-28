@@ -75,13 +75,13 @@ async fn shared_game_initialize_test<
 	let rpc = provider.to_rpc();
 	let authority_keypair = create_authority_keypair();
 	let authority = authority_keypair.pubkey();
-	let access_signer_keypair = Keypair::new();
-	let refresh_signer_keypair = Keypair::new();
-	let access_signer = access_signer_keypair.pubkey();
-	let refresh_signer = refresh_signer_keypair.pubkey();
+	let temp_signer_keypair = Keypair::new();
+	let funded_signer_keypair = Keypair::new();
+	let temp_signer = temp_signer_keypair.pubkey();
+	let funded_signer = funded_signer_keypair.pubkey();
 	let game = get_pda_game(game_index).0;
 	let recent_blockhash = rpc.get_latest_blockhash().await?;
-	let ix = game_initialize(&authority, &access_signer, &refresh_signer, game_index);
+	let ix = game_initialize(&authority, &temp_signer, &funded_signer, game_index);
 	let mut transaction =
 		VersionedTransaction::new_unsigned_v0(&authority, &[ix], &[], recent_blockhash)?;
 
@@ -91,25 +91,25 @@ async fn shared_game_initialize_test<
 
 	transaction
 		.try_sign(&[&authority_keypair], None)?
-		.try_sign(&[&access_signer_keypair], None)?
-		.try_sign(&[&refresh_signer_keypair], None)?;
+		.try_sign(&[&temp_signer_keypair], None)?
+		.try_sign(&[&funded_signer_keypair], None)?;
 
 	let signature = rpc.send_and_confirm_transaction(&transaction).await?;
 	rpc.confirm_transaction(&signature).await?;
 
 	let game_state_data = rpc.get_account_data(&game).await?;
 	let game_state_account = GameState::try_from_bytes(&game_state_data)?;
-	let access_signer_redaction = create_insta_redaction(access_signer, "access_signer:pubkey");
-	let refresh_signer_redaction = create_insta_redaction(refresh_signer, "refresh_signer:pubkey");
+	let temp_signer_redaction = create_insta_redaction(temp_signer, "temp_signer:pubkey");
+	let funded_signer_redaction = create_insta_redaction(funded_signer, "funded_signer:pubkey");
 	insta::assert_compact_json_snapshot!(game_state_account,{
-		".accessSigner" => insta::dynamic_redaction(access_signer_redaction),
-		".refreshSigner" => insta::dynamic_redaction(refresh_signer_redaction),
+		".tempSigner" => insta::dynamic_redaction(temp_signer_redaction),
+		".fundedSigner" => insta::dynamic_redaction(funded_signer_redaction),
 
 	});
 
-	let refresh_signer_lamports = rpc.get_balance(&refresh_signer).await?;
-	log::info!("refresh_signer_lamports: {refresh_signer_lamports}");
-	insta::assert_snapshot!(refresh_signer_lamports, @"5890880");
+	let funded_signer_lamports = rpc.get_balance(&funded_signer).await?;
+	log::info!("funded_signer_lamports: {funded_signer_lamports}");
+	insta::assert_snapshot!(funded_signer_lamports, @"5890880");
 
 	Ok(compute_units)
 }

@@ -812,17 +812,17 @@
 					]
 				},
 				{
-					"name": "access_signer",
+					"name": "temp_signer",
 					"docs": [
-						"The `access_signer` is created by the backend and used for on chain",
+						"The `temp_signer` is created by the backend and used for on chain",
 						"operations."
 					],
 					"signer": true
 				},
 				{
-					"name": "refresh_signer",
+					"name": "funded_signer",
 					"docs": [
-						"The `refresh_signer`. The `access_token` expires every 24 hours. In",
+						"The `funded_signer`. The `access_token` expires every 24 hours. In",
 						"order to create a new one this is ."
 					],
 					"signer": true
@@ -1013,7 +1013,7 @@
 			]
 		},
 		{
-			"name": "refresh_access_signer",
+			"name": "refresh_temp_signer",
 			"docs": [
 				"Refresh the access signer.",
 				"This will be called by the backend to create a new one."
@@ -1100,17 +1100,17 @@
 					}
 				},
 				{
-					"name": "access_signer",
+					"name": "temp_signer",
 					"docs": [
-						"The new `access_signer` is created by the backend and used for on chain",
+						"The new `temp_signer` is created by the backend and used for on chain",
 						"operations."
 					],
 					"signer": true
 				},
 				{
-					"name": "refresh_signer",
+					"name": "funded_signer",
 					"docs": [
-						"The `refresh_signer`. The `access_token` expires every 24 hours. In",
+						"The `funded_signer`. The `access_token` expires every 24 hours. In",
 						"order to create a new one this is used."
 					],
 					"signer": true,
@@ -1224,9 +1224,9 @@
 					]
 				},
 				{
-					"name": "access_signer",
+					"name": "temp_signer",
 					"docs": [
-						"The `access_signer` is created by the backend and used for on chain",
+						"The `temp_signer` is created by the backend and used for on chain",
 						"operations."
 					],
 					"signer": true,
@@ -1702,7 +1702,7 @@
 					}
 				},
 				{
-					"name": "access_signer",
+					"name": "temp_signer",
 					"docs": [
 						"The backend signer to authorise this."
 					],
@@ -2130,7 +2130,7 @@
 				"kind": "struct",
 				"fields": [
 					{
-						"name": "refresh_signer",
+						"name": "funded_signer",
 						"docs": [
 							"This is a refresh signer created and maintained by the backend. It needs",
 							"to be provided to update the access signer. It will need to be updated",
@@ -2139,7 +2139,7 @@
 						"type": "pubkey"
 					},
 					{
-						"name": "access_signer",
+						"name": "temp_signer",
 						"docs": [
 							"This is an access signer created and maintained by the backend. Which is",
 							"allowed to sign certain transactions and expires daily."

@@ -2,16 +2,16 @@ use solana_program::msg;
 use steel::*;
 use sysvar::rent::Rent;
 
-use super::BitflipInstruction;
-use crate::constants::*;
-use crate::get_pda_config;
 use crate::get_pda_mint;
-use crate::get_pda_treasury;
+use crate::seeds_config;
+use crate::seeds_treasury;
 use crate::BitflipError;
+use crate::BitflipInstruction;
 use crate::ConfigState;
 use crate::TokenMember;
 use crate::ADMIN_PUBKEY;
 use crate::ID;
+
 /// Initialize the program.
 ///
 /// This creates the config account and the treasury account.
@@ -28,12 +28,27 @@ pub fn process_config_initialize(accounts: &[AccountInfo<'_>]) -> ProgramResult 
 	};
 
 	if admin_info.key.ne(&ADMIN_PUBKEY) {
+		msg!(
+			"UnauthorizedAdmin: {}, expected: {}",
+			admin_info.key,
+			ADMIN_PUBKEY
+		);
 		return Err(BitflipError::UnauthorizedAdmin.into());
 	}
 
 	if authority_info.key.eq(&ADMIN_PUBKEY) {
+		msg!("DuplicateAuthority: {}", authority_info.key);
 		return Err(BitflipError::DuplicateAuthority.into());
 	}
+
+	let config_seeds = seeds_config!();
+	let treasury_seeds = seeds_treasury!();
+	let config_bump = config_info.find_canonical_bump(config_seeds, &ID)?;
+	let treasury_bump = treasury_info.find_canonical_bump(treasury_seeds, &ID)?;
+	let mint_bit_bump = get_pda_mint(TokenMember::Bit).1;
+	let mint_kibibit_bump = get_pda_mint(TokenMember::Kibibit).1;
+	let mint_mebibit_bump = get_pda_mint(TokenMember::Mebibit).1;
+	let mint_gibibit_bump = get_pda_mint(TokenMember::Gibibit).1;
 
 	admin_info.is_signer()?;
 	authority_info.is_signer()?.is_writable()?;
@@ -44,24 +59,13 @@ pub fn process_config_initialize(accounts: &[AccountInfo<'_>]) -> ProgramResult 
 		.has_owner(&system_program::ID)?;
 	system_program_info.is_program(&system_program::ID)?;
 
-	let (config_key, config_bump) = get_pda_config();
-	let (treasury_key, treasury_bump) = get_pda_treasury();
-	let mint_bit_bump = get_pda_mint(TokenMember::Bit).1;
-	let mint_kibibit_bump = get_pda_mint(TokenMember::Kibibit).1;
-	let mint_mebibit_bump = get_pda_mint(TokenMember::Mebibit).1;
-	let mint_gibibit_bump = get_pda_mint(TokenMember::Gibibit).1;
-
-	if config_key.ne(config_info.key) || treasury_key.ne(treasury_info.key) {
-		return Err(ProgramError::InvalidSeeds);
-	}
-
 	// initialize config
 	create_account_with_bump::<ConfigState>(
 		config_info,
 		system_program_info,
 		authority_info,
 		&ID,
-		&[SEED_PREFIX, SEED_CONFIG],
+		config_seeds,
 		config_bump,
 	)?;
 
@@ -101,7 +105,17 @@ mod tests {
 
 	use super::*;
 	use crate::get_pda_config;
+	use crate::get_pda_treasury;
 	use crate::leak;
+
+	#[test_log::test]
+	fn should_pass_validation() -> anyhow::Result<()> {
+		let accounts = create_account_infos();
+		let result = process_config_initialize(&accounts);
+		check!(result.unwrap_err() == ProgramError::UnsupportedSysvar);
+
+		Ok(())
+	}
 
 	#[test_log::test]
 	fn should_have_enough_accounts() -> anyhow::Result<()> {

@@ -58,7 +58,7 @@ pub const SEED_SECTION: &[u8] = b"section";
 /// Assuming a price of 100USD per sol. This is approximately 1 cent.
 pub const BASE_LAMPORTS_PER_BIT: u64 = LAMPORTS_PER_SOL / 100 / 100;
 pub const MIN_LAMPORTS_PER_BIT: u64 = BASE_LAMPORTS_PER_BIT / 10;
-
+pub const MAX_LAMPORTS_PER_BIT: u64 = u64::MAX;
 pub const SEED_BIT_CREATOR: &[u8] = b"bit_creator";
 pub const SPACE_DISCRIMINATOR: usize = 8;
 pub const SPACE_U32: usize = 4;

@@ -1,8 +1,11 @@
+use std::ops::AddAssign;
+
 use fixed::types::U64F64;
 use solana_program::msg;
 use spl_pod::primitives::PodI64;
 use spl_pod::primitives::PodU16;
 use spl_pod::primitives::PodU32;
+use spl_pod::primitives::PodU64;
 use static_assertions::const_assert;
 use steel::*;
 
@@ -11,6 +14,7 @@ use crate::BASE_LAMPORTS_PER_BIT;
 use crate::BITFLIP_SECTION_LENGTH;
 use crate::BITFLIP_SECTION_TOTAL_BITS;
 use crate::EARNED_TOKENS_PER_SECTION;
+use crate::MAX_LAMPORTS_PER_BIT;
 use crate::MIN_LAMPORTS_PER_BIT;
 use crate::SESSION_DURATION;
 
@@ -23,7 +27,7 @@ pub enum BitflipAccount {
 }
 
 const_assert!(ConfigState::space() == 80);
-const_assert!(GameState::space() == 124);
+const_assert!(GameState::space() == 149);
 const_assert!(SectionState::space() == 600);
 
 account!(BitflipAccount, ConfigState);
@@ -107,6 +111,15 @@ impl ConfigState {
 	}
 }
 
+#[repr(u8)]
+#[derive(Default, Clone, Copy, Debug, Eq, PartialEq, TryFromPrimitive, IntoPrimitive)]
+pub enum GameStatus {
+	#[default]
+	Pending = 0,
+	Running = 1,
+	Ended = 2,
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Pod, Zeroable)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -116,30 +129,43 @@ pub struct GameState {
 	/// The version of the state.
 	#[cfg_attr(feature = "client", builder(default = GameState::VERSION))]
 	pub version: u8,
-	/// This is a refresh signer created and maintained by the backend. It needs
-	/// to be provided to update the access signer. It will need to be updated
-	/// after every game.
+	/// This is a permanent signer created and maintained by the backend. It
+	/// needs to be provided to update the access signer.
 	#[cfg_attr(
 		feature = "serde",
 		serde(with = "::serde_with::As::<serde_with::DisplayFromStr>")
 	)]
 	#[cfg_attr(feature = "client", builder(default))]
-	pub refresh_signer: Pubkey,
-	/// This is an access signer created and maintained by the backend. Which is
-	/// allowed to sign certain transactions and expires daily.
+	pub funded_signer: Pubkey,
+	/// This is a temporary signer created and maintained by the backend. Which
+	/// is allowed to sign certain transactions and expires after a fixed amount
+	/// of time.
 	#[cfg_attr(
 		feature = "serde",
 		serde(with = "::serde_with::As::<serde_with::DisplayFromStr>")
 	)]
 	#[cfg_attr(feature = "client", builder(default))]
-	pub access_signer: Pubkey,
-	/// The timestamp that the access expiry will end.
-	#[cfg_attr(feature = "client", builder(default, setter(into)))]
-	pub access_expiry: PodI64,
+	pub temp_signer: Pubkey,
 	/// The start time. If 0 then it hasn't started yet. Using an `Option` here
-	/// would waste an extra byte.
+	/// would waste extra bytes.
 	#[cfg_attr(feature = "client", builder(default, setter(into)))]
 	pub start_time: PodI64,
+	/// The duration of the game.
+	#[cfg_attr(feature = "client", builder(default = SESSION_DURATION.into(), setter(into)))]
+	pub duration: PodI64,
+	/// The minimum amount of lamports that the price of flipping a bit should
+	/// be.
+	#[cfg_attr(feature = "client", builder(default = MIN_LAMPORTS_PER_BIT.into(), setter(into)))]
+	pub min_lamports: PodU64,
+	/// The initial price of flipping a bit.
+	#[cfg_attr(feature = "client", builder(default = BASE_LAMPORTS_PER_BIT.into(), setter(into)))]
+	pub base_lamports: PodU64,
+	/// The maximum price of flipping a bit.
+	#[cfg_attr(feature = "client", builder(default = MAX_LAMPORTS_PER_BIT.into(), setter(into)))]
+	pub max_lamports: PodU64,
+	/// The status of the game.
+	#[cfg_attr(feature = "client", builder(default = GameStatus::Pending.into()))]
+	pub status: u8,
 	/// The index of this currently played game.
 	pub game_index: u8,
 	/// The most recent section which was unlocked. This will be updated every
@@ -161,13 +187,17 @@ impl AccountVersion for GameState {
 }
 
 impl GameState {
-	pub fn new(access_signer: Pubkey, refresh_signer: Pubkey, index: u8, bump: u8) -> Self {
+	pub fn new(temp_signer: Pubkey, funded_signer: Pubkey, index: u8, bump: u8) -> Self {
 		Self {
 			version: GameState::VERSION,
-			refresh_signer,
-			access_signer,
-			access_expiry: 0.into(),
+			funded_signer,
+			temp_signer,
 			start_time: 0.into(),
+			duration: SESSION_DURATION.into(),
+			min_lamports: MIN_LAMPORTS_PER_BIT.into(),
+			base_lamports: BASE_LAMPORTS_PER_BIT.into(),
+			max_lamports: MAX_LAMPORTS_PER_BIT.into(),
+			status: GameStatus::Pending.into(),
 			section_index: 0,
 			game_index: index,
 			bump,
@@ -175,17 +205,40 @@ impl GameState {
 		}
 	}
 
+	#[inline(always)]
 	pub fn start_time(&self) -> i64 {
 		self.start_time.into()
 	}
 
-	pub fn access_expiry(&self) -> i64 {
-		self.access_expiry.into()
+	#[inline(always)]
+	pub fn duration(&self) -> i64 {
+		self.duration.into()
+	}
+
+	#[inline(always)]
+	pub fn min_lamports(&self) -> u64 {
+		self.min_lamports.into()
+	}
+
+	#[inline(always)]
+	pub fn base_lamports(&self) -> u64 {
+		self.base_lamports.into()
+	}
+
+	#[inline(always)]
+	pub fn max_lamports(&self) -> u64 {
+		self.max_lamports.into()
+	}
+
+	#[inline(always)]
+	pub fn status(&self) -> GameStatus {
+		GameStatus::try_from(self.status).unwrap()
 	}
 
 	/// The end time of the game.
+	#[inline(always)]
 	pub fn end_time(&self) -> i64 {
-		self.start_time().saturating_add(SESSION_DURATION)
+		self.start_time().saturating_add(self.duration())
 	}
 
 	/// The remaining time of the game.
@@ -193,25 +246,26 @@ impl GameState {
 		self.end_time().saturating_sub(current_time)
 	}
 
-	/// Whether the game has started.
-	pub fn has_started(&self) -> bool {
-		msg!("start_time: {}", self.start_time());
-		self.start_time() > 0
+	/// Whether the game is running.
+	pub fn running(&self, current_time: i64) -> bool {
+		self.start_time() > 0 && self.status() == GameStatus::Running && !self.ended(current_time)
 	}
 
 	/// Whether the game has ended.
-	pub fn has_ended(&self, current_time: i64) -> bool {
-		msg!(
-			"current_time: {}, end_time: {}",
-			current_time,
-			self.end_time()
-		);
-		self.has_started() && current_time > self.end_time()
+	pub fn ended(&self, current_time: i64) -> bool {
+		current_time > self.end_time() || self.status() == GameStatus::Ended
 	}
 
-	/// Whether the game is running.
-	pub fn is_running(&self, current_time: i64) -> bool {
-		self.has_started() && !self.has_ended(current_time)
+	pub fn start(&mut self, current_time: i64) {
+		self.status = GameStatus::Running.into();
+		self.start_time = current_time.into();
+	}
+
+	/// Increment the section index, without overflowing.
+	pub fn increment_section(&mut self) {
+		if let Some(next_index) = self.section_index.checked_add(1) {
+			self.section_index = next_index;
+		}
 	}
 }
 

@@ -4,70 +4,68 @@ use steel::ProgramError;
 
 use crate::TokenMember;
 use crate::ID;
-use crate::SEED_CONFIG;
-use crate::SEED_EVENT;
-use crate::SEED_GAME;
-use crate::SEED_NONCE;
-use crate::SEED_PLAYER;
-use crate::SEED_PREFIX;
-use crate::SEED_SECTION;
-use crate::SEED_TREASURY;
 
 pub fn get_token_account(wallet: &Pubkey, mint: &Pubkey) -> Pubkey {
 	get_associated_token_address_with_program_id(wallet, mint, &spl_token_2022::ID)
 }
 
+macro_rules! seeds_config {
+	() => {
+		&[crate::SEED_PREFIX, crate::SEED_CONFIG]
+	};
+	($bump:expr) => {
+		&[crate::SEED_PREFIX, crate::SEED_CONFIG, &[$bump]]
+	};
+}
+
+pub(crate) use seeds_config;
+
 pub fn get_pda_config() -> (Pubkey, u8) {
-	Pubkey::find_program_address(&[SEED_PREFIX, SEED_CONFIG], &ID)
+	Pubkey::find_program_address(seeds_config!(), &ID)
 }
 
 pub fn create_pda_config(bump: u8) -> Result<Pubkey, ProgramError> {
-	let pubkey = Pubkey::create_program_address(&[SEED_PREFIX, SEED_CONFIG, &[bump]], &ID)?;
+	let pubkey = Pubkey::create_program_address(seeds_config!(bump), &ID)?;
 	Ok(pubkey)
 }
 
+macro_rules! seeds_event {
+	() => {
+		&[crate::SEED_PREFIX, crate::SEED_EVENT]
+	};
+	($bump:expr) => {
+		&[crate::SEED_PREFIX, crate::SEED_EVENT, &[$bump]]
+	};
+}
+
+pub(crate) use seeds_event;
+
 pub fn get_pda_event() -> (Pubkey, u8) {
-	Pubkey::find_program_address(&[SEED_PREFIX, SEED_EVENT], &ID)
+	Pubkey::find_program_address(seeds_event!(), &ID)
 }
 
 pub fn create_pda_event(bump: u8) -> Result<Pubkey, ProgramError> {
-	let pubkey = Pubkey::create_program_address(&[SEED_PREFIX, SEED_EVENT, &[bump]], &ID)?;
+	let pubkey = Pubkey::create_program_address(seeds_event!(bump), &ID)?;
 	Ok(pubkey)
 }
 
-pub fn get_pda_derived_player(player: &Pubkey) -> (Pubkey, u8) {
-	Pubkey::find_program_address(&[SEED_PREFIX, SEED_PLAYER, player.as_ref()], &ID)
+macro_rules! seeds_treasury {
+	() => {
+		&[crate::SEED_PREFIX, crate::SEED_TREASURY]
+	};
+	($bump:expr) => {
+		&[crate::SEED_PREFIX, crate::SEED_TREASURY, &[$bump]]
+	};
 }
 
-pub fn create_pda_derived_player(player: &Pubkey, bump: u8) -> Result<Pubkey, ProgramError> {
-	let pubkey =
-		Pubkey::create_program_address(&[SEED_PREFIX, SEED_PLAYER, player.as_ref(), &[bump]], &ID)?;
-	Ok(pubkey)
-}
-
-pub fn get_pda_nonce(address: &Pubkey) -> (Pubkey, u8) {
-	Pubkey::find_program_address(&[SEED_PREFIX, SEED_NONCE, address.as_ref()], &ID)
-}
-
-pub fn create_pda_nonce(address: &Pubkey, bump: u8) -> Result<Pubkey, ProgramError> {
-	let pubkey =
-		Pubkey::create_program_address(&[SEED_PREFIX, SEED_NONCE, address.as_ref(), &[bump]], &ID)?;
-	Ok(pubkey)
-}
-
-pub fn get_derived_player_token_account(player: &Pubkey, member: TokenMember) -> Pubkey {
-	let player_pda = get_pda_derived_player(player).0;
-	let mint = get_pda_mint(member).0;
-
-	get_token_account(&player_pda, &mint)
-}
+pub(crate) use seeds_treasury;
 
 pub fn get_pda_treasury() -> (Pubkey, u8) {
-	Pubkey::find_program_address(&[SEED_PREFIX, SEED_TREASURY], &ID)
+	Pubkey::find_program_address(seeds_treasury!(), &ID)
 }
 
 pub fn create_pda_treasury(bump: u8) -> Result<Pubkey, ProgramError> {
-	let pubkey = Pubkey::create_program_address(&[SEED_PREFIX, SEED_TREASURY, &[bump]], &ID)?;
+	let pubkey = Pubkey::create_program_address(seeds_treasury!(bump), &ID)?;
 	Ok(pubkey)
 }
 
@@ -78,64 +76,81 @@ pub fn get_treasury_token_account(member: TokenMember) -> Pubkey {
 	get_token_account(&treasury, &mint)
 }
 
+macro_rules! seeds_mint {
+	($member:expr) => {
+		&[crate::SEED_PREFIX, $member.seed()]
+	};
+	($member:expr, $bump:expr) => {
+		&[crate::SEED_PREFIX, $member.seed(), &[$bump]]
+	};
+}
+
+pub(crate) use seeds_mint;
+
 pub fn get_pda_mint(member: TokenMember) -> (Pubkey, u8) {
-	Pubkey::find_program_address(&[SEED_PREFIX, member.seed()], &ID)
+	Pubkey::find_program_address(seeds_mint!(member), &ID)
 }
 
 pub fn create_pda_mint(member: TokenMember, bump: u8) -> Result<Pubkey, ProgramError> {
-	let pubkey = Pubkey::create_program_address(&[SEED_PREFIX, member.seed(), &[bump]], &ID)?;
+	let pubkey = Pubkey::create_program_address(seeds_mint!(member, bump), &ID)?;
 	Ok(pubkey)
 }
 
+macro_rules! seeds_game {
+	($game_index:expr) => {
+		&[
+			crate::SEED_PREFIX,
+			crate::SEED_GAME,
+			&$game_index.to_le_bytes(),
+		]
+	};
+	($game_index:expr, $bump:expr) => {
+		&[
+			crate::SEED_PREFIX,
+			crate::SEED_GAME,
+			&$game_index.to_le_bytes(),
+			&[$bump],
+		]
+	};
+}
+
+pub(crate) use seeds_game;
+
 pub fn get_pda_game(game_index: u8) -> (Pubkey, u8) {
-	Pubkey::find_program_address(&[SEED_PREFIX, SEED_GAME, &game_index.to_le_bytes()], &ID)
+	Pubkey::find_program_address(seeds_game!(game_index), &ID)
 }
 
 pub fn create_pda_game(game_index: u8, bump: u8) -> Result<Pubkey, ProgramError> {
-	let pubkey = Pubkey::create_program_address(
-		&[SEED_PREFIX, SEED_GAME, &game_index.to_le_bytes(), &[bump]],
-		&ID,
-	)?;
+	let pubkey = Pubkey::create_program_address(seeds_game!(game_index, bump), &ID)?;
 	Ok(pubkey)
 }
 
-pub fn get_pda_game_nonce(game_index: u8) -> (Pubkey, u8) {
-	Pubkey::find_program_address(
+macro_rules! seeds_section {
+	($game_index:expr, $section_index:expr) => {
 		&[
-			SEED_PREFIX,
-			SEED_GAME,
-			&game_index.to_le_bytes(),
-			SEED_NONCE,
-		],
-		&ID,
-	)
+			crate::SEED_PREFIX,
+			crate::SEED_GAME,
+			&$game_index.to_le_bytes(),
+			crate::SEED_SECTION,
+			&$section_index.to_le_bytes(),
+		]
+	};
+	($game_index:expr, $section_index:expr, $bump:expr) => {
+		&[
+			crate::SEED_PREFIX,
+			crate::SEED_GAME,
+			&$game_index.to_le_bytes(),
+			crate::SEED_SECTION,
+			&$section_index.to_le_bytes(),
+			&[$bump],
+		]
+	};
 }
 
-pub fn create_pda_game_nonce(game_index: u8, bump: u8) -> Result<Pubkey, ProgramError> {
-	let pubkey = Pubkey::create_program_address(
-		&[
-			SEED_PREFIX,
-			SEED_GAME,
-			&game_index.to_le_bytes(),
-			SEED_NONCE,
-			&[bump],
-		],
-		&ID,
-	)?;
-	Ok(pubkey)
-}
+pub(crate) use seeds_section;
 
 pub fn get_pda_section(game_index: u8, section_index: u8) -> (Pubkey, u8) {
-	Pubkey::find_program_address(
-		&[
-			SEED_PREFIX,
-			SEED_GAME,
-			&game_index.to_le_bytes(),
-			SEED_SECTION,
-			&section_index.to_le_bytes(),
-		],
-		&ID,
-	)
+	Pubkey::find_program_address(seeds_section!(game_index, section_index), &ID)
 }
 
 pub fn create_pda_section(
@@ -143,17 +158,8 @@ pub fn create_pda_section(
 	section_index: u8,
 	bump: u8,
 ) -> Result<Pubkey, ProgramError> {
-	let pubkey = Pubkey::create_program_address(
-		&[
-			SEED_PREFIX,
-			SEED_GAME,
-			&game_index.to_le_bytes(),
-			SEED_SECTION,
-			&section_index.to_le_bytes(),
-			&[bump],
-		],
-		&ID,
-	)?;
+	let pubkey =
+		Pubkey::create_program_address(seeds_section!(game_index, section_index, bump), &ID)?;
 	Ok(pubkey)
 }
 

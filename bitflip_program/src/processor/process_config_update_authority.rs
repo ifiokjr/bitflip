@@ -1,8 +1,8 @@
 use steel::*;
 
-use super::BitflipInstruction;
-use crate::create_pda_config;
+use crate::seeds_config;
 use crate::BitflipError;
+use crate::BitflipInstruction;
 use crate::ConfigState;
 use crate::ID;
 
@@ -11,8 +11,14 @@ pub fn process_config_update_authority(accounts: &[AccountInfo]) -> ProgramResul
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};
 
+	let config = config_info.as_account_mut::<ConfigState>(&ID)?;
+	let config_seeds_with_bump = seeds_config!(config.bump);
+
 	// validate accounts
-	config_info.is_writable()?.is_type::<ConfigState>(&ID)?;
+	config_info
+		.is_writable()?
+		.is_type::<ConfigState>(&ID)?
+		.has_seeds_with_bump(config_seeds_with_bump, &ID)?;
 	authority_info
 		.is_signer()?
 		.is_writable()?
@@ -21,24 +27,14 @@ pub fn process_config_update_authority(accounts: &[AccountInfo]) -> ProgramResul
 		.is_signer()?
 		.has_owner(&system_program::ID)?;
 
-	if config_info.data_len() < ConfigState::space() {
-		return Err(ProgramError::AccountDataTooSmall);
-	}
-
-	let config = config_info.as_account_mut::<ConfigState>(&ID)?;
-	let config_key = create_pda_config(config.bump)?;
-
-	if config_info.key.ne(&config_key) {
-		return Err(ProgramError::InvalidSeeds);
-	}
-
-	if authority_info.key.ne(&config.authority) {
-		return Err(BitflipError::Unauthorized.into());
-	}
-
-	if new_authority_info.key.eq(&config.authority) {
-		return Err(BitflipError::DuplicateAuthority.into());
-	}
+	config.assert_err(
+		|config| config.authority.eq(authority_info.key),
+		BitflipError::Unauthorized,
+	)?;
+	config.assert_err(
+		|config| new_authority_info.key.ne(&config.authority),
+		BitflipError::DuplicateAuthority,
+	)?;
 
 	config.authority = *new_authority_info.key;
 
@@ -68,7 +64,7 @@ mod tests {
 	use crate::TokenMember;
 
 	#[test_log::test]
-	fn should_pass() -> anyhow::Result<()> {
+	fn should_pass_validation() -> anyhow::Result<()> {
 		let accounts = create_account_infos();
 		process_config_update_authority(&accounts)?;
 

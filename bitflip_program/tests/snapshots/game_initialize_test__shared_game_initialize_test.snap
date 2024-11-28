@@ -5,10 +5,13 @@ snapshot_kind: text
 ---
 {
   "version": 0,
-  "refreshSigner": "[refresh_signer:pubkey]",
-  "accessSigner": "[access_signer:pubkey]",
-  "accessExpiry": 0,
+  "fundedSigner": "[funded_signer:pubkey]",
+  "tempSigner": "[temp_signer:pubkey]",
   "startTime": 0,
+  "duration": 5184000,
+  "minLamports": 10000,
+  "baseLamports": 100000,
+  "maxLamports": 18446744073709551615,
   "gameIndex": 0,
   "sectionIndex": 0,
   "bump": 253,

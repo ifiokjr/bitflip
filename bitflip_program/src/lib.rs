@@ -23,12 +23,12 @@ pub use crate::processor::*;
 pub use crate::state::*;
 pub use crate::utils::*;
 
-solana_package_metadata::declare_id_with_package_metadata!("solana.program-id");
+declare_id!("5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM");
 
 #[cfg(not(feature = "no-entrypoint"))]
-entrypoint!(process_instruction);
+steel::entrypoint!(process_instruction);
 
-// #[cfg(not(feature = "no-entrypoint"))]
+#[cfg(not(feature = "no-entrypoint"))]
 solana_security_txt::security_txt! {
 	// Required fields
 	name: "Bitflip",
@@ -43,7 +43,7 @@ solana_security_txt::security_txt! {
 	source_release: default_env::default_env!("GITHUB_REF_NAME", ""),
 	auditors: concat!("Verifier pubkey: ", default_env::default_env!("GITHUB_SHA", "")),
 	encryption: "",
-	acknowledgements: "Thank you to our bug bounty degens!"
+	acknowledgements: "Thank you to all bug bounty degens!"
 }
 
 #[cfg(test)]

@@ -4,7 +4,6 @@ use spl_token_2022::extension::ExtensionType;
 use steel::*;
 use sysvar::rent::Rent;
 
-use super::BitflipInstruction;
 use crate::cpi::create_associated_token_account;
 use crate::cpi::group_member_pointer_initialize;
 use crate::cpi::group_pointer_initialize;
@@ -13,11 +12,12 @@ use crate::cpi::metadata_pointer_initialize;
 use crate::cpi::mint_close_authority_initialize;
 use crate::cpi::mint_to;
 use crate::cpi::token_metadata_initialize;
-use crate::create_pda_config;
-use crate::create_pda_treasury;
-use crate::get_token_account;
 use crate::get_token_amount;
+use crate::seeds_config;
+use crate::seeds_mint;
+use crate::seeds_treasury;
 use crate::BitflipError;
+use crate::BitflipInstruction;
 use crate::ConfigState;
 use crate::BIT_TOKEN_NAME;
 use crate::BIT_TOKEN_SYMBOL;
@@ -37,7 +37,6 @@ use crate::SEED_GIBIBIT_MINT;
 use crate::SEED_KIBIBIT_MINT;
 use crate::SEED_MEBIBIT_MINT;
 use crate::SEED_PREFIX;
-use crate::SEED_TREASURY;
 use crate::TOKEN_DECIMALS;
 use crate::TOTAL_BIT_TOKENS;
 
@@ -53,33 +52,32 @@ pub fn process_token_initialize(accounts: &[AccountInfo], data: &[u8]) -> Progra
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};
 
+	let config = config_info.as_account::<ConfigState>(&ID)?;
+	let config_seeds_with_bump = seeds_config!(config.bump);
+	let treasury_seeds_with_bump = seeds_treasury!(config.treasury_bump);
+	let mint_seeds_with_bump = seeds_mint!(member, member.bump(config));
+
 	authority_info.is_signer()?.is_writable()?;
-	config_info.is_type::<ConfigState>(&ID)?;
-	treasury_info.has_owner(&system_program::ID)?;
-	mint_info.is_empty()?.is_writable()?;
-	treasury_token_account_info.is_empty()?.is_writable()?;
+	config_info
+		.is_type::<ConfigState>(&ID)?
+		.has_seeds_with_bump(config_seeds_with_bump, &ID)?;
+	treasury_info
+		.has_owner(&system_program::ID)?
+		.has_seeds_with_bump(treasury_seeds_with_bump, &ID)?;
+	mint_info
+		.is_empty()?
+		.is_writable()?
+		.has_seeds_with_bump(mint_seeds_with_bump, &ID)?;
+	treasury_token_account_info
+		.is_empty()?
+		.is_writable()?
+		.is_associated_token_address(treasury_info.key, mint_info.key)?;
 	associated_token_program_info.is_program(&spl_associated_token_account::ID)?;
 	token_program_info.is_program(&spl_token_2022::ID)?;
 	system_program_info.is_program(&system_program::ID)?;
 
-	let config = config_info.as_account::<ConfigState>(&ID)?;
-	let config_key = create_pda_config(config.bump)?;
-	let treasury_key = create_pda_treasury(config.treasury_bump)?;
-	let mint_seeds = &[SEED_PREFIX, member.seed(), &[member.bump(config)]];
-	let mint_key = Pubkey::create_program_address(mint_seeds, &ID)?;
-	let treasury_token_account_key = get_token_account(&treasury_key, &mint_key);
-	let treasury_seeds = &[SEED_PREFIX, SEED_TREASURY, &[config.treasury_bump]];
-
 	if authority_info.key.ne(&config.authority) {
 		return Err(BitflipError::Unauthorized.into());
-	}
-
-	if config_key.ne(config_info.key)
-		|| treasury_key.ne(treasury_info.key)
-		|| mint_key.ne(mint_info.key)
-		|| treasury_token_account_key.ne(treasury_token_account_info.key)
-	{
-		return Err(ProgramError::InvalidSeeds);
 	}
 
 	let rent_sysvar = Rent::get()?;
@@ -126,7 +124,7 @@ pub fn process_token_initialize(accounts: &[AccountInfo], data: &[u8]) -> Progra
 		member.name().into(),
 		member.symbol().into(),
 		member.uri().into(),
-		&[treasury_seeds],
+		&[treasury_seeds_with_bump],
 	)?;
 
 	msg!("{}: get mint account size", name);
@@ -148,7 +146,7 @@ pub fn process_token_initialize(accounts: &[AccountInfo], data: &[u8]) -> Progra
 		mint_info,
 		token_program_info,
 		system_program_info,
-		&[treasury_seeds],
+		&[treasury_seeds_with_bump],
 	)?;
 
 	let token_amount = get_token_amount(member.supply(), member.decimals())?;
@@ -161,7 +159,7 @@ pub fn process_token_initialize(accounts: &[AccountInfo], data: &[u8]) -> Progra
 			treasury_info,
 			token_program_info,
 			token_amount,
-			&[treasury_seeds],
+			&[treasury_seeds_with_bump],
 		)?;
 	}
 
@@ -209,7 +207,7 @@ impl TokenMember {
 	}
 
 	#[inline(always)]
-	pub const fn seed(&self) -> &[u8] {
+	pub const fn seed(&self) -> &'static [u8] {
 		match self {
 			TokenMember::Bit => SEED_BIT_MINT,
 			TokenMember::Kibibit => SEED_KIBIBIT_MINT,
@@ -324,6 +322,7 @@ mod tests {
 	use crate::get_pda_config;
 	use crate::get_pda_mint;
 	use crate::get_pda_treasury;
+	use crate::get_token_account;
 	use crate::leak;
 	use crate::BitflipError;
 

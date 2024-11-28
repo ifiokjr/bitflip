@@ -10,7 +10,7 @@
 			"rounded_compute_units": 10000,
 			"description": "Update the authority of the config"
 		},
-		"flip_bit_test": {
+		"flip_bit": {
 			"compute_units": 64832,
 			"rounded_compute_units": 70000,
 			"description": "Flip a single bit from `0` to `1`"
@@ -20,7 +20,7 @@
 			"rounded_compute_units": 20000,
 			"description": "Initialize the game"
 		},
-		"game_refresh_signer": {
+		"game_update_temp_signer": {
 			"compute_units": 2232,
 			"rounded_compute_units": 10000,
 			"description": "Refresh the signer"

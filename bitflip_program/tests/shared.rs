@@ -38,7 +38,6 @@ use spl_token_2022::extension::group_member_pointer::GroupMemberPointer;
 use spl_token_2022::extension::group_pointer::GroupPointer;
 use spl_token_2022::extension::metadata_pointer::MetadataPointer;
 use spl_token_2022::extension::mint_close_authority::MintCloseAuthority;
-use spl_token_2022::extension::BaseStateWithExtensions;
 use spl_token_2022::extension::BaseStateWithExtensionsMut;
 use spl_token_2022::extension::ExtensionType;
 use spl_token_2022::extension::PodStateWithExtensionsMut;
@@ -366,37 +365,31 @@ fn create_token_account_data(
 
 pub struct CreatedGameState {
 	pub game_state_account: AccountSharedData,
-	pub access_signer: Keypair,
-	pub refresh_signer: Keypair,
-	pub refresh_signer_account: AccountSharedData,
+	pub temp_signer: Keypair,
+	pub funded_signer: Keypair,
+	pub funded_signer_account: AccountSharedData,
 }
 
-pub fn create_game_state(
-	game_index: u8,
-	section_index: u8,
-	start_time: i64,
-	access_expiry: i64,
-) -> CreatedGameState {
+pub fn create_game_state(game_index: u8, section_index: u8, start_time: i64) -> CreatedGameState {
 	let game_bump = get_pda_game(game_index).1;
-	let (access_signer, refresh_signer) = (Keypair::new(), Keypair::new());
+	let (temp_signer, funded_signer) = (Keypair::new(), Keypair::new());
 	let game_state = GameState::builder()
-		.access_signer(access_signer.pubkey())
-		.refresh_signer(refresh_signer.pubkey())
+		.temp_signer(temp_signer.pubkey())
+		.funded_signer(funded_signer.pubkey())
 		.start_time(start_time)
 		.game_index(game_index)
 		.bump(game_bump)
-		.access_expiry(access_expiry)
 		.section_index(section_index)
 		.build();
 
 	let lamports = Rent::default().minimum_balance(0) + 5_000_000;
-	let refresh_signer_account = AccountSharedData::new(lamports, 0, &system_program::ID);
+	let funded_signer_account = AccountSharedData::new(lamports, 0, &system_program::ID);
 
 	CreatedGameState {
 		game_state_account: game_state.to_account_shared_data(),
-		access_signer,
-		refresh_signer,
-		refresh_signer_account,
+		temp_signer,
+		funded_signer,
+		funded_signer_account,
 	}
 }
 

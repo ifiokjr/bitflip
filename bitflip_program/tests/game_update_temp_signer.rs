@@ -3,7 +3,7 @@
 use std::future::Future;
 
 use assert2::check;
-use bitflip_program::game_refresh_signer;
+use bitflip_program::game_update_temp_signer;
 use bitflip_program::get_pda_game;
 use bitflip_program::GameState;
 use shared::create_config_accounts;
@@ -21,9 +21,9 @@ use test_utils_solana::prelude::*;
 mod shared;
 
 #[test_log::test(tokio::test)]
-async fn game_refresh_signer_test() -> anyhow::Result<()> {
-	let created_game_state = create_game_state(0, 0, 0, 0);
-	shared_game_refresh_signer_test(
+async fn game_update_temp_signer_test() -> anyhow::Result<()> {
+	let created_game_state = create_game_state(0, 0, 0);
+	shared_game_update_temp_signer_test(
 		|| create_banks_client_rpc(&created_game_state),
 		&created_game_state,
 	)
@@ -34,9 +34,9 @@ async fn game_refresh_signer_test() -> anyhow::Result<()> {
 
 #[cfg(feature = "test_validator")]
 #[test_log::test(tokio::test)]
-async fn game_refresh_signer_test_validator() -> anyhow::Result<()> {
-	let created_game_state = create_game_state(0, 0, 0, 0);
-	let compute_units = shared_game_refresh_signer_test(
+async fn game_update_temp_signer_test_validator() -> anyhow::Result<()> {
+	let created_game_state = create_game_state(0, 0, 0);
+	let compute_units = shared_game_update_temp_signer_test(
 		|| create_validator_rpc(&created_game_state),
 		&created_game_state,
 	)
@@ -45,15 +45,19 @@ async fn game_refresh_signer_test_validator() -> anyhow::Result<()> {
 
 	check!(rounded_compute_units == 10_000);
 	insta::assert_snapshot!(format!("{rounded_compute_units} CU"));
-	shared::save_compute_units("game_refresh_signer", compute_units, "Refresh the signer")?;
+	shared::save_compute_units(
+		"game_update_temp_signer",
+		compute_units,
+		"Refresh the signer",
+	)?;
 	Ok(())
 }
 
 async fn create_banks_client_rpc(
 	CreatedGameState {
 		ref game_state_account,
-		ref refresh_signer,
-		ref refresh_signer_account,
+		ref funded_signer,
+		ref funded_signer_account,
 		..
 	}: &CreatedGameState,
 ) -> anyhow::Result<impl ToRpcClient> {
@@ -68,10 +72,7 @@ async fn create_banks_client_rpc(
 		let game = get_pda_game(0).0;
 
 		p.add_account(game, game_state_account.clone().into());
-		p.add_account(
-			refresh_signer.pubkey(),
-			refresh_signer_account.clone().into(),
-		);
+		p.add_account(funded_signer.pubkey(), funded_signer_account.clone().into());
 
 		Ok(())
 	})
@@ -84,45 +85,45 @@ async fn create_banks_client_rpc(
 async fn create_validator_rpc(
 	CreatedGameState {
 		ref game_state_account,
-		ref refresh_signer,
-		ref refresh_signer_account,
+		ref funded_signer,
+		ref funded_signer_account,
 		..
 	}: &CreatedGameState,
 ) -> anyhow::Result<impl ToRpcClient> {
 	let mut accounts = create_config_accounts();
 	let game = get_pda_game(0).0;
 	accounts.insert(game, game_state_account.clone());
-	accounts.insert(refresh_signer.pubkey(), refresh_signer_account.clone());
+	accounts.insert(funded_signer.pubkey(), funded_signer_account.clone());
 
 	let runner = shared::create_runner_with_accounts(accounts).await;
 
 	Ok(runner)
 }
 
-async fn shared_game_refresh_signer_test<
+async fn shared_game_update_temp_signer_test<
 	T: ToRpcClient,
 	Fut: Future<Output = anyhow::Result<T>>,
 	Create: FnOnce() -> Fut,
 >(
 	create_provider: Create,
 	CreatedGameState {
-		refresh_signer: ref refresh_signer_keypair,
+		funded_signer: ref funded_signer_keypair,
 		..
 	}: &CreatedGameState,
 ) -> anyhow::Result<u64> {
 	let provider = create_provider().await?;
 	let rpc = provider.to_rpc();
-	let access_signer_keypair = Keypair::new();
-	let access_signer = access_signer_keypair.pubkey();
-	let refresh_signer = refresh_signer_keypair.pubkey();
+	let temp_signer_keypair = Keypair::new();
+	let temp_signer = temp_signer_keypair.pubkey();
+	let funded_signer = funded_signer_keypair.pubkey();
 	let game_index = 0;
 	let game = get_pda_game(game_index).0;
 
 	// Create transaction
 	let recent_blockhash = rpc.get_latest_blockhash().await?;
-	let ix = game_refresh_signer(&access_signer, &refresh_signer, game_index);
+	let ix = game_update_temp_signer(&funded_signer, &temp_signer, game_index);
 	let mut transaction =
-		VersionedTransaction::new_unsigned_v0(&refresh_signer, &[ix], &[], recent_blockhash)?;
+		VersionedTransaction::new_unsigned_v0(&funded_signer, &[ix], &[], recent_blockhash)?;
 
 	let simulation = rpc.simulate_transaction(&transaction).await?;
 	log::info!("simulation: {simulation:#?}");
@@ -130,8 +131,8 @@ async fn shared_game_refresh_signer_test<
 
 	// Sign and send transaction
 	transaction
-		.try_sign(&[&access_signer_keypair], None)?
-		.try_sign(&[refresh_signer_keypair], None)?;
+		.try_sign(&[&temp_signer_keypair], None)?
+		.try_sign(&[funded_signer_keypair], None)?;
 
 	let signature = rpc.send_and_confirm_transaction(&transaction).await?;
 	rpc.confirm_transaction(&signature).await?;
@@ -139,11 +140,11 @@ async fn shared_game_refresh_signer_test<
 	// Verify the game state was updated
 	let game_state_data = rpc.get_account_data(&game).await?;
 	let game_state_account = GameState::try_from_bytes(&game_state_data)?;
-	let access_signer_redaction = create_insta_redaction(access_signer, "access_signer:pubkey");
-	let refresh_signer_redaction = create_insta_redaction(refresh_signer, "refresh_signer:pubkey");
+	let temp_signer_redaction = create_insta_redaction(temp_signer, "temp_signer:pubkey");
+	let funded_signer_redaction = create_insta_redaction(funded_signer, "funded_signer:pubkey");
 	insta::assert_compact_json_snapshot!(game_state_account,{
-		".accessSigner" => insta::dynamic_redaction(access_signer_redaction),
-		".refreshSigner" => insta::dynamic_redaction(refresh_signer_redaction),
+		".tempSigner" => insta::dynamic_redaction(temp_signer_redaction),
+		".fundedSigner" => insta::dynamic_redaction(funded_signer_redaction),
 	});
 
 	Ok(compute_units)

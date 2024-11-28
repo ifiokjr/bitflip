@@ -1,10 +1,10 @@
 use steel::*;
 use sysvar::rent::Rent;
 
-use super::BitflipInstruction;
 use crate::create_pda_config;
 use crate::get_pda_game;
 use crate::BitflipError;
+use crate::BitflipInstruction;
 use crate::ConfigState;
 use crate::GameState;
 use crate::ID;
@@ -13,7 +13,7 @@ use crate::SEED_PREFIX;
 use crate::TRANSACTION_FEE;
 
 pub fn process_game_initialize(accounts: &[AccountInfo]) -> ProgramResult {
-	let [authority_info, access_signer_info, refresh_signer_info, config_info, game_info, system_program_info] =
+	let [authority_info, temp_signer_info, funded_signer_info, config_info, game_info, system_program_info] =
 		accounts
 	else {
 		return Err(ProgramError::NotEnoughAccountKeys);
@@ -23,8 +23,8 @@ pub fn process_game_initialize(accounts: &[AccountInfo]) -> ProgramResult {
 		.is_signer()?
 		.is_writable()?
 		.has_owner(&system_program::ID)?;
-	access_signer_info.is_empty()?.is_signer()?;
-	refresh_signer_info.is_empty()?.is_signer()?.is_writable()?;
+	temp_signer_info.is_empty()?.is_signer()?;
+	funded_signer_info.is_empty()?.is_signer()?.is_writable()?;
 	config_info.is_type::<ConfigState>(&ID)?;
 	game_info.is_empty()?.is_writable()?;
 	system_program_info.is_program(&system_program::ID)?;
@@ -53,19 +53,19 @@ pub fn process_game_initialize(accounts: &[AccountInfo]) -> ProgramResult {
 
 	let game = game_info.as_account_mut::<GameState>(&ID)?;
 	*game = GameState::new(
-		*access_signer_info.key,
-		*refresh_signer_info.key,
+		*temp_signer_info.key,
+		*funded_signer_info.key,
 		config.game_index,
 		game_bump,
 	);
 
 	// store lamports in the refresh signer
 	let rent_sysvar = Rent::get()?;
-	let refresh_signer_lamports = rent_sysvar
+	let funded_signer_lamports = rent_sysvar
 		.minimum_balance(0)
 		.checked_add(TRANSACTION_FEE.checked_mul(1000).unwrap())
 		.unwrap();
-	refresh_signer_info.collect(refresh_signer_lamports, authority_info)?;
+	funded_signer_info.collect(funded_signer_lamports, authority_info)?;
 
 	Ok(())
 }
@@ -134,10 +134,10 @@ mod tests {
 	}
 
 	#[test_log::test]
-	fn access_signer_should_be_signer() -> anyhow::Result<()> {
+	fn temp_signer_should_be_signer() -> anyhow::Result<()> {
 		let mut accounts = create_account_infos();
-		let access_signer_info = &mut accounts[1];
-		access_signer_info.is_signer = false;
+		let temp_signer = &mut accounts[1];
+		temp_signer.is_signer = false;
 
 		let result = process_game_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
@@ -146,10 +146,10 @@ mod tests {
 	}
 
 	#[test_log::test]
-	fn refresh_signer_should_be_signer() -> anyhow::Result<()> {
+	fn funded_signer_should_be_signer() -> anyhow::Result<()> {
 		let mut accounts = create_account_infos();
-		let refresh_signer_info = &mut accounts[2];
-		refresh_signer_info.is_signer = false;
+		let funded_signer_info = &mut accounts[2];
+		funded_signer_info.is_signer = false;
 
 		let result = process_game_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
@@ -158,10 +158,10 @@ mod tests {
 	}
 
 	#[test_log::test]
-	fn refresh_signer_should_be_writable() -> anyhow::Result<()> {
+	fn funded_signer_should_be_writable() -> anyhow::Result<()> {
 		let mut accounts = create_account_infos();
-		let refresh_signer_info = &mut accounts[2];
-		refresh_signer_info.is_writable = false;
+		let funded_signer_info = &mut accounts[2];
+		funded_signer_info.is_writable = false;
 
 		let result = process_game_initialize(&accounts);
 		check!(result.unwrap_err() == ProgramError::MissingRequiredSignature);
@@ -246,12 +246,12 @@ mod tests {
 		let authority_key = leak(authority);
 		let authority_lamports = leak(1_000_000_000);
 		let authority_data = leak(vec![]);
-		let access_signer_key = leak(Pubkey::new_unique());
-		let access_signer_lamports = leak(0);
-		let access_signer_data = leak(vec![]);
-		let refresh_signer_key = leak(Pubkey::new_unique());
-		let refresh_signer_lamports = leak(0);
-		let refresh_signer_data = leak(vec![]);
+		let temp_signer_key = leak(Pubkey::new_unique());
+		let temp_signer_lamports = leak(0);
+		let temp_signer_data = leak(vec![]);
+		let funded_signer_key = leak(Pubkey::new_unique());
+		let funded_signer_lamports = leak(0);
+		let funded_signer_data = leak(vec![]);
 		let config_key = leak(get_pda_config().0);
 		let config_lamports = leak(0);
 		let config_data = {
@@ -289,22 +289,22 @@ mod tests {
 			false,
 			u64::MAX,
 		);
-		let access_signer_info = AccountInfo::new(
-			access_signer_key,
+		let temp_signer_info = AccountInfo::new(
+			temp_signer_key,
 			true,
 			false,
-			access_signer_lamports,
-			access_signer_data,
+			temp_signer_lamports,
+			temp_signer_data,
 			&system_program::ID,
 			false,
 			u64::MAX,
 		);
-		let refresh_signer_info = AccountInfo::new(
-			refresh_signer_key,
+		let funded_signer_info = AccountInfo::new(
+			funded_signer_key,
 			true,
 			true,
-			refresh_signer_lamports,
-			refresh_signer_data,
+			funded_signer_lamports,
+			funded_signer_data,
 			&system_program::ID,
 			false,
 			u64::MAX,
@@ -342,8 +342,8 @@ mod tests {
 
 		[
 			authority_info,
-			access_signer_info,
-			refresh_signer_info,
+			temp_signer_info,
+			funded_signer_info,
 			config_info,
 			game_info,
 			system_program_info,

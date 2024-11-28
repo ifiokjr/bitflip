@@ -7,49 +7,53 @@ use crate::BITFLIP_SECTION_LENGTH;
 #[repr(u32)]
 pub enum BitflipError {
 	#[error("An unknown error occured")]
-	Unknown,
+	Unknown = 0,
 	#[error(
 		"The incorrect section is being initialized. The sections must be initialized sequentially"
 	)]
-	IncorrectSectionInitialized,
+	IncorrectSectionInitialized = 1,
 	#[error("No update recorded")]
-	BitsUnchanged,
-	#[error("The game index request is invalid")]
-	InvalidGameIndex,
+	BitsUnchanged = 2,
 	#[error("The provided account was invalid")]
-	InvalidAccount,
+	InvalidAccount = 3,
 	#[error("The value set must be `0` or `1`")]
-	InvalidPlayValue,
+	InvalidPlayValue = 4,
 	#[error("The bit offset is invalid and must be less than 16")]
-	InvalidBitOffset,
+	InvalidBitOffset = 5,
 	#[error("Invalid section requested")]
-	InvalidSectionRequested,
+	InvalidSectionRequested = 6,
 	#[error("Invalid section index requested")]
-	InvalidSectionIndex,
+	InvalidSectionIndex = 7,
 	#[error("Invalid bits data section array length")]
-	InvalidBitsDataSectionLength,
+	InvalidBitsDataSectionLength = 8,
 	#[error("Data sections initialized out of order")]
-	InvalidBitsDataSectionOrder,
+	InvalidBitsDataSectionOrder = 9,
 	#[error("The bits array is an invalid length")]
-	InvalidBitsLength,
+	InvalidBitsLength = 10,
 	#[error("An invalid number of flipped bits was provided")]
-	InvalidFlippedBits,
-	#[error("The current `GameState` is not running")]
-	GameNotRunning,
+	InvalidFlippedBits = 11,
 	#[error("The token is not yet initialized")]
-	TokenNotInitialized,
+	TokenNotInitialized = 12,
 	#[error("The admin used was incorrect")]
-	UnauthorizedAdmin,
+	UnauthorizedAdmin = 13,
 	#[error("The previous section does not meet the minimum flips threshold")]
-	MinimumFlipThreshold,
+	MinimumFlipThreshold = 14,
 	#[error("The same account cannot own consecutive sections")]
-	SectionOwnerDuplicate,
-	#[error("The access signer has not been updated")]
-	AccessSignerNotUpdated,
+	SectionOwnerDuplicate = 15,
+	#[error("The game index request is invalid")]
+	GameIndexInvalid = 16,
+	#[error("The current `GameState` is not running")]
+	GameNotRunning = 17,
+	#[error("The provided game signer is unchanged")]
+	GameSignerUnchanged = 18,
+	#[error("The provided game signer is invalid")]
+	GameSignerInvalid = 19,
+	#[error("The game has already started")]
+	GameAlreadyStarted = 20,
 	#[error("The authority used was a duplicate")]
-	DuplicateAuthority,
+	DuplicateAuthority = 21,
 	#[error("The authority is not authorized to update the authority")]
-	Unauthorized,
+	Unauthorized = 22,
 }
 
 error!(BitflipError);

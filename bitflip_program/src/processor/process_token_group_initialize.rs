@@ -2,18 +2,16 @@ use solana_program::msg;
 use steel::*;
 use sysvar::rent::Rent;
 
-use super::BitflipInstruction;
 use crate::cpi::initialize_token_group;
 use crate::cpi::initialize_token_group_member;
-use crate::create_pda_config;
-use crate::create_pda_mint;
-use crate::create_pda_treasury;
+use crate::seeds_config;
+use crate::seeds_mint;
+use crate::seeds_treasury;
 use crate::BitflipError;
+use crate::BitflipInstruction;
 use crate::ConfigState;
 use crate::TokenMember;
 use crate::ID;
-use crate::SEED_PREFIX;
-use crate::SEED_TREASURY;
 
 pub fn process_token_group_initialize(accounts: &[AccountInfo]) -> ProgramResult {
 	use TokenMember::*;
@@ -24,39 +22,40 @@ pub fn process_token_group_initialize(accounts: &[AccountInfo]) -> ProgramResult
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};
 
+	let config = config_info.as_account::<ConfigState>(&ID)?;
+	let config_seeds_with_bump = seeds_config!(config.bump);
+	let mint_bit_seeds_with_bump = seeds_mint!(Bit, Bit.bump(config));
+	let mint_kibibit_seeds_with_bump = seeds_mint!(Kibibit, Kibibit.bump(config));
+	let mint_mebibit_seeds_with_bump = seeds_mint!(Mebibit, Mebibit.bump(config));
+	let mint_gibibit_seeds_with_bump = seeds_mint!(Gibibit, Gibibit.bump(config));
+	let treasury_seeds = seeds_treasury!(config.treasury_bump);
+
 	authority_info.is_signer()?.is_writable()?;
-	config_info.is_type::<ConfigState>(&ID)?;
-	treasury_info.has_owner(&system_program::ID)?;
-	mint_bit_info.is_writable()?;
-	mint_kibibit_info.is_writable()?;
-	mint_mebibit_info.is_writable()?;
-	mint_gibibit_info.is_writable()?;
+	config_info
+		.is_type::<ConfigState>(&ID)?
+		.has_seeds_with_bump(config_seeds_with_bump, &ID)?;
+	treasury_info
+		.has_owner(&system_program::ID)?
+		.has_seeds_with_bump(treasury_seeds, &ID)?;
+	mint_bit_info
+		.is_writable()?
+		.has_seeds_with_bump(mint_bit_seeds_with_bump, &ID)?;
+	mint_kibibit_info
+		.is_writable()?
+		.has_seeds_with_bump(mint_kibibit_seeds_with_bump, &ID)?;
+	mint_mebibit_info
+		.is_writable()?
+		.has_seeds_with_bump(mint_mebibit_seeds_with_bump, &ID)?;
+	mint_gibibit_info
+		.is_writable()?
+		.has_seeds_with_bump(mint_gibibit_seeds_with_bump, &ID)?;
 	associated_token_program_info.is_program(&spl_associated_token_account::ID)?;
 	token_program_info.is_program(&spl_token_2022::ID)?;
 	system_program_info.is_program(&system_program::ID)?;
-
-	let config = config_info.as_account::<ConfigState>(&ID)?;
-	let config_key = create_pda_config(config.bump)?;
-	let treasury_key = create_pda_treasury(config.treasury_bump)?;
-	let mint_bit_key = create_pda_mint(Bit, Bit.bump(config))?;
-	let mint_kibibit_key = create_pda_mint(Kibibit, Kibibit.bump(config))?;
-	let mint_mebibit_key = create_pda_mint(Mebibit, Mebibit.bump(config))?;
-	let mint_gibibit_key = create_pda_mint(Gibibit, Gibibit.bump(config))?;
-	let treasury_seeds = &[SEED_PREFIX, SEED_TREASURY, &[config.treasury_bump]];
-
-	if config_key.ne(config_info.key)
-		|| treasury_key.ne(treasury_info.key)
-		|| mint_bit_key.ne(mint_bit_info.key)
-		|| mint_kibibit_key.ne(mint_kibibit_info.key)
-		|| mint_mebibit_key.ne(mint_mebibit_info.key)
-		|| mint_gibibit_key.ne(mint_gibibit_info.key)
-	{
-		return Err(ProgramError::InvalidSeeds);
-	}
-
-	if authority_info.key.ne(&config.authority) {
-		return Err(BitflipError::Unauthorized.into());
-	}
+	config.assert_err(
+		|state| authority_info.key.eq(&state.authority),
+		BitflipError::Unauthorized,
+	)?;
 
 	let rent_sysvar = Rent::get()?;
 

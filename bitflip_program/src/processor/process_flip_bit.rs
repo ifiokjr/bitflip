@@ -1,15 +1,14 @@
 use solana_program::msg;
 use steel::*;
 
-use super::BitflipInstruction;
 use crate::cpi::create_associated_token_account_idempotent;
 use crate::cpi::transfer_checked;
-use crate::create_pda_config;
-use crate::create_pda_game;
-use crate::create_pda_mint;
-use crate::create_pda_section;
-use crate::get_token_account;
+use crate::seeds_config;
+use crate::seeds_game;
+use crate::seeds_mint;
+use crate::seeds_section;
 use crate::BitflipError;
+use crate::BitflipInstruction;
 use crate::ConfigState;
 use crate::GameState;
 use crate::SectionState;
@@ -32,79 +31,68 @@ pub fn process_flip_bit(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};
 
+	let config = config_info.as_account::<ConfigState>(&ID)?;
+	let game = game_info.as_account::<GameState>(&ID)?;
+	let section = section_info.as_account_mut::<SectionState>(&ID)?;
+	let config_seeds_with_bump = seeds_config!(config.bump);
+	let mint_seeds_with_bump = seeds_mint!(TokenMember::Bit, config.mint_bit_bump);
+	let game_seeds_with_bump = seeds_game!(game.game_index, game.bump);
+	let section_seeds_with_bump = seeds_section!(game.game_index, args.section_index, section.bump);
+
+	config.assert_err(
+		|state| state.game_index == game.game_index,
+		BitflipError::GameIndexInvalid,
+	)?;
+	section.assert_err(
+		|state| state.section_index == args.section_index,
+		BitflipError::InvalidSectionIndex,
+	)?;
 	player_info.is_signer()?.is_writable()?;
-	player_bit_token_account_info.is_writable()?;
-	config_info.is_type::<ConfigState>(&ID)?;
-	game_info.is_type::<GameState>(&ID)?;
-	section_info.is_type::<SectionState>(&ID)?.is_writable()?;
-	section_bit_token_account_info.is_writable()?;
+	player_bit_token_account_info
+		.is_writable()?
+		.is_associated_token_address(player_info.key, mint_bit_info.key)?;
+	config_info
+		.is_type::<ConfigState>(&ID)?
+		.has_seeds_with_bump(config_seeds_with_bump, &ID)?;
+	game_info
+		.is_type::<GameState>(&ID)?
+		.has_seeds_with_bump(game_seeds_with_bump, &ID)?;
+	mint_bit_info.has_seeds_with_bump(mint_seeds_with_bump, &ID)?;
+	section_info
+		.is_type::<SectionState>(&ID)?
+		.is_writable()?
+		.has_seeds_with_bump(section_seeds_with_bump, &ID)?;
+	section_bit_token_account_info
+		.is_writable()?
+		.is_associated_token_address(section_info.key, mint_bit_info.key)?;
 	associated_token_program_info.is_program(&spl_associated_token_account::ID)?;
 	token_program_info.is_program(&spl_token_2022::ID)?;
 	system_program_info.is_program(&system_program::ID)?;
 
-	let config_state = config_info.as_account::<ConfigState>(&ID)?;
-	let game_state = game_info.as_account::<GameState>(&ID)?;
-	let section_state = section_info.as_account_mut::<SectionState>(&ID)?;
-
-	if config_state.game_index != game_state.game_index {
-		return Err(BitflipError::InvalidGameIndex.into());
-	}
-
-	if args.section_index != section_state.section_index {
-		return Err(BitflipError::InvalidSectionIndex.into());
-	}
-
-	let player_bit_token_account_key = get_token_account(player_info.key, mint_bit_info.key);
-	let config_key = create_pda_config(config_state.bump)?;
-	let game_key = create_pda_game(game_state.game_index, game_state.bump)?;
-	let mint_bit_key = create_pda_mint(TokenMember::Bit, config_state.mint_bit_bump)?;
-	let section_key = create_pda_section(
-		game_state.game_index,
-		section_state.section_index,
-		section_state.bump,
-	)?;
-	let section_bit_token_account_key = get_token_account(section_info.key, mint_bit_info.key);
-
-	if player_bit_token_account_key.ne(player_bit_token_account_info.key)
-		|| config_key.ne(config_info.key)
-		|| game_key.ne(game_info.key)
-		|| mint_bit_key.ne(mint_bit_info.key)
-		|| section_key.ne(section_info.key)
-		|| section_bit_token_account_key.ne(section_bit_token_account_info.key)
-	{
-		return Err(ProgramError::InvalidSeeds);
-	}
-
 	let current_time = Clock::get()?.unix_timestamp;
+	game.assert_err(
+		|state| state.running(current_time),
+		BitflipError::GameNotRunning,
+	)?;
 
-	if !game_state.is_running(current_time) {
-		return Err(BitflipError::GameNotRunning.into());
-	}
-
-	msg!("game is running");
-
-	let remaining_time = game_state.remaining_time(current_time);
-	// TODO: check robustness of bonding curve
-	let token_price = section_state.get_token_price_in_lamports(remaining_time);
-	let is_changed = section_state.set_bit(args)?;
+	let is_changed = section.set_bit(args)?;
 	let flips = if !is_changed {
-		section_state.flip_on(1)?;
-		section_state.flip_off(1)?;
+		section.flip_on(1)?;
+		section.flip_off(1)?;
 		2
 	} else if args.on() {
-		section_state.flip_on(1)?;
+		section.flip_on(1)?;
 		1
 	} else {
-		section_state.flip_off(1)?;
+		section.flip_off(1)?;
 		1
 	};
 
+	let token_price = section.get_token_price_in_lamports(game.remaining_time(current_time));
+	let lamports_to_transfer = token_price.saturating_mul(flips);
 	msg!("flips: {}", flips);
 	msg!("token price: {}", token_price);
 
-	let lamports_to_transfer = token_price.saturating_mul(flips);
-
-	msg!("creating associated token account");
 	create_associated_token_account_idempotent(
 		player_info,
 		player_bit_token_account_info,
@@ -125,7 +113,7 @@ pub fn process_flip_bit(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
 		section_bit_token_account_info,
 		player_bit_token_account_info,
 		token_program_info,
-		section_state,
+		section,
 		flips,
 	)?;
 
@@ -187,9 +175,6 @@ pub struct FlipBit {
 	pub offset: u8,
 	/// The value to set the bit to: `0` or `1`.
 	pub value: u8,
-	/// Padding to make the struct size a multiple of 8 bytes.
-	#[cfg_attr(feature = "client", builder(default))]
-	pub _padding: [u8; 4],
 }
 
 impl FlipBit {
@@ -225,8 +210,35 @@ mod tests {
 	use crate::get_pda_config;
 	use crate::get_pda_game;
 	use crate::get_pda_mint;
+	use crate::get_pda_section;
 	use crate::get_player_token_account;
+	use crate::get_section_token_account;
 	use crate::leak;
+
+	#[test_log::test]
+	fn should_pass_validation() -> anyhow::Result<()> {
+		let game_index = 0;
+		let section_index = 0;
+		let account_infos = create_account_infos(game_index, section_index);
+		let args = FlipBit::builder()
+			.section_index(0)
+			.array_index(0)
+			.offset(0)
+			.value(1)
+			.build();
+		println!(
+			"account_infos: {:?}",
+			account_infos
+				.iter()
+				.map(|info| *info.key)
+				.collect::<Vec<_>>()
+		);
+		let result = process_flip_bit(&account_infos, bytemuck::bytes_of(&args));
+
+		check!(result.unwrap_err() == ProgramError::UnsupportedSysvar);
+
+		Ok(())
+	}
 
 	#[test_log::test]
 	fn should_have_enough_accounts() -> anyhow::Result<()> {
@@ -579,20 +591,25 @@ mod tests {
 		let mint_bit_key = leak(get_pda_mint(TokenMember::Bit).0);
 		let mint_bit_lamports = leak(0);
 		let mint_bit_data = leak(vec![]);
-		let section_key = leak(Pubkey::new_unique());
+		let section_key = leak(get_pda_section(game_index, section_index).0);
 		let section_lamports = leak(0);
 		let section_data = {
-			let game_bump = get_pda_game(game_index).1;
+			let bump = get_pda_section(game_index, section_index).1;
 			let mut data = vec![0u8; 8];
 			data[0] = SectionState::discriminator();
 			data.append(
-				&mut SectionState::new(Pubkey::new_unique(), game_index, section_index, game_bump)
+				&mut SectionState::new(Pubkey::new_unique(), game_index, section_index, bump)
 					.to_bytes()
 					.to_vec(),
 			);
+
 			leak(data)
 		};
-		let section_bit_token_account_key = leak(Pubkey::new_unique());
+		let section_bit_token_account_key = leak(get_section_token_account(
+			game_index,
+			section_index,
+			TokenMember::Bit,
+		));
 		let section_bit_token_account_lamports = leak(0);
 		let section_bit_token_account_data = leak(vec![]);
 		let associated_token_program_lamports = leak(0);

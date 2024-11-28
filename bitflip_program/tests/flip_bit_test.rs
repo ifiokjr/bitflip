@@ -12,7 +12,6 @@ use bitflip_program::get_player_token_account;
 use bitflip_program::get_section_token_account;
 use bitflip_program::SectionState;
 use bitflip_program::TokenMember;
-use bitflip_program::ACCESS_SIGNER_DURATION;
 use bitflip_program::BITFLIP_SECTION_LENGTH;
 use bitflip_program::TOKEN_DECIMALS;
 use shared::create_config_accounts;
@@ -62,7 +61,7 @@ async fn flip_bit_test_validator() -> anyhow::Result<()> {
 	check!(rounded_compute_units <= 100_000);
 	insta::assert_snapshot!(format!("{rounded_compute_units} CU"));
 	shared::save_compute_units(
-		"flip_bit_test",
+		"flip_bit",
 		compute_units,
 		"Flip a single bit from `0` to `1`",
 	)?;
@@ -87,7 +86,7 @@ async fn create_banks_client_rpc(
 			.unwrap()
 			.as_secs() as i64;
 		let game = get_pda_game(game_index).0;
-		let create_game_state = create_game_state(0, 0, now - 3600, now + ACCESS_SIGNER_DURATION);
+		let create_game_state = create_game_state(0, 0, now - 3600);
 		p.add_account(game, create_game_state.game_state_account.into());
 
 		let section_accounts = create_section_state(
@@ -121,7 +120,7 @@ async fn create_validator_rpc(
 		.unwrap()
 		.as_secs() as i64;
 	let game = get_pda_game(game_index).0;
-	let create_game_state = create_game_state(0, 0, now - 3600, now + ACCESS_SIGNER_DURATION);
+	let create_game_state = create_game_state(0, 0, now - 3600);
 	accounts.insert(game, create_game_state.game_state_account);
 
 	let section_accounts = create_section_state(

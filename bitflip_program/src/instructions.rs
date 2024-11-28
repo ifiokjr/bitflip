@@ -10,7 +10,8 @@ use crate::ConfigInitialize;
 use crate::ConfigUpdateAuthority;
 use crate::FlipBit;
 use crate::GameInitialize;
-use crate::GameRefreshSigner;
+use crate::GameUpdateTempSigner;
+use crate::SectionUnlock;
 use crate::TokenGroupInitialize;
 use crate::TokenInitialize;
 use crate::TokenMember;
@@ -133,12 +134,12 @@ pub fn token_group_initialize(authority: &Pubkey) -> Instruction {
 /// ### Arguments
 ///
 /// * `authority` - The authority account: must be a signer.
-/// * `access_signer` - The access signer account: must be a signer.
-/// * `refresh_signer` - The refresh signer account: must be a signer.
+/// * `temp_signer` - The access signer account: must be a signer.
+/// * `funded_signer` - The refresh signer account: must be a signer.
 pub fn game_initialize(
 	authority: &Pubkey,
-	access_signer: &Pubkey,
-	refresh_signer: &Pubkey,
+	temp_signer: &Pubkey,
+	funded_signer: &Pubkey,
 	game_index: u8,
 ) -> Instruction {
 	let config = get_pda_config().0;
@@ -148,8 +149,8 @@ pub fn game_initialize(
 		program_id: crate::ID,
 		accounts: vec![
 			AccountMeta::new(*authority, true),
-			AccountMeta::new_readonly(*access_signer, true),
-			AccountMeta::new(*refresh_signer, true),
+			AccountMeta::new_readonly(*temp_signer, true),
+			AccountMeta::new(*funded_signer, true),
 			AccountMeta::new(config, false),
 			AccountMeta::new(game, false),
 			AccountMeta::new_readonly(system_program::ID, false),
@@ -162,24 +163,64 @@ pub fn game_initialize(
 ///
 /// ### Arguments
 ///
-/// * `access_signer` - The access signer: must be a signer.
-/// * `refresh_signer` - The refresh signer: must be a signer.
-/// * `game_index` - The index of the game.
-pub fn game_refresh_signer(
-	access_signer: &Pubkey,
-	refresh_signer: &Pubkey,
+/// * `funded_signer` - The permanent game signer: must be a signer.
+/// * `temp_signer` - The new temporary game signer: must be a signer.
+/// * `game_index` - The index of the game to update.
+pub fn game_update_temp_signer(
+	funded_signer: &Pubkey,
+	temp_signer: &Pubkey,
 	game_index: u8,
 ) -> Instruction {
+	let game = get_pda_game(game_index).0;
 	let accounts = vec![
-		AccountMeta::new_readonly(*access_signer, true), // Access signer must sign
-		AccountMeta::new(*refresh_signer, true),         // Refresh signer must sign
-		AccountMeta::new(get_pda_game(game_index).0, false), // Game account to be modified
+		AccountMeta::new(*funded_signer, true), // funded signer must sign
+		AccountMeta::new_readonly(*temp_signer, true), // temp signer must sign
+		AccountMeta::new(game, false),
 	];
 
 	Instruction {
 		program_id: crate::ID,
 		accounts,
-		data: GameRefreshSigner {}.to_bytes(),
+		data: GameUpdateTempSigner {}.to_bytes(),
+	}
+}
+
+/// Create an instruction to reset the signers of the game.
+///
+/// ### Arguments
+///
+/// * `authority` - The authority account: must be a signer.
+/// * `funded_signer` - The new permanent game signer: must be a signer.
+/// * `temp_signer` - The new temporary game signer: must be a signer.
+/// * `previous_funded_signer` - The previous permanent game signer: if provided
+///   must be a signer.
+/// * `game_index` - The index of the game.
+pub fn game_reset_signers(
+	authority: &Pubkey,
+	funded_signer: &Pubkey,
+	temp_signer: &Pubkey,
+	previous_funded_signer: Option<Pubkey>,
+	game_index: u8,
+) -> Instruction {
+	let config = get_pda_config().0;
+	let game = get_pda_game(game_index).0;
+	let accounts = vec![
+		AccountMeta::new(*authority, true),
+		AccountMeta::new(*funded_signer, true),
+		AccountMeta::new_readonly(*temp_signer, true),
+		if let Some(previous_funded_signer) = previous_funded_signer {
+			AccountMeta::new(previous_funded_signer, true)
+		} else {
+			AccountMeta::new_readonly(Pubkey::default(), false)
+		},
+		AccountMeta::new(config, false),
+		AccountMeta::new(game, false),
+	];
+
+	Instruction {
+		program_id: crate::ID,
+		accounts,
+		data: GameUpdateTempSigner {}.to_bytes(),
 	}
 }
 
@@ -227,6 +268,52 @@ pub fn flip_bit(
 			AccountMeta::new_readonly(token_program, false),
 			AccountMeta::new_readonly(system_program, false),
 		],
+		data,
+	}
+}
+
+/// Create an instruction to unlock a section.
+///
+/// This instruction will be paired with an advance nonce instruction where the
+/// nonce
+///
+/// ### Arguments
+///
+/// * `owner` - The owner account: must be a signer.
+/// * `temp_signer` - The access signer: must be a signer.
+/// * `game_index` - The index of the game.
+/// * `section_index` - The index of the section.
+/// * `lamports` - The amount of lamports that is being bid on the section. The
+///   highest bid will win.
+pub fn section_unlock(
+	owner: &Pubkey,
+	temp_signer: &Pubkey,
+	game_index: u8,
+	section_index: u8,
+	lamports: u64,
+) -> Instruction {
+	let config = get_pda_config().0;
+	let game = get_pda_game(game_index).0;
+	let section = get_pda_section(game_index, section_index).0;
+	let treasury = get_pda_treasury().0;
+	let system_program = system_program::ID;
+	let accounts = vec![
+		AccountMeta::new(*owner, true),
+		AccountMeta::new_readonly(*temp_signer, true),
+		AccountMeta::new_readonly(config, false),
+		AccountMeta::new(game, false),
+		AccountMeta::new(section, false),
+		AccountMeta::new(treasury, false),
+		AccountMeta::new_readonly(system_program, false),
+	];
+	let data = SectionUnlock {
+		lamports: lamports.into(),
+	}
+	.to_bytes();
+
+	Instruction {
+		program_id: crate::ID,
+		accounts,
 		data,
 	}
 }
