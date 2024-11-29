@@ -58,7 +58,10 @@ pub fn App() -> impl IntoView {
 			<main>
 				<FlatRoutes fallback=|| "Page not found.".into_view()>
 					<Route path=path!("") view=HomePage />
-					<Route path=path!("/game/0/section/:section") view=SectionPage />
+					<Route
+						path=path!("/game/:game_index/section/:section_index")
+						view=SectionPage
+					/>
 				</FlatRoutes>
 			</main>
 		</Router>
@@ -72,7 +75,7 @@ fn HomePage() -> impl IntoView {
 		view! {
 			<div class="w-[25vw] h-[25vw] hover:outline hover:outline-blue-300">
 				// <div class="w-[100vw] h-[100vw] hover:outline hover:outline-blue-300">
-				<A href=format!("/section/{section}")>
+				<A href=format!("/game/0/section/{section}")>
 					<img src=format!("/game/0/section-image/{section}") class="w-full" />
 				</A>
 			</div>
@@ -96,6 +99,20 @@ pub struct SectionPageParams {
 fn SectionPage() -> impl IntoView {
 	log::info!("rendering section page");
 	let params = use_params::<SectionPageParams>();
+	let url = move || {
+		params
+			.get()
+			.map(|params| {
+				log::info!("{:#?}", params);
+				format!(
+					"/game/{}/section-image/{}",
+					params.game_index, params.section_index
+				)
+			})
+			.ok()
+	};
+
+	view! { <img src=url class="w-full" /> }
 }
 
 #[island]

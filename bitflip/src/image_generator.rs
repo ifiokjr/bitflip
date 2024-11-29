@@ -41,7 +41,6 @@ pub fn generate_section_image(section: &SectionState) -> Vec<u8> {
 
 				let x = (4 * x) + offset % 4;
 				let y = (4 * y) + offset / 4;
-				log::info!("index: {index}, offset: {offset}, x: {x}, y: {y}");
 
 				pixmap.fill_rect(
 					tiny_skia::Rect::from_xywh(x as f32 * 16.0, y as f32 * 16.0, 16.0, 16.0)
