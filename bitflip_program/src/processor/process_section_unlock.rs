@@ -25,12 +25,12 @@ pub fn process_section_unlock(accounts: &[AccountInfo], data: &[u8]) -> Result<(
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};
 
-	let config_state = config_info.as_account::<ConfigState>(&ID)?;
-	let game_state = game_info.as_account_mut::<GameState>(&ID)?;
-	let config_seeds_with_bump = seeds_config!(config_state.bump);
-	let treasury_seeds_with_bump = seeds_treasury!(config_state.treasury_bump);
-	let game_seeds_with_bump = seeds_game!(game_state.game_index, game_state.bump);
-	let section_seeds = seeds_section!(game_state.game_index, game_state.section_index);
+	let config = config_info.as_account::<ConfigState>(&ID)?;
+	let game = game_info.as_account_mut::<GameState>(&ID)?;
+	let config_seeds_with_bump = seeds_config!(config.bump);
+	let treasury_seeds_with_bump = seeds_treasury!(config.treasury_bump);
+	let game_seeds_with_bump = seeds_game!(game.game_index, game.bump);
+	let section_seeds = seeds_section!(game.game_index, game.section_index);
 	let section_bump = section_info.find_canonical_bump(section_seeds, &ID)?;
 
 	owner_info.is_signer()?.is_writable()?;
@@ -51,13 +51,13 @@ pub fn process_section_unlock(accounts: &[AccountInfo], data: &[u8]) -> Result<(
 		.has_seeds_with_bump(treasury_seeds_with_bump, &ID)?;
 	system_program_info.is_program(&system_program::ID)?;
 
-	game_state.assert_err(
+	game.assert_err(
 		|game| game.temp_signer.eq(temp_signer_info.key),
 		BitflipError::GameSignerInvalid,
 	)?;
 
 	let clock = Clock::get()?;
-	game_state.assert_err(
+	game.assert_err(
 		|game| game.running(clock.unix_timestamp),
 		BitflipError::GameNotRunning,
 	)?;
@@ -73,13 +73,18 @@ pub fn process_section_unlock(accounts: &[AccountInfo], data: &[u8]) -> Result<(
 	)?;
 
 	let section = section_info.as_account_mut::<SectionState>(&ID)?;
-	section.init(*owner_info.key, game_state.section_index, section_bump);
+	section.init(
+		*owner_info.key,
+		game.game_index,
+		game.section_index,
+		section_bump,
+	);
 
 	msg!("transferring lamports from owner to treasury");
 	treasury_info.collect(args.lamports.into(), owner_info)?;
 
 	msg!("incrementing section index");
-	game_state.increment_section();
+	game.increment_section();
 
 	Ok(())
 }

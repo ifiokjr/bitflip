@@ -11,7 +11,7 @@
 	"imports": {
 		"@/tailwind/": "./setup/tailwind/",
 		"@egoist/tailwindcss-icons": "npm:@egoist/tailwindcss-icons@^1.8.1",
-		"@iconify/json": "npm:@iconify/json@^2.2.276",
+		"@iconify/json": "npm:@iconify/json@^2.2.277",
 		"@molt/cli": "jsr:@molt/cli@^0.19.8",
 		"@playwright/test": "npm:@playwright/test@^1.49.0",
 		"@solana/web3.js": "npm:@solana/web3.js@^1.95.5",

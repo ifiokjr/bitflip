@@ -1,5 +1,3 @@
-use std::ops::AddAssign;
-
 use fixed::types::U64F64;
 use solana_program::msg;
 use spl_pod::primitives::PodI64;
@@ -329,14 +327,21 @@ impl SectionState {
 
 	/// Initialize the section state without touching the data to prevent using
 	/// compute units.
-	pub fn init(&mut self, owner: Pubkey, index: u8, bump: u8) {
+	pub fn init(&mut self, owner: Pubkey, game_index: u8, section_index: u8, bump: u8) {
 		self.version = SectionState::VERSION;
 		self.owner = owner;
-		self.section_index = index;
+		self.game_index = game_index;
+		self.section_index = section_index;
 		self.bump = bump;
 		self.on = 0.into();
 		self.off = BITFLIP_SECTION_TOTAL_BITS.into();
 		self.flips = 0.into();
+	}
+
+	/// Whether the bit at the given index and offset is `1`.
+	pub fn is_checked(&self, index: u8, offset: u8) -> bool {
+		let value: u16 = self.data[index as usize].into();
+		(value & ((index as u16) << (offset as u16))) != 0
 	}
 
 	pub fn on(&self) -> u32 {

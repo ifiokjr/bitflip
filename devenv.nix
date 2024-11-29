@@ -377,20 +377,20 @@
     cp -f $generated_bitflip_legacy_program_idl $saved_bitflip_legacy_program_idl
     dprint fmt $DEVENV_ROOT/idls/*.json
   '';
-  tasks."build:docker" = {
+  scripts."build:docker" = {
     exec = ''
       set -e
       docker build -t kj-dev -f $DEVENV_ROOT/bitflip/Dockerfile $DEVENV_ROOT
     '';
     description = "";
   };
-  tasks."watch:bitflip" = {
+  scripts."watch:bitflip" = {
     exec = ''
       cargo make watch:bitflip
     '';
     description = "";
   };
-  tasks."build:bitflip" = {
+  scripts."build:bitflip" = {
     exec = ''
       set -e
       cargo make build:bitflip:tailwind
@@ -398,7 +398,7 @@
     '';
     description = "";
   };
-  tasks."serve:bitflip" = {
+  scripts."serve:bitflip" = {
     exec = ''
       set -e
       cargo make build:bitflip:tailwind
@@ -406,7 +406,7 @@
     '';
     description = "";
   };
-  tasks."prepare:bitflip" = {
+  scripts."prepare:bitflip" = {
     exec = ''
       set -e
       rm -rf $DEVENV_ROOT/dist/bitflip
@@ -417,7 +417,7 @@
     '';
     description = "";
   };
-  tasks."watch:bitflip:leptos" = {
+  scripts."watch:bitflip:leptos" = {
     exec = ''
       cargo leptos watch --hot-reload --project bitflip
     '';
