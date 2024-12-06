@@ -4,6 +4,7 @@ use bitflip_program::BITFLIP_SECTION_LENGTH;
 use bitflip_program::BITFLIP_SECTION_TOTAL_BITS;
 use leptos::prelude::*;
 use rand::Rng;
+use rand::RngCore;
 use rand::SeedableRng;
 use solana_sdk::pubkey::Pubkey;
 
@@ -18,8 +19,16 @@ pub async fn get_default_section_index() -> Result<u8, ServerFnError> {
 /// Get the active game index which is currently being played.
 #[allow(clippy::unused_async)]
 #[server]
-pub async fn get_default_game_index() -> Result<u8, ServerFnError> {
+pub async fn get_active_game_index() -> Result<u8, ServerFnError> {
 	Ok(0)
+}
+
+/// Get the number of active players in the game.
+#[allow(clippy::unused_async)]
+#[server]
+pub async fn get_active_players() -> Result<u32, ServerFnError> {
+	let mut rng = rand::rngs::StdRng::seed_from_u64(0);
+	Ok(rng.next_u32())
 }
 
 /// Get the section state for the given game and section index.
