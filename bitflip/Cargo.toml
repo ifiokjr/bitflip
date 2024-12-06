@@ -28,8 +28,10 @@ rand = { workspace = true }
 reactive_stores = { workspace = true }
 rust-embed = { workspace = true, features = ["axum", "mime_guess", "tokio"], optional = true }
 serde = { workspace = true, features = ["derive"] }
+serde-big-array = { workspace = true }
 simple_logger = { workspace = true }
 solana-sdk = { workspace = true }
+strum = { workspace = true, features = ["derive"] }
 surrealdb = { workspace = true, optional = true }
 surrealdb_extra = { workspace = true, optional = true }
 thiserror = { workspace = true }
@@ -63,6 +65,7 @@ ssr = [
 	"leptos_router/ssr",
 	"leptos/ssr",
 ]
+tracing = []
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]
