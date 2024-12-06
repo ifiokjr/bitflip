@@ -1,36 +1,72 @@
 {
-	"tasks": {
-		"playwright:version": "deno run -Aq npm:playwright -V | sed -e 's/Version //'",
-		"tailwind:watch": "deno run -Aq npm:tailwindcss@3 -i $DEVENV_ROOT/setup/tailwind/input.css -o $DEVENV_ROOT/bitflip/style/output.css --config $DEVENV_ROOT/bitflip/tailwind.config.js --watch",
-		"tailwind:build": "deno run -Aq npm:tailwindcss@3 -i $DEVENV_ROOT/setup/tailwind/input.css -o $DEVENV_ROOT/bitflip/style/output.css --config $DEVENV_ROOT/bitflip/tailwind.config.js",
-		"update": "deno run --allow-env --allow-read --allow-write='~/.local,.' --allow-run=git,deno --allow-net=jsr.io jsr:@molt/cli",
-		"update:write": "deno task -q update --write",
-		"update:commit": "deno task -q update --commit"
-	},
-	"nodeModulesDir": "auto",
 	"imports": {
-		"@/tailwind/": "./setup/tailwind/",
-		"@egoist/tailwindcss-icons": "npm:@egoist/tailwindcss-icons@^1.8.1",
-		"@iconify/json": "npm:@iconify/json@^2.2.277",
-		"@molt/cli": "jsr:@molt/cli@^0.19.8",
 		"@playwright/test": "npm:@playwright/test@^1.49.0",
-		"@solana/web3.js": "npm:@solana/web3.js@^1.95.5",
+		"@solana/web3.js": "npm:@solana/web3.js@^1.95.8",
 		"@std/path": "jsr:@std/path@^1.0.8",
+		"@tailwindcss/cli": "npm:@tailwindcss/cli@^4.0.0-beta.5",
 		"@tailwindcss/typography": "npm:@tailwindcss/typography@^0.5.15",
 		"bs58": "npm:bs58@^6.0.0",
 		"daisyui": "npm:daisyui@^4.12.14",
 		"playwright": "npm:playwright@^1.49.0",
-		"tailwindcss": "npm:tailwindcss@^3.4.15",
-		"tailwindcss-animated": "npm:tailwindcss-animated@^1.1.2",
-		"tailwindcss/": "npm:tailwindcss@^3.4.15/",
-		"tailwindcss/plugin": "npm:tailwindcss@^3.4.15/plugin.js",
+		"tailwindcss": "npm:tailwindcss@^4.0.0-beta.5",
 		"unzipper": "npm:unzipper@^0.12.3"
 	},
 	"lint": {
-		"exclude": ["target/**", "node_modules/**"],
+		"exclude": [
+			"target/**",
+			"node_modules/**"
+		],
 		"rules": {
-			"tags": ["recommended"]
+			"tags": [
+				"recommended"
+			]
 		}
+	},
+	"nodeModulesDir": "auto",
+	"tasks": {
+		"build": {
+			"command": "cargo leptos build --project bitflip --release -vv --features=prod",
+			"dependencies": [
+				"build:tailwind"
+			],
+			"description": "Build the bitflip app"
+		},
+		"build:program": "cargo build-sbf --manifest-path $DEVENV_ROOT/bitflip_program/Cargo.toml --arch sbfv1",
+		"build:program:verified": "solana-verify build --library-name bitflip_program",
+		"build:tailwind": "deno run -Aq npm:@tailwindcss/cli@next -i $DEVENV_ROOT/bitflip/style/input.css -o $DEVENV_ROOT/bitflip/style/output.css",
+		"fix": {
+			"command": "deno task fix:deno && deno task fix:rust && deno task fix:format && deno task lint:security-txt",
+			"description": "Run all fix tasks"
+		},
+		"fix:deno": "deno lint --fix",
+		"fix:format": "dprint fmt --config $DEVENV_ROOT/dprint.json",
+		"fix:rust": "cargo clippy --fix --allow-dirty --allow-staged --all-features",
+		"lint": {
+			"command": "deno task lint:deno && deno task lint:rust && deno task lint:format && deno task lint:security-txt",
+			"description": "Run all linting tasks"
+		},
+		"lint:deno": "deno lint",
+		"lint:format": "dprint check",
+		"lint:rust": "cargo clippy --all-features",
+		"lint:security-txt": "query-security-txt $DEVENV_ROOT/target/deploy/bitflip_program.so",
+		"playwright:version": "deno run -Aq npm:playwright -V | sed -e 's/Version //'",
+		"serve": {
+			"command": "cargo leptos serve --project bitflip --release -vv --features=prod",
+			"dependencies": [
+				"build:tailwind"
+			],
+			"description": "Serve the bitflip app"
+		},
+		"watch": {
+			"command": "",
+			"dependencies": [
+				"watch:tailwind",
+				"watch:leptos"
+			],
+			"description": "Watch the bitflip app"
+		},
+		"watch:leptos": "cargo leptos watch --hot-reload --project bitflip",
+		"watch:tailwind": "deno run -Aq npm:@tailwindcss/cli@next -i $DEVENV_ROOT/bitflip/style/input.css -o $DEVENV_ROOT/bitflip/style/output.css --watch"
 	},
 	"workspace": []
 }

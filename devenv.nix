@@ -73,6 +73,13 @@
     '';
     description = "Generate a local solana keypair. Must provide a name.";
   };
+	scripts.bitflip = {
+		exec = ''
+			set -e
+			deno task $@
+		'';
+		description = "The `bitflip` tasks";
+	};
   scripts."install:deno" = {
     exec = ''
       set -e
@@ -89,9 +96,10 @@
   };
   scripts."update:deps" = {
     exec = ''
-            set -e
-            cargo update
-      			devenv update
+			set -e
+			cargo update
+			deno outdated -u --latest
+			devenv update
     '';
     description = "Update dependencies.";
   };
