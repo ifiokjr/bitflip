@@ -341,7 +341,7 @@ impl SectionState {
 	/// Whether the bit at the given index and offset is `1`.
 	pub fn is_checked(&self, index: u8, offset: u8) -> bool {
 		let value: u16 = self.data[index as usize].into();
-		(value & ((index as u16) << (offset as u16))) != 0
+		(value & (1 << offset)) != 0
 	}
 
 	pub fn on(&self) -> u32 {
