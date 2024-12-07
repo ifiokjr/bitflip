@@ -4,6 +4,7 @@ use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use web_sys::CanvasRenderingContext2d;
+use web_sys::MouseEvent;
 
 use crate::get_active_game_index;
 use crate::get_default_section_index;
@@ -91,6 +92,28 @@ pub fn SectionCanvas(game_index: Option<u8>, section_index: Option<u8>) -> impl 
 
 	Effect::new(effect);
 
+	let canvas_click_handler = move |e: MouseEvent| {
+		let rect = e
+			.target()
+			.and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+			.map(|el| el.get_bounding_client_rect())
+			.expect("Failed to get canvas bounds");
+		let dx = f64::from(e.client_x()) - rect.left();
+		let dy = f64::from(e.client_y()) - rect.top();
+		let canvas_x = (dx * 1024.0 / rect.width()) as u16;
+		let canvas_y = (dy * 1024.0 / rect.height()) as u16;
+		let x = canvas_x / 16;
+		let y = canvas_y / 16;
+		let (index, offset) = get_index_offset(x, y);
+		log::info!(
+			"Clicked grid cell: ({}, {}) - index: {} - offset: {}",
+			x,
+			y,
+			index,
+			offset
+		);
+	};
+
 	view! {
 		<div class="w-full h-full">
 			<Show when=show_image>
@@ -102,6 +125,7 @@ pub fn SectionCanvas(game_index: Option<u8>, section_index: Option<u8>) -> impl 
 				height=1024
 				class="w-full h-full"
 				class:hidden=show_image
+				on:click=canvas_click_handler
 			/>
 		</div>
 	}
@@ -118,4 +142,11 @@ pub fn SectionImage(game_index: Signal<u8>, section_index: Signal<u8>) -> impl I
 	};
 
 	view! { <img src=url class="w-full" /> }
+}
+
+pub fn get_index_offset(x: u16, y: u16) -> (u16, u16) {
+	let index = ((((x / 4) / 4) + ((y / 4) / 4) * 4) * 16) + ((x / 4) % 4) + 4 * ((y / 4) % 4);
+	let offset = x % 4 + (y % 4) * 4;
+
+	(index, offset)
 }

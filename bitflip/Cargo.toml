@@ -44,7 +44,7 @@ wallet_standard_browser = { workspace = true, features = ["solana"] }
 wasm-bindgen = { workspace = true }
 wasm_client_anchor = { workspace = true }
 wasm_client_solana = { workspace = true }
-web-sys = { workspace = true, features = ["CanvasRenderingContext2d", "Document", "Element", "HtmlCanvasElement", "ImageData", "Window"] }
+web-sys = { workspace = true, features = ["DomRect", "CanvasRenderingContext2d", "Document", "Element", "HtmlCanvasElement", "ImageData", "Window", "EventTarget"] }
 
 [features]
 csr = ["leptos/csr", "wasm_client_solana/js", "codee/json_serde_wasm"]
