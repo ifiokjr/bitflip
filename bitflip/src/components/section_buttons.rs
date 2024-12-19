@@ -1,9 +1,7 @@
 use leptos::prelude::*;
 use leptos_router::hooks::use_url;
 
-use crate::get_default_section_index;
-use crate::use_parsed_param;
-use crate::AppParam;
+use crate::use_section_index;
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy)]
@@ -16,16 +14,7 @@ pub enum Direction {
 /// Can only be used within a `Suspense` component.
 fn use_transformed_section(direction: Direction, jump: u8) -> (Signal<String>, Signal<bool>) {
 	let url = use_url();
-	let section_index_resource = Resource::new(move || {}, move |()| get_default_section_index());
-	let section_index = Signal::derive(move || {
-		if let Some(section_index) = use_parsed_param::<u8>(AppParam::Section).get() {
-			section_index
-		} else if let Some(Ok(section_index)) = section_index_resource.get() {
-			section_index
-		} else {
-			0
-		}
-	});
+	let section_index = use_section_index(crate::RouterProp::Default);
 
 	let is_disabled = Signal::derive(move || {
 		let section_index = section_index();
@@ -35,6 +24,7 @@ fn use_transformed_section(direction: Direction, jump: u8) -> (Signal<String>, S
 			Direction::Decrement => section_index == 0,
 		}
 	});
+
 	let section_path = Signal::derive(move || {
 		if is_disabled() {
 			return String::new();

@@ -39,16 +39,18 @@ wasm_client_solana = { workspace = true }
 anyhow = { workspace = true }
 assert2 = { workspace = true }
 insta = { workspace = true, features = ["json", "redactions", "ron", "yaml"] }
+memory_wallet = { workspace = true }
 rstest = { workspace = true }
 solana-program-test = { workspace = true }
 spl-associated-token-account = { workspace = true }
 spl-token-2022 = { workspace = true }
 spl-transfer-hook-interface = { workspace = true }
 test-log = { workspace = true, features = ["log", "trace"] }
-test_utils = { workspace = true }
+test_utils_anchor = { workspace = true }
+test_utils_insta = { workspace = true }
+test_utils_keypairs = { workspace = true }
 test_utils_solana = { workspace = true, features = [] }
 tokio = { workspace = true, features = ["test-util", "rt", "macros", "time"] }
-wallet_standard_wallets = { workspace = true }
 
 [features]
 ssr = ["wasm_client_solana/ssr"]

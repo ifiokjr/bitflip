@@ -15,7 +15,7 @@ use shared::ToRpcClient;
 use solana_sdk::signature::Keypair;
 use solana_sdk::transaction::VersionedTransaction;
 use steel::*;
-use test_utils::create_insta_redaction;
+use test_utils_insta::create_insta_redaction;
 use test_utils_solana::prelude::*;
 
 mod shared;

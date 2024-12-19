@@ -1,0 +1,92 @@
+---
+source: bitflip/src/db.rs
+expression: diff
+snapshot_kind: text
+---
+[
+    Issue {
+        ident: TableIdent {
+            schema: None,
+            name: "encrypted_keypairs",
+        },
+        level: Medium,
+        kind: Changed(
+            Diff {
+                column: "pubkey",
+                db_type: "TEXT",
+                db_nullable: true,
+                welds_type: "String",
+                welds_nullable: false,
+                type_changed: false,
+            },
+        ),
+    },
+    Issue {
+        ident: TableIdent {
+            schema: None,
+            name: "encrypted_keypairs",
+        },
+        level: High,
+        kind: Changed(
+            Diff {
+                column: "key_index",
+                db_type: "INTEGER",
+                db_nullable: false,
+                welds_type: "u32",
+                welds_nullable: false,
+                type_changed: true,
+            },
+        ),
+    },
+    Issue {
+        ident: TableIdent {
+            schema: None,
+            name: "encrypted_keypairs",
+        },
+        level: High,
+        kind: Changed(
+            Diff {
+                column: "status",
+                db_type: "INTEGER",
+                db_nullable: false,
+                welds_type: "u8",
+                welds_nullable: false,
+                type_changed: true,
+            },
+        ),
+    },
+    Issue {
+        ident: TableIdent {
+            schema: None,
+            name: "encrypted_keypairs",
+        },
+        level: High,
+        kind: Changed(
+            Diff {
+                column: "created_at",
+                db_type: "TEXT",
+                db_nullable: false,
+                welds_type: "DateTime<Utc>",
+                welds_nullable: false,
+                type_changed: true,
+            },
+        ),
+    },
+    Issue {
+        ident: TableIdent {
+            schema: None,
+            name: "encrypted_keypairs",
+        },
+        level: High,
+        kind: Changed(
+            Diff {
+                column: "updated_at",
+                db_type: "TEXT",
+                db_nullable: false,
+                welds_type: "DateTime<Utc>",
+                welds_nullable: false,
+                type_changed: true,
+            },
+        ),
+    },
+]

@@ -1,0 +1,7 @@
+DROP TABLE IF EXISTS games;
+
+DROP TABLE IF EXISTS sections;
+
+DROP TABLE IF EXISTS section_events;
+
+DROP TABLE IF EXISTS players;

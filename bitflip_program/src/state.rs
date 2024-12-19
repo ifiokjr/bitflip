@@ -267,6 +267,9 @@ impl GameState {
 	}
 }
 
+pub type PodSectionData = [PodU16; BITFLIP_SECTION_LENGTH];
+pub type SectionData = [u16; BITFLIP_SECTION_LENGTH];
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Pod, Zeroable)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -277,7 +280,7 @@ pub struct SectionState {
 	/// The state of the bits that are represented as flippable bits on the
 	/// frontend.
 	#[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
-	pub data: [PodU16; BITFLIP_SECTION_LENGTH],
+	pub data: PodSectionData,
 	/// The owner of this section.
 	#[cfg_attr(
 		feature = "serde",
@@ -410,8 +413,6 @@ impl SectionState {
 		} else {
 			current & !bit
 		};
-
-		msg!("current: {}, bit: {}, updated: {}", current, bit, updated);
 
 		if updated == current {
 			return Ok(false);

@@ -21,6 +21,7 @@ use bitflip_program::TokenMember;
 use bitflip_program::EARNED_TOKENS_PER_SECTION;
 use bitflip_program::ID;
 use bitflip_program::MINIMUM_FLIPS_PER_SECTION;
+use memory_wallet::MemoryWallet;
 use rstest::fixture;
 use serde::Deserialize;
 use serde::Serialize;
@@ -49,15 +50,14 @@ use spl_token_group_interface::state::TokenGroupMember;
 use spl_token_metadata_interface::state::TokenMetadata;
 use spl_type_length_value::variable_len_pack::VariableLenPack;
 use steel::*;
-use test_utils::SECRET_KEY_ADMIN;
-use test_utils::SECRET_KEY_AUTHORITY;
-use test_utils::SECRET_KEY_TREASURY;
-use test_utils::SECRET_KEY_WALLET;
+use test_utils_keypairs::get_admin_keypair;
+use test_utils_keypairs::get_authority_keypair;
+use test_utils_keypairs::get_treasury_keypair;
+use test_utils_keypairs::get_wallet_keypair;
 use test_utils_solana::processor;
 use test_utils_solana::solana_sdk::account::Account;
 use test_utils_solana::ProgramTest;
 use test_utils_solana::TestRpcProvider;
-use wallet_standard_wallets::MemoryWallet;
 use wasm_client_solana::SolanaRpcClient;
 
 #[cfg(feature = "test_validator")]
@@ -89,22 +89,6 @@ pub(crate) fn create_program_test() -> ProgramTest {
 	)
 }
 
-pub fn create_admin_keypair() -> Keypair {
-	Keypair::from_bytes(&SECRET_KEY_ADMIN).unwrap()
-}
-
-pub fn create_authority_keypair() -> Keypair {
-	Keypair::from_bytes(&SECRET_KEY_AUTHORITY).unwrap()
-}
-
-pub fn create_treasury_keypair() -> Keypair {
-	Keypair::from_bytes(&SECRET_KEY_TREASURY).unwrap()
-}
-
-pub fn create_wallet_keypair() -> Keypair {
-	Keypair::from_bytes(&SECRET_KEY_WALLET).unwrap()
-}
-
 #[cfg(feature = "test_validator")]
 pub async fn create_runner() -> test_utils_solana::TestValidatorRunner {
 	create_runner_with_accounts(HashMap::new()).await
@@ -121,10 +105,10 @@ pub async fn create_runner_with_accounts(
 	let props = test_utils_solana::TestValidatorRunnerProps::builder()
 		.programs(vec![launchpad_program])
 		.pubkeys(vec![
-			create_admin_keypair().pubkey(),
-			create_authority_keypair().pubkey(),
-			create_treasury_keypair().pubkey(),
-			create_wallet_keypair().pubkey(),
+			get_admin_keypair().pubkey(),
+			get_authority_keypair().pubkey(),
+			get_treasury_keypair().pubkey(),
+			get_wallet_keypair().pubkey(),
 		])
 		.commitment(CommitmentLevel::Finalized)
 		.accounts(accounts)
@@ -142,21 +126,21 @@ pub(crate) async fn create_program_context_with_factory<
 
 	factory(&mut program_test)?;
 	program_test.add_account(
-		create_admin_keypair().pubkey(),
+		get_admin_keypair().pubkey(),
 		Account {
 			lamports: sol_to_lamports(10.0),
 			..Account::default()
 		},
 	);
 	program_test.add_account(
-		create_authority_keypair().pubkey(),
+		get_authority_keypair().pubkey(),
 		Account {
 			lamports: sol_to_lamports(10.0),
 			..Account::default()
 		},
 	);
 	program_test.add_account(
-		create_wallet_keypair().pubkey(),
+		get_wallet_keypair().pubkey(),
 		Account {
 			lamports: sol_to_lamports(10.0),
 			..Account::default()
@@ -170,15 +154,15 @@ pub(crate) async fn create_program_context_with_factory<
 
 /// The program client using the admin wallet account
 pub fn get_admin_wallet(rpc: &SolanaRpcClient) -> MemoryWallet {
-	get_wallet(rpc, &create_admin_keypair())
+	get_wallet(rpc, &get_admin_keypair())
 }
 
 pub fn get_authority_wallet(rpc: &SolanaRpcClient) -> MemoryWallet {
-	get_wallet(rpc, &create_authority_keypair())
+	get_wallet(rpc, &get_authority_keypair())
 }
 
 pub fn get_wallet_wallet(rpc: &SolanaRpcClient) -> MemoryWallet {
-	get_wallet(rpc, &create_wallet_keypair())
+	get_wallet(rpc, &get_wallet_keypair())
 }
 
 /// A program client using a custom payer.
@@ -188,7 +172,7 @@ pub fn get_wallet(rpc: &SolanaRpcClient, payer: &Keypair) -> MemoryWallet {
 
 pub fn create_config_accounts() -> HashMap<Pubkey, AccountSharedData> {
 	let mut map = HashMap::new();
-	let authority = create_authority_keypair().pubkey();
+	let authority = get_authority_keypair().pubkey();
 	let config_bump = get_pda_config().1;
 	let (treasury, treasury_bump) = get_pda_treasury();
 	let (_, mint_bit_bump) = get_pda_mint(TokenMember::Bit);

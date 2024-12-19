@@ -26,7 +26,7 @@ pub async fn get_active_game_index() -> Result<u8, ServerFnError> {
 /// Get the number of active players in the game.
 #[allow(clippy::unused_async)]
 #[server]
-pub async fn get_active_players() -> Result<u32, ServerFnError> {
+pub async fn get_active_player_count() -> Result<u32, ServerFnError> {
 	let mut rng = rand::rngs::StdRng::seed_from_u64(0);
 	Ok(rng.next_u32())
 }
@@ -43,6 +43,7 @@ pub async fn get_section_state(
 	let mut section_state =
 		SectionState::new(Pubkey::new_unique(), game_index, section_index, bump);
 	let section_data: [u16; BITFLIP_SECTION_LENGTH] = std::array::from_fn(|_| rng.r#gen());
+	// let section_data = [0u16; BITFLIP_SECTION_LENGTH];
 	let on = section_data
 		.iter()
 		.fold(0, |acc, entry| acc + entry.count_ones());

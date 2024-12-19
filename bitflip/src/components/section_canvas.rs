@@ -1,3 +1,4 @@
+use bitflip_program::FlipBit;
 use js_sys::Reflect;
 use leptos::html::Canvas;
 use leptos::prelude::*;
@@ -6,34 +7,16 @@ use wasm_bindgen::JsValue;
 use web_sys::CanvasRenderingContext2d;
 use web_sys::MouseEvent;
 
-use crate::get_active_game_index;
-use crate::get_default_section_index;
 use crate::get_section_state;
+use crate::use_game_index;
+use crate::use_section_index;
 
 #[island]
 pub fn SectionCanvas(game_index: Option<u8>, section_index: Option<u8>) -> impl IntoView {
 	let canvas_ref = NodeRef::<Canvas>::new();
+	let section_index_signal = use_section_index(crate::RouterProp::Value(section_index));
+	let game_index_signal = use_game_index(crate::RouterProp::Value(game_index));
 	let (show_image, set_show_image) = signal(true);
-	let game_index_resource = Resource::new(move || {}, move |()| get_active_game_index());
-	let section_index_resource = Resource::new(move || {}, move |()| get_default_section_index());
-	let game_index_signal = Signal::derive(move || {
-		if let Some(game_index) = game_index {
-			game_index
-		} else if let Some(Ok(game_index)) = game_index_resource.get() {
-			game_index
-		} else {
-			0
-		}
-	});
-	let section_index_signal = Signal::derive(move || {
-		if let Some(section_index) = section_index {
-			section_index
-		} else if let Some(Ok(section_index)) = section_index_resource.get() {
-			section_index
-		} else {
-			0
-		}
-	});
 	let section_resource = Resource::new(
 		move || (game_index_signal(), section_index_signal()),
 		move |_| {
@@ -42,30 +25,16 @@ pub fn SectionCanvas(game_index: Option<u8>, section_index: Option<u8>) -> impl 
 			get_section_state(game_index, section_index)
 		},
 	);
+	let section_state = RwSignal::new(None);
 
 	let effect = move || {
-		let Some(canvas) = canvas_ref.get() else {
-			log::error!("Canvas not found");
-			return;
-		};
-
+		let context = get_2d_context(canvas_ref);
 		let Some(Ok(section)) = section_resource.get() else {
 			log::error!("Section not found");
 			return;
 		};
 
-		Reflect::set(&window(), &JsValue::from_str("_abc"), &canvas).unwrap();
-
-		let Ok(Some(context_object)) = canvas.get_context("2d") else {
-			log::error!("Canvas context not found");
-			return;
-		};
-
-		let Ok(context) = context_object.dyn_into::<CanvasRenderingContext2d>() else {
-			log::error!("could not `dyn_into` context");
-			return;
-		};
-
+		section_state.set(Some(section));
 		context.set_image_smoothing_enabled(false);
 
 		for x in 0..16u32 {
@@ -93,6 +62,10 @@ pub fn SectionCanvas(game_index: Option<u8>, section_index: Option<u8>) -> impl 
 	Effect::new(effect);
 
 	let canvas_click_handler = move |e: MouseEvent| {
+		let Some(section) = section_state.get() else {
+			return;
+		};
+		let section_index = section_index_signal();
 		let rect = e
 			.target()
 			.and_then(|t| t.dyn_into::<web_sys::Element>().ok())
@@ -112,6 +85,34 @@ pub fn SectionCanvas(game_index: Option<u8>, section_index: Option<u8>) -> impl 
 			index,
 			offset
 		);
+
+		section_state.update(move |state| {
+			let Some(state) = state else {
+				log::error!("Section state not found");
+				return;
+			};
+
+			let is_checked = state.is_checked(index, offset);
+			log::info!("is_checked: {}", is_checked);
+
+			let context = get_2d_context(canvas_ref);
+			let result = state.set_bit(&FlipBit {
+				section_index,
+				array_index: index,
+				offset,
+				value: u8::from(!is_checked),
+			});
+			log::info!("result: {:?}", result);
+
+			if is_checked {
+				let _ = state.flip_off(1);
+				context.clear_rect(f64::from(x * 16), f64::from(y * 16), 16f64, 16f64);
+			} else {
+				let _ = state.flip_on(1);
+				context.set_fill_style_str("black");
+				context.fill_rect(f64::from(x * 16), f64::from(y * 16), 16f64, 16f64);
+			}
+		});
 	};
 
 	view! {
@@ -144,9 +145,32 @@ pub fn SectionImage(game_index: Signal<u8>, section_index: Signal<u8>) -> impl I
 	view! { <img src=url class="w-full" /> }
 }
 
-pub fn get_index_offset(x: u16, y: u16) -> (u16, u16) {
+fn get_2d_context(canvas_ref: NodeRef<Canvas>) -> CanvasRenderingContext2d {
+	let Some(canvas) = canvas_ref.get() else {
+		log::error!("Canvas not found");
+		panic!();
+	};
+
+	Reflect::set(&window(), &JsValue::from_str("_abc"), &canvas).unwrap();
+
+	let Ok(Some(context_object)) = canvas.get_context("2d") else {
+		log::error!("Canvas context not found");
+		panic!();
+	};
+
+	let Ok(context) = context_object.dyn_into::<CanvasRenderingContext2d>() else {
+		log::error!("could not `dyn_into` context");
+		panic!();
+	};
+
+	context
+}
+
+/// Will panic if the index or offset is greater than `u8::MAX`.
+pub fn get_index_offset(x: u16, y: u16) -> (u8, u8) {
 	let index = ((((x / 4) / 4) + ((y / 4) / 4) * 4) * 16) + ((x / 4) % 4) + 4 * ((y / 4) % 4);
 	let offset = x % 4 + (y % 4) * 4;
+	assert!(offset <= 16);
 
-	(index, offset)
+	(u8::try_from(index).unwrap(), u8::try_from(offset).unwrap())
 }

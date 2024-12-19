@@ -1,13 +1,16 @@
 {
 	"imports": {
-		"@playwright/test": "npm:@playwright/test@^1.49.0",
-		"@solana/web3.js": "npm:@solana/web3.js@^1.95.8",
+		"@playwright/test": "npm:@playwright/test@^1.49.1",
+		"@solana/web3.js": "npm:@solana/web3.js@^1.98.0",
+		"@std/io": "jsr:@std/io@^0.225.0",
 		"@std/path": "jsr:@std/path@^1.0.8",
+		"@surrealdb/ql-wasm": "npm:@surrealdb/ql-wasm@^0.2.0-beta.1",
+		"@surrealdb/wasm": "npm:@surrealdb/wasm@^1.1.0",
 		"@tailwindcss/cli": "npm:@tailwindcss/cli@^4.0.0-beta.5",
 		"@tailwindcss/typography": "npm:@tailwindcss/typography@^0.5.15",
 		"bs58": "npm:bs58@^6.0.0",
-		"daisyui": "npm:daisyui@^4.12.14",
-		"playwright": "npm:playwright@^1.49.0",
+		"daisyui": "npm:daisyui@^4.12.22",
+		"playwright": "npm:playwright@^1.49.1",
 		"tailwindcss": "npm:tailwindcss@^4.0.0-beta.5",
 		"unzipper": "npm:unzipper@^0.12.3"
 	},
@@ -31,25 +34,90 @@
 			],
 			"description": "Build the bitflip app"
 		},
-		"build:program": "cargo build-sbf --manifest-path $DEVENV_ROOT/bitflip_program/Cargo.toml --arch sbfv1",
-		"build:program:verified": "solana-verify build --library-name bitflip_program",
-		"build:tailwind": "deno run -Aq npm:@tailwindcss/cli@next -i $DEVENV_ROOT/bitflip/style/input.css -o $DEVENV_ROOT/bitflip/style/output.css",
+		"build:program": {
+			"command": "cargo build-sbf --manifest-path $DEVENV_ROOT/bitflip_program/Cargo.toml --arch sbfv1",
+			"description": "Build the bitflip program"
+		},
+		"build:program:verified": {
+			"command": "solana-verify build --library-name bitflip_program",
+			"description": "Verify the bitflip program"
+		},
+		"build:tailwind": {
+			"command": "deno run -Aq npm:@tailwindcss/cli@next -i $DEVENV_ROOT/bitflip/style/input.css -o $DEVENV_ROOT/bitflip/style/output.css",
+			"description": "Build the tailwind CSS"
+		},
+		"db:create": {
+			"command": "sqlx database create",
+			"description": "Create the development database"
+		},
+		"db:drop": {
+			"command": "rm bitflip.db || true",
+			"description": "Drop the development database"
+		},
+		"db:migrate": {
+			"command": "sqlx migrate run",
+			"description": "Run the database migrations"
+		},
+		"db:reset": {
+			"command": "bitflip db:drop && bitflip db:create && bitflip db:migrate",
+			"description": "Reset the development database by dropping it, creating it, and running the migrations"
+		},
 		"fix": {
-			"command": "deno task fix:deno && deno task fix:rust && deno task fix:format && deno task lint:security-txt",
+			"command": "bitflip fix:deno && bitflip fix:rust && bitflip fix:format && bitflip lint:security-txt",
 			"description": "Run all fix tasks"
 		},
-		"fix:deno": "deno lint --fix",
-		"fix:format": "dprint fmt --config $DEVENV_ROOT/dprint.json",
-		"fix:rust": "cargo clippy --fix --allow-dirty --allow-staged --all-features",
+		"fix:deno": {
+			"command": "deno lint --fix",
+			"description": "Fix the deno linting errors"
+		},
+		"fix:format": {
+			"command": "dprint fmt --config $DEVENV_ROOT/dprint.json",
+			"description": "Fix the formatting errors"
+		},
+		"fix:rust": {
+			"command": "cargo clippy --fix --allow-dirty --allow-staged --all-features",
+			"description": "Fix the rust linting errors"
+		},
 		"lint": {
-			"command": "deno task lint:deno && deno task lint:rust && deno task lint:format && deno task lint:security-txt",
+			"command": "bitflip lint:deno && bitflip lint:rust && bitflip lint:format && bitflip lint:security-txt",
 			"description": "Run all linting tasks"
 		},
-		"lint:deno": "deno lint",
-		"lint:format": "dprint check",
-		"lint:rust": "cargo clippy --all-features",
-		"lint:security-txt": "query-security-txt $DEVENV_ROOT/target/deploy/bitflip_program.so",
-		"playwright:version": "deno run -Aq npm:playwright -V | sed -e 's/Version //'",
+		"lint:deno": {
+			"command": "deno lint",
+			"description": "Lint the deno code"
+		},
+		"lint:format": {
+			"command": "dprint check",
+			"description": "Check the formatting"
+		},
+		"lint:rust": {
+			"command": "cargo clippy --all-features",
+			"description": "Lint the rust code"
+		},
+		"lint:security-txt": {
+			"command": "query-security-txt $DEVENV_ROOT/target/deploy/bitflip_program.so",
+			"description": "Lint the security.txt file"
+		},
+		"playwright:version": {
+			"command": "deno run -Aq npm:playwright -V | sed -e 's/Version //'",
+			"description": "Get the cleaned playwright version"
+		},
+		"prepare": {
+			"command": "rm -rf $DEVENV_ROOT/dist/bitflip && mkdir -p $DEVENV_ROOT/dist/bitflip && cp $DEVENV_ROOT/target/release/bitflip $DEVENV_ROOT/dist/bitflip/bitflip && cp -r $DEVENV_ROOT/target/site/bitflip $DEVENV_ROOT/dist/bitflip/site && cp -r $DEVENV_ROOT/bitflip/Cargo.toml $DEVENV_ROOT/dist/bitflip",
+			"description": "Prepare the bitflip app for deployment"
+		},
+		"schema:generate": {
+			"command": "welds -s $DEVENV_ROOT/setup/welds.yaml -p $DEVENV_ROOT/bitflip/src/db generate",
+			"description": "Auto generate code for the welds schema"
+		},
+		"schema:update": {
+			"command": "welds -s $DEVENV_ROOT/setup/welds.yaml update",
+			"description": "Update the welds schema"
+		},
+		"schema": {
+			"command": "bitflip schema:update && bitflip schema:generate",
+			"description": "Update and generate the welds schema"
+		},
 		"serve": {
 			"command": "cargo leptos serve --project bitflip --release -vv --features=prod",
 			"dependencies": [
@@ -65,8 +133,14 @@
 			],
 			"description": "Watch the bitflip app"
 		},
-		"watch:leptos": "cargo leptos watch --hot-reload --project bitflip",
-		"watch:tailwind": "deno run -Aq npm:@tailwindcss/cli@next -i $DEVENV_ROOT/bitflip/style/input.css -o $DEVENV_ROOT/bitflip/style/output.css --watch"
+		"watch:leptos": {
+			"command": "cargo leptos watch --hot-reload --project bitflip",
+			"description": "Watch the leptos app"
+		},
+		"watch:tailwind": {
+			"command": "deno run -Aq npm:@tailwindcss/cli@next -i $DEVENV_ROOT/bitflip/style/input.css -o $DEVENV_ROOT/bitflip/style/output.css --watch",
+			"description": "Watch the tailwind CSS"
+		}
 	},
 	"workspace": []
 }

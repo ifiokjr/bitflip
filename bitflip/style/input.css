@@ -1369,15 +1369,14 @@
 				#fff 75%,
 				#fff
 			),
-			
 			linear-gradient(
-				45deg,
-				#fff 25%,
-				transparent 25%,
-				transparent 75%,
-				#fff 75%,
-				#fff
-			);
+			45deg,
+			#fff 25%,
+			transparent 25%,
+			transparent 75%,
+			#fff 75%,
+			#fff
+		);
 		background-position: 0 0, 10px 10px;
 		background-size: 20px 20px;
 	}
@@ -1393,15 +1392,14 @@
 				#fff 75%,
 				#fff
 			),
-			
 			-moz-linear-gradient(
-				45deg,
-				#fff 25%,
-				transparent 25%,
-				transparent 75%,
-				#fff 75%,
-				#fff
-			);
+			45deg,
+			#fff 25%,
+			transparent 25%,
+			transparent 75%,
+			#fff 75%,
+			#fff
+		);
 		background-position: 0 0, 10px 10px;
 		background-size: 20px 20px;
 	}
@@ -1417,15 +1415,14 @@
 				#fff 75%,
 				#fff
 			),
-			
 			linear-gradient(
-				45deg,
-				#fff 25%,
-				transparent 25%,
-				transparent 75%,
-				#fff 75%,
-				#fff
-			);
+			45deg,
+			#fff 25%,
+			transparent 25%,
+			transparent 75%,
+			#fff 75%,
+			#fff
+		);
 		background-position: 0 0, 10px 10px;
 		background-size: 20px 20px;
 		border: none;

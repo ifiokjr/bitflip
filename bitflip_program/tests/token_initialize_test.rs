@@ -10,14 +10,14 @@ use bitflip_program::token_initialize;
 use bitflip_program::TokenMember;
 use bitflip_program::TOKEN_DECIMALS;
 use rstest::rstest;
-use shared::create_authority_keypair;
 use shared::create_config_accounts;
 use shared::create_program_context_with_factory;
 use shared::testname;
 use shared::ToRpcClient;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::transaction::VersionedTransaction;
-use test_utils::create_insta_redaction;
+use test_utils_insta::create_insta_redaction;
+use test_utils_keypairs::get_authority_keypair;
 use test_utils_solana::prelude::*;
 use wasm_client_solana::solana_account_decoder::parse_account_data::SplTokenAdditionalData;
 use wasm_client_solana::solana_account_decoder::parse_token::parse_token_v2;
@@ -107,7 +107,7 @@ async fn shared_token_initialize_test<
 ) -> anyhow::Result<u64> {
 	let provider = create_provider().await?;
 	let rpc = provider.to_rpc();
-	let authority_keypair = create_authority_keypair();
+	let authority_keypair = get_authority_keypair();
 	let authority = authority_keypair.pubkey();
 	let treasury = get_pda_treasury().0;
 	let mint = get_pda_mint(member).0;

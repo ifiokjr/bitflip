@@ -7,7 +7,6 @@ use bitflip_program::config_update_authority;
 use bitflip_program::get_pda_config;
 use bitflip_program::BitflipError;
 use bitflip_program::ConfigState;
-use shared::create_authority_keypair;
 use shared::create_config_accounts;
 use shared::create_program_context_with_factory;
 use shared::create_token_accounts;
@@ -17,7 +16,8 @@ use solana_sdk::signature::Keypair;
 use solana_sdk::transaction::TransactionError;
 use solana_sdk::transaction::VersionedTransaction;
 use steel::*;
-use test_utils::create_insta_redaction;
+use test_utils_insta::create_insta_redaction;
+use test_utils_keypairs::get_authority_keypair;
 use test_utils_solana::prelude::*;
 
 mod shared;
@@ -91,7 +91,7 @@ async fn shared_config_update_authority_test<
 ) -> anyhow::Result<u64> {
 	let provider = create_provider().await?;
 	let rpc = provider.to_rpc();
-	let authority_keypair = create_authority_keypair();
+	let authority_keypair = get_authority_keypair();
 	let authority = authority_keypair.pubkey();
 	let new_authority_keypair = Keypair::new();
 	let new_authority = new_authority_keypair.pubkey();
@@ -131,7 +131,7 @@ async fn shared_authority_must_change_test<
 ) -> anyhow::Result<()> {
 	let provider = create_provider().await?;
 	let rpc = provider.to_rpc();
-	let authority_keypair = create_authority_keypair();
+	let authority_keypair = get_authority_keypair();
 	let authority = authority_keypair.pubkey();
 	let recent_blockhash = rpc.get_latest_blockhash().await?;
 	let ix = config_update_authority(&authority, &authority);

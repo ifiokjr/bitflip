@@ -32,7 +32,6 @@ use insta::internals::Content;
 use insta::internals::ContentPath;
 use shared::create_game_state;
 use shared::create_section_state;
-use shared::create_wallet_keypair;
 use shared::get_authority_program;
 use shared::get_wallet_program;
 use solana_sdk::account::Account;
@@ -43,8 +42,9 @@ use solana_sdk::system_program;
 use solana_sdk::sysvar::recent_blockhashes::RecentBlockhashes;
 use spl_associated_token_account::get_associated_token_address_with_program_id;
 use test_log::test;
-use test_utils::create_insta_redaction;
-use test_utils_solana::prelude::*;
+use test_utils_anchor::prelude::*;
+use test_utils_insta::create_insta_redaction;
+use test_utils_keypairs::get_wallet_keypair;
 use test_utils_solana::ProgramTest;
 use wasm_client_solana::solana_account_decoder::parse_account_data::SplTokenAdditionalData;
 use wasm_client_solana::solana_account_decoder::parse_token::parse_token_v2;
@@ -349,7 +349,7 @@ async fn unlock_first_section() -> anyhow::Result<()> {
 		.set_sysvar(&RecentBlockhashes::default());
 	let rpc = provider.to_rpc_client();
 	let program_client = get_wallet_program(&rpc);
-	let owner = create_wallet_keypair().pubkey();
+	let owner = get_wallet_keypair().pubkey();
 	let mint = get_pda_mint().0;
 
 	initialize_token_request(&get_authority_program(&rpc))

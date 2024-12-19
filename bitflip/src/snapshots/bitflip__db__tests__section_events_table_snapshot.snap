@@ -1,0 +1,58 @@
+---
+source: bitflip/src/db.rs
+expression: diff
+snapshot_kind: text
+---
+[
+    Issue {
+        ident: TableIdent {
+            schema: None,
+            name: "section_events",
+        },
+        level: Medium,
+        kind: Changed(
+            Diff {
+                column: "id",
+                db_type: "TEXT",
+                db_nullable: true,
+                welds_type: "Uuid",
+                welds_nullable: false,
+                type_changed: false,
+            },
+        ),
+    },
+    Issue {
+        ident: TableIdent {
+            schema: None,
+            name: "section_events",
+        },
+        level: High,
+        kind: Changed(
+            Diff {
+                column: "event_type",
+                db_type: "INTEGER",
+                db_nullable: false,
+                welds_type: "u8",
+                welds_nullable: false,
+                type_changed: true,
+            },
+        ),
+    },
+    Issue {
+        ident: TableIdent {
+            schema: None,
+            name: "section_events",
+        },
+        level: High,
+        kind: Changed(
+            Diff {
+                column: "created_at",
+                db_type: "TEXT",
+                db_nullable: false,
+                welds_type: "DateTime<Utc>",
+                welds_nullable: false,
+                type_changed: true,
+            },
+        ),
+    },
+]

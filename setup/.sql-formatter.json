@@ -1,0 +1,10 @@
+{
+	"language": "sqlite",
+	"tabWidth": 4,
+	"useTabs": true,
+	"keywordCase": "upper",
+	"functionCase": "upper",
+	"identifierCase": "lower",
+	"dataTypeCase": "upper",
+	"linesBetweenQueries": 1
+}

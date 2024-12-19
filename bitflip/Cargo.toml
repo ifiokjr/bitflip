@@ -10,12 +10,17 @@ workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+aes-gcm-siv = { workspace = true, optional = true, features = ["std"] }
 anyhow = { workspace = true }
-axum = { workspace = true, optional = true }
+argon2 = { workspace = true, optional = true, features = ["std"] }
+axum = { workspace = true, optional = true, features = ["macros"] }
 bitflip_program = { workspace = true, features = ["serde", "no-entrypoint", "client"] }
+chrono = { workspace = true, features = ["serde", "clock"] }
 codee = { workspace = true }
 console_error_panic_hook = { workspace = true }
 console_log = { workspace = true }
+derive_more = { workspace = true, features = ["deref", "deref_mut", "from", "into", "debug"] }
+fixed = { workspace = true }
 http = { workspace = true }
 js-sys = { workspace = true }
 leptos = { workspace = true, features = ["tracing", "nightly", "islands"] }
@@ -24,43 +29,62 @@ leptos_meta = { workspace = true }
 leptos_router = { workspace = true, features = ["nightly"] }
 log = { workspace = true }
 mime_guess = { workspace = true, optional = true }
-rand = { workspace = true }
+num_enum = { workspace = true }
+rand = { workspace = true, optional = true }
 reactive_stores = { workspace = true }
 rust-embed = { workspace = true, features = ["axum", "mime_guess", "tokio"], optional = true }
 serde = { workspace = true, features = ["derive"] }
 serde-big-array = { workspace = true }
 simple_logger = { workspace = true }
 solana-sdk = { workspace = true }
+spl-pod = { workspace = true }
+sqlx = { workspace = true, optional = true, features = ["chrono", "runtime-tokio", "uuid"] }
 strum = { workspace = true, features = ["derive"] }
-surrealdb = { workspace = true, optional = true }
-surrealdb_extra = { workspace = true, optional = true }
 thiserror = { workspace = true }
 tiny-skia = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"], optional = true }
 tower = { workspace = true, optional = true }
 tower-http = { workspace = true, features = ["fs", "compression-gzip", "compression-br"], optional = true }
 tracing = { workspace = true, optional = true }
+typed-builder = { workspace = true }
+url = { workspace = true, features = ["serde"] }
+uuid = { workspace = true, features = ["serde", "v7"] }
 wallet_standard_browser = { workspace = true, features = ["solana"] }
 wasm-bindgen = { workspace = true }
 wasm_client_anchor = { workspace = true }
 wasm_client_solana = { workspace = true }
 web-sys = { workspace = true, features = ["DomRect", "CanvasRenderingContext2d", "Document", "Element", "HtmlCanvasElement", "ImageData", "Window", "EventTarget"] }
+welds = { workspace = true, features = ["sqlite", "check"], optional = true }
+
+[dev-dependencies]
+anyhow = { workspace = true }
+assert2 = { workspace = true }
+insta = { workspace = true, features = ["json", "redactions", "ron", "yaml"] }
+memory_wallet = { workspace = true }
+rstest = { workspace = true }
+test-log = { workspace = true, features = ["log", "trace"] }
+test_utils_insta = { workspace = true }
+test_utils_keypairs = { workspace = true }
+tokio = { workspace = true, features = ["test-util", "rt", "macros", "time"] }
 
 [features]
 csr = ["leptos/csr", "wasm_client_solana/js", "codee/json_serde_wasm"]
 hydrate = ["leptos/hydrate", "wasm_client_solana/js", "codee/json_serde_wasm"]
 ssr = [
 	"codee/json_serde",
+	"dep:aes-gcm-siv",
+	"dep:argon2",
 	"dep:axum",
 	"dep:leptos_axum",
+	"dep:rand",
 	"dep:rust-embed",
-	"dep:surrealdb_extra",
-	"dep:surrealdb",
+	"dep:sqlx",
 	"dep:tiny-skia",
 	"dep:tokio",
 	"dep:tower-http",
 	"dep:tower",
 	"dep:tracing",
+	"dep:welds",
 	"leptos_meta/ssr",
 	"leptos_router/ssr",
 	"leptos/ssr",

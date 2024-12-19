@@ -6,7 +6,6 @@ use assert2::check;
 use bitflip_program::game_initialize;
 use bitflip_program::get_pda_game;
 use bitflip_program::GameState;
-use shared::create_authority_keypair;
 use shared::create_config_accounts;
 use shared::create_program_context_with_factory;
 use shared::create_token_accounts;
@@ -14,7 +13,8 @@ use shared::ToRpcClient;
 use solana_sdk::signature::Keypair;
 use solana_sdk::transaction::VersionedTransaction;
 use steel::*;
-use test_utils::create_insta_redaction;
+use test_utils_insta::create_insta_redaction;
+use test_utils_keypairs::get_authority_keypair;
 use test_utils_solana::prelude::*;
 
 mod shared;
@@ -73,7 +73,7 @@ async fn shared_game_initialize_test<
 	let game_index = 0;
 	let provider = create_provider().await?;
 	let rpc = provider.to_rpc();
-	let authority_keypair = create_authority_keypair();
+	let authority_keypair = get_authority_keypair();
 	let authority = authority_keypair.pubkey();
 	let temp_signer_keypair = Keypair::new();
 	let funded_signer_keypair = Keypair::new();

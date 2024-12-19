@@ -1,0 +1,349 @@
+tables:
+  - schema: null
+    name: games
+    manual_update: false
+    model: null
+    type: table
+    columns:
+      - db_name: base_lamports
+        db_type: INTEGER
+        model_name: base_lamports
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: created_at
+        db_type: TEXT
+        model_name: created_at
+        is_null: true
+        primary_key: false
+        writeable: true
+      - db_name: duration
+        db_type: INTEGER
+        model_name: duration
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: game_signer
+        db_type: TEXT
+        model_name: game_signer
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: max_lamports
+        db_type: INTEGER
+        model_name: max_lamports
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: min_lamports
+        db_type: INTEGER
+        model_name: min_lamports
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: section_index
+        db_type: INTEGER
+        model_name: section_index
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: start_time
+        db_type: INTEGER
+        model_name: start_time
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: status
+        db_type: INTEGER
+        model_name: status
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: temp_signer
+        db_type: TEXT
+        model_name: temp_signer
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: updated_at
+        db_type: TEXT
+        model_name: updated_at
+        is_null: true
+        primary_key: false
+        writeable: true
+      - db_name: game_index
+        db_type: INTEGER
+        model_name: game_index
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: id
+        db_type: TEXT
+        model_name: id
+        is_null: true
+        primary_key: true
+        writeable: true
+    belongs_to: []
+    has_many:
+      - schema: null
+        tablename: sections
+        foreign_key: game_index
+    database: Sqlite
+  - schema: null
+    name: sections
+    manual_update: false
+    model: null
+    type: table
+    columns:
+      - db_name: created_at
+        db_type: TEXT
+        model_name: created_at
+        is_null: true
+        primary_key: false
+        writeable: true
+      - db_name: data
+        db_type: BLOB
+        model_name: data
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: flips
+        db_type: INTEGER
+        model_name: flips
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: lamports
+        db_type: INTEGER
+        model_name: lamports
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: owner
+        db_type: TEXT
+        model_name: owner
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: reward_tokens
+        db_type: INTEGER
+        model_name: reward_tokens
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: updated_at
+        db_type: TEXT
+        model_name: updated_at
+        is_null: true
+        primary_key: false
+        writeable: true
+      - db_name: game_index
+        db_type: INTEGER
+        model_name: game_index
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: section_index
+        db_type: INTEGER
+        model_name: section_index
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: id
+        db_type: TEXT
+        model_name: id
+        is_null: true
+        primary_key: true
+        writeable: true
+    belongs_to:
+      - schema: null
+        tablename: games
+        foreign_key: game_index
+    has_many:
+      - schema: null
+        tablename: section_events
+        foreign_key: section_id
+    database: Sqlite
+  - schema: null
+    name: _sqlx_migrations
+    manual_update: false
+    model: null
+    type: table
+    columns:
+      - db_name: checksum
+        db_type: BLOB
+        model_name: checksum
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: description
+        db_type: TEXT
+        model_name: description
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: execution_time
+        db_type: BIGINT
+        model_name: execution_time
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: installed_on
+        db_type: TIMESTAMP
+        model_name: installed_on
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: success
+        db_type: BOOLEAN
+        model_name: success
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: version
+        db_type: BIGINT
+        model_name: version
+        is_null: true
+        primary_key: true
+        writeable: true
+    belongs_to: []
+    has_many: []
+    database: Sqlite
+  - schema: null
+    name: players
+    manual_update: false
+    model: null
+    type: table
+    columns:
+      - db_name: created_at
+        db_type: TEXT
+        model_name: created_at
+        is_null: true
+        primary_key: false
+        writeable: true
+      - db_name: signer
+        db_type: TEXT
+        model_name: signer
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: updated_at
+        db_type: TEXT
+        model_name: updated_at
+        is_null: true
+        primary_key: false
+        writeable: true
+      - db_name: pubkey
+        db_type: TEXT
+        model_name: pubkey
+        is_null: true
+        primary_key: true
+        writeable: true
+    belongs_to: []
+    has_many:
+      - schema: null
+        tablename: section_events
+        foreign_key: player_pubkey
+    database: Sqlite
+  - schema: null
+    name: section_events
+    manual_update: false
+    model: null
+    type: table
+    columns:
+      - db_name: created_at
+        db_type: TEXT
+        model_name: created_at
+        is_null: true
+        primary_key: false
+        writeable: true
+      - db_name: data
+        db_type: BLOB
+        model_name: data
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: event_type
+        db_type: INTEGER
+        model_name: event_type
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: player_pubkey
+        db_type: TEXT
+        model_name: player_pubkey
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: section_id
+        db_type: TEXT
+        model_name: section_id
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: id
+        db_type: TEXT
+        model_name: id
+        is_null: true
+        primary_key: true
+        writeable: true
+    belongs_to:
+      - schema: null
+        tablename: players
+        foreign_key: player_pubkey
+      - schema: null
+        tablename: sections
+        foreign_key: section_id
+    has_many: []
+    database: Sqlite
+  - schema: null
+    name: encrypted_keypairs
+    manual_update: false
+    model: null
+    type: table
+    columns:
+      - db_name: created_at
+        db_type: TEXT
+        model_name: created_at
+        is_null: true
+        primary_key: false
+        writeable: true
+      - db_name: encrypted_keypair
+        db_type: BLOB
+        model_name: encrypted_keypair
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: encryption_key_index
+        db_type: INTEGER
+        model_name: encryption_key_index
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: updated_at
+        db_type: TEXT
+        model_name: updated_at
+        is_null: true
+        primary_key: false
+        writeable: true
+      - db_name: pubkey
+        db_type: TEXT
+        model_name: pubkey
+        is_null: true
+        primary_key: true
+        writeable: true
+      - db_name: nonce
+        db_type: BLOB
+        model_name: nonce
+        is_null: false
+        primary_key: false
+        writeable: true
+      - db_name: salt
+        db_type: BLOB
+        model_name: salt
+        is_null: false
+        primary_key: false
+        writeable: true
+    belongs_to: []
+    has_many: []
+    database: Sqlite

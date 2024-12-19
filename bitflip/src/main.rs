@@ -46,7 +46,9 @@ async fn main() {
 			"/game/:game_index/section-image/:section_index",
 			get(section_image_handler),
 		)
-		.fallback(leptos_axum::file_and_error_handler(shell))
+		.fallback(leptos_axum::file_and_error_handler::<LeptosOptions, _>(
+			shell,
+		))
 		.with_state(leptos_options);
 
 	// run our app with hyper

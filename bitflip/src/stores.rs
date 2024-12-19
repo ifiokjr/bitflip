@@ -13,3 +13,9 @@ pub struct SectionStateStore {
 	#[serde(with = "serde_big_array::BigArray")]
 	pub data: [u16; BITFLIP_SECTION_LENGTH],
 }
+
+impl SectionStateStore {
+	pub fn is_checked(&self, index: u8, offset: u8) -> bool {
+		self.data[index as usize] & (1 << offset) != 0
+	}
+}

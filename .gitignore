@@ -54,3 +54,5 @@ node_modules/
 /test-results
 
 /bitflip/style/output.css
+
+/bitflip.db

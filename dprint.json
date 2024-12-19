@@ -10,7 +10,7 @@
 	"exec": {
 		"commands": [
 			{
-				"command": "cargo bin leptosfmt --stdin --rustfmt",
+				"command": "cargo bin leptosfmt -c ./setup/leptosfmt.toml --stdin --rustfmt",
 				"exts": [
 					"rs"
 				]
@@ -19,6 +19,12 @@
 				"command": "nixfmt",
 				"exts": [
 					"nix"
+				]
+			},
+			{
+				"command": "sql-formatter -c ./setup/.sql-formatter.json",
+				"exts": [
+					"sql"
 				]
 			},
 			{
@@ -45,7 +51,7 @@
 		"cargo.applyConventions": true
 	},
 	"includes": [
-		"**/*.{ts,tsx,js,jsx,cjs,mjs,json,jsonc,md,toml,Dockerfile,rs,yml,yaml,css,sh,bash}"
+		"**/*.{ts,tsx,js,jsx,cjs,mjs,json,jsonc,md,toml,Dockerfile,rs,yml,yaml,css,sh,bash,sql}"
 	],
 	"excludes": [
 		"deno.lock",
@@ -62,13 +68,13 @@
 		"**/pkg/"
 	],
 	"plugins": [
-		"https://plugins.dprint.dev/typescript-0.93.0.wasm",
-		"https://plugins.dprint.dev/json-0.19.3.wasm",
+		"https://plugins.dprint.dev/typescript-0.93.3.wasm",
+		"https://plugins.dprint.dev/json-0.19.4.wasm",
 		"https://plugins.dprint.dev/markdown-0.17.8.wasm",
-		"https://plugins.dprint.dev/exec-0.5.0.json@8d9972eee71fa1590e04873540421f3eda7674d0f1aae3d7c788615e7b7413d0",
+		"https://plugins.dprint.dev/exec-0.5.1.json@492414e39dea4dccc07b4af796d2f4efdb89e84bae2bd4e1e924c0cc050855bf",
 		"https://plugins.dprint.dev/g-plane/pretty_yaml-v0.5.0.wasm",
-		"https://plugins.dprint.dev/g-plane/markup_fmt-v0.13.1.wasm",
-		"https://plugins.dprint.dev/g-plane/malva-v0.10.1.wasm",
+		"https://plugins.dprint.dev/g-plane/markup_fmt-v0.18.0.wasm",
+		"https://plugins.dprint.dev/g-plane/malva-v0.11.1.wasm",
 		"https://plugins.dprint.dev/toml-0.6.3.wasm"
 	]
 }

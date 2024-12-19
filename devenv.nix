@@ -19,8 +19,10 @@
       pkgs.nixfmt-rfc-style
       pkgs.rustup
       pkgs.shfmt
+      pkgs.sqlite
+      pkgs.sql-formatter
       pkgs.surrealdb
-      pkgs.surrealdb-migrations
+			pkgs.surrealdb-migrations
       pkgs.wasm-pack
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin (
@@ -33,6 +35,7 @@
       ]
     );
 
+
   # disable dotenv since it breaks the variable interpolation supported by `direnv`
   dotenv.disableHint = true;
 
@@ -43,12 +46,26 @@
     '';
     description = "The `anchor` executable";
   };
+  scripts.welds = {
+    exec = ''
+      set -e
+      cargo bin welds $@
+    '';
+    description = "The `welds` executable for generating database models.";
+  };
+  scripts.sqlx = {
+    exec = ''
+      set -e
+      cargo bin sqlx $@
+    '';
+    description = "The `sqlx` executable for database migrations.";
+  };
   scripts."query-security-txt" = {
     exec = ''
       set -e
       cargo bin query-security-txt $@
     '';
-    description = "The `anchor` executable";
+    description = "The `query-security-txt` executable";
   };
   scripts."solana-verify" = {
     exec = ''
@@ -116,12 +133,6 @@
     '';
     description = "Build all crates with all features activated.";
   };
-  scripts."build:docs" = {
-    exec = ''
-      RUSTDOCFLAGS="--cfg docsrs" cargo doc --all-features
-    '';
-    description = "Build documentation site.";
-  };
   scripts."test:all" = {
     exec = ''
       set -e
@@ -129,81 +140,6 @@
       cargo test_bitflip_legacy_client_validator
     '';
     description = "Run all tests across the crates";
-  };
-  scripts."db:start" = {
-    exec = ''
-      surreal start --log debug --user $SURREAL_USER --password $SURREAL_PASS
-    '';
-    description = "Start the surrealdb instance";
-  };
-  scripts."fix:all" = {
-    exec = ''
-      set -e
-      fix:clippy
-      fix:deno
-      fix:format
-			lint:security-txt
-    '';
-    description = "Fix all autofixable problems.";
-  };
-  scripts."fix:format" = {
-    exec = ''
-      set -e
-      dprint fmt --config "$DEVENV_ROOT/dprint.json"
-    '';
-    description = "Format files with dprint.";
-  };
-  scripts."fix:clippy" = {
-    exec = ''
-      set -e
-      cargo clippy --fix --allow-dirty --allow-staged --all-features
-    '';
-    description = "Fix clippy lints for rust.";
-  };
-  scripts."fix:deno" = {
-    exec = ''
-      set -e
-      deno lint --fix .
-    '';
-    description = "Fix lints for JS / TS.";
-  };
-  scripts."lint:all" = {
-    exec = ''
-      set -e
-      lint:clippy
-      lint:deno
-      lint:format
-			lint:security-txt
-    '';
-    description = "Run all checks.";
-  };
-  scripts."lint:format" = {
-    exec = ''
-      set -e
-      dprint check
-    '';
-    description = "Check that all files are formatted.";
-  };
-  scripts."lint:clippy" = {
-    exec = ''
-      set -e
-      cargo clippy --all-features
-    '';
-    description = "Check that all rust lints are passing.";
-  };
-  scripts."lint:deno" = {
-    exec = ''
-      set -e
-      deno lint
-    '';
-    description = "Check lints for all JS / TS files.";
-  };
-  scripts."lint:security-txt" = {
-    exec = ''
-      set -e
-      query-security-txt $DEVENV_ROOT/target/deploy/bitflip_program.so
-    '';
-    description = "Check security.txt.";
   };
   scripts."setup:vscode" = {
     exec = ''
@@ -389,45 +325,6 @@
     exec = ''
       set -e
       docker build -t kj-dev -f $DEVENV_ROOT/bitflip/Dockerfile $DEVENV_ROOT
-    '';
-    description = "";
-  };
-  scripts."watch:bitflip" = {
-    exec = ''
-      cargo make watch:bitflip
-    '';
-    description = "";
-  };
-  scripts."build:bitflip" = {
-    exec = ''
-      set -e
-      cargo make build:bitflip:tailwind
-      cargo leptos build --project bitflip --release -vv --features="prod"
-    '';
-    description = "";
-  };
-  scripts."serve:bitflip" = {
-    exec = ''
-      set -e
-      cargo make build:bitflip:tailwind
-      cargo leptos serve --project bitflip --release -vv --features="prod"
-    '';
-    description = "";
-  };
-  scripts."prepare:bitflip" = {
-    exec = ''
-      set -e
-      rm -rf $DEVENV_ROOT/dist/bitflip
-      mkdir -p $DEVENV_ROOT/dist/bitflip
-      cp $DEVENV_ROOT/target/release/bitflip $DEVENV_ROOT/dist/bitflip/bitflip
-      cp -r $DEVENV_ROOT/target/site/bitflip $DEVENV_ROOT/dist/bitflip/site
-      cp -r $DEVENV_ROOT/bitflip/Cargo.toml $DEVENV_ROOT/dist/bitflip
-    '';
-    description = "";
-  };
-  scripts."watch:bitflip:leptos" = {
-    exec = ''
-      cargo leptos watch --hot-reload --project bitflip
     '';
     description = "";
   };

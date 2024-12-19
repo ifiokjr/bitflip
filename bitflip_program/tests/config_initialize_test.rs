@@ -8,8 +8,6 @@ use bitflip_program::get_pda_config;
 use bitflip_program::get_pda_treasury;
 use bitflip_program::BitflipError;
 use bitflip_program::ConfigState;
-use shared::create_admin_keypair;
-use shared::create_authority_keypair;
 use shared::create_program_context_with_factory;
 use shared::ToRpcClient;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
@@ -19,7 +17,9 @@ use solana_sdk::transaction::TransactionError;
 use solana_sdk::transaction::VersionedTransaction;
 use steel::*;
 use sysvar::rent::Rent;
-use test_utils::create_insta_redaction;
+use test_utils_insta::create_insta_redaction;
+use test_utils_keypairs::get_admin_keypair;
+use test_utils_keypairs::get_authority_keypair;
 use test_utils_solana::prelude::*;
 
 mod shared;
@@ -86,9 +86,9 @@ async fn shared_config_initialize_test<
 ) -> anyhow::Result<u64> {
 	let provider = create_provider().await?;
 	let rpc = provider.to_rpc();
-	let admin_keypair = create_admin_keypair();
+	let admin_keypair = get_admin_keypair();
 	let admin = admin_keypair.pubkey();
-	let authority_keypair = create_authority_keypair();
+	let authority_keypair = get_authority_keypair();
 	let authority = authority_keypair.pubkey();
 	let config = get_pda_config().0;
 	let treasury = get_pda_treasury().0;
@@ -138,7 +138,7 @@ async fn shared_invalid_admin_config_initialize_test<
 	let rpc = provider.to_rpc();
 	let admin_keypair = Keypair::new();
 	let admin = admin_keypair.pubkey();
-	let authority_keypair = create_authority_keypair();
+	let authority_keypair = get_authority_keypair();
 	let authority = authority_keypair.pubkey();
 	let recent_blockhash = rpc.get_latest_blockhash().await?;
 	let ix = config_initialize(&admin, &authority);
@@ -168,9 +168,9 @@ async fn shared_duplicate_authority_config_initialize_test<
 ) -> anyhow::Result<()> {
 	let provider = create_provider().await?;
 	let rpc = provider.to_rpc();
-	let admin_keypair = create_admin_keypair();
+	let admin_keypair = get_admin_keypair();
 	let admin = admin_keypair.pubkey();
-	let authority_keypair = create_admin_keypair();
+	let authority_keypair = get_admin_keypair();
 	let authority = authority_keypair.pubkey();
 	let recent_blockhash = rpc.get_latest_blockhash().await?;
 	let ix = config_initialize(&admin, &authority);

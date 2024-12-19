@@ -30,12 +30,9 @@ use bitflip_legacy_program::BITFLIP_SECTION_LENGTH;
 use bitflip_legacy_program::TOKEN_DECIMALS;
 use insta::internals::Content;
 use insta::internals::ContentPath;
-use shared::create_admin_keypair;
-use shared::create_authority_keypair;
 use shared::create_config_state;
 use shared::create_game_state;
 use shared::create_runner_with_accounts;
-use shared::create_wallet_keypair;
 use shared::get_authority_program;
 use shared::get_wallet_program;
 use solana_sdk::account::ReadableAccount;
@@ -44,8 +41,11 @@ use solana_sdk::signer::Signer;
 use solana_sdk::system_program;
 use spl_associated_token_account::get_associated_token_address_with_program_id;
 use test_log::test;
-use test_utils::create_insta_redaction;
-use test_utils_solana::prelude::*;
+use test_utils_anchor::prelude::*;
+use test_utils_insta::create_insta_redaction;
+use test_utils_keypairs::get_admin_keypair;
+use test_utils_keypairs::get_authority_keypair;
+use test_utils_keypairs::get_wallet_keypair;
 use wasm_client_solana::solana_account_decoder::parse_account_data::SplTokenAdditionalData;
 use wasm_client_solana::solana_account_decoder::parse_token::parse_token_v2;
 
@@ -53,9 +53,9 @@ mod shared;
 
 #[test(tokio::test)]
 async fn initialize_config_test() -> anyhow::Result<()> {
-	let admin_keypair = create_admin_keypair();
+	let admin_keypair = get_admin_keypair();
 	let admin = admin_keypair.pubkey();
-	let authority_keypair = create_authority_keypair();
+	let authority_keypair = get_authority_keypair();
 	let authority = authority_keypair.pubkey();
 	let system_program = system_program::id();
 	let (config, _) = get_pda_config();
@@ -341,7 +341,7 @@ async fn unlock_first_section() -> anyhow::Result<()> {
 	let runner = create_runner_with_accounts(accounts).await;
 	let rpc = runner.rpc();
 	let program_client = get_wallet_program(rpc);
-	let owner = create_wallet_keypair().pubkey();
+	let owner = get_wallet_keypair().pubkey();
 	let mint = get_pda_mint().0;
 
 	log::warn!("the running game: {game}");

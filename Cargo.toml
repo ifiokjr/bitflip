@@ -1,5 +1,5 @@
 [workspace]
-members = ["bitflip", "bitflip_legacy_client", "bitflip_legacy_program", "bitflip_program"]
+members = ["bitflip", "bitflip_program"]
 resolver = "2"
 
 [workspace.package]
@@ -12,10 +12,12 @@ repository = "https://github.com/ifiokjr/bitflip"
 rust-version = "1.71.0"
 
 [workspace.dependencies]
-anchor-lang = { git = "https://github.com/coral-xyz/anchor", rev = "6d6b24a" }
-anchor-spl = { git = "https://github.com/coral-xyz/anchor", rev = "6d6b24a" }
-anchor-syn = { git = "https://github.com/coral-xyz/anchor", rev = "6d6b24a" }
+aes-gcm-siv = "0.11"
+anchor-lang = { git = "https://github.com/coral-xyz/anchor", rev = "955e7ea" }
+anchor-spl = { git = "https://github.com/coral-xyz/anchor", rev = "955e7ea" }
+anchor-syn = { git = "https://github.com/coral-xyz/anchor", rev = "955e7ea" }
 anyhow = "1"
+argon2 = "0.5"
 assert2 = "0.3"
 assert_matches = "1"
 async-trait = "0.1"
@@ -27,12 +29,12 @@ bs58 = "0.5"
 bytemuck = "1"
 cfg-if = "1"
 check_keyword = "0.3"
-chrono = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.2"
 codee = "0.2"
 console_error_panic_hook = "0.1"
 console_log = "1"
-const_str_to_pubkey = { git = "https://github.com/ifiokjr/const_str_to_pubkey", rev = "1a6f856" }
+const_str_to_pubkey = "0.2"
 crossbeam-channel = "0.5"
 cuid2 = "0.1"
 default-env = "0.1"
@@ -63,13 +65,14 @@ insta = "1"
 js-sys = "0.3"
 jsonwebtoken = "9"
 lazy_static = "1"
-leptos = "0.7.0"
-leptos-use = "0.14.0"
-leptos_axum = "0.7.0"
-leptos_dom = "0.7.0"
-leptos_meta = "0.7.0"
-leptos_router = "0.7.0"
+leptos = "0.7"
+leptos-use = "0.15"
+leptos_axum = "0.7"
+leptos_dom = "0.7"
+leptos_meta = "0.7"
+leptos_router = "0.7"
 log = "0.4"
+memory_wallet = "0.1"
 mime_guess = "2"
 num_enum = "0.7"
 paste = "1"
@@ -86,8 +89,7 @@ serde-wasm-bindgen = "0.6"
 serde_json = "1"
 serde_qs = "0.13"
 serde_with = "3"
-serial_test = "3"
-server_fn = "=0.7.0-rc2"
+server_fn = "0.7"
 sha2 = "0.10"
 similar-asserts = "1"
 simple_logger = "5"
@@ -117,16 +119,18 @@ spl-token-group-interface = "0.5"
 spl-token-metadata-interface = "0.6"
 spl-transfer-hook-interface = "0.9"
 spl-type-length-value = "0.7"
+sqlx = "0.8"
 static_assertions = "1"
 steel = { git = "https://github.com/ifiokjr/steel", rev = "81f8139" }
 strum = "0.26"
 surrealdb = "2"
-surrealdb_extra = "0.10"
 tailwind_fuse = "0.3"
 test-context = "0.3"
 test-log = "0.2"
-test_utils = { git = "https://github.com/ifiokjr/wasm_solana", rev = "195df0" }
-test_utils_solana = { git = "https://github.com/ifiokjr/wasm_solana", rev = "195df0" }
+test_utils_anchor = { git = "https://github.com/ifiokjr/wasm_solana", rev = "cfcc3cd" }
+test_utils_insta = "0.1"
+test_utils_keypairs = "0.1"
+test_utils_solana = "0.6"
 thiserror = "2"
 tiny-skia = "0.11"
 tokio = "1"
@@ -139,16 +143,17 @@ typed-builder = "0.20"
 uint = "0.10"
 url = "2"
 urlencoding = "2"
+uuid = "1"
 validator = { version = "0.19", features = ["derive"] }
-wallet_standard = { git = "https://github.com/ifiokjr/wasm_solana", rev = "195df0" }
-wallet_standard_browser = { git = "https://github.com/ifiokjr/wasm_solana", rev = "195df0" }
-wallet_standard_wallets = { git = "https://github.com/ifiokjr/wasm_solana", rev = "195df0" }
+wallet_standard = "0.4"
+wallet_standard_browser = "0.4"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 wasm-bindgen-test = "0.3"
-wasm_client_anchor = { git = "https://github.com/ifiokjr/wasm_solana", rev = "195df0" }
-wasm_client_solana = { git = "https://github.com/ifiokjr/wasm_solana", rev = "195df0" }
+wasm_client_anchor = { git = "https://github.com/ifiokjr/wasm_solana", rev = "cfcc3cd" }
+wasm_client_solana = "0.7"
 web-sys = "0.3"
+welds = "0.4"
 
 # internal crates
 bitflip_legacy_client = { path = "./bitflip_legacy_client", version = "0.0.0" }
@@ -156,14 +161,20 @@ bitflip_legacy_program = { path = "./bitflip_legacy_program", version = "0.0.0" 
 bitflip_program = { path = "./bitflip_program", version = "0.0.0" }
 
 [workspace.metadata.bin]
-anchor-cli = { version = "0.30.1", git = "https://github.com/coral-xyz/anchor", rev = "6d6b24a", bins = ["anchor"] }
+anchor-cli = { version = "0.30.1", git = "https://github.com/coral-xyz/anchor", rev = "955e7ea", bins = ["anchor"] }
 cargo-insta = { version = "1.41.1" }
-cargo-leptos = { version = "0.2.22" }
+cargo-leptos = { version = "0.2.24" }
 cargo-llvm-cov = { version = "0.6.14" }
-cargo-nextest = { version = "0.9.85" }
+cargo-nextest = { version = "0.9.86" }
 leptosfmt = { version = "0.1.32", bins = ["leptosfmt"] }
 query-security-txt = { version = "1.1.1", bins = ["query-security-txt"] }
 solana-verify = { version = "0.3.1", bins = ["solana-verify"] }
+sqlx-cli = { version = "0.8.2", bins = ["sqlx"] }
+welds-cli = { version = "0.4.2", bins = ["welds"] }
+
+[patch.crates-io]
+# wasm_client_solana = { version = "0.7.2" }
+# test_utils_solana = { version = "0.6.3" }
 
 [workspace.metadata.solana]
 tools-version = "1.43"

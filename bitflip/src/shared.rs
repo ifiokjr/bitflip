@@ -1,4 +1,9 @@
+use derive_more::Deref;
+use derive_more::DerefMut;
+
+#[derive(Debug, Deref, DerefMut)]
 pub struct AppError(anyhow::Error);
+pub type AppResult<T> = Result<T, AppError>;
 
 // Tell axum how to convert `AppError` into a response.
 #[cfg(feature = "ssr")]
