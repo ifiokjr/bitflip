@@ -163,21 +163,6 @@
       echo "DEVENV_PROFILE=$DEVENV_PROFILE" >> $GITHUB_ENV
       echo "DEVENV_ROOT=$DEVENV_ROOT" >> $GITHUB_ENV
       echo "DEVENV_STATE=$DEVENV_STATE" >> $GITHUB_ENV
-
-      fnm_env=$(fnm env --json)
-
-      # Parse the JSON file contents
-      PARSED_FNM_ENV=$(jq -r '.' <<< "$fnm_env")
-      FNM_MULTISHELL_PATH=$(jq -r '.FNM_MULTISHELL_PATH' <<< "$PARSED_FNM_ENV")
-
-      # Add fnm to the path
-      echo "$FNM_MULTISHELL_PATH/bin" >> $GITHUB_PATH
-
-      # add fnm environment variables
-      for key in $(jq -r 'keys[]' <<< "$PARSED_FNM_ENV"); do
-        value=$(jq -r ".$key" <<< "$PARSED_FNM_ENV")
-        echo "$key=$value" >> $GITHUB_ENV
-      done
     '';
     description = "Setup devenv for GitHub Actions";
   };
@@ -200,21 +185,6 @@
       echo "export DEVENV_PROFILE=$DEVENV_PROFILE" >> /etc/profile
       echo "export DEVENV_ROOT=$DEVENV_ROOT" >> /etc/profile
       echo "export DEVENV_STATE=$DEVENV_STATE" >> /etc/profile
-
-      fnm_env=$(fnm env --json)
-
-      # Parse the JSON file contents
-      PARSED_FNM_ENV=$(jq -r '.' <<< "$fnm_env")
-      FNM_MULTISHELL_PATH=$(jq -r '.FNM_MULTISHELL_PATH' <<< "$PARSED_FNM_ENV")
-
-      # add fnm to the path
-      echo "export PATH=$FNM_MULTISHELL_PATH/bin:\$PATH" >> /etc/profile
-
-      # add fnm environment variables
-      for key in $(jq -r 'keys[]' <<< "$PARSED_FNM_ENV"); do
-        value=$(jq -r ".$key" <<< "$PARSED_FNM_ENV")
-        echo "export $key=$value" >> /etc/profile
-      done
     '';
     description = "Setup devenv shell for docker.";
   };
