@@ -1,5 +1,5 @@
 ---
-source: bitflip_program/tests/game_update_temp_signer.rs
+source: bitflip_program/tests/game_update_temp_signer_test.rs
 expression: game_state_account
 snapshot_kind: text
 ---

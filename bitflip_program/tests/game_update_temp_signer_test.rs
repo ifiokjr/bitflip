@@ -25,8 +25,8 @@ mod shared;
 async fn game_update_temp_signer_test() -> anyhow::Result<()> {
 	let created_game_state = create_game_state(0, 0, 0, GameStatus::Pending);
 	shared_game_update_temp_signer_test(
-		|| create_banks_client_rpc(&created_game_state),
-		&created_game_state,
+		|| create_banks_client_rpc(created_game_state.clone()),
+		created_game_state.funded_signer.insecure_clone(),
 	)
 	.await?;
 
@@ -38,8 +38,8 @@ async fn game_update_temp_signer_test() -> anyhow::Result<()> {
 async fn game_update_temp_signer_test_validator() -> anyhow::Result<()> {
 	let created_game_state = create_game_state(0, 0, 0, GameStatus::Pending);
 	let compute_units = shared_game_update_temp_signer_test(
-		|| create_validator_rpc(&created_game_state),
-		&created_game_state,
+		|| create_validator_rpc(created_game_state.clone()),
+		created_game_state.funded_signer.insecure_clone(),
 	)
 	.await?;
 	let rounded_compute_units = bitflip_program::round_compute_units_up(compute_units);
@@ -51,16 +51,17 @@ async fn game_update_temp_signer_test_validator() -> anyhow::Result<()> {
 		compute_units,
 		"Refresh the signer",
 	)?;
+
 	Ok(())
 }
 
 async fn create_banks_client_rpc(
 	CreatedGameState {
-		ref game_state_account,
-		ref funded_signer,
-		ref funded_signer_account,
+		game_state_account,
+		funded_signer,
+		funded_signer_account,
 		..
-	}: &CreatedGameState,
+	}: CreatedGameState,
 ) -> anyhow::Result<impl ToRpcClient> {
 	let provider = create_program_context_with_factory(|p| {
 		let mut config_state_accounts = create_config_accounts();
@@ -85,11 +86,11 @@ async fn create_banks_client_rpc(
 #[cfg(feature = "test_validator")]
 async fn create_validator_rpc(
 	CreatedGameState {
-		ref game_state_account,
-		ref funded_signer,
-		ref funded_signer_account,
+		game_state_account,
+		funded_signer,
+		funded_signer_account,
 		..
-	}: &CreatedGameState,
+	}: CreatedGameState,
 ) -> anyhow::Result<impl ToRpcClient> {
 	let mut accounts = create_config_accounts();
 	let game = get_pda_game(0).0;
@@ -107,10 +108,7 @@ async fn shared_game_update_temp_signer_test<
 	Create: FnOnce() -> Fut,
 >(
 	create_provider: Create,
-	CreatedGameState {
-		funded_signer: ref funded_signer_keypair,
-		..
-	}: &CreatedGameState,
+	funded_signer_keypair: Keypair,
 ) -> anyhow::Result<u64> {
 	let provider = create_provider().await?;
 	let rpc = provider.to_rpc();

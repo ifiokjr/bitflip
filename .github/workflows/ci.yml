@@ -43,6 +43,11 @@ jobs:
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test:
+          - test_program
+          - test_bitflip_ssr
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -54,12 +59,8 @@ jobs:
           nix-cache: /tmp/nixcache
           deno-cache: /tmp/denocache
 
-      - name: test program
-        run: cargo test_program
-        shell: bash
-
-      - name: test bitflip ssr
-        run: cargo test_bitflip_ssr
+      - name: test ${{ matrix.test }}
+        run: cargo ${{ matrix.test }}
         shell: bash
 
   build_bitflip_program:

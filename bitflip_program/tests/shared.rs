@@ -355,6 +355,17 @@ pub struct CreatedGameState {
 	pub funded_signer_account: AccountSharedData,
 }
 
+impl Clone for CreatedGameState {
+	fn clone(&self) -> Self {
+		CreatedGameState {
+			game_state_account: self.game_state_account.clone(),
+			temp_signer: self.temp_signer.insecure_clone(),
+			funded_signer: self.funded_signer.insecure_clone(),
+			funded_signer_account: self.funded_signer_account.clone(),
+		}
+	}
+}
+
 pub fn create_game_state(
 	game_index: u8,
 	section_index: u8,
