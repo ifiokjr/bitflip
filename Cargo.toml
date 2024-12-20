@@ -13,9 +13,6 @@ rust-version = "1.71.0"
 
 [workspace.dependencies]
 aes-gcm-siv = "0.11"
-anchor-lang = { git = "https://github.com/coral-xyz/anchor", rev = "955e7ea" }
-anchor-spl = { git = "https://github.com/coral-xyz/anchor", rev = "955e7ea" }
-anchor-syn = { git = "https://github.com/coral-xyz/anchor", rev = "955e7ea" }
 anyhow = "1"
 argon2 = "0.5"
 assert2 = "0.3"
@@ -127,7 +124,6 @@ surrealdb = "2"
 tailwind_fuse = "0.3"
 test-context = "0.3"
 test-log = "0.2"
-test_utils_anchor = { git = "https://github.com/ifiokjr/wasm_solana", rev = "cfcc3cd" }
 test_utils_insta = "0.1"
 test_utils_keypairs = "0.1"
 test_utils_solana = "0.6"
@@ -150,18 +146,14 @@ wallet_standard_browser = "0.4"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 wasm-bindgen-test = "0.3"
-wasm_client_anchor = { git = "https://github.com/ifiokjr/wasm_solana", rev = "cfcc3cd" }
 wasm_client_solana = "0.7"
 web-sys = "0.3"
 welds = "0.4"
 
 # internal crates
-bitflip_legacy_client = { path = "./bitflip_legacy_client", version = "0.0.0" }
-bitflip_legacy_program = { path = "./bitflip_legacy_program", version = "0.0.0" }
 bitflip_program = { path = "./bitflip_program", version = "0.0.0" }
 
 [workspace.metadata.bin]
-anchor-cli = { version = "0.30.1", git = "https://github.com/coral-xyz/anchor", rev = "955e7ea", bins = ["anchor"] }
 cargo-insta = { version = "1.41.1" }
 cargo-leptos = { version = "0.2.24" }
 cargo-llvm-cov = { version = "0.6.14" }
@@ -171,10 +163,6 @@ query-security-txt = { version = "1.1.1", bins = ["query-security-txt"] }
 solana-verify = { version = "0.3.1", bins = ["solana-verify"] }
 sqlx-cli = { version = "0.8.2", bins = ["sqlx"] }
 welds-cli = { version = "0.4.2", bins = ["welds"] }
-
-[patch.crates-io]
-# wasm_client_solana = { version = "0.7.2" }
-# test_utils_solana = { version = "0.6.3" }
 
 [workspace.metadata.solana]
 tools-version = "1.43"

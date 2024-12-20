@@ -69,7 +69,7 @@ jobs:
           deno-cache: /tmp/denocache
 
       - name: build
-        run: anchor:build
+        run: build program
         shell: bash
 
   test_validator:

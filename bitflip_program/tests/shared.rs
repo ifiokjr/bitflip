@@ -80,7 +80,7 @@ impl ToRpcClient for test_utils_solana::TestValidatorRunner {
 	}
 }
 
-/// Add the anchor program to the project.
+/// Add the program to the project.
 pub(crate) fn create_program_test() -> ProgramTest {
 	ProgramTest::new(
 		"bitflip",

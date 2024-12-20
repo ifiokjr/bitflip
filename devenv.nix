@@ -38,14 +38,6 @@
 
   # disable dotenv since it breaks the variable interpolation supported by `direnv`
   dotenv.disableHint = true;
-
-  scripts.anchor = {
-    exec = ''
-      set -e
-      cargo bin anchor $@
-    '';
-    description = "The `anchor` executable";
-  };
   scripts.welds = {
     exec = ''
       set -e
@@ -293,34 +285,6 @@
 		'';
 		description = "Build the steel program.";
 	};
-  scripts."build:program:legacy".exec = ''
-    set -e
-    anchor build
-    generated_bitflip_legacy_program_idl="$DEVENV_ROOT/target/idl/bitflip_legacy_program.json"
-    ci_bitflip_legacy_program_idl="$DEVENV_ROOT/idls/bitflip_legacy_program_ci.json"
-    saved_bitflip_legacy_program_idl="$DEVENV_ROOT/idls/bitflip_legacy_program.json"
-
-    if [ -n "$CI" ]; then
-      echo "ℹ️ running inside CI"
-      cp -f $generated_bitflip_legacy_program_idl $ci_bitflip_legacy_program_idl
-      dprint fmt $DEVENV_ROOT/idls/*.json
-      if cmp -s "$ci_bitflip_legacy_program_idl" "$saved_bitflip_legacy_program_idl"; then
-        echo "✅ files are identical"
-        rm $ci_bitflip_legacy_program_idl
-        exit 0
-      else
-        echo "❌ idl files were not updated"
-        echo "ℹ️ make sure to run `anchor:build` before pushing your code"
-      fi
-
-      rm $ci_bitflip_legacy_program_idl
-      exit 1
-    fi
-
-    echo "ℹ️ running outside ci"
-    cp -f $generated_bitflip_legacy_program_idl $saved_bitflip_legacy_program_idl
-    dprint fmt $DEVENV_ROOT/idls/*.json
-  '';
   scripts."build:docker" = {
     exec = ''
       set -e
