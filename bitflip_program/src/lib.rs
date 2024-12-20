@@ -1,3 +1,5 @@
+#[cfg(feature = "client")]
+mod client;
 mod constants;
 pub mod cpi;
 mod errors;
@@ -12,6 +14,8 @@ mod utils;
 
 use steel::*;
 
+#[cfg(feature = "client")]
+pub use crate::client::*;
 pub use crate::constants::*;
 pub use crate::errors::*;
 pub use crate::events::*;

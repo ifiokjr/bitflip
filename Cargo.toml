@@ -121,7 +121,6 @@ static_assertions = "1"
 steel = { git = "https://github.com/ifiokjr/steel", rev = "8c31249" }
 strum = "0.26"
 tailwind_fuse = "0.3"
-test-context = "0.3"
 test-log = "0.2"
 test_utils_insta = "0.1"
 test_utils_keypairs = "0.1"
@@ -188,11 +187,11 @@ codegen-units = 1
 lto = "fat"
 
 [workspace.lints.rust]
-# Group lints
+# group
 rust_2021_compatibility = { level = "warn", priority = -1 }
 rust_2024_compatibility = { level = "warn", priority = -1 }
 
-# Individual lints
+# individual
 unsafe_code = "deny"
 unstable_features = "deny"
 unused_extern_crates = "warn"
@@ -203,7 +202,7 @@ unused_qualifications = "warn"
 variant_size_differences = "warn"
 
 [workspace.lints.clippy]
-# Group lints
+# group
 complexity = { level = "warn", priority = -1 }
 correctness = { level = "deny", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
@@ -211,7 +210,7 @@ perf = { level = "warn", priority = -1 }
 style = { level = "warn", priority = -1 }
 suspicious = { level = "warn", priority = -1 }
 
-# Individual lints
+# individual
 blocks_in_conditions = "allow"
 cargo_common_metadata = "allow"
 cast_possible_truncation = "allow"
