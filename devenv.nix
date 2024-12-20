@@ -66,6 +66,10 @@
   };
   scripts."install:all" = {
     exec = ''
+      if [ ! -f "$DEVENV_ROOT/.env" ]; then
+        cp "$DEVENV_ROOT/.env.example" "$DEVENV_ROOT/.env"
+      fi
+
       set -e
       install:cargo:bin
       install:solana
