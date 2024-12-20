@@ -10,6 +10,7 @@ use bitflip_program::get_pda_mint;
 use bitflip_program::get_pda_section;
 use bitflip_program::get_player_token_account;
 use bitflip_program::get_section_token_account;
+use bitflip_program::GameStatus;
 use bitflip_program::SectionState;
 use bitflip_program::TokenMember;
 use bitflip_program::BITFLIP_SECTION_LENGTH;
@@ -86,7 +87,7 @@ async fn create_banks_client_rpc(
 			.unwrap()
 			.as_secs() as i64;
 		let game = get_pda_game(game_index).0;
-		let create_game_state = create_game_state(0, 0, now - 3600);
+		let create_game_state = create_game_state(0, 0, now - 3600, GameStatus::Running);
 		p.add_account(game, create_game_state.game_state_account.into());
 
 		let section_accounts = create_section_state(
@@ -120,7 +121,7 @@ async fn create_validator_rpc(
 		.unwrap()
 		.as_secs() as i64;
 	let game = get_pda_game(game_index).0;
-	let create_game_state = create_game_state(0, 0, now - 3600);
+	let create_game_state = create_game_state(0, 0, now - 3600, GameStatus::Running);
 	accounts.insert(game, create_game_state.game_state_account);
 
 	let section_accounts = create_section_state(

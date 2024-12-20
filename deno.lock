@@ -11,6 +11,7 @@
     "npm:@solana/web3.js@^1.98.0": "1.98.0",
     "npm:@tailwindcss/cli@*": "0.1.2_postcss@8.4.47_autoprefixer@10.4.20__postcss@8.4.47",
     "npm:@tailwindcss/cli@^4.0.0-beta.8": "4.0.0-beta.8",
+    "npm:@tailwindcss/cli@next": "4.0.0-beta.8",
     "npm:@tailwindcss/typography@~0.5.15": "0.5.15_tailwindcss@3.4.1__postcss@8.4.47",
     "npm:bs58@6": "6.0.0",
     "npm:daisyui@^4.12.22": "4.12.22",

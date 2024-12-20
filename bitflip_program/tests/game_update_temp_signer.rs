@@ -6,6 +6,7 @@ use assert2::check;
 use bitflip_program::game_update_temp_signer;
 use bitflip_program::get_pda_game;
 use bitflip_program::GameState;
+use bitflip_program::GameStatus;
 use shared::create_config_accounts;
 use shared::create_game_state;
 use shared::create_program_context_with_factory;
@@ -22,7 +23,7 @@ mod shared;
 
 #[test_log::test(tokio::test)]
 async fn game_update_temp_signer_test() -> anyhow::Result<()> {
-	let created_game_state = create_game_state(0, 0, 0);
+	let created_game_state = create_game_state(0, 0, 0, GameStatus::Pending);
 	shared_game_update_temp_signer_test(
 		|| create_banks_client_rpc(&created_game_state),
 		&created_game_state,
@@ -35,7 +36,7 @@ async fn game_update_temp_signer_test() -> anyhow::Result<()> {
 #[cfg(feature = "test_validator")]
 #[test_log::test(tokio::test)]
 async fn game_update_temp_signer_test_validator() -> anyhow::Result<()> {
-	let created_game_state = create_game_state(0, 0, 0);
+	let created_game_state = create_game_state(0, 0, 0, GameStatus::Pending);
 	let compute_units = shared_game_update_temp_signer_test(
 		|| create_validator_rpc(&created_game_state),
 		&created_game_state,

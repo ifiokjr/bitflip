@@ -162,7 +162,7 @@ pub struct GameState {
 	#[cfg_attr(feature = "client", builder(default = MAX_LAMPORTS_PER_BIT.into(), setter(into)))]
 	pub max_lamports: PodU64,
 	/// The status of the game.
-	#[cfg_attr(feature = "client", builder(default = GameStatus::Pending.into()))]
+	#[cfg_attr(feature = "client", builder(default = GameStatus::Pending.into(), setter(into)))]
 	pub status: u8,
 	/// The index of this currently played game.
 	pub game_index: u8,

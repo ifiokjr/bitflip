@@ -12,6 +12,7 @@ snapshot_kind: text
   "minLamports": 10000,
   "baseLamports": 100000,
   "maxLamports": 18446744073709551615,
+  "status": 0,
   "gameIndex": 0,
   "sectionIndex": 0,
   "bump": 253,

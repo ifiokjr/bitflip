@@ -1,8 +1,6 @@
 use std::str::FromStr;
-#[cfg(feature = "ssr")]
 use std::sync::Arc;
 
-#[cfg(feature = "ssr")]
 use anyhow::Context;
 use bitflip_program::GameStatus;
 use bitflip_program::SectionData;
@@ -17,26 +15,20 @@ use serde::Serialize;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 use uuid::Uuid;
-#[cfg(feature = "ssr")]
 use welds::connections::sqlite::connect;
-#[cfg(feature = "ssr")]
 use welds::connections::sqlite::SqliteClient;
-#[cfg(feature = "ssr")]
 use welds::state::DbState;
-#[cfg(feature = "ssr")]
 use welds::WeldsModel;
 
 use crate::encryption::decrypt_keypair;
 use crate::encryption::derive_key;
+use crate::state::AppStateConfig;
 use crate::AppResult;
-use crate::AppStateConfig;
 
-#[cfg(feature = "ssr")]
 #[derive(derive_more::Debug, Clone, derive_more::From, derive_more::Into, derive_more::Deref)]
 pub struct Db(#[debug(skip)] Arc<SqliteClient>);
 
 impl Db {
-	#[cfg(feature = "ssr")]
 	pub async fn try_new(connection_string: &str) -> AppResult<Self> {
 		let connection = connect(connection_string)
 			.await
@@ -45,23 +37,20 @@ impl Db {
 		Ok(Arc::new(connection).into())
 	}
 
-	#[cfg(feature = "ssr")]
 	pub fn as_sqlx_pool(&self) -> &sqlx::SqlitePool {
 		self.0.as_sqlx_pool()
 	}
 
-	#[cfg(feature = "ssr")]
 	pub fn as_client(&self) -> &SqliteClient {
 		self.0.as_ref()
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(WeldsModel))]
-#[cfg_attr(feature = "ssr", welds(table = "games"))]
-#[cfg_attr(feature = "ssr", welds(HasMany(section, Section, "game_index")))]
+#[derive(Debug, Clone, Serialize, Deserialize, WeldsModel)]
+#[welds(table = "games")]
+#[welds(HasMany(section, Section, "game_index"))]
 pub struct Game {
-	#[cfg_attr(feature = "ssr", welds(primary_key))]
+	#[welds(primary_key)]
 	id: Uuid,
 	game_index: u8,
 	start_time: DateTime<Utc>,
@@ -188,16 +177,15 @@ impl Game {
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(WeldsModel))]
-#[cfg_attr(feature = "ssr", welds(table = "sections"))]
+#[derive(Debug, Clone, Serialize, Deserialize, WeldsModel)]
+#[welds(table = "sections")]
 #[cfg_attr(
 	feature = "ssr",
 	welds(HasMany(section_event, SectionEvent, "section_id"))
 )]
-#[cfg_attr(feature = "ssr", welds(BelongsTo(game, Game, "game_index")))]
+#[welds(BelongsTo(game, Game, "game_index"))]
 pub struct Section {
-	#[cfg_attr(feature = "ssr", welds(primary_key))]
+	#[welds(primary_key)]
 	id: Uuid,
 	game_index: u8,
 	section_index: u8,
@@ -303,13 +291,12 @@ impl Section {
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(WeldsModel))]
-#[cfg_attr(feature = "ssr", welds(table = "section_events"))]
-#[cfg_attr(feature = "ssr", welds(BelongsTo(player, Player, "player_pubkey")))]
-#[cfg_attr(feature = "ssr", welds(BelongsTo(section, Section, "section_id")))]
+#[derive(Debug, Clone, Serialize, Deserialize, WeldsModel)]
+#[welds(table = "section_events")]
+#[welds(BelongsTo(player, Player, "player_pubkey"))]
+#[welds(BelongsTo(section, Section, "section_id"))]
 pub struct SectionEvent {
-	#[cfg_attr(feature = "ssr", welds(primary_key))]
+	#[welds(primary_key)]
 	id: Uuid,
 	section_id: Uuid,
 	player_pubkey: String,
@@ -379,9 +366,8 @@ impl SectionEvent {
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(WeldsModel))]
-#[cfg_attr(feature = "ssr", welds(table = "players"))]
+#[derive(Debug, Clone, Serialize, Deserialize, WeldsModel)]
+#[welds(table = "players")]
 #[cfg_attr(
 	feature = "ssr",
 	welds(HasMany(section_event, SectionEvent, "player_pubkey"))
@@ -422,9 +408,8 @@ impl Player {
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(WeldsModel))]
-#[cfg_attr(feature = "ssr", welds(table = "encrypted_keypairs"))]
+#[derive(Debug, Clone, Serialize, Deserialize, WeldsModel)]
+#[welds(table = "encrypted_keypairs")]
 pub struct EncryptedKeypair {
 	#[welds(primary_key)]
 	pubkey: String,
@@ -438,7 +423,6 @@ pub struct EncryptedKeypair {
 }
 
 impl EncryptedKeypair {
-	#[cfg(feature = "ssr")]
 	pub async fn find_by_pubkey(
 		client: &SqliteClient,
 		pubkey: &Pubkey,
@@ -448,7 +432,6 @@ impl EncryptedKeypair {
 		Ok(result)
 	}
 
-	#[cfg(feature = "ssr")]
 	pub fn generate(&mut self, config: &AppStateConfig) -> AppResult<Keypair> {
 		use rand::Rng;
 		use solana_sdk::signer::Signer;
@@ -484,7 +467,6 @@ impl EncryptedKeypair {
 		&self.encrypted_keypair
 	}
 
-	#[cfg(feature = "ssr")]
 	pub fn keypair(&self, config: &AppStateConfig) -> AppResult<Keypair> {
 		use aes_gcm_siv::Nonce;
 		use argon2::password_hash::SaltString;

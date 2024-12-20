@@ -16,7 +16,7 @@ concurrency:
 jobs:
   lint:
     timeout-minutes: 60
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -29,7 +29,11 @@ jobs:
           deno-cache: /tmp/denocache
 
       - name: lint formatting
-        run: lint:format
+        run: bitflip lint:format
+        shell: bash
+
+      - name: lint formatting
+        run: bitflip lint:deno
         shell: bash
 
       - uses: clechasseur/rs-clippy-check@v3
@@ -38,7 +42,7 @@ jobs:
 
   test:
     timeout-minutes: 60
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -54,17 +58,13 @@ jobs:
         run: cargo test_program
         shell: bash
 
-      - name: test program with validator
-        run: cargo test_program_validator
-        shell: bash
-
       - name: test bitflip ssr
         run: cargo test_bitflip_ssr
         shell: bash
 
   build_bitflip_program:
     timeout-minutes: 60
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -77,13 +77,19 @@ jobs:
           deno-cache: /tmp/denocache
 
       - name: build
-        run: build program
+        run: bitflip build:program
         shell: bash
 
-  test_validator:
+      - name: upload bitflip program
+        uses: actions/upload-artifact@v4
+        with:
+          name: bitflip_program.so
+          path: target/deploy/bitflip_program.so
+
+  test_program_with_validator:
     timeout-minutes: 60
     needs: [build_bitflip_program]
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -95,13 +101,19 @@ jobs:
           nix-cache: /tmp/nixcache
           deno-cache: /tmp/denocache
 
+      - name: download bitflip program
+        uses: actions/download-artifact@v4
+        with:
+          name: bitflip_program.so
+          path: target/deploy/bitflip_program.so
+
       - name: test
-        run: cargo test_bitflip_client_validator
+        run: cargo test_program_validator
         shell: bash
 
   build_bitflip_website:
     timeout-minutes: 60
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -114,5 +126,5 @@ jobs:
           deno-cache: /tmp/denocache
 
       - name: build
-        run: build:bitflip
+        run: bitflip build
         shell: bash

@@ -16,6 +16,7 @@ use bitflip_program::get_token_amount;
 use bitflip_program::get_treasury_token_account;
 use bitflip_program::ConfigState;
 use bitflip_program::GameState;
+use bitflip_program::GameStatus;
 use bitflip_program::SectionState;
 use bitflip_program::TokenMember;
 use bitflip_program::EARNED_TOKENS_PER_SECTION;
@@ -354,7 +355,12 @@ pub struct CreatedGameState {
 	pub funded_signer_account: AccountSharedData,
 }
 
-pub fn create_game_state(game_index: u8, section_index: u8, start_time: i64) -> CreatedGameState {
+pub fn create_game_state(
+	game_index: u8,
+	section_index: u8,
+	start_time: i64,
+	status: GameStatus,
+) -> CreatedGameState {
 	let game_bump = get_pda_game(game_index).1;
 	let (temp_signer, funded_signer) = (Keypair::new(), Keypair::new());
 	let game_state = GameState::builder()
@@ -364,6 +370,7 @@ pub fn create_game_state(game_index: u8, section_index: u8, start_time: i64) -> 
 		.game_index(game_index)
 		.bump(game_bump)
 		.section_index(section_index)
+		.status(status)
 		.build();
 
 	let lamports = Rent::default().minimum_balance(0) + 5_000_000;

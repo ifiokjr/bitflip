@@ -26,7 +26,7 @@
 	"nodeModulesDir": "auto",
 	"tasks": {
 		"build": {
-			"command": "cargo leptos build --project bitflip --release -vv --features=prod",
+			"command": "cargo leptos build --project bitflip -vv --release",
 			"dependencies": [
 				"build:tailwind"
 			],
