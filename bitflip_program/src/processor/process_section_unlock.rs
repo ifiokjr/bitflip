@@ -31,25 +31,25 @@ pub fn process_section_unlock(accounts: &[AccountInfo], data: &[u8]) -> Result<(
 	let treasury_seeds_with_bump = seeds_treasury!(config.treasury_bump);
 	let game_seeds_with_bump = seeds_game!(game.game_index, game.bump);
 	let section_seeds = seeds_section!(game.game_index, game.section_index);
-	let section_bump = section_info.find_canonical_bump(section_seeds, &ID)?;
+	let section_bump = section_info.assert_canonical_bump(section_seeds, &ID)?;
 
-	owner_info.is_signer()?.is_writable()?;
+	owner_info.assert_signer()?.assert_writable()?;
 	temp_signer_info
-		.is_empty()?
-		.is_signer()?
-		.has_owner(&system_program::ID)?;
+		.assert_empty()?
+		.assert_signer()?
+		.assert_owner(&system_program::ID)?;
 	config_info
-		.is_type::<ConfigState>(&ID)?
-		.has_seeds_with_bump(config_seeds_with_bump, &ID)?;
+		.assert_type::<ConfigState>(&ID)?
+		.assert_seeds_with_bump(config_seeds_with_bump, &ID)?;
 	game_info
-		.is_type::<GameState>(&ID)?
-		.is_writable()?
-		.has_seeds_with_bump(game_seeds_with_bump, &ID)?;
-	section_info.is_empty()?.is_writable()?;
+		.assert_type::<GameState>(&ID)?
+		.assert_writable()?
+		.assert_seeds_with_bump(game_seeds_with_bump, &ID)?;
+	section_info.assert_empty()?.assert_writable()?;
 	treasury_info
-		.is_writable()?
-		.has_seeds_with_bump(treasury_seeds_with_bump, &ID)?;
-	system_program_info.is_program(&system_program::ID)?;
+		.assert_writable()?
+		.assert_seeds_with_bump(treasury_seeds_with_bump, &ID)?;
+	system_program_info.assert_program(&system_program::ID)?;
 
 	game.assert_err(
 		|game| game.temp_signer.eq(temp_signer_info.key),

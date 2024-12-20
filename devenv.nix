@@ -21,8 +21,6 @@
       pkgs.shfmt
       pkgs.sqlite
       pkgs.sql-formatter
-      pkgs.surrealdb
-			pkgs.surrealdb-migrations
       pkgs.wasm-pack
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin (
@@ -124,14 +122,6 @@
       fi
     '';
     description = "Build all crates with all features activated.";
-  };
-  scripts."test:all" = {
-    exec = ''
-      set -e
-      cargo test_bitflip_legacy_client
-      cargo test_bitflip_legacy_client_validator
-    '';
-    description = "Run all tests across the crates";
   };
   scripts."setup:vscode" = {
     exec = ''

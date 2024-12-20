@@ -57,24 +57,24 @@ pub fn process_token_initialize(accounts: &[AccountInfo], data: &[u8]) -> Progra
 	let treasury_seeds_with_bump = seeds_treasury!(config.treasury_bump);
 	let mint_seeds_with_bump = seeds_mint!(member, member.bump(config));
 
-	authority_info.is_signer()?.is_writable()?;
+	authority_info.assert_signer()?.assert_writable()?;
 	config_info
-		.is_type::<ConfigState>(&ID)?
-		.has_seeds_with_bump(config_seeds_with_bump, &ID)?;
+		.assert_type::<ConfigState>(&ID)?
+		.assert_seeds_with_bump(config_seeds_with_bump, &ID)?;
 	treasury_info
-		.has_owner(&system_program::ID)?
-		.has_seeds_with_bump(treasury_seeds_with_bump, &ID)?;
+		.assert_owner(&system_program::ID)?
+		.assert_seeds_with_bump(treasury_seeds_with_bump, &ID)?;
 	mint_info
-		.is_empty()?
-		.is_writable()?
-		.has_seeds_with_bump(mint_seeds_with_bump, &ID)?;
+		.assert_empty()?
+		.assert_writable()?
+		.assert_seeds_with_bump(mint_seeds_with_bump, &ID)?;
 	treasury_token_account_info
-		.is_empty()?
-		.is_writable()?
-		.is_associated_token_address(treasury_info.key, mint_info.key)?;
-	associated_token_program_info.is_program(&spl_associated_token_account::ID)?;
-	token_program_info.is_program(&spl_token_2022::ID)?;
-	system_program_info.is_program(&system_program::ID)?;
+		.assert_empty()?
+		.assert_writable()?
+		.assert_associated_token_address(treasury_info.key, mint_info.key)?;
+	associated_token_program_info.assert_program(&spl_associated_token_account::ID)?;
+	token_program_info.assert_program(&spl_token_2022::ID)?;
+	system_program_info.assert_program(&system_program::ID)?;
 
 	if authority_info.key.ne(&config.authority) {
 		return Err(BitflipError::Unauthorized.into());

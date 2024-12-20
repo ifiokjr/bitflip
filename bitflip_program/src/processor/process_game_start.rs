@@ -26,16 +26,16 @@ pub fn process_game_start(accounts: &[AccountInfo]) -> Result<(), ProgramError> 
 		&[game.bump],
 	];
 
-	funded_signer_info.is_signer()?;
-	temp_signer_info.is_signer()?;
+	funded_signer_info.assert_signer()?;
+	temp_signer_info.assert_signer()?;
 	config_info
-		.is_type::<ConfigState>(&ID)?
-		.has_seeds_with_bump(config_seeds, &ID)?;
+		.assert_type::<ConfigState>(&ID)?
+		.assert_seeds_with_bump(config_seeds, &ID)?;
 	game_info
-		.is_type::<GameState>(&ID)?
-		.is_writable()?
-		.has_seeds_with_bump(game_seeds, &ID)?;
-	system_program_info.is_program(&system_program::ID)?;
+		.assert_type::<GameState>(&ID)?
+		.assert_writable()?
+		.assert_seeds_with_bump(game_seeds, &ID)?;
+	system_program_info.assert_program(&system_program::ID)?;
 	game.assert_err(
 		|game| {
 			game.temp_signer.eq(temp_signer_info.key)

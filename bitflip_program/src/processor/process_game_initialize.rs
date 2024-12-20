@@ -1,8 +1,8 @@
 use steel::*;
 use sysvar::rent::Rent;
 
-use crate::create_pda_config;
-use crate::get_pda_game;
+use crate::seeds_config;
+use crate::seeds_game;
 use crate::BitflipError;
 use crate::BitflipInstruction;
 use crate::ConfigState;
@@ -19,26 +19,28 @@ pub fn process_game_initialize(accounts: &[AccountInfo]) -> ProgramResult {
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};
 
-	authority_info
-		.is_signer()?
-		.is_writable()?
-		.has_owner(&system_program::ID)?;
-	temp_signer_info.is_empty()?.is_signer()?;
-	funded_signer_info.is_empty()?.is_signer()?.is_writable()?;
-	config_info.is_type::<ConfigState>(&ID)?;
-	game_info.is_empty()?.is_writable()?;
-	system_program_info.is_program(&system_program::ID)?;
-
 	let config = config_info.as_account::<ConfigState>(&ID)?;
-	let config_key = create_pda_config(config.bump)?;
-	let (game_key, game_bump) = get_pda_game(config.game_index);
+	let config_seeds_with_bump = seeds_config!(config.bump);
+	let game_seeds = seeds_game!(config.game_index);
+	let game_bump = game_info.assert_canonical_bump(game_seeds, &ID)?;
+
+	authority_info
+		.assert_signer()?
+		.assert_writable()?
+		.assert_owner(&system_program::ID)?;
+	temp_signer_info.assert_empty()?.assert_signer()?;
+	funded_signer_info
+		.assert_empty()?
+		.assert_signer()?
+		.assert_writable()?;
+	config_info
+		.assert_type::<ConfigState>(&ID)?
+		.assert_seeds_with_bump(config_seeds_with_bump, &ID)?;
+	game_info.assert_empty()?.assert_writable()?;
+	system_program_info.assert_program(&system_program::ID)?;
 
 	if authority_info.key.ne(&config.authority) {
 		return Err(BitflipError::Unauthorized.into());
-	}
-
-	if config_info.key.ne(&config_key) || game_info.key.ne(&game_key) {
-		return Err(ProgramError::InvalidSeeds);
 	}
 
 	// create the onchain account
@@ -86,6 +88,7 @@ mod tests {
 
 	use super::*;
 	use crate::get_pda_config;
+	use crate::get_pda_game;
 	use crate::leak;
 
 	#[test_log::test]

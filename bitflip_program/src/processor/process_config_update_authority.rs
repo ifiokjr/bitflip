@@ -16,16 +16,16 @@ pub fn process_config_update_authority(accounts: &[AccountInfo]) -> ProgramResul
 
 	// validate accounts
 	config_info
-		.is_writable()?
-		.is_type::<ConfigState>(&ID)?
-		.has_seeds_with_bump(config_seeds_with_bump, &ID)?;
+		.assert_writable()?
+		.assert_type::<ConfigState>(&ID)?
+		.assert_seeds_with_bump(config_seeds_with_bump, &ID)?;
 	authority_info
-		.is_signer()?
-		.is_writable()?
-		.has_owner(&system_program::ID)?;
+		.assert_signer()?
+		.assert_writable()?
+		.assert_owner(&system_program::ID)?;
 	new_authority_info
-		.is_signer()?
-		.has_owner(&system_program::ID)?;
+		.assert_signer()?
+		.assert_owner(&system_program::ID)?;
 
 	config.assert_err(
 		|config| config.authority.eq(authority_info.key),

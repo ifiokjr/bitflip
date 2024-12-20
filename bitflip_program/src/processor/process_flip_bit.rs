@@ -47,27 +47,27 @@ pub fn process_flip_bit(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
 		|state| state.section_index == args.section_index,
 		BitflipError::InvalidSectionIndex,
 	)?;
-	player_info.is_signer()?.is_writable()?;
+	player_info.assert_signer()?.assert_writable()?;
 	player_bit_token_account_info
-		.is_writable()?
-		.is_associated_token_address(player_info.key, mint_bit_info.key)?;
+		.assert_writable()?
+		.assert_associated_token_address(player_info.key, mint_bit_info.key)?;
 	config_info
-		.is_type::<ConfigState>(&ID)?
-		.has_seeds_with_bump(config_seeds_with_bump, &ID)?;
+		.assert_type::<ConfigState>(&ID)?
+		.assert_seeds_with_bump(config_seeds_with_bump, &ID)?;
 	game_info
-		.is_type::<GameState>(&ID)?
-		.has_seeds_with_bump(game_seeds_with_bump, &ID)?;
-	mint_bit_info.has_seeds_with_bump(mint_seeds_with_bump, &ID)?;
+		.assert_type::<GameState>(&ID)?
+		.assert_seeds_with_bump(game_seeds_with_bump, &ID)?;
+	mint_bit_info.assert_seeds_with_bump(mint_seeds_with_bump, &ID)?;
 	section_info
-		.is_type::<SectionState>(&ID)?
-		.is_writable()?
-		.has_seeds_with_bump(section_seeds_with_bump, &ID)?;
+		.assert_type::<SectionState>(&ID)?
+		.assert_writable()?
+		.assert_seeds_with_bump(section_seeds_with_bump, &ID)?;
 	section_bit_token_account_info
-		.is_writable()?
-		.is_associated_token_address(section_info.key, mint_bit_info.key)?;
-	associated_token_program_info.is_program(&spl_associated_token_account::ID)?;
-	token_program_info.is_program(&spl_token_2022::ID)?;
-	system_program_info.is_program(&system_program::ID)?;
+		.assert_writable()?
+		.assert_associated_token_address(section_info.key, mint_bit_info.key)?;
+	associated_token_program_info.assert_program(&spl_associated_token_account::ID)?;
+	token_program_info.assert_program(&spl_token_2022::ID)?;
+	system_program_info.assert_program(&system_program::ID)?;
 
 	let current_time = Clock::get()?.unix_timestamp;
 	game.assert_err(

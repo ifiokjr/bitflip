@@ -25,6 +25,7 @@ serde-big-array = { workspace = true }
 serde_with = { workspace = true, optional = true }
 solana-package-metadata = { workspace = true }
 solana-program = { workspace = true }
+solana-sdk = { workspace = true, optional = true }
 solana-security-txt = { workspace = true }
 spl-associated-token-account = { workspace = true, features = ["no-entrypoint"] }
 spl-pod = { workspace = true }
@@ -34,6 +35,7 @@ spl-token-metadata-interface = { workspace = true }
 spl-type-length-value = { workspace = true }
 static_assertions = { workspace = true }
 steel = { workspace = true, features = ["logs", "spl"] }
+strum = { workspace = true, features = ["derive"], optional = true }
 thiserror = { workspace = true }
 typed-builder = { workspace = true, optional = true }
 wasm_client_solana = { workspace = true, optional = true }
@@ -48,7 +50,6 @@ memory_wallet = { workspace = true }
 rstest = { workspace = true }
 serde_json = { workspace = true }
 solana-program-test = { workspace = true }
-solana-sdk = { workspace = true }
 spl-associated-token-account = { workspace = true }
 spl-token-2022 = { workspace = true }
 spl-transfer-hook-interface = { workspace = true }
@@ -60,14 +61,29 @@ tokio = { workspace = true, features = ["test-util", "rt", "macros", "time"] }
 
 [features]
 no-entrypoint = []
-serde = ["dep:serde", "dep:serde_with", "spl-pod/serde-traits"]
-client = ["serde", "dep:typed-builder", "dep:wasm_client_solana", "dep:log"]
+serde = [
+	"dep:serde_with",
+	"dep:serde",
+	"spl-pod/serde-traits",
+]
+client = [
+	"dep:log",
+	"dep:solana-sdk",
+	"dep:strum",
+	"dep:typed-builder",
+	"dep:wasm_client_solana",
+	"serde",
+]
 ssr = ["wasm_client_solana?/ssr"]
 js = [
-	"wasm_client_solana?/js",
 	"no-entrypoint",
+	"wasm_client_solana?/js",
 ]
-test_validator = ["client", "test_utils_solana/test_validator", "dep:log"]
+test_validator = [
+	"client",
+	"dep:log",
+	"test_utils_solana/test_validator",
+]
 
 [package.metadata.solana]
 program-id = "5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM"

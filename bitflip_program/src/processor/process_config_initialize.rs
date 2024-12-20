@@ -43,21 +43,21 @@ pub fn process_config_initialize(accounts: &[AccountInfo<'_>]) -> ProgramResult 
 
 	let config_seeds = seeds_config!();
 	let treasury_seeds = seeds_treasury!();
-	let config_bump = config_info.find_canonical_bump(config_seeds, &ID)?;
-	let treasury_bump = treasury_info.find_canonical_bump(treasury_seeds, &ID)?;
+	let config_bump = config_info.assert_canonical_bump(config_seeds, &ID)?;
+	let treasury_bump = treasury_info.assert_canonical_bump(treasury_seeds, &ID)?;
 	let mint_bit_bump = get_pda_mint(TokenMember::Bit).1;
 	let mint_kibibit_bump = get_pda_mint(TokenMember::Kibibit).1;
 	let mint_mebibit_bump = get_pda_mint(TokenMember::Mebibit).1;
 	let mint_gibibit_bump = get_pda_mint(TokenMember::Gibibit).1;
 
-	admin_info.is_signer()?;
-	authority_info.is_signer()?.is_writable()?;
-	config_info.is_empty()?.is_writable()?;
+	admin_info.assert_signer()?;
+	authority_info.assert_signer()?.assert_writable()?;
+	config_info.assert_empty()?.assert_writable()?;
 	treasury_info
-		.is_empty()?
-		.is_writable()?
-		.has_owner(&system_program::ID)?;
-	system_program_info.is_program(&system_program::ID)?;
+		.assert_empty()?
+		.assert_writable()?
+		.assert_owner(&system_program::ID)?;
+	system_program_info.assert_program(&system_program::ID)?;
 
 	// initialize config
 	create_account_with_bump::<ConfigState>(

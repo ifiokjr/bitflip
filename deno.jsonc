@@ -4,14 +4,12 @@
 		"@solana/web3.js": "npm:@solana/web3.js@^1.98.0",
 		"@std/io": "jsr:@std/io@^0.225.0",
 		"@std/path": "jsr:@std/path@^1.0.8",
-		"@surrealdb/ql-wasm": "npm:@surrealdb/ql-wasm@^0.2.0-beta.1",
-		"@surrealdb/wasm": "npm:@surrealdb/wasm@^1.1.0",
-		"@tailwindcss/cli": "npm:@tailwindcss/cli@^4.0.0-beta.5",
+		"@tailwindcss/cli": "npm:@tailwindcss/cli@^4.0.0-beta.8",
 		"@tailwindcss/typography": "npm:@tailwindcss/typography@^0.5.15",
 		"bs58": "npm:bs58@^6.0.0",
 		"daisyui": "npm:daisyui@^4.12.22",
 		"playwright": "npm:playwright@^1.49.1",
-		"tailwindcss": "npm:tailwindcss@^4.0.0-beta.5",
+		"tailwindcss": "npm:tailwindcss@^4.0.0-beta.8",
 		"unzipper": "npm:unzipper@^0.12.3"
 	},
 	"lint": {

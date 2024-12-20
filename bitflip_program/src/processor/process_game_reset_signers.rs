@@ -22,16 +22,16 @@ pub fn process_game_reset_signers(accounts: &[AccountInfo]) -> ProgramResult {
 	let config_seeds_with_bump = seeds_config!(config.bump);
 	let game_seeds_with_bump = seeds_game!(game.game_index, game.bump);
 
-	authority_info.is_signer()?.is_writable()?;
-	temp_signer_info.is_signer()?;
-	funded_signer_info.is_signer()?;
+	authority_info.assert_signer()?.assert_writable()?;
+	temp_signer_info.assert_signer()?;
+	funded_signer_info.assert_signer()?;
 	config_info
-		.is_type::<ConfigState>(&ID)?
-		.has_seeds_with_bump(config_seeds_with_bump, &ID)?;
+		.assert_type::<ConfigState>(&ID)?
+		.assert_seeds_with_bump(config_seeds_with_bump, &ID)?;
 	game_info
-		.is_type::<GameState>(&ID)?
-		.is_writable()?
-		.has_seeds_with_bump(game_seeds_with_bump, &ID)?;
+		.assert_type::<GameState>(&ID)?
+		.assert_writable()?
+		.assert_seeds_with_bump(game_seeds_with_bump, &ID)?;
 	config.assert_err(
 		// Check that the authority is the same as the one in the config
 		|state| state.authority.eq(authority_info.key),
@@ -49,7 +49,9 @@ pub fn process_game_reset_signers(accounts: &[AccountInfo]) -> ProgramResult {
 	// transfer lamports from the previous funded signer to the authority
 	if game.funded_signer.eq(previous_funded_signer_info.key) {
 		// check that the previous funded signer is a signer and writable
-		previous_funded_signer_info.is_signer()?.is_writable()?;
+		previous_funded_signer_info
+			.assert_signer()?
+			.assert_writable()?;
 		// transfer lamports from the previous funded signer to the authority
 		authority_info.collect(
 			previous_funded_signer_info.lamports(),

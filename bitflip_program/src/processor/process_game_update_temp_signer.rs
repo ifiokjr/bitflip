@@ -16,12 +16,12 @@ pub fn process_game_update_temp_signer(accounts: &[AccountInfo]) -> ProgramResul
 	let game = game_info.as_account_mut::<GameState>(&ID)?;
 	let game_seeds_with_bump = seeds_game!(game.game_index, game.bump);
 
-	funded_signer_info.is_signer()?;
-	temp_signer_info.is_signer()?;
+	funded_signer_info.assert_signer()?;
+	temp_signer_info.assert_signer()?;
 	game_info
-		.is_type::<GameState>(&ID)?
-		.is_writable()?
-		.has_seeds_with_bump(game_seeds_with_bump, &ID)?;
+		.assert_type::<GameState>(&ID)?
+		.assert_writable()?
+		.assert_seeds_with_bump(game_seeds_with_bump, &ID)?;
 
 	game.assert_err(
 		|state| {

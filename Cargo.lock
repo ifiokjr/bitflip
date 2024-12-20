@@ -888,8 +888,8 @@ dependencies = [
  "thiserror 2.0.8",
  "tiny-skia",
  "tokio",
- "tower 0.4.13",
- "tower-http 0.5.2",
+ "tower 0.5.2",
+ "tower-http",
  "tracing",
  "typed-builder",
  "url 2.5.4",
@@ -938,6 +938,7 @@ dependencies = [
  "spl-type-length-value 0.7.0",
  "static_assertions",
  "steel",
+ "strum 0.26.3",
  "test-log",
  "test_utils_insta",
  "test_utils_keypairs",
@@ -3740,7 +3741,7 @@ dependencies = [
  "server_fn",
  "tokio",
  "tower 0.5.2",
- "tower-http 0.6.2",
+ "tower-http",
 ]
 
 [[package]]
@@ -9935,7 +9936,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 [[package]]
 name = "steel"
 version = "2.1.1"
-source = "git+https://github.com/ifiokjr/steel?rev=81f8139#81f8139dce6b6e0de41748191312faf4776e5996"
+source = "git+https://github.com/ifiokjr/steel?rev=8c31249#8c3124994b96e78d362504d86e91e57ec45070c3"
 dependencies = [
  "bytemuck",
  "num_enum",
@@ -10822,39 +10823,14 @@ dependencies = [
 
 [[package]]
 name = "tower-http"
-version = "0.5.2"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e9cd434a998747dd2c4276bc96ee2e0c7a2eadf3cae88e52be55a05fa9053f5"
+checksum = "403fa3b783d4b626a8ad51d766ab03cb6d2dbfc46b1c5d4448395e6628dc9697"
 dependencies = [
  "async-compression",
  "bitflags 2.6.0",
  "bytes",
  "futures-core",
- "futures-util",
- "http 1.2.0",
- "http-body 1.0.1",
- "http-body-util",
- "http-range-header",
- "httpdate",
- "mime",
- "mime_guess",
- "percent-encoding 2.3.1",
- "pin-project-lite",
- "tokio",
- "tokio-util 0.7.13",
- "tower-layer",
- "tower-service",
- "tracing",
-]
-
-[[package]]
-name = "tower-http"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "403fa3b783d4b626a8ad51d766ab03cb6d2dbfc46b1c5d4448395e6628dc9697"
-dependencies = [
- "bitflags 2.6.0",
- "bytes",
  "futures-util",
  "http 1.2.0",
  "http-body 1.0.1",

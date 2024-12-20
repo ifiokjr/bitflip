@@ -30,28 +30,28 @@ pub fn process_token_group_initialize(accounts: &[AccountInfo]) -> ProgramResult
 	let mint_gibibit_seeds_with_bump = seeds_mint!(Gibibit, Gibibit.bump(config));
 	let treasury_seeds = seeds_treasury!(config.treasury_bump);
 
-	authority_info.is_signer()?.is_writable()?;
+	authority_info.assert_signer()?.assert_writable()?;
 	config_info
-		.is_type::<ConfigState>(&ID)?
-		.has_seeds_with_bump(config_seeds_with_bump, &ID)?;
+		.assert_type::<ConfigState>(&ID)?
+		.assert_seeds_with_bump(config_seeds_with_bump, &ID)?;
 	treasury_info
-		.has_owner(&system_program::ID)?
-		.has_seeds_with_bump(treasury_seeds, &ID)?;
+		.assert_owner(&system_program::ID)?
+		.assert_seeds_with_bump(treasury_seeds, &ID)?;
 	mint_bit_info
-		.is_writable()?
-		.has_seeds_with_bump(mint_bit_seeds_with_bump, &ID)?;
+		.assert_writable()?
+		.assert_seeds_with_bump(mint_bit_seeds_with_bump, &ID)?;
 	mint_kibibit_info
-		.is_writable()?
-		.has_seeds_with_bump(mint_kibibit_seeds_with_bump, &ID)?;
+		.assert_writable()?
+		.assert_seeds_with_bump(mint_kibibit_seeds_with_bump, &ID)?;
 	mint_mebibit_info
-		.is_writable()?
-		.has_seeds_with_bump(mint_mebibit_seeds_with_bump, &ID)?;
+		.assert_writable()?
+		.assert_seeds_with_bump(mint_mebibit_seeds_with_bump, &ID)?;
 	mint_gibibit_info
-		.is_writable()?
-		.has_seeds_with_bump(mint_gibibit_seeds_with_bump, &ID)?;
-	associated_token_program_info.is_program(&spl_associated_token_account::ID)?;
-	token_program_info.is_program(&spl_token_2022::ID)?;
-	system_program_info.is_program(&system_program::ID)?;
+		.assert_writable()?
+		.assert_seeds_with_bump(mint_gibibit_seeds_with_bump, &ID)?;
+	associated_token_program_info.assert_program(&spl_associated_token_account::ID)?;
+	token_program_info.assert_program(&spl_token_2022::ID)?;
+	system_program_info.assert_program(&system_program::ID)?;
 	config.assert_err(
 		|state| authority_info.key.eq(&state.authority),
 		BitflipError::Unauthorized,
