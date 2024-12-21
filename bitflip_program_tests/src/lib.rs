@@ -1,5 +1,3 @@
-#![cfg(feature = "client")]
-
 use std::collections::HashMap;
 use std::fs;
 use std::hash::RandomState;
@@ -82,7 +80,7 @@ impl ToRpcClient for test_utils_solana::TestValidatorRunner {
 }
 
 /// Add the program to the project.
-pub(crate) fn create_program_test() -> ProgramTest {
+pub fn create_program_test() -> ProgramTest {
 	ProgramTest::new(
 		"bitflip",
 		ID,
@@ -118,9 +116,7 @@ pub async fn create_runner_with_accounts(
 	test_utils_solana::TestValidatorRunner::run(props).await
 }
 
-pub(crate) async fn create_program_context_with_factory<
-	F: Fn(&mut ProgramTest) -> anyhow::Result<()>,
->(
+pub async fn create_program_context_with_factory<F: Fn(&mut ProgramTest) -> anyhow::Result<()>>(
 	factory: F,
 ) -> anyhow::Result<TestRpcProvider> {
 	let mut program_test = create_program_test();

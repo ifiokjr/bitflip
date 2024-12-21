@@ -1,0 +1,54 @@
+[package]
+name = "bitflip_program_tests"
+version = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+description = "Tests for the bitflip program"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "bitflip_program_tests"
+
+[dependencies]
+anyhow = { workspace = true }
+bitflip_program = { workspace = true, features = ["serde", "client"] }
+bytemuck = { workspace = true }
+indexmap = { workspace = true, features = ["serde"] }
+log = { workspace = true }
+memory_wallet = { workspace = true }
+rstest = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+solana-sdk = { workspace = true }
+spl-pod = { workspace = true, features = ["serde-traits"] }
+spl-token-2022 = { workspace = true, features = ["no-entrypoint"] }
+spl-token-group-interface = { workspace = true }
+spl-token-metadata-interface = { workspace = true }
+spl-type-length-value = { workspace = true }
+steel = { workspace = true, features = ["logs", "spl"] }
+test_utils_insta = { workspace = true }
+test_utils_keypairs = { workspace = true }
+test_utils_solana = { workspace = true, features = [] }
+thiserror = { workspace = true }
+typed-builder = { workspace = true }
+wasm_client_solana = { workspace = true }
+
+[dev-dependencies]
+assert2 = { workspace = true }
+chrono = { workspace = true }
+insta = { workspace = true, features = ["json", "redactions", "ron", "yaml"] }
+serde_json = { workspace = true }
+solana-program-test = { workspace = true }
+spl-associated-token-account = { workspace = true }
+spl-token-2022 = { workspace = true }
+spl-transfer-hook-interface = { workspace = true }
+test-log = { workspace = true, features = ["log", "trace"] }
+tokio = { workspace = true, features = ["test-util", "rt", "macros", "time"] }
+
+[features]
+no-entrypoint = []
+ssr = ["wasm_client_solana/ssr"]
+js = ["no-entrypoint", "wasm_client_solana/js"]
+test_validator = ["test_utils_solana/test_validator"]

@@ -1,5 +1,3 @@
-#![cfg(feature = "client")]
-
 use std::future::Future;
 
 use assert2::check;
@@ -8,10 +6,10 @@ use bitflip_program::get_pda_treasury;
 use bitflip_program::token_group_initialize;
 use bitflip_program::TokenMember;
 use bitflip_program::TOKEN_DECIMALS;
-use shared::create_config_accounts;
-use shared::create_program_context_with_factory;
-use shared::create_token_accounts;
-use shared::ToRpcClient;
+use bitflip_program_tests::create_config_accounts;
+use bitflip_program_tests::create_program_context_with_factory;
+use bitflip_program_tests::create_token_accounts;
+use bitflip_program_tests::ToRpcClient;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::transaction::VersionedTransaction;
 use test_utils_insta::create_insta_redaction;
@@ -19,8 +17,6 @@ use test_utils_keypairs::get_authority_keypair;
 use test_utils_solana::prelude::*;
 use wasm_client_solana::solana_account_decoder::parse_account_data::SplTokenAdditionalData;
 use wasm_client_solana::solana_account_decoder::parse_token::parse_token_v2;
-
-mod shared;
 
 #[test_log::test(tokio::test)]
 async fn token_group_initialize_test() -> anyhow::Result<()> {
@@ -36,7 +32,7 @@ async fn token_group_initialize_test_validator() -> anyhow::Result<()> {
 
 	check!(rounded_compute_units <= 90_000);
 	insta::assert_snapshot!(format!("{rounded_compute_units} CU"));
-	shared::save_compute_units(
+	bitflip_program_tests::save_compute_units(
 		"token_group_initialize",
 		compute_units,
 		"Initialize the token group",
@@ -65,7 +61,7 @@ async fn create_validator_rpc() -> anyhow::Result<impl ToRpcClient> {
 	let mut accounts = create_config_accounts();
 	accounts.extend(create_token_accounts(false)?);
 
-	let runner = shared::create_runner_with_accounts(accounts).await;
+	let runner = bitflip_program_tests::create_runner_with_accounts(accounts).await;
 
 	Ok(runner)
 }

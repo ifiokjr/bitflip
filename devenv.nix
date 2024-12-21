@@ -91,6 +91,16 @@
 		'';
 		description = "The `bitflip` tasks";
 	};
+	scripts."test:all" = {
+		exec = ''
+			set -e
+			cargo test_program
+			cargo test_program_validator
+			cargo test_bitflip_ssr
+			# cargo test_bitflip_js
+		'';
+		description = "Run all tests";
+	};
   scripts."install:deno" = {
     exec = ''
       set -e

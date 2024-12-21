@@ -5,7 +5,7 @@ edition = { workspace = true }
 homepage = { workspace = true }
 license = { workspace = true }
 repository = { workspace = true }
-description = ""
+description = "The bitflip program for on-chain deployment"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -43,21 +43,10 @@ wasm_client_solana = { workspace = true, optional = true }
 [dev-dependencies]
 anyhow = { workspace = true }
 assert2 = { workspace = true }
-chrono = { workspace = true }
-indexmap = { workspace = true, features = ["serde"] }
 insta = { workspace = true, features = ["json", "redactions", "ron", "yaml"] }
-memory_wallet = { workspace = true }
 rstest = { workspace = true }
 serde_json = { workspace = true }
-solana-program-test = { workspace = true }
-spl-associated-token-account = { workspace = true }
-spl-token-2022 = { workspace = true }
-spl-transfer-hook-interface = { workspace = true }
 test-log = { workspace = true, features = ["log", "trace"] }
-test_utils_insta = { workspace = true }
-test_utils_keypairs = { workspace = true }
-test_utils_solana = { workspace = true, features = [] }
-tokio = { workspace = true, features = ["test-util", "rt", "macros", "time"] }
 
 [features]
 no-entrypoint = []
@@ -78,11 +67,6 @@ ssr = ["wasm_client_solana?/ssr"]
 js = [
 	"no-entrypoint",
 	"wasm_client_solana?/js",
-]
-test_validator = [
-	"client",
-	"dep:log",
-	"test_utils_solana/test_validator",
 ]
 
 [package.metadata.solana]

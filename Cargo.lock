@@ -909,15 +909,12 @@ dependencies = [
  "assert2",
  "bitflags 2.6.0",
  "bytemuck",
- "chrono",
  "const_str_to_pubkey",
  "default-env",
  "derive_more 1.0.0",
  "fixed",
- "indexmap 2.7.0",
  "insta",
  "log",
- "memory_wallet",
  "num_enum",
  "rstest",
  "serde",
@@ -926,7 +923,6 @@ dependencies = [
  "serde_with",
  "solana-package-metadata",
  "solana-program",
- "solana-program-test",
  "solana-sdk",
  "solana-security-txt",
  "spl-associated-token-account 6.0.0",
@@ -934,11 +930,42 @@ dependencies = [
  "spl-token-2022 6.0.0",
  "spl-token-group-interface 0.5.0",
  "spl-token-metadata-interface 0.6.0",
- "spl-transfer-hook-interface 0.9.0",
  "spl-type-length-value 0.7.0",
  "static_assertions",
  "steel",
  "strum 0.26.3",
+ "test-log",
+ "thiserror 2.0.8",
+ "typed-builder",
+ "wasm_client_solana",
+]
+
+[[package]]
+name = "bitflip_program_tests"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "assert2",
+ "bitflip_program",
+ "bytemuck",
+ "chrono",
+ "indexmap 2.7.0",
+ "insta",
+ "log",
+ "memory_wallet",
+ "rstest",
+ "serde",
+ "serde_json",
+ "solana-program-test",
+ "solana-sdk",
+ "spl-associated-token-account 6.0.0",
+ "spl-pod 0.5.0",
+ "spl-token-2022 6.0.0",
+ "spl-token-group-interface 0.5.0",
+ "spl-token-metadata-interface 0.6.0",
+ "spl-transfer-hook-interface 0.9.0",
+ "spl-type-length-value 0.7.0",
+ "steel",
  "test-log",
  "test_utils_insta",
  "test_utils_keypairs",
@@ -1125,18 +1152,18 @@ dependencies = [
 
 [[package]]
 name = "bytemuck"
-version = "1.20.0"
+version = "1.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b37c88a63ffd85d15b406896cc343916d7cf57838a847b3a6f2ca5d39a5695a"
+checksum = "ef657dfab802224e671f5818e9a4935f9b1957ed18e58292690cc39e7a4092a3"
 dependencies = [
  "bytemuck_derive",
 ]
 
 [[package]]
 name = "bytemuck_derive"
-version = "1.8.0"
+version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bcfcc3cd946cb52f0bbfdbbcfa2f4e24f75ebb6c0e1002f7c25904fada18b9ec"
+checksum = "3fa76293b4f7bb636ab88fd78228235b5248b4d05cc589aed610f954af5d7c7a"
 dependencies = [
  "proc-macro2 1.0.92",
  "quote 1.0.37",
@@ -2100,9 +2127,9 @@ dependencies = [
 
 [[package]]
 name = "env_filter"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f2c92ceda6ceec50f43169f9ee8424fe2db276791afde7b2cd8bc084cb376ab"
+checksum = "186e05a59d4c50738528153b83b0b0194d3a29507dfec16eccd4b342903397d0"
 dependencies = [
  "log",
 ]
@@ -2122,9 +2149,9 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
-version = "0.11.5"
+version = "0.11.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e13fa619b91fb2381732789fc5de83b45675e882f66623b7d8cb4f643017018d"
+checksum = "dcaee3d8e3cfc3fd92428d477bc97fc29ec8716d180c0d74c643bb26166660e0"
 dependencies = [
  "anstream",
  "anstyle",
@@ -10315,7 +10342,7 @@ version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3dffced63c2b5c7be278154d76b479f9f9920ed34e7574201407f0b14e2bbb93"
 dependencies = [
- "env_logger 0.11.5",
+ "env_logger 0.11.6",
  "test-log-macros",
  "tracing-subscriber",
 ]
@@ -10548,9 +10575,9 @@ dependencies = [
 
 [[package]]
 name = "tinyvec"
-version = "1.8.0"
+version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "445e881f4f6d382d5f27c034e25eb92edd7c784ceab92a0937db7f2e9471b938"
+checksum = "022db8904dfa342efe721985167e9fcd16c29b226db4397ed752a761cfce81e8"
 dependencies = [
  "tinyvec_macros",
 ]

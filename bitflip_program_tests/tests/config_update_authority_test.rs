@@ -1,5 +1,3 @@
-#![cfg(feature = "client")]
-
 use std::future::Future;
 
 use assert2::check;
@@ -7,10 +5,10 @@ use bitflip_program::config_update_authority;
 use bitflip_program::get_pda_config;
 use bitflip_program::BitflipError;
 use bitflip_program::ConfigState;
-use shared::create_config_accounts;
-use shared::create_program_context_with_factory;
-use shared::create_token_accounts;
-use shared::ToRpcClient;
+use bitflip_program_tests::create_config_accounts;
+use bitflip_program_tests::create_program_context_with_factory;
+use bitflip_program_tests::create_token_accounts;
+use bitflip_program_tests::ToRpcClient;
 use solana_sdk::instruction::InstructionError;
 use solana_sdk::signature::Keypair;
 use solana_sdk::transaction::TransactionError;
@@ -19,8 +17,6 @@ use steel::*;
 use test_utils_insta::create_insta_redaction;
 use test_utils_keypairs::get_authority_keypair;
 use test_utils_solana::prelude::*;
-
-mod shared;
 
 #[test_log::test(tokio::test)]
 async fn config_update_authority_test() -> anyhow::Result<()> {
@@ -36,7 +32,7 @@ async fn config_update_authority_test_validator() -> anyhow::Result<()> {
 
 	check!(rounded_compute_units == 10_000);
 	insta::assert_snapshot!(format!("{rounded_compute_units} CU"));
-	shared::save_compute_units(
+	bitflip_program_tests::save_compute_units(
 		"config_update_authority",
 		compute_units,
 		"Update the authority of the config",
@@ -77,7 +73,7 @@ async fn create_validator_rpc() -> anyhow::Result<impl ToRpcClient> {
 	let mut config_state_accounts = create_config_accounts();
 	config_state_accounts.extend(create_token_accounts(false)?);
 
-	let runner = shared::create_runner_with_accounts(config_state_accounts).await;
+	let runner = bitflip_program_tests::create_runner_with_accounts(config_state_accounts).await;
 
 	Ok(runner)
 }

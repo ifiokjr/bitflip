@@ -32,6 +32,18 @@
 			],
 			"description": "Build the bitflip app"
 		},
+		"validator:bare": {
+			"command": "solana-test-validator --warp-slot 1000 --reset --quiet",
+			"description": "Start a bare validator"
+		},
+		"validator:program": {
+			"command": "solana-test-validator --warp-slot 1000 --reset --quiet --bpf-program $BITFLIP_PROGRAM_ID $DEVENV_ROOT/target/deploy/bitflip_program.so",
+			"description": "Start a validator with the program loaded"
+		},
+		"validator:logs": {
+			"command": "solana logs --url localnet --verbose",
+			"description": "Get the logs from local validator"
+		},
 		"build:program": {
 			"command": "cargo build-sbf --manifest-path $DEVENV_ROOT/bitflip_program/Cargo.toml --arch sbfv1",
 			"description": "Build the bitflip program"

@@ -1,5 +1,3 @@
-#![cfg(feature = "client")]
-
 use std::future::Future;
 use std::time::SystemTime;
 
@@ -15,12 +13,12 @@ use bitflip_program::SectionState;
 use bitflip_program::TokenMember;
 use bitflip_program::BITFLIP_SECTION_LENGTH;
 use bitflip_program::TOKEN_DECIMALS;
-use shared::create_config_accounts;
-use shared::create_game_state;
-use shared::create_program_context_with_factory;
-use shared::create_section_state;
-use shared::create_token_accounts;
-use shared::ToRpcClient;
+use bitflip_program_tests::create_config_accounts;
+use bitflip_program_tests::create_game_state;
+use bitflip_program_tests::create_program_context_with_factory;
+use bitflip_program_tests::create_section_state;
+use bitflip_program_tests::create_token_accounts;
+use bitflip_program_tests::ToRpcClient;
 use solana_sdk::account::ReadableAccount;
 use solana_sdk::transaction::VersionedTransaction;
 use spl_pod::primitives::PodU16;
@@ -30,8 +28,6 @@ use test_utils_keypairs::get_wallet_keypair;
 use test_utils_solana::prelude::*;
 use wasm_client_solana::solana_account_decoder::parse_account_data::SplTokenAdditionalData;
 use wasm_client_solana::solana_account_decoder::parse_token::parse_token_v2;
-
-mod shared;
 
 #[test_log::test(tokio::test)]
 async fn flip_bit_test() -> anyhow::Result<()> {
@@ -61,7 +57,7 @@ async fn flip_bit_test_validator() -> anyhow::Result<()> {
 
 	check!(rounded_compute_units <= 100_000);
 	insta::assert_snapshot!(format!("{rounded_compute_units} CU"));
-	shared::save_compute_units(
+	bitflip_program_tests::save_compute_units(
 		"flip_bit",
 		compute_units,
 		"Flip a single bit from `0` to `1`",
@@ -132,7 +128,7 @@ async fn create_validator_rpc(
 	)?;
 	accounts.extend(section_accounts);
 
-	let runner = shared::create_runner_with_accounts(accounts).await;
+	let runner = bitflip_program_tests::create_runner_with_accounts(accounts).await;
 
 	Ok(runner)
 }

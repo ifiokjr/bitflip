@@ -1,5 +1,3 @@
-#![cfg(feature = "client")]
-
 use std::future::Future;
 
 use assert2::check;
@@ -9,11 +7,12 @@ use bitflip_program::get_token_account;
 use bitflip_program::token_initialize;
 use bitflip_program::TokenMember;
 use bitflip_program::TOKEN_DECIMALS;
+use bitflip_program_tests::create_config_accounts;
+use bitflip_program_tests::create_program_context_with_factory;
+use bitflip_program_tests::set_snapshot_suffix;
+use bitflip_program_tests::testname;
+use bitflip_program_tests::ToRpcClient;
 use rstest::rstest;
-use shared::create_config_accounts;
-use shared::create_program_context_with_factory;
-use shared::testname;
-use shared::ToRpcClient;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::transaction::VersionedTransaction;
 use test_utils_insta::create_insta_redaction;
@@ -21,8 +20,6 @@ use test_utils_keypairs::get_authority_keypair;
 use test_utils_solana::prelude::*;
 use wasm_client_solana::solana_account_decoder::parse_account_data::SplTokenAdditionalData;
 use wasm_client_solana::solana_account_decoder::parse_token::parse_token_v2;
-
-mod shared;
 
 #[rstest]
 #[case::bit(TokenMember::Bit)]
@@ -50,13 +47,13 @@ async fn token_initialize_test_validator(
 	testname: String,
 	#[case] member: TokenMember,
 ) -> anyhow::Result<()> {
-	set_snapshot_suffix!("{}", testname);
+	bitflip_program_tests::set_snapshot_suffix!("{}", testname);
 	let compute_units = shared_token_initialize_test(create_validator_rpc, member).await?;
 	let rounded_compute_units = bitflip_program::round_compute_units_up(compute_units);
 
 	check!(rounded_compute_units <= 90_000);
 	insta::assert_snapshot!(format!("{rounded_compute_units} CU"));
-	shared::save_compute_units(
+	bitflip_program_tests::save_compute_units(
 		format!("token_initialize:{}", member.name().to_lowercase()).as_str(),
 		compute_units,
 		format!(
@@ -92,7 +89,7 @@ async fn create_banks_client_rpc() -> anyhow::Result<impl ToRpcClient> {
 async fn create_validator_rpc() -> anyhow::Result<impl ToRpcClient> {
 	let accounts = create_config_accounts();
 
-	let runner = shared::create_runner_with_accounts(accounts).await;
+	let runner = bitflip_program_tests::create_runner_with_accounts(accounts).await;
 
 	Ok(runner)
 }

@@ -1,5 +1,5 @@
 [workspace]
-members = ["bitflip", "bitflip_program"]
+members = ["bitflip", "bitflip_program", "bitflip_program_tests"]
 resolver = "2"
 
 [workspace.package]
@@ -9,7 +9,7 @@ edition = "2021"
 homepage = "https://bitflip.art"
 license = "Apache-2.0"
 repository = "https://github.com/ifiokjr/bitflip"
-rust-version = "1.71.0"
+rust-version = "1.83.0"
 
 [workspace.dependencies]
 aes-gcm-siv = "0.11"
@@ -149,12 +149,13 @@ welds = "0.4"
 
 # internal crates
 bitflip_program = { path = "./bitflip_program", version = "0.0.0" }
+bitflip_program_tests = { path = "./bitflip_program_tests", version = "0.0.0" }
 
 [workspace.metadata.bin]
 cargo-insta = { version = "1.41.1" }
 cargo-leptos = { version = "0.2.24" }
 cargo-llvm-cov = { version = "0.6.14" }
-cargo-nextest = { version = "0.9.86" }
+cargo-nextest = { version = "0.9.87" }
 leptosfmt = { version = "0.1.32", bins = ["leptosfmt"] }
 query-security-txt = { version = "1.1.1", bins = ["query-security-txt"] }
 solana-verify = { version = "0.4.0", bins = ["solana-verify"] }
