@@ -70,6 +70,8 @@
         cp "$DEVENV_ROOT/.env.example" "$DEVENV_ROOT/.env"
       fi
 
+			mkdir -p $HOME/.cache/solana
+
       set -e
       install:cargo:bin
       install:solana
