@@ -175,32 +175,10 @@
 
       echo "DEVENV_DOTFILE=$DEVENV_DOTFILE" >> $GITHUB_ENV
       echo "DEVENV_PROFILE=$DEVENV_PROFILE" >> $GITHUB_ENV
-      echo "DEVENV_ROOT=$DEVENV_ROOT" >> $GITHUB_ENV
+      echo "DEVENV_ROOT=$GITHUB_WORKSPACE" >> $GITHUB_ENV
       echo "DEVENV_STATE=$DEVENV_STATE" >> $GITHUB_ENV
     '';
     description = "Setup devenv for GitHub Actions";
-  };
-  scripts."setup:docker" = {
-    exec = ''
-      set -e
-      # update path
-      echo "export PATH=$DEVENV_PROFILE/bin:\$PATH" >> /etc/profile
-      echo "export PATH=$DEVENV_ROOT/.local-cache/solana-release/bin:\$PATH" >> /etc/profile
-
-      echo "export DEVENV_PROFILE=$DEVENV_PROFILE" >> /etc/profile
-      echo "export PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> /etc/profile
-      echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> /etc/profile
-      echo "export LIBRARY_PATH=$LIBRARY_PATH" >> /etc/profile
-      echo "export C_INCLUDE_PATH=$C_INCLUDE_PATH" >> /etc/profile
-      echo "export XDG_DATA_DIRS=$XDG_DATA_DIRS" >> /etc/profile
-      echo "export XDG_CONFIG_DIRS=$XDG_CONFIG_DIRS" >> /etc/profile
-
-      echo "export DEVENV_DOTFILE=$DEVENV_DOTFILE" >> /etc/profile
-      echo "export DEVENV_PROFILE=$DEVENV_PROFILE" >> /etc/profile
-      echo "export DEVENV_ROOT=$DEVENV_ROOT" >> /etc/profile
-      echo "export DEVENV_STATE=$DEVENV_STATE" >> /etc/profile
-    '';
-    description = "Setup devenv shell for docker.";
   };
   scripts."install:solana" = {
     exec = ''

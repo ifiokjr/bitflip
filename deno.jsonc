@@ -28,25 +28,17 @@
 		"build": {
 			"command": "cargo leptos build --project bitflip -vv --release",
 			"dependencies": [
-				"build:tailwind"
+				"build:tailwind",
+				"env"
 			],
 			"description": "Build the bitflip app"
 		},
-		"validator:bare": {
-			"command": "solana-test-validator --warp-slot 1000 --reset --quiet",
-			"description": "Start a bare validator"
-		},
-		"validator:program": {
-			"command": "solana-test-validator --warp-slot 1000 --reset --quiet --bpf-program $BITFLIP_PROGRAM_ID $DEVENV_ROOT/target/deploy/bitflip_program.so",
-			"description": "Start a validator with the program loaded"
-		},
-		"validator:logs": {
-			"command": "solana logs --url localnet --verbose",
-			"description": "Get the logs from local validator"
-		},
 		"build:program": {
 			"command": "cargo build-sbf --manifest-path $DEVENV_ROOT/bitflip_program/Cargo.toml --arch sbfv1",
-			"description": "Build the bitflip program"
+			"description": "Build the bitflip program",
+			"dependencies": [
+				"env"
+			]
 		},
 		"build:program:verified": {
 			"command": "solana-verify build --library-name bitflip_program",
@@ -71,6 +63,10 @@
 		"db:reset": {
 			"command": "bitflip db:drop && bitflip db:create && bitflip db:migrate",
 			"description": "Reset the development database by dropping it, creating it, and running the migrations"
+		},
+		"env": {
+			"command": "env && echo \"devenv root: $DEVENV_ROOT\"",
+			"description": "Print the environment variables"
 		},
 		"fix": {
 			"command": "bitflip fix:deno && bitflip fix:rust && bitflip fix:format && bitflip lint:security-txt",
@@ -116,6 +112,10 @@
 			"command": "rm -rf $DEVENV_ROOT/dist/bitflip && mkdir -p $DEVENV_ROOT/dist/bitflip && cp $DEVENV_ROOT/target/release/bitflip $DEVENV_ROOT/dist/bitflip/bitflip && cp -r $DEVENV_ROOT/target/site/bitflip $DEVENV_ROOT/dist/bitflip/site && cp -r $DEVENV_ROOT/bitflip/Cargo.toml $DEVENV_ROOT/dist/bitflip",
 			"description": "Prepare the bitflip app for deployment"
 		},
+		"schema": {
+			"command": "bitflip schema:update && bitflip schema:generate",
+			"description": "Update and generate the welds schema"
+		},
 		"schema:generate": {
 			"command": "welds -s $DEVENV_ROOT/setup/welds.yaml -p $DEVENV_ROOT/bitflip/src/db generate",
 			"description": "Auto generate code for the welds schema"
@@ -124,16 +124,24 @@
 			"command": "welds -s $DEVENV_ROOT/setup/welds.yaml update",
 			"description": "Update the welds schema"
 		},
-		"schema": {
-			"command": "bitflip schema:update && bitflip schema:generate",
-			"description": "Update and generate the welds schema"
-		},
 		"serve": {
 			"command": "cargo leptos serve --project bitflip --release -vv --features=prod",
 			"dependencies": [
 				"build:tailwind"
 			],
 			"description": "Serve the bitflip app"
+		},
+		"validator:bare": {
+			"command": "solana-test-validator --warp-slot 1000 --reset --quiet",
+			"description": "Start a bare validator"
+		},
+		"validator:logs": {
+			"command": "solana logs --url localnet --verbose",
+			"description": "Get the logs from local validator"
+		},
+		"validator:program": {
+			"command": "solana-test-validator --warp-slot 1000 --reset --quiet --bpf-program $BITFLIP_PROGRAM_ID $DEVENV_ROOT/target/deploy/bitflip_program.so",
+			"description": "Start a validator with the program loaded"
 		},
 		"watch": {
 			"command": "",
