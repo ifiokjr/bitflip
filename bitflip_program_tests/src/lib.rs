@@ -59,9 +59,6 @@ use test_utils_solana::ProgramTest;
 use test_utils_solana::TestRpcProvider;
 use wasm_client_solana::SolanaRpcClient;
 
-#[cfg(feature = "test_validator")]
-const DEVENV_ROOT: &str = env!("DEVENV_ROOT");
-
 pub trait ToRpcClient {
 	fn to_rpc(&self) -> SolanaRpcClient;
 }
@@ -97,9 +94,10 @@ pub async fn create_runner() -> test_utils_solana::TestValidatorRunner {
 pub async fn create_runner_with_accounts(
 	accounts: HashMap<Pubkey, AccountSharedData, RandomState>,
 ) -> test_utils_solana::TestValidatorRunner {
+	let devenv_root = std::env::var("DEVENV_ROOT").unwrap();
 	let launchpad_program = test_utils_solana::TestProgramInfo::builder()
 		.program_id(ID)
-		.program_path(format!("{DEVENV_ROOT}/target/deploy/bitflip_program.so"))
+		.program_path(format!("{devenv_root}/target/deploy/bitflip_program.so"))
 		.build();
 	let props = test_utils_solana::TestValidatorRunnerProps::builder()
 		.programs(vec![launchpad_program])

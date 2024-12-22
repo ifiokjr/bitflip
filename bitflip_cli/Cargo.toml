@@ -1,0 +1,34 @@
+[package]
+name = "bitflip_cli"
+version = { workspace = true }
+edition = { workspace = true }
+
+[[bin]]
+name = "bitflip"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+bitflip_program = { workspace = true, features = ["no-entrypoint", "client", "ssr"] }
+bitflip_program_tests = { workspace = true, features = ["test_validator"] }
+clap = { version = "4", features = ["derive"] }
+colored = { workspace = true }
+console = { workspace = true }
+env_logger = { workspace = true }
+indicatif = { workspace = true }
+log = { workspace = true }
+solana-program = { workspace = true }
+solana-program-test = { workspace = true }
+solana-sdk = { workspace = true }
+test_utils_keypairs = { workspace = true }
+test_utils_solana = { workspace = true, features = ["test_validator"] }
+tokio = { workspace = true, features = ["macros", "rt"] }
+url = { workspace = true }
+
+[dev-dependencies]
+insta = { workspace = true, features = ["json", "redactions", "ron", "yaml"] }
+test-log = { workspace = true, features = ["log", "trace"] }
+tokio = { workspace = true, features = ["test-util", "rt", "macros", "time"] }
+
+[lints]
+workspace = true

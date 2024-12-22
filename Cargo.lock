@@ -902,6 +902,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitflip_cli"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "bitflip_program",
+ "bitflip_program_tests",
+ "clap 4.5.23",
+ "colored",
+ "console",
+ "env_logger 0.11.6",
+ "indicatif",
+ "insta",
+ "log",
+ "solana-program",
+ "solana-program-test",
+ "solana-sdk",
+ "test-log",
+ "test_utils_keypairs",
+ "test_utils_solana",
+ "tokio",
+ "url 2.5.4",
+]
+
+[[package]]
 name = "bitflip_program"
 version = "0.0.0"
 dependencies = [
@@ -1333,6 +1357,46 @@ dependencies = [
  "unicode-width 0.1.14",
  "vec_map",
 ]
+
+[[package]]
+name = "clap"
+version = "4.5.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3135e7ec2ef7b10c6ed8950f0f792ed96ee093fa088608f1c76e569722700c84"
+dependencies = [
+ "clap_builder",
+ "clap_derive",
+]
+
+[[package]]
+name = "clap_builder"
+version = "4.5.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30582fc632330df2bd26877bde0c1f4470d57c582bbc070376afcd04d8cb4838"
+dependencies = [
+ "anstream",
+ "anstyle",
+ "clap_lex",
+ "strsim 0.11.1",
+]
+
+[[package]]
+name = "clap_derive"
+version = "4.5.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ac6a0c7b1a9e9a5186361f67dfa1b88213572f427fb9ab038efb2bd8c582dab"
+dependencies = [
+ "heck 0.5.0",
+ "proc-macro2 1.0.92",
+ "quote 1.0.37",
+ "syn 2.0.90",
+]
+
+[[package]]
+name = "clap_lex"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
 name = "codee"
@@ -2132,6 +2196,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "186e05a59d4c50738528153b83b0b0194d3a29507dfec16eccd4b342903397d0"
 dependencies = [
  "log",
+ "regex",
 ]
 
 [[package]]
@@ -2156,6 +2221,7 @@ dependencies = [
  "anstream",
  "anstyle",
  "env_filter",
+ "humantime",
  "log",
 ]
 
@@ -4220,9 +4286,9 @@ dependencies = [
 
 [[package]]
 name = "memory_wallet"
-version = "0.1.18"
+version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33ebe8462200fccc45f948a6b6fbfb3361c2a4c4d8ed520b895ed6933511424c"
+checksum = "4463d6400c21b5e1c05482d8e57cc28841b7ecf81b62ec0be0030a585564073e"
 dependencies = [
  "async-trait",
  "derive_more 1.0.0",
@@ -4630,9 +4696,9 @@ checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
 
 [[package]]
 name = "object"
-version = "0.36.5"
+version = "0.36.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aedf0a2d09c573ed1d8d85b30c119153926a2b36dce0ab28322c09a117a4683e"
+checksum = "62948e14d923ea95ea2c7c86c71013138b66525b86bdc08d2dcc262bdb497b87"
 dependencies = [
  "memchr",
 ]
@@ -6992,7 +7058,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eef7c8137bfa3cb18f64f025a41eb4f95ccccac381b8903f48ddea4f5ed37bcf"
 dependencies = [
  "chrono",
- "clap",
+ "clap 2.34.0",
  "rpassword",
  "solana-derivation-path",
  "solana-remote-wallet",
@@ -7028,7 +7094,7 @@ dependencies = [
  "Inflector",
  "base64 0.22.1",
  "chrono",
- "clap",
+ "clap 2.34.0",
  "console",
  "humantime",
  "indicatif",
@@ -7346,7 +7412,7 @@ checksum = "d8d44e54fbbf4383a0ecea631c3c4b5278ca5a2d8696644bc369e8e45726b117"
 dependencies = [
  "bincode",
  "byteorder",
- "clap",
+ "clap 2.34.0",
  "crossbeam-channel",
  "log",
  "serde",
@@ -7433,7 +7499,7 @@ dependencies = [
  "assert_matches",
  "bincode",
  "bv",
- "clap",
+ "clap 2.34.0",
  "crossbeam-channel",
  "flate2",
  "indexmap 2.7.0",
@@ -10360,9 +10426,9 @@ dependencies = [
 
 [[package]]
 name = "test_utils_insta"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27dd3c0e6f3d966da6cdb4b3632305462c4d9f021d432cf3338433b129079248"
+checksum = "bb6771faf6a9572be0d5b8fc5fed07c33d927f3b4c80c3bfb9bd2a94de72b7d0"
 dependencies = [
  "anyhow",
  "assert2",
@@ -10371,18 +10437,18 @@ dependencies = [
 
 [[package]]
 name = "test_utils_keypairs"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6803afbda50a053d1980459a54c9b11997d9fa0dff20f0e4369587f206cc20cc"
+checksum = "036b79157d4ceb9a4c9f695d1a2fbd8a0415951d4f04ff7af997171b05b7df97"
 dependencies = [
  "solana-sdk",
 ]
 
 [[package]]
 name = "test_utils_solana"
-version = "0.6.3"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d16cb93dd51d78fe45bee6bc872ef305b4bc636f10eb4796aff91ab039d99ef"
+checksum = "020aa4107d5264a6b232760c3f8f916c1bb60ec8c159b8ae7a478dc0d83d5ea3"
 dependencies = [
  "anyhow",
  "assert2",
@@ -11287,9 +11353,9 @@ dependencies = [
 
 [[package]]
 name = "wallet_standard_browser"
-version = "0.4.1"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45be1d16f4ceaeb116e28533b6e21624c41383053f3488bf934b8ff4dcd027e8"
+checksum = "8e15f730e4469f38477f952379c049c9e10cda670a566d527f8c3c5cc4d21be6"
 dependencies = [
  "async-trait",
  "bincode",
@@ -11418,9 +11484,9 @@ dependencies = [
 
 [[package]]
 name = "wasm_client_solana"
-version = "0.7.2"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19998bcbd560d63c165459d536af54cdd79acf98a1a8e7428ecf34386b7a516f"
+checksum = "c45ab0e083656026d5c7b4f3e7e3f41b414279509587f7afa59933b382323faa"
 dependencies = [
  "async-trait",
  "async-tungstenite",

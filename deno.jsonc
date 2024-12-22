@@ -28,17 +28,13 @@
 		"build": {
 			"command": "cargo leptos build --project bitflip -vv --release",
 			"dependencies": [
-				"build:tailwind",
-				"env"
+				"build:tailwind"
 			],
 			"description": "Build the bitflip app"
 		},
 		"build:program": {
 			"command": "cargo build-sbf --manifest-path $DEVENV_ROOT/bitflip_program/Cargo.toml --arch sbfv1",
-			"description": "Build the bitflip program",
-			"dependencies": [
-				"env"
-			]
+			"description": "Build the bitflip program"
 		},
 		"build:program:verified": {
 			"command": "solana-verify build --library-name bitflip_program",
@@ -61,15 +57,11 @@
 			"description": "Run the database migrations"
 		},
 		"db:reset": {
-			"command": "bitflip db:drop && bitflip db:create && bitflip db:migrate",
+			"command": "task db:drop && task db:create && task db:migrate",
 			"description": "Reset the development database by dropping it, creating it, and running the migrations"
 		},
-		"env": {
-			"command": "env && echo \"devenv root: $DEVENV_ROOT\"",
-			"description": "Print the environment variables"
-		},
 		"fix": {
-			"command": "bitflip fix:deno && bitflip fix:rust && bitflip fix:format && bitflip lint:security-txt",
+			"command": "task fix:deno && task fix:rust && task fix:format && task lint:security-txt",
 			"description": "Run all fix tasks"
 		},
 		"fix:deno": {
@@ -85,7 +77,7 @@
 			"description": "Fix the rust linting errors"
 		},
 		"lint": {
-			"command": "bitflip lint:deno && bitflip lint:rust && bitflip lint:format && bitflip lint:security-txt",
+			"command": "task lint:deno && task lint:rust && task lint:format && task lint:security-txt",
 			"description": "Run all linting tasks"
 		},
 		"lint:deno": {
@@ -113,7 +105,7 @@
 			"description": "Prepare the bitflip app for deployment"
 		},
 		"schema": {
-			"command": "bitflip schema:update && bitflip schema:generate",
+			"command": "task schema:update && task schema:generate",
 			"description": "Update and generate the welds schema"
 		},
 		"schema:generate": {

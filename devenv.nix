@@ -36,6 +36,13 @@
 
   # disable dotenv since it breaks the variable interpolation supported by `direnv`
   dotenv.disableHint = true;
+  scripts.bitflip = {
+    exec = ''
+      set -e
+      cargo run -p bitflip_cli -- $@
+    '';
+    description = "The `bitflip` executable for running the Bitflip CLI.";
+  };
   scripts.welds = {
     exec = ''
       set -e
@@ -86,12 +93,12 @@
     '';
     description = "Generate a local solana keypair. Must provide a name.";
   };
-	scripts.bitflip = {
+	scripts.task = {
 		exec = ''
 			set -e
 			deno task $@
 		'';
-		description = "The `bitflip` tasks";
+		description = "Run deno tasks";
 	};
 	scripts."test:all" = {
 		exec = ''

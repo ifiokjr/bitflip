@@ -31,11 +31,11 @@ jobs:
           deno-cache: /tmp/denocache
 
       - name: lint formatting
-        run: bitflip lint:format
+        run: task lint:format
         shell: bash
 
       - name: lint formatting
-        run: bitflip lint:deno
+        run: task lint:deno
         shell: bash
 
       - uses: clechasseur/rs-clippy-check@v3
@@ -80,7 +80,7 @@ jobs:
           deno-cache: /tmp/denocache
 
       - name: build
-        run: bitflip build:program
+        run: task build:program
         shell: bash
 
       - name: upload bitflip program
@@ -129,5 +129,5 @@ jobs:
           deno-cache: /tmp/denocache
 
       - name: build
-        run: bitflip build
+        run: task build
         shell: bash

@@ -1,5 +1,5 @@
 [workspace]
-members = ["bitflip", "bitflip_program", "bitflip_program_tests"]
+members = ["bitflip", "bitflip_cli", "bitflip_program", "bitflip_program_tests"]
 resolver = "2"
 
 [workspace.package]
@@ -29,6 +29,8 @@ check_keyword = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.2"
 codee = "0.2"
+colored = "2"
+console = "0.15"
 console_error_panic_hook = "0.1"
 console_log = "1"
 const_str_to_pubkey = "0.2"
@@ -39,6 +41,7 @@ derive-where = "1"
 derive_more = "1"
 dom_testing_library = "0.1"
 dotenvy = "0.15"
+env_logger = "0.11"
 fake = "3"
 fixed = "=1.28.0"
 fixed_math = "0.4"
@@ -58,6 +61,7 @@ hyper = "1"
 image = "0.25"
 imagesize = "0.13"
 indexmap = "2"
+indicatif = "0.17"
 insta = "1"
 js-sys = "0.3"
 jsonwebtoken = "9"
@@ -124,7 +128,7 @@ tailwind_fuse = "0.3"
 test-log = "0.2"
 test_utils_insta = "0.1"
 test_utils_keypairs = "0.1"
-test_utils_solana = "0.6"
+test_utils_solana = "0.7"
 thiserror = "2"
 tiny-skia = "0.11"
 tokio = "1"
@@ -148,6 +152,7 @@ web-sys = "0.3"
 welds = "0.4"
 
 # internal crates
+bitflip_cli = { path = "./bitflip_cli", version = "0.0.0" }
 bitflip_program = { path = "./bitflip_program", version = "0.0.0" }
 bitflip_program_tests = { path = "./bitflip_program_tests", version = "0.0.0" }
 
