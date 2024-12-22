@@ -1,5 +1,5 @@
 [package]
-name = "bitflip_program_tests"
+name = "bitflip_program_test"
 version = { workspace = true }
 edition = { workspace = true }
 homepage = { workspace = true }
@@ -9,7 +9,7 @@ description = "Tests for the bitflip program"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "bitflip_program_tests"
+name = "bitflip_program_test"
 
 [dependencies]
 anyhow = { workspace = true }

@@ -13,12 +13,12 @@ use bitflip_program::SectionState;
 use bitflip_program::TokenMember;
 use bitflip_program::BITFLIP_SECTION_LENGTH;
 use bitflip_program::TOKEN_DECIMALS;
-use bitflip_program_tests::create_config_accounts;
-use bitflip_program_tests::create_game_state;
-use bitflip_program_tests::create_program_context_with_factory;
-use bitflip_program_tests::create_section_state;
-use bitflip_program_tests::create_token_accounts;
-use bitflip_program_tests::ToRpcClient;
+use bitflip_program_test::create_config_accounts;
+use bitflip_program_test::create_game_state;
+use bitflip_program_test::create_program_context_with_factory;
+use bitflip_program_test::create_section_state;
+use bitflip_program_test::create_token_accounts;
+use bitflip_program_test::ToRpcClient;
 use solana_sdk::account::ReadableAccount;
 use solana_sdk::transaction::VersionedTransaction;
 use spl_pod::primitives::PodU16;
@@ -57,7 +57,7 @@ async fn flip_bit_test_validator() -> anyhow::Result<()> {
 
 	check!(rounded_compute_units <= 100_000);
 	insta::assert_snapshot!(format!("{rounded_compute_units} CU"));
-	bitflip_program_tests::save_compute_units(
+	bitflip_program_test::save_compute_units(
 		"flip_bit",
 		compute_units,
 		"Flip a single bit from `0` to `1`",
@@ -128,7 +128,7 @@ async fn create_validator_rpc(
 	)?;
 	accounts.extend(section_accounts);
 
-	let runner = bitflip_program_tests::create_runner_with_accounts(accounts).await;
+	let runner = bitflip_program_test::create_runner_with_accounts(accounts).await;
 
 	Ok(runner)
 }

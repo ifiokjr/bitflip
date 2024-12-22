@@ -907,7 +907,7 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "bitflip_program",
- "bitflip_program_tests",
+ "bitflip_program_test",
  "clap 4.5.23",
  "colored",
  "console",
@@ -965,7 +965,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bitflip_program_tests"
+name = "bitflip_program_test"
 version = "0.0.0"
 dependencies = [
  "anyhow",

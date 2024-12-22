@@ -10,7 +10,7 @@ path = "src/main.rs"
 [dependencies]
 anyhow = { workspace = true }
 bitflip_program = { workspace = true, features = ["no-entrypoint", "client", "ssr"] }
-bitflip_program_tests = { workspace = true, features = ["test_validator"] }
+bitflip_program_test = { workspace = true, features = ["test_validator"] }
 clap = { version = "4", features = ["derive"] }
 colored = { workspace = true }
 console = { workspace = true }

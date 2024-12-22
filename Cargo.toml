@@ -1,5 +1,5 @@
 [workspace]
-members = ["bitflip", "bitflip_cli", "bitflip_program", "bitflip_program_tests"]
+members = ["bitflip", "bitflip_cli", "bitflip_program", "bitflip_program_test"]
 resolver = "2"
 
 [workspace.package]
@@ -154,7 +154,7 @@ welds = "0.4"
 # internal crates
 bitflip_cli = { path = "./bitflip_cli", version = "0.0.0" }
 bitflip_program = { path = "./bitflip_program", version = "0.0.0" }
-bitflip_program_tests = { path = "./bitflip_program_tests", version = "0.0.0" }
+bitflip_program_test = { path = "./bitflip_program_test", version = "0.0.0" }
 
 [workspace.metadata.bin]
 cargo-insta = { version = "1.41.1" }

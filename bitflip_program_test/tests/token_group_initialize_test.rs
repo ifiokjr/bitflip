@@ -6,10 +6,10 @@ use bitflip_program::get_pda_treasury;
 use bitflip_program::token_group_initialize;
 use bitflip_program::TokenMember;
 use bitflip_program::TOKEN_DECIMALS;
-use bitflip_program_tests::create_config_accounts;
-use bitflip_program_tests::create_program_context_with_factory;
-use bitflip_program_tests::create_token_accounts;
-use bitflip_program_tests::ToRpcClient;
+use bitflip_program_test::create_config_accounts;
+use bitflip_program_test::create_program_context_with_factory;
+use bitflip_program_test::create_token_accounts;
+use bitflip_program_test::ToRpcClient;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::transaction::VersionedTransaction;
 use test_utils_insta::create_insta_redaction;
@@ -32,7 +32,7 @@ async fn token_group_initialize_test_validator() -> anyhow::Result<()> {
 
 	check!(rounded_compute_units <= 90_000);
 	insta::assert_snapshot!(format!("{rounded_compute_units} CU"));
-	bitflip_program_tests::save_compute_units(
+	bitflip_program_test::save_compute_units(
 		"token_group_initialize",
 		compute_units,
 		"Initialize the token group",
@@ -61,7 +61,7 @@ async fn create_validator_rpc() -> anyhow::Result<impl ToRpcClient> {
 	let mut accounts = create_config_accounts();
 	accounts.extend(create_token_accounts(false)?);
 
-	let runner = bitflip_program_tests::create_runner_with_accounts(accounts).await;
+	let runner = bitflip_program_test::create_runner_with_accounts(accounts).await;
 
 	Ok(runner)
 }
