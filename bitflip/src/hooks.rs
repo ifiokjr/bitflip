@@ -46,17 +46,12 @@ pub enum RouterProp<T: Send + Sync + 'static> {
 }
 
 /// Get the section index from the provided props
-pub fn use_section_index(props: RouterProp<u8>) -> Signal<u8> {
+pub fn use_section_index() -> Signal<u8> {
 	let section_index_resource = Resource::new(move || {}, move |()| get_default_section_index());
+	let section_index_signal = use_parsed_param::<u8>(AppParam::Section)();
 
 	Signal::derive(move || {
-		let section_index = match props {
-			RouterProp::Default => use_parsed_param::<u8>(AppParam::Section)(),
-			RouterProp::Signal(signal) => signal(),
-			RouterProp::Value(value) => value,
-		};
-
-		if let Some(section_index) = section_index {
+		if let Some(section_index) = section_index_signal {
 			section_index
 		} else if let Some(Ok(section_index)) = section_index_resource.get() {
 			section_index
@@ -66,17 +61,12 @@ pub fn use_section_index(props: RouterProp<u8>) -> Signal<u8> {
 	})
 }
 /// Get the game index from the provided props
-pub fn use_game_index(props: RouterProp<u8>) -> Signal<u8> {
+pub fn use_game_index() -> Signal<u8> {
 	let game_index_resource = Resource::new(move || {}, move |()| get_active_game_index());
+	let game_index_signal = use_parsed_param::<u8>(AppParam::Game)();
 
 	Signal::derive(move || {
-		let game_index = match props {
-			RouterProp::Default => use_parsed_param::<u8>(AppParam::Game)(),
-			RouterProp::Signal(signal) => signal(),
-			RouterProp::Value(value) => value,
-		};
-
-		if let Some(game_index) = game_index {
+		if let Some(game_index) = game_index_signal {
 			game_index
 		} else if let Some(Ok(game_index)) = game_index_resource.get() {
 			game_index

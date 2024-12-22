@@ -14,7 +14,7 @@ pub enum Direction {
 /// Can only be used within a `Suspense` component.
 fn use_transformed_section(direction: Direction, jump: u8) -> (Signal<String>, Signal<bool>) {
 	let url = use_url();
-	let section_index = use_section_index(crate::RouterProp::Default);
+	let section_index = use_section_index();
 
 	let is_disabled = Signal::derive(move || {
 		let section_index = section_index();

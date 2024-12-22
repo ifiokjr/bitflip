@@ -11,17 +11,17 @@ use crate::get_section_state;
 use crate::use_game_index;
 use crate::use_section_index;
 
-#[island]
-pub fn SectionCanvas(game_index: Option<u8>, section_index: Option<u8>) -> impl IntoView {
+#[component]
+pub fn SectionCanvas() -> impl IntoView {
+	let game_index = use_game_index();
+	let section_index = use_section_index();
 	let canvas_ref = NodeRef::<Canvas>::new();
-	let section_index_signal = use_section_index(crate::RouterProp::Value(section_index));
-	let game_index_signal = use_game_index(crate::RouterProp::Value(game_index));
 	let (show_image, set_show_image) = signal(true);
 	let section_resource = Resource::new(
-		move || (game_index_signal(), section_index_signal()),
+		move || (game_index(), section_index()),
 		move |_| {
 			set_show_image(true);
-			let (game_index, section_index) = (game_index_signal(), section_index_signal());
+			let (game_index, section_index) = (game_index(), section_index());
 			get_section_state(game_index, section_index)
 		},
 	);
@@ -62,10 +62,10 @@ pub fn SectionCanvas(game_index: Option<u8>, section_index: Option<u8>) -> impl 
 	Effect::new(effect);
 
 	let canvas_click_handler = move |e: MouseEvent| {
-		let Some(section) = section_state.get() else {
+		let Some(_) = section_state.get() else {
 			return;
 		};
-		let section_index = section_index_signal();
+		let section_index = section_index.get();
 		let rect = e
 			.target()
 			.and_then(|t| t.dyn_into::<web_sys::Element>().ok())
@@ -77,12 +77,12 @@ pub fn SectionCanvas(game_index: Option<u8>, section_index: Option<u8>) -> impl 
 		let canvas_y = (dy * 1024.0 / rect.height()) as u16;
 		let x = canvas_x / 16;
 		let y = canvas_y / 16;
-		let (index, offset) = get_index_offset(x, y);
+		let (array_index, offset) = get_index_offset(x, y);
 		log::info!(
 			"Clicked grid cell: ({}, {}) - index: {} - offset: {}",
 			x,
 			y,
-			index,
+			array_index,
 			offset
 		);
 
@@ -92,13 +92,13 @@ pub fn SectionCanvas(game_index: Option<u8>, section_index: Option<u8>) -> impl 
 				return;
 			};
 
-			let is_checked = state.is_checked(index, offset);
+			let is_checked = state.is_checked(array_index, offset);
 			log::info!("is_checked: {}", is_checked);
 
 			let context = get_2d_context(canvas_ref);
 			let result = state.set_bit(&FlipBit {
 				section_index,
-				array_index: index,
+				array_index,
 				offset,
 				value: u8::from(!is_checked),
 			});
@@ -116,19 +116,21 @@ pub fn SectionCanvas(game_index: Option<u8>, section_index: Option<u8>) -> impl 
 	};
 
 	view! {
-		<div class="w-full h-full">
-			<Show when=show_image>
-				<SectionImage game_index=game_index_signal section_index=section_index_signal />
-			</Show>
-			<canvas
-				node_ref=canvas_ref
-				width=1024
-				height=1024
-				class="w-full h-full"
-				class:hidden=show_image
-				on:click=canvas_click_handler
-			/>
-		</div>
+		<Suspense fallback=|| view! { <div class="nes-text">"loading..."</div> }>
+			<div class="w-full h-full">
+				<Show when=show_image>
+					<SectionImage game_index=game_index section_index=section_index />
+				</Show>
+				<canvas
+					node_ref=canvas_ref
+					width=1024
+					height=1024
+					class="w-full h-full"
+					class:hidden=show_image
+					on:click=canvas_click_handler
+				/>
+			</div>
+		</Suspense>
 	}
 }
 

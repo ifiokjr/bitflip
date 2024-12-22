@@ -15,8 +15,6 @@ use crate::components::GameSelect;
 use crate::components::NextSectionButton;
 use crate::components::PreviousSectionButton;
 use crate::components::SectionCanvas;
-use crate::use_parsed_param;
-use crate::AppParam;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
 	view! {
@@ -26,7 +24,7 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
 				<meta charset="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
 				<AutoReload options=options.clone() />
-				<HydrationScripts options islands=true />
+				<HydrationScripts options />
 				<MetaTags />
 			</head>
 			<body class="w-full h-full">
@@ -63,14 +61,10 @@ pub fn App() -> impl IntoView {
 /// Renders the home page of your application.
 #[component]
 pub fn HomePage() -> impl IntoView {
-	let game_index = use_parsed_param::<u8>(AppParam::Game);
-	let section_index = use_parsed_param::<u8>(AppParam::Section);
-
 	view! {
 		<div class="flex flex-col items-center">
-			<section class="container px-4">
-				<GameHeader />
-			</section>
+			<section class="container px-4" />
+			<GameHeader />
 			<section class="container p-4">
 				<GameInfoBar />
 				<div class="h-4" />
@@ -79,9 +73,7 @@ pub fn HomePage() -> impl IntoView {
 				// Main game grid container with navigation arrows
 				<div class="flex-grow p-0 nes-container is-rounded aspect-square">
 					{move || {
-						view! {
-							<SectionCanvas game_index=game_index() section_index=section_index() />
-						}
+						view! { <SectionCanvas /> }
 					}}
 				</div>
 				<div class="h-4" />
