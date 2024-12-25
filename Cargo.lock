@@ -907,6 +907,7 @@ name = "bitflip_cli"
 version = "0.0.0"
 dependencies = [
  "anyhow",
+ "bincode",
  "bitflip_program",
  "bitflip_program_test",
  "clap 4.5.23",
@@ -916,6 +917,7 @@ dependencies = [
  "indicatif",
  "insta",
  "log",
+ "serde_json",
  "solana-program",
  "solana-program-test",
  "solana-sdk",
@@ -924,6 +926,7 @@ dependencies = [
  "test_utils_solana",
  "tokio",
  "url 2.5.4",
+ "wasm_client_solana",
 ]
 
 [[package]]

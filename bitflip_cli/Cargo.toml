@@ -9,6 +9,7 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = { workspace = true }
+bincode = { workspace = true }
 bitflip_program = { workspace = true, features = ["no-entrypoint", "client", "ssr"] }
 bitflip_program_test = { workspace = true, features = ["test_validator"] }
 clap = { version = "4", features = ["derive"] }
@@ -17,6 +18,7 @@ console = { workspace = true }
 env_logger = { workspace = true }
 indicatif = { workspace = true }
 log = { workspace = true }
+serde_json = { workspace = true }
 solana-program = { workspace = true }
 solana-program-test = { workspace = true }
 solana-sdk = { workspace = true }
@@ -24,6 +26,7 @@ test_utils_keypairs = { workspace = true }
 test_utils_solana = { workspace = true, features = ["test_validator"] }
 tokio = { workspace = true, features = ["macros", "rt"] }
 url = { workspace = true }
+wasm_client_solana = { workspace = true }
 
 [dev-dependencies]
 insta = { workspace = true, features = ["json", "redactions", "ron", "yaml"] }

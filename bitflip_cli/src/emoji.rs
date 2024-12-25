@@ -1,19 +1,19 @@
 use console::Emoji;
 
 // Status indicators
-pub static SUCCESS: Emoji = Emoji("✨ ", "* ");
-pub static ERROR: Emoji = Emoji("💥 ", "! ");
-pub static INFO: Emoji = Emoji("ℹ️  ", "i ");
-pub static WARNING: Emoji = Emoji("⚠️  ", "! ");
+pub const SUCCESS: Emoji = Emoji("✨ ", "* ");
+pub const ERROR: Emoji = Emoji("💥 ", "! ");
+pub const INFO: Emoji = Emoji("ℹ️  ", "i ");
+pub const WARNING: Emoji = Emoji("⚠️  ", "! ");
 
 // Action indicators
-pub static LOADING: Emoji = Emoji("⌛ ", "> ");
-pub static STOP: Emoji = Emoji("🛑 ", "x ");
-pub static START: Emoji = Emoji("🚀 ", "> ");
-pub static DONE: Emoji = Emoji("🎉 ", "* ");
+pub const LOADING: Emoji = Emoji("⌛ ", "> ");
+pub const STOP: Emoji = Emoji("🛑 ", "x ");
+pub const START: Emoji = Emoji("🚀 ", "> ");
+pub const DONE: Emoji = Emoji("🎉 ", "* ");
 
 // Program specific
-pub static VALIDATOR: Emoji = Emoji("🏦 ", "V ");
-pub static GAME: Emoji = Emoji("🎮 ", "G ");
-pub static CONFIG: Emoji = Emoji("⚙️  ", "C ");
-pub static WALLET: Emoji = Emoji("👛 ", "W ");
+pub const VALIDATOR: Emoji = Emoji("🏦 ", "V ");
+pub const GAME: Emoji = Emoji("🎮 ", "G ");
+pub const CONFIG: Emoji = Emoji("⚙️  ", "C ");
+pub const WALLET: Emoji = Emoji("👛 ", "W ");
