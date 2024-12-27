@@ -9,6 +9,7 @@ use anyhow::Context;
 use anyhow::Result;
 use bitflip_program::config_initialize;
 use bitflip_program::config_update_authority;
+use bitflip_program::game_initialize;
 use bitflip_program::get_pda_config;
 use bitflip_program::get_pda_game;
 use bitflip_program::get_pda_mint;
@@ -202,7 +203,7 @@ enum ConfigCommands {
 
 #[derive(Parser)]
 struct ConfigInitializeArgs {
-	/// The admin's keypair path
+	/// The admin's public key
 	#[arg(long)]
 	admin: Pubkey,
 	/// The authority's public key
@@ -214,17 +215,18 @@ struct ConfigInitializeArgs {
 enum GameCommands {
 	/// Initialize a new game
 	Initialize {
-		/// The game index
-		#[arg(long)]
-		index: u8,
-
-		/// Optional start time in seconds since UNIX epoch
-		#[arg(long)]
-		start_time: Option<i64>,
-
 		/// The authority's public key
 		#[arg(long)]
 		authority: Pubkey,
+		/// The game signer's public key
+		#[arg(long)]
+		game_signer: Pubkey,
+		/// The temporary signer's public key
+		#[arg(long)]
+		temp_signer: Pubkey,
+		/// The game index
+		#[arg(long)]
+		index: u8,
 	},
 }
 
@@ -437,17 +439,23 @@ async fn main() -> Result<()> {
 					new_authority,
 					authority,
 				} => {
+					eprintln!(
+						"{} {}",
+						format!("{} updating authority to:", emoji::CONFIG).bright_blue(),
+						new_authority.to_string().yellow()
+					);
 					let instruction = config_update_authority(authority, new_authority);
 					process_transaction(&cli, authority, instruction, &rpc, &mut writer).await?;
 				}
 			}
 		}
-		Commands::Game(game_cmd) => {
+		Commands::Game(ref game_cmd) => {
 			match game_cmd {
 				GameCommands::Initialize {
-					index,
-					start_time,
 					authority,
+					game_signer,
+					temp_signer,
+					index,
 				} => {
 					eprintln!(
 						"{} {} {} {}",
@@ -456,14 +464,8 @@ async fn main() -> Result<()> {
 						"and authority:".bright_blue(),
 						authority.to_string().yellow()
 					);
-					if let Some(start_time) = start_time {
-						eprintln!(
-							"{} {}",
-							format!("{} start time set to:", emoji::INFO).bright_blue(),
-							start_time.to_string().yellow()
-						);
-					}
-					// TODO: Implement game initialization using bitflip_program
+					let instruction = game_initialize(authority, game_signer, temp_signer, *index);
+					process_transaction(&cli, authority, instruction, &rpc, &mut writer).await?;
 				}
 			}
 		}
