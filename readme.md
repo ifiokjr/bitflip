@@ -70,20 +70,4 @@ setup:vscode # Setup vscode
 
 ## License
 
-BSD 3-Clause, see the [LICENSE](./LICENSE) file.
-
-## Thoughts
-
-Open source products are public goods.
-
-Public goods should be publicly auditable.
-
-The blockchain is designed for providing a solution to these constraints.
-
-Funds can be raised and then audited directly by the community.
-
-Funds which are misappropriated can lead to a fork of the project which will diminish the desirability of the original project.
-
-This does leave the possibility open for reputation attacks.
-
-!C Can we chat?
+BSD 3-Clause, see the [LICENSE](./LICENSE) file. eeeeeeeeeee
