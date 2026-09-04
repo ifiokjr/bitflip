@@ -1,0 +1,7 @@
+class: MintSectionResult
+fields:
+  assetId: String
+  merkleTree: String
+  leafIndex: int
+  transactionSignature: String?
+  alreadyMinted: bool

@@ -1,100 +1,33 @@
-name: devenv
-description: "Setup development environment with devenv"
+name: Setup devenv
+description: Install the pinned Nix, devenv, Flutter, Rust, and Serverpod toolchains
 inputs:
   github-token:
-    description: Provide a github token
-    required: true
-  nix-cache:
-    description: The location of the nix cache
-    required: true
-  deno-cache:
-    description: The location of the deno cache
+    description: GitHub token used by Nix to avoid unauthenticated API limits
     required: true
 
 runs:
   using: composite
   steps:
-    - name: free disk space
-      run: |
-        sudo rm -rf /usr/share/dotnet
-        sudo rm -rf /usr/local/lib/android
-        sudo rm -rf /opt/ghc
-        sudo rm -rf "/usr/local/share/boost"
-        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-        df -h
-      shell: bash
-
-    - name: cache nix store
-      uses: actions/cache@v4
-      id: nix-cache
-      with:
-        path: ${{ inputs.nix-cache }}
-        key: ${{ runner.os }}-nix-cache-${{ hashFiles('**/devenv.nix', '**/devenv.yaml', '**/devenv.lock') }}
-        restore-keys: ${{ runner.os }}-nix-cache-
-
-    - name: cache deno store
-      uses: actions/cache@v4
-      id: deno-cache
-      with:
-        path: ${{ inputs.deno-cache }}
-        key: ${{ runner.os }}-deno-cache-${{ hashFiles('deno.lock') }}
-        restore-keys: ${{ runner.os }}-deno-cache
-
-    - name: install nix
-      uses: cachix/install-nix-action@v27
+    - name: Install Nix
+      uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
       with:
         github_access_token: ${{ inputs.github-token }}
 
-    - name: import nix store cache
-      if: steps.nix-cache.outputs.cache-hit == 'true'
-      run: nix-store --import < ${{ inputs.nix-cache }}
-      shell: bash
-
-    - name: enable cachix
-      uses: cachix/cachix-action@v15
-      with:
-        name: devenv
-
-    - name: install devenv.sh
+    - name: Install devenv with the shared binary cache
       run: |
+        nix profile add --accept-flake-config nixpkgs#cachix
         cachix use devenv
-        nix profile install --accept-flake-config nixpkgs#devenv
+        nix profile add nixpkgs#devenv
       shell: bash
 
-    - name: build developer environment
-      run: devenv test
-      shell: bash
-
-    - name: update path with devenv
-      run: devenv shell setup:ci
-      shell: bash
-
-    - name: export nix store cache
-      if: steps.nix-cache.outputs.cache-hit != 'true'
-      run: nix-store --export $(find /nix/store -maxdepth 1 -name '*-*')> ${{ inputs.nix-cache }}
-      shell: bash
-
-    - name: cache rust dependencies
-      uses: Swatinem/rust-cache@v2
+    - name: Install pinned Flutter SDK
+      uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
       with:
-        key: ${{ runner.os }}
+        channel: stable
+        flutter-version-file: .fvmrc
+        cache: true
+        pub-cache: true
 
-    - name: cache cargo binaries
-      uses: actions/cache@v4
-      with:
-        path: ./.bin
-        key: ${{ runner.os }}-cargo-bin-${{ hashFiles('rust-toolchain.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-bin-
-
-    - name: cache local binaries
-      uses: actions/cache@v4
-      with:
-        path: ./.local-cache
-        key: ${{ runner.os }}-local-cache-${{ hashFiles('setup/cache-versions.json') }}
-        restore-keys: |
-          ${{ runner.os }}-local-cache-
-
-    - name: install dependencies
+    - name: Install locked workspace dependencies
       run: install:all
-      shell: bash
+      shell: devenv shell bash -- -e {0}

@@ -1,0 +1,9 @@
+name: _
+publish_to: none
+
+environment:
+  sdk: "^3.13.0"
+
+workspace:
+  - bitflip_server_client
+  - bitflip_server_server

@@ -1,0 +1,16 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated dependencies, toolchains, and build outputs"
+paths = [
+	'''(^|/)\.dart_tool/''',
+	'''(^|/)\.devenv/''',
+	'''(^|/)\.direnv/''',
+	'''(^|/)\.fvm/''',
+	'''(^|/)\.tools/''',
+	'''(^|/)build/''',
+	'''(^|/)node_modules/''',
+	'''(^|/)config/passwords\.yaml$''',
+	'''(^|/)target/''',
+]

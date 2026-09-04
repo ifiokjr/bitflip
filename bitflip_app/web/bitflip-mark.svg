@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Bitflip">
+  <rect width="1024" height="1024" rx="128" fill="#050b0a"/>
+  <g fill="#c9ff3d">
+    <path d="M128 128h614v154H128zM128 435h614v154H128zM128 742h614v154H128z"/>
+    <path d="M128 128h154v768H128z"/>
+  </g>
+  <path d="M742 282h154v153H742zM742 589h154v153H742z" fill="#ff654f"/>
+</svg>

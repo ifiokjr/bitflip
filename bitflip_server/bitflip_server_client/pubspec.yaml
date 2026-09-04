@@ -1,0 +1,10 @@
+name: bitflip_server_client
+description: Generated Serverpod client for Bitflip.
+
+environment:
+  sdk: "^3.13.0"
+
+resolution: workspace
+
+dependencies:
+  serverpod_client: 4.0.0-rc.1

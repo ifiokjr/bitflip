@@ -1,0 +1,53 @@
+name: bitflip_app
+description: A collaborative, on-chain canvas where every pixel is a move.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: "^3.13.0"
+  flutter: "^3.47.0"
+
+dependencies:
+  bitflip_program:
+    path: ../bitflip_program/clients/dart
+  bitflip_server_client:
+    path: ../bitflip_server/bitflip_server_client
+  cupertino_icons: 1.0.9
+  flutter:
+    sdk: flutter
+  flutter_hooks: 0.21.3+1
+  flutter_localizations:
+    sdk: flutter
+  go_router: 18.0.1
+  hooks_riverpod: 3.4.3
+  intl: any
+  riverpod_annotation: 4.0.7
+  serverpod_client: 4.0.0-rc.1
+  solana_kit: 0.9.1
+  solana_kit_mobile_wallet_adapter: 0.5.1
+  solana_kit_mobile_wallet_adapter_protocol: 0.5.1
+  solana_kit_rpc_api: 0.9.1
+  solana_kit_rpc_spec: 0.9.1
+  solana_kit_rpc_types: 0.9.1
+  solana_kit_system: 0.7.1
+  url_launcher: 6.3.2
+
+dev_dependencies:
+  build_runner: 2.16.1
+  flutter_test:
+    sdk: flutter
+  flutter_lints: 6.0.0
+  integration_test:
+    sdk: flutter
+  patrol: 4.9.0
+  riverpod_generator: 4.0.9
+  solana_kit_surfpool: 0.3.1
+
+patrol:
+  app_name: Bitflip
+  android:
+    package_name: com.ifiokjr.bitflip
+
+flutter:
+  generate: true
+  uses-material-design: true

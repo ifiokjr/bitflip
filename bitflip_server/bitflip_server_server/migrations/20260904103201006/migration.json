@@ -1,0 +1,144 @@
+{
+	"__className__": "serverpod.DatabaseMigration",
+	"actions": [
+		{
+			"__className__": "serverpod.DatabaseMigrationAction",
+			"type": "createTable",
+			"createTable": {
+				"__className__": "serverpod.TableDefinition",
+				"name": "bitflip_mint_challenge",
+				"dartName": "MintChallenge",
+				"module": "bitflip_server",
+				"schema": "public",
+				"columns": [
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "id",
+						"fieldName": "id",
+						"columnType": 7,
+						"isNullable": false,
+						"columnDefault": "random_v7",
+						"dartType": "UuidValue?"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "walletAddress",
+						"fieldName": "walletAddress",
+						"columnType": 0,
+						"isNullable": false,
+						"dartType": "String"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "gameIndex",
+						"fieldName": "gameIndex",
+						"columnType": 6,
+						"isNullable": false,
+						"dartType": "int"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "sectionIndex",
+						"fieldName": "sectionIndex",
+						"columnType": 6,
+						"isNullable": false,
+						"dartType": "int"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "nonce",
+						"fieldName": "nonce",
+						"columnType": 0,
+						"isNullable": false,
+						"dartType": "String"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "message",
+						"fieldName": "message",
+						"columnType": 0,
+						"isNullable": false,
+						"dartType": "String"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "createdAt",
+						"fieldName": "createdAt",
+						"columnType": 4,
+						"isNullable": false,
+						"dartType": "DateTime"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "expiresAt",
+						"fieldName": "expiresAt",
+						"columnType": 4,
+						"isNullable": false,
+						"dartType": "DateTime"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "usedAt",
+						"fieldName": "usedAt",
+						"columnType": 4,
+						"isNullable": true,
+						"dartType": "DateTime?"
+					}
+				],
+				"foreignKeys": [],
+				"indexes": [
+					{
+						"__className__": "serverpod.IndexDefinition",
+						"indexName": "bitflip_mint_challenge_nonce_idx",
+						"elements": [
+							{
+								"__className__": "serverpod.IndexElementDefinition",
+								"type": 0,
+								"definition": "nonce"
+							}
+						],
+						"type": "btree",
+						"isUnique": true,
+						"isPrimary": false
+					},
+					{
+						"__className__": "serverpod.IndexDefinition",
+						"indexName": "bitflip_mint_challenge_wallet_created_idx",
+						"elements": [
+							{
+								"__className__": "serverpod.IndexElementDefinition",
+								"type": 0,
+								"definition": "walletAddress"
+							},
+							{
+								"__className__": "serverpod.IndexElementDefinition",
+								"type": 0,
+								"definition": "createdAt"
+							}
+						],
+						"type": "btree",
+						"isUnique": false,
+						"isPrimary": false
+					},
+					{
+						"__className__": "serverpod.IndexDefinition",
+						"indexName": "bitflip_mint_challenge_expiry_idx",
+						"elements": [
+							{
+								"__className__": "serverpod.IndexElementDefinition",
+								"type": 0,
+								"definition": "expiresAt"
+							}
+						],
+						"type": "btree",
+						"isUnique": false,
+						"isPrimary": false
+					}
+				],
+				"managed": true
+			}
+		}
+	],
+	"warnings": [],
+	"migrationApiVersion": 1
+}
