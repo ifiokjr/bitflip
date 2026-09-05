@@ -1,24 +1,3 @@
--- Enable WAL mode for better concurrency and performance
-PRAGMA journal_mode = wal;
-
--- Ensure foreign key constraints are enforced
-PRAGMA foreign_keys = ON;
-
--- Keep the per-connection page cache bounded to roughly 20 MiB
-PRAGMA cache_size = -20000;
-
--- Allow a bounded 256 MiB memory-mapped read window
-PRAGMA mmap_size = 268435456;
-
--- Set temp store to memory for faster temp operations
-PRAGMA temp_store = memory;
-
--- Enable auto_vacuum to keep the database file size in check
-PRAGMA auto_vacuum = incremental;
-
--- Set page size (must be power of 2, default is 4096)
-PRAGMA page_size = 4096;
-
 -- Create a game table
 CREATE TABLE IF NOT EXISTS games (
 	id TEXT PRIMARY KEY,

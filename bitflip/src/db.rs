@@ -1,5 +1,6 @@
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Context;
 use bitflip_program::BITFLIP_SECTION_LENGTH;
@@ -14,10 +15,13 @@ use serde::Deserialize;
 use serde::Serialize;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
+use sqlx::sqlite::SqliteConnectOptions;
+use sqlx::sqlite::SqliteJournalMode;
+use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::sqlite::SqliteSynchronous;
 use uuid::Uuid;
 use welds::WeldsModel;
 use welds::connections::sqlite::SqliteClient;
-use welds::connections::sqlite::connect;
 use welds::state::DbState;
 
 use crate::AppResult;
@@ -30,9 +34,22 @@ pub struct Db(#[debug(skip)] Arc<SqliteClient>);
 
 impl Db {
 	pub async fn try_new(connection_string: &str) -> AppResult<Self> {
-		let connection = connect(connection_string)
+		let options = SqliteConnectOptions::from_str(connection_string)
+			.context("invalid SQLite connection string")?
+			.journal_mode(SqliteJournalMode::Wal)
+			.synchronous(SqliteSynchronous::Normal)
+			.foreign_keys(true)
+			.busy_timeout(Duration::from_secs(5))
+			.pragma("cache_size", "-20000")
+			.pragma("mmap_size", "268435456")
+			.pragma("temp_store", "memory")
+			.pragma("auto_vacuum", "incremental")
+			.pragma("page_size", "4096");
+		let pool = SqlitePoolOptions::new()
+			.connect_with(options)
 			.await
 			.context("could not connect to the database")?;
+		let connection = SqliteClient::from(pool);
 
 		Ok(Arc::new(connection).into())
 	}
@@ -646,6 +663,24 @@ mod tests {
 		.await?;
 
 		assert_eq!(remaining_tables, 0);
+
+		Ok(())
+	}
+
+	#[test(tokio::test)]
+	async fn migrations_run_against_a_file_database() -> AppResult<()> {
+		let path = std::env::temp_dir().join(format!("bitflip-{}.db", Uuid::now_v7()));
+		let connection_string = format!("sqlite://{}?mode=rwc", path.display());
+		let db = Db::try_new(&connection_string).await?;
+
+		sqlx::migrate!("../migrations")
+			.run(db.as_sqlx_pool())
+			.await?;
+		db.as_sqlx_pool().close().await;
+
+		for suffix in ["", "-shm", "-wal"] {
+			let _ = std::fs::remove_file(format!("{}{suffix}", path.display()));
+		}
 
 		Ok(())
 	}

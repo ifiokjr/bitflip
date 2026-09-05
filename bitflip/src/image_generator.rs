@@ -1,4 +1,5 @@
 use axum::extract::Path;
+use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use bitflip_program::SectionState;
@@ -9,8 +10,10 @@ use tiny_skia::Transform;
 
 use crate::AppError;
 use crate::color_projection::ColorPixel;
+use crate::color_projection::load_section_colors;
 use crate::colors::COLOR_PALETTE;
 use crate::get_section_state;
+use crate::state::AppState;
 
 /// Generate an image for a section of the Bitflip game state.
 ///
@@ -83,14 +86,15 @@ fn pixel_coordinates(array_index: u8, offset: u8) -> (u8, u8) {
 
 #[allow(clippy::unused_async)]
 pub async fn section_image_handler(
+	State(state): State<AppState>,
 	Path((game_index, section_index)): Path<(u8, u8)>,
 ) -> Result<impl IntoResponse, AppError> {
-	// Use a deterministic seed based on the section index
 	let section_state = get_section_state(game_index, section_index)
 		.await
 		.map_err(|e| anyhow::anyhow!("Failed to get section state: {}", e))?;
+	let colors = load_section_colors(state.db.as_sqlx_pool(), game_index, section_index).await?;
 
-	let png_data = generate_section_image(&section_state);
+	let png_data = generate_colored_section_image(&section_state, &colors);
 
 	Ok((StatusCode::OK, [("Content-Type", "image/png")], png_data))
 }

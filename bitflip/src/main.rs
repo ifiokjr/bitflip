@@ -2,11 +2,18 @@
 
 #[cfg(feature = "ssr")]
 #[tokio::main]
-async fn main() {
+async fn main() -> bitflip::AppResult<()> {
+	use std::sync::Arc;
+
 	use axum::Router;
+	use axum::extract::State;
+	use axum::http::StatusCode;
 	use axum::routing::get;
 	use bitflip::app::*;
+	use bitflip::db::Db;
 	use bitflip::image_generator::section_image_handler;
+	use bitflip::state::AppState;
+	use bitflip::state::AppStateConfig;
 	use leptos::prelude::*;
 	use leptos_axum::LeptosRoutes;
 	use leptos_axum::generate_route_list;
@@ -16,10 +23,20 @@ async fn main() {
 	use tower_http::compression::predicate::NotForContentType;
 	use tower_http::compression::predicate::SizeAbove;
 
-	simple_logger::init_with_level(log::Level::Debug).expect("couldn't initialize logging");
-	let conf = get_configuration(None).unwrap();
+	simple_logger::init_with_level(log::Level::Info)?;
+	let conf = get_configuration(None)?;
 	let addr = conf.leptos_options.site_addr;
 	let leptos_options = conf.leptos_options;
+	let config = Arc::new(AppStateConfig::from_env()?);
+	let db = Db::try_new(config.database_url.as_str()).await?;
+	sqlx::migrate!("../migrations")
+		.run(db.as_sqlx_pool())
+		.await?;
+	let state = AppState::builder()
+		.leptos(leptos_options.clone())
+		.config(config)
+		.db(db)
+		.build();
 	// Generate the list of routes in your Leptos App
 	let routes = generate_route_list(App);
 
@@ -33,7 +50,7 @@ async fn main() {
 		.and(NotForContentType::const_new("text/css"));
 
 	let app = Router::new()
-		.leptos_routes(&leptos_options, routes, {
+		.leptos_routes(&state, routes, {
 			let leptos_options = leptos_options.clone();
 			move || shell(leptos_options.clone())
 		})
@@ -46,19 +63,27 @@ async fn main() {
 			"/game/{game_index}/section-image/{section_index}",
 			get(section_image_handler),
 		)
-		.fallback(leptos_axum::file_and_error_handler::<LeptosOptions, _>(
-			shell,
-		))
-		.with_state(leptos_options);
+		.route(
+			"/healthz",
+			get(|State(state): State<AppState>| async move {
+				sqlx::query_scalar::<_, i64>("SELECT 1")
+					.fetch_one(state.db.as_sqlx_pool())
+					.await
+					.map(|_| StatusCode::NO_CONTENT)
+					.map_err(bitflip::AppError::from)
+			}),
+		)
+		.fallback(leptos_axum::file_and_error_handler::<AppState, _>(shell))
+		.with_state(state);
 
 	// run our app with hyper
 	// `axum::Server` is a re-export of `hyper::Server`
 	log::info!("listening on http://{}", &addr);
-	let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+	let listener = tokio::net::TcpListener::bind(&addr).await?;
 
-	axum::serve(listener, app.into_make_service())
-		.await
-		.unwrap();
+	axum::serve(listener, app.into_make_service()).await?;
+
+	Ok(())
 }
 
 // client-only stuff for Trunk
