@@ -218,6 +218,7 @@ in
         set -euo pipefail
         rustup toolchain install "$PINA_LINT_TOOLCHAIN" \
           --profile minimal \
+          --component llvm-tools-preview \
           --component rustc-dev \
           --component rust-src
       '';
@@ -352,6 +353,16 @@ in
         set -euo pipefail
         install:pina-lint
         cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+        lint_sysroot="$(rustup run "$PINA_LINT_TOOLCHAIN" rustc --print sysroot)"
+        export LIBRARY_PATH="$lint_sysroot/lib''${LIBRARY_PATH:+:$LIBRARY_PATH}"
+        export RUSTFLAGS="-Lnative=$lint_sysroot/lib''${RUSTFLAGS:+ $RUSTFLAGS}"
+        if [ "$(uname -s)" = "Darwin" ]; then
+          export DYLD_FALLBACK_LIBRARY_PATH="$lint_sysroot/lib''${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
+        else
+          export LD_LIBRARY_PATH="$lint_sysroot/lib''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+        fi
+
         RUSTUP_TOOLCHAIN="$PINA_LINT_TOOLCHAIN" \
           pina lint --project "$DEVENV_ROOT/bitflip_program"
       '';
@@ -470,7 +481,10 @@ in
         set -euo pipefail
         ${resolveFlutterSdk}
         cd "$DEVENV_ROOT/${serverDir}"
-        "$flutter_sdk/bin/dart" test --exclude-tags surfpool
+        "$flutter_sdk/bin/dart" test \
+          --exclude-tags surfpool \
+          --reporter expanded \
+          --chain-stack-traces
       '';
       description = "Run Serverpod unit and embedded-PostgreSQL integration tests.";
       binary = "bash";
