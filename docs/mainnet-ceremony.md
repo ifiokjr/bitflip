@@ -7,7 +7,7 @@ This ceremony requires two people: an operator and an independent witness. Do no
 1. Freeze the reviewed commit and record its full Git SHA.
 2. Resolve or explicitly accept every independent program/operator audit finding.
 3. Run `audit:security`, `lint:all`, `test:all`, and all release builds from a clean checkout.
-4. Build the SBF artifact twice in isolated clean environments. Record both SHA-256 values and stop if they differ.
+4. Build the SBF artifact twice in isolated clean environments with `build:program`. Confirm the recorded feature set contains `bpf-entrypoint` and does **not** contain `sbf-test-authority`; that feature embeds a public test key and must never appear in a deployable artifact. Record both SHA-256 values and stop if they differ.
 5. Verify the deployed program against the reviewed source with `solana-verify` and preserve its output.
 
 ## Keys and authorities

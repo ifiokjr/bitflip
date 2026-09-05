@@ -504,9 +504,16 @@ in
     "test:surfpool" = {
       exec = ''
         set -euo pipefail
-        pina test --project "$DEVENV_ROOT/bitflip_program"
+        pina build \
+          --project "$DEVENV_ROOT/bitflip_program" \
+          --features sbf-test-authority
+        PINA_SBF_ARTIFACT="$DEVENV_ROOT/target/deploy/bitflip_program.so" \
+          cargo test \
+            --manifest-path "$DEVENV_ROOT/bitflip_program/tests/surfpool/Cargo.toml" \
+            -- \
+            --ignored
       '';
-      description = "Build the real SBF artifact and test it in isolated Surfpool.";
+      description = "Build a test-authority SBF artifact and run adversarial isolated Surfpool tests.";
       binary = "bash";
     };
     "fetch:surfpool-programs" = {

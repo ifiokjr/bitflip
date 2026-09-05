@@ -15,6 +15,9 @@ crate-type = ["cdylib", "lib"]
 
 [features]
 bpf-entrypoint = []
+# Never enable this in a deployable build. It exists only so the isolated SBF
+# suite can sign authority-gated instructions with a public test key.
+sbf-test-authority = []
 
 [dependencies]
 pina = { workspace = true, default-features = false, features = ["derive", "logs"] }
