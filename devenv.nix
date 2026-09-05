@@ -192,9 +192,21 @@
       description = "Build all crates with all features activated.";
       binary = "bash";
     };
+    "build:css" = {
+      exec = ''
+        set -e
+        pnpm dlx @tailwindcss/cli@4.1.2 \
+          --input "$DEVENV_ROOT/bitflip/style/input.css" \
+          --output "$DEVENV_ROOT/bitflip/style/output.css" \
+          --minify
+      '';
+      description = "Build the Tailwind CSS bundle.";
+      binary = "bash";
+    };
     "build:web" = {
       exec = ''
         set -e
+        build:css
         cargo bin wasm-bindgen-cli --version
 
         CARGO_BIN_ROOT="$DEVENV_ROOT/.bin/rust-$(rustc --version | cut -d ' ' -f 2)"
