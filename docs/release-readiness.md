@@ -48,9 +48,14 @@ SOLANA_RPC_URL=https://...
 BITFLIP_METADATA_BASE_URL=https://...
 BITFLIP_MERKLE_TREE=<private Bubblegum tree address>
 BITFLIP_OPERATOR_PRIVATE_KEY=<secret JSON byte array>
+BITFLIP_PRIORITY_FEE_MICROLAMPORTS=<explicit non-negative integer>
 ```
 
-Serverpod database passwords and service secrets remain required by Serverpod. The server validates the tree address and signer encoding before it starts.
+Optional bounded reliability settings are `BITFLIP_RPC_TIMEOUT_SECONDS` (2–60, default 12) and `BITFLIP_MINT_MAX_ATTEMPTS` (1–5, default 3). Serverpod database passwords and service secrets remain required by Serverpod. The server validates the tree address, signer encoding, and operator fee policy before it starts.
+
+The public challenge endpoint is rate limited per source and globally within each process before any Solana RPC work begins. Production ingress must enforce the same policy across replicas; abandoned challenges never consume a wallet-specific quota. Mint work is rejected when operator capacity is full, runs outside database transactions, uses explicit RPC deadlines and priority fees, and retries from fresh on-chain state.
+
+Serverpod exposes `/livez`, `/readyz`, and `/startupz` on the API service. Production deployment probes all three and alerts on readiness failures. The production configuration disables Serverpod Insights; logs and metrics are exported through the private observability pipeline instead.
 
 ## Metadata permanence
 
