@@ -1,12 +1,16 @@
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::io::Write;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::time::Duration;
 use std::time::SystemTime;
 
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use bitflip_cli::emoji;
+use bitflip_cli::Spinner;
 use bitflip_program::config_initialize;
 use bitflip_program::config_update_authority;
 use bitflip_program::game_initialize;
@@ -40,10 +44,6 @@ use test_utils_keypairs::get_treasury_keypair;
 use test_utils_keypairs::get_wallet_keypair;
 use test_utils_solana::TestValidatorPorts;
 use wasm_client_solana::SolanaRpcClient;
-
-mod emoji;
-mod spinner;
-use spinner::Spinner;
 use wasm_client_solana::VersionedTransactionExtension;
 
 #[derive(Clone, Debug, ValueEnum, PartialEq, Eq)]
@@ -173,6 +173,45 @@ struct ValidatorArgs {
 	/// Optional pubkeys to fund with SOL
 	#[arg(long = "pubkey", value_name = "PUBKEY")]
 	pubkeys: Vec<Pubkey>,
+
+	/// The program to deploy to the validator. It is a space separated tuple of
+	/// the program address and the path to the program.
+	/// `--program "<PUBKEY> <PATH>"`
+	#[arg(long, value_name = "PUBKEY> <PATH", default_value_t)]
+	program: PubkeyPath,
+}
+
+#[derive(Clone, Debug)]
+struct PubkeyPath {
+	pubkey: Pubkey,
+	path: PathBuf,
+}
+
+impl Default for PubkeyPath {
+	fn default() -> Self {
+		Self {
+			pubkey: ID,
+			path: PathBuf::from("./target/deploy/bitflip_program.so"),
+		}
+	}
+}
+
+impl FromStr for PubkeyPath {
+	type Err = anyhow::Error;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		let parts: Vec<&str> = s.split_whitespace().collect();
+		Ok(Self {
+			pubkey: Pubkey::from_str(parts[0]).context("Invalid pubkey")?,
+			path: PathBuf::from(parts[1]),
+		})
+	}
+}
+
+impl Display for PubkeyPath {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{} {}", self.pubkey, self.path.display())
+	}
 }
 
 impl ValidatorArgs {
@@ -325,10 +364,9 @@ async fn main() -> Result<()> {
 				"blue",
 			);
 			let accounts = create_validator_accounts(args)?;
-			let devenv_root = std::env::var("DEVENV_ROOT").unwrap();
 			let launchpad_program = test_utils_solana::TestProgramInfo::builder()
-				.program_id(ID)
-				.program_path(format!("{devenv_root}/target/deploy/bitflip_program.so"))
+				.program_id(args.program.pubkey)
+				.program_path(&args.program.path)
 				.build();
 			let mut pubkeys = vec![
 				get_admin_keypair().pubkey(),

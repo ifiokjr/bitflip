@@ -28,15 +28,10 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           nix-cache: /tmp/nixcache
-          deno-cache: /tmp/denocache
 
       - name: lint formatting
         run: task lint:format
-        shell: bash
-
-      - name: lint formatting
-        run: task lint:deno
-        shell: bash
+        shell: devenv shell bash -- -e {0}
 
       - uses: clechasseur/rs-clippy-check@v3
         with:
@@ -59,11 +54,10 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           nix-cache: /tmp/nixcache
-          deno-cache: /tmp/denocache
 
       - name: test ${{ matrix.test }}
         run: cargo ${{ matrix.test }}
-        shell: bash
+        shell: devenv shell bash -- -e {0}
 
   build_bitflip_program:
     timeout-minutes: 60
@@ -77,11 +71,10 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           nix-cache: /tmp/nixcache
-          deno-cache: /tmp/denocache
 
       - name: build
         run: task build:program
-        shell: bash
+        shell: devenv shell bash -- -e {0}
 
       - name: upload bitflip program
         uses: actions/upload-artifact@v4
@@ -102,7 +95,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           nix-cache: /tmp/nixcache
-          deno-cache: /tmp/denocache
 
       - name: download bitflip program
         uses: actions/download-artifact@v4
@@ -112,7 +104,7 @@ jobs:
 
       - name: test
         run: cargo test_program_validator
-        shell: bash
+        shell: devenv shell bash -- -e {0}
 
   build_bitflip_website:
     timeout-minutes: 60
@@ -126,8 +118,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           nix-cache: /tmp/nixcache
-          deno-cache: /tmp/denocache
 
       - name: build
         run: task build
-        shell: bash
+        shell: devenv shell bash -- -e {0}

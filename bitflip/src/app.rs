@@ -1,6 +1,5 @@
 use leptos::prelude::*;
 use leptos_meta::provide_meta_context;
-use leptos_meta::Html;
 use leptos_meta::MetaTags;
 use leptos_meta::Stylesheet;
 use leptos_meta::Title;
@@ -40,9 +39,9 @@ pub fn App() -> impl IntoView {
 	provide_meta_context();
 
 	view! {
-		<Html attr:data-theme="light" />
 		<Stylesheet id="css-font" href="https://fonts.googleapis.com/css?family=Press+Start+2P" />
 		<Stylesheet id="css-leptos" href="/pkg/bitflip.css" />
+		// <BrowserWalletWidget auto_register=true wallet_name="bitflip" />
 
 		// sets the document title
 		<Title text="bitflip" />
@@ -73,7 +72,11 @@ pub fn HomePage() -> impl IntoView {
 				// Main game grid container with navigation arrows
 				<div class="flex-grow p-0 nes-container is-rounded aspect-square">
 					{move || {
-						view! { <SectionCanvas /> }
+						view! {
+							<Suspense fallback=|| "Loading...">
+								<SectionCanvas />
+							</Suspense>
+						}
 					}}
 				</div>
 				<div class="h-4" />

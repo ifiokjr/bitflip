@@ -5,7 +5,6 @@
 		"ms-playwright.playwright",
 		"rust-lang.rust-analyzer",
 		"vadimcn.vscode-lldb",
-		"bradlc.vscode-tailwindcss",
-		"denoland.vscode-deno"
+		"bradlc.vscode-tailwindcss"
 	]
 }

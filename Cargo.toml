@@ -1,5 +1,5 @@
 [workspace]
-members = ["bitflip", "bitflip_cli", "bitflip_program", "bitflip_program_test"]
+members = ["bitflip", "bitflip_cli", "bitflip_program", "bitflip_program_test", "solapino"]
 resolver = "2"
 
 [workspace.package]
@@ -9,41 +9,43 @@ edition = "2021"
 homepage = "https://bitflip.art"
 license = "Apache-2.0"
 repository = "https://github.com/ifiokjr/bitflip"
-rust-version = "1.83.0"
+rust-version = "1.85.0"
 
 [workspace.dependencies]
 aes-gcm-siv = "0.11"
-anyhow = "1"
+anyhow = { default-features = false, version = "^1" }
 argon2 = "0.5"
-assert2 = "0.3"
+assert2 = { default-features = false, version = "^0.3" }
 assert_matches = "1"
 async-trait = "0.1"
-axum = "0.7"
+axum = "0.8"
 base64 = "0.22"
 bincode = "1"
+bip32 = "0.5"
 bitflags = "2"
 bs58 = "0.5"
-bytemuck = "1"
+bytemuck = { default-features = false, version = "^1" }
 cfg-if = "1"
-check_keyword = "0.3"
-chrono = { version = "0.4", features = ["serde"] }
+check_keyword = "0.4"
+chrono = { version = "0.4", features = ["serde"], default-features = false }
 chrono-humanize = "0.2"
-codee = "0.2"
-colored = "2"
-console = "0.15"
+codee = "0.3"
+colored = "3"
+console = "0.16"
 console_error_panic_hook = "0.1"
 console_log = "1"
 const_str_to_pubkey = "0.2"
 crossbeam-channel = "0.5"
 cuid2 = "0.1"
 default-env = "0.1"
+deli = "0.2"
 derive-where = "1"
-derive_more = "1"
+derive_more = { default-features = false, version = "^2" }
 dom_testing_library = "0.1"
 dotenvy = "0.15"
 env_logger = "0.11"
-fake = "3"
-fixed = "=1.28.0"
+fake = "4"
+fixed = { default-features = false, version = "=1.29" }
 fixed_math = "0.4"
 futures = "0.3"
 futures-timeout = "0.1"
@@ -58,114 +60,117 @@ heck = "0.5"
 hmac = "0.12"
 http = "1"
 hyper = "1"
+idb = "0.6"
 image = "0.25"
 imagesize = "0.13"
 indexmap = "2"
-indicatif = "0.17"
-insta = "1"
+indicatif = "0.18"
+insta = { default-features = false, version = "^1" }
 js-sys = "0.3"
 jsonwebtoken = "9"
 lazy_static = "1"
-leptos = "0.7"
-leptos-use = "0.15"
-leptos_axum = "0.7"
-leptos_dom = "0.7"
-leptos_meta = "0.7"
-leptos_router = "0.7"
-log = "0.4"
-memory_wallet = "0.1"
+leptos = "0.8"
+leptos-fetch = "0.4.4"
+leptos-use = "0.16"
+leptos_axum = "0.8"
+leptos_dom = "0.8"
+leptos_meta = "0.8"
+leptos_router = "0.8"
+log = { default-features = false, version = "^0.4" }
+memory_wallet = { default-features = false, version = "^0.1" }
 mime_guess = "2"
-num_enum = "0.7"
+num_enum = { default-features = false, version = "^0.7" }
 paste = "1"
-port_check = "0.2"
-rand = "0.8"
-reactive_stores = "0.1"
+port_check = "0.3"
+rand = "0.9"
+reactive_stores = "0.2"
 regex = "1"
-retrier = "0.1"
-rstest = "0.23"
+retrier = "0.2"
+rstest = { default-features = false, version = "^0.26" }
 rust-embed = "8"
-serde = "1"
-serde-big-array = "0.5"
+serde = { default-features = false, version = "^1" }
+serde-big-array = { default-features = false, version = "^0.5" }
 serde-wasm-bindgen = "0.6"
-serde_json = "1"
-serde_qs = "0.13"
+serde_json = { default-features = false, version = "^1" }
+serde_qs = "0.15"
 serde_with = "3"
-server_fn = "0.7"
+server_fn = "0.8"
 sha2 = "0.10"
 similar-asserts = "1"
 simple_logger = "5"
-solana-address-lookup-table-program = "=2.1"
-solana-banks-client = "=2.1"
-solana-banks-interface = "=2.1"
-solana-client = "=2.1"
-solana-config-program = "=2.1"
-solana-faucet = "=2.1"
-solana-package-metadata = "=2.1"
-solana-program = "=2.1"
-solana-program-runtime = "=2.1"
-solana-program-test = "=2.1"
-solana-rpc = "=2.1"
-solana-sdk = "=2.1"
+solana-address-lookup-table-program = "2"
+solana-banks-client = "2"
+solana-banks-interface = "2"
+solana-client = "2"
+solana-config-program = "2"
+solana-faucet = "2"
+solana-package-metadata = "2"
+solana-program = { default-features = false, version = "2" }
+solana-program-runtime = "2"
+solana-program-test = { default-features = false, version = "2" }
+solana-rpc = "2"
+solana-sdk = { default-features = false, version = "2" }
 solana-security-txt = "1"
-solana-streamer = "=2.1"
-solana-test-validator = "=2.1"
-solana-version = "=2.1"
-spl-associated-token-account = "6"
+solana-streamer = "2"
+solana-test-validator = "2"
+solana-version = "2"
+spl-associated-token-account = { default-features = false, version = "^7" }
 spl-memo = "6"
-spl-pod = "0.5"
-spl-tlv-account-resolution = "0.9"
-spl-token = "7"
-spl-token-2022 = "6"
-spl-token-group-interface = "0.5"
-spl-token-metadata-interface = "0.6"
-spl-transfer-hook-interface = "0.9"
-spl-type-length-value = "0.7"
+spl-pod = { default-features = false, version = "^0.7" }
+spl-tlv-account-resolution = "0.11"
+spl-token = "8"
+spl-token-2022 = { default-features = false, version = "^9" }
+spl-token-group-interface = { default-features = false, version = "^0.7" }
+spl-token-metadata-interface = { default-features = false, version = "^0.8" }
+spl-transfer-hook-interface = "0.10"
+spl-type-length-value = { default-features = false, version = "^0.9" }
 sqlx = "0.8"
 static_assertions = "1"
-steel = { git = "https://github.com/ifiokjr/steel", rev = "8c31249" }
-strum = "0.26"
+steel = { git = "https://github.com/ifiokjr/steel", rev = "1d3a37b", default-features = false }
+strum = { default-features = false, version = "^0.27" }
 tailwind_fuse = "0.3"
-test-log = "0.2"
-test_utils_insta = "0.1"
-test_utils_keypairs = "0.1"
-test_utils_solana = "0.7"
-thiserror = "2"
+test-log = { default-features = false, version = "^0.2" }
+test_utils_insta = { default-features = false, version = "^0.1" }
+test_utils_keypairs = { default-features = false, version = "^0.1" }
+test_utils_solana = { default-features = false, version = "^0.7" }
+thiserror = { default-features = false, version = "^2" }
+tiny-bip39 = "2"
 tiny-skia = "0.11"
-tokio = "1"
+tokio = { default-features = false, version = "^1" }
 tower = "0.5"
 tower-http = "0.6"
-tower_governor = "0.5"
+tower_governor = "0.8"
 tracing = "0.1"
-typed-builder = "0.20"
+typed-builder = { default-features = false, version = "^0.21" }
 uint = "0.10"
-url = "2"
+url = { default-features = false, version = "^2" }
 urlencoding = "2"
 uuid = "1"
-validator = { version = "0.19", features = ["derive"] }
+validator = { version = "0.20", features = ["derive"] }
 wallet_standard = "0.4"
 wallet_standard_browser = "0.4"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 wasm-bindgen-test = "0.3"
-wasm_client_solana = "0.7"
+wasm_client_solana = { default-features = false, version = "^0.8" }
 web-sys = "0.3"
 welds = "0.4"
 
 # internal crates
-bitflip_cli = { path = "./bitflip_cli", version = "0.0.0" }
-bitflip_program = { path = "./bitflip_program", version = "0.0.0" }
-bitflip_program_test = { path = "./bitflip_program_test", version = "0.0.0" }
+bitflip_program = { path = "./bitflip_program" }
+bitflip_program_test = { path = "./bitflip_program_test" }
+solapino = { path = "./solapino" }
 
 [workspace.metadata.bin]
-cargo-insta = { version = "1.41.1" }
-cargo-leptos = { version = "0.2.24" }
-cargo-llvm-cov = { version = "0.6.14" }
-cargo-nextest = { version = "0.9.87" }
-leptosfmt = { version = "0.1.32", bins = ["leptosfmt"] }
+cargo-easy-dep = { version = "0.1.1" }
+cargo-insta = { version = "1.43" }
+cargo-interactive-update = { version = "0.6.2" }
+cargo-leptos = { version = "0.2.42" }
+cargo-llvm-cov = { version = "0.6.18" }
+cargo-nextest = { version = "0.9.103" }
+leptosfmt = { version = "0.1.33", bins = ["leptosfmt"], git = "https://github.com/bram209/leptosfmt", rev = "8b4194b" }
 query-security-txt = { version = "1.1.1", bins = ["query-security-txt"] }
-solana-verify = { version = "0.4.0", bins = ["solana-verify"] }
-sqlx-cli = { version = "0.8.2", bins = ["sqlx"] }
-welds-cli = { version = "0.4.2", bins = ["welds"] }
+solana-verify = { version = "0.4.11", bins = ["solana-verify"] }
 
 [workspace.metadata.solana]
 tools-version = "1.43"

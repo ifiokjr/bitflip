@@ -109,3 +109,12 @@ for (const extension of EXTENSIONS) {
 }
 
 await Promise.all(promises);
+
+let a = await crypto.subtle.generateKey(
+	{
+		name: "AES-GCM",
+		length: 256,
+	},
+	true,
+	["encrypt", "decrypt"],
+);

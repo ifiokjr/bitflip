@@ -43,7 +43,7 @@ async fn main() {
 				.compress_when(predicate),
 		)
 		.route(
-			"/game/:game_index/section-image/:section_index",
+			"/game/{game_index}/section-image/{section_index}",
 			get(section_image_handler),
 		)
 		.fallback(leptos_axum::file_and_error_handler::<LeptosOptions, _>(

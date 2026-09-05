@@ -7,9 +7,6 @@ inputs:
   nix-cache:
     description: The location of the nix cache
     required: true
-  deno-cache:
-    description: The location of the deno cache
-    required: true
 
 runs:
   using: composite
@@ -31,15 +28,6 @@ runs:
         path: ${{ inputs.nix-cache }}
         key: ${{ runner.os }}-nix-cache-${{ hashFiles('**/devenv.nix', '**/devenv.yaml', '**/devenv.lock') }}
         restore-keys: ${{ runner.os }}-nix-cache-
-
-    - name: cache deno store
-      uses: actions/cache@v4
-      id: deno-cache
-      with:
-        path: ${{ inputs.deno-cache }}
-        key: ${{ runner.os }}-deno-cache-${{ hashFiles('deno.lock') }}
-        restore-keys: ${{ runner.os }}-deno-cache
-
     - name: install nix
       uses: cachix/install-nix-action@v27
       with:
@@ -63,10 +51,6 @@ runs:
 
     - name: build developer environment
       run: devenv test
-      shell: bash
-
-    - name: update path with devenv
-      run: devenv shell setup:ci
       shell: bash
 
     - name: export nix store cache
@@ -97,4 +81,4 @@ runs:
 
     - name: install dependencies
       run: install:all
-      shell: bash
+      shell: devenv shell bash -- -e {0}

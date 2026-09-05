@@ -1,0 +1,39 @@
+[package]
+name = "solapino"
+version = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+keywords = ["solana", "pinocchio"]
+license = { workspace = true }
+readme = { workspace = true }
+repository = { workspace = true }
+description = "Solana pinocchio smart contract framework"
+
+[features]
+deafult = []
+logs = [] # Enable logging for validation errors
+token = [
+	"dep:pinocchio-associated-token-account",
+	"dep:pinocchio-token",
+	"dep:pinocchio-token-2022",
+]
+
+[dependencies]
+bytemuck = "1"
+num_enum = "0.7.4"
+paste = "1.0.15"
+pinocchio = "0.9.1"
+pinocchio-associated-token-account = { version = "0.2.0", optional = true }
+pinocchio-memo = "0.2.0"
+pinocchio-pubkey = "0.3.0"
+pinocchio-system = "0.3.0"
+pinocchio-token = { version = "0.4.0", optional = true }
+pinocchio-token-2022 = { version = "0.1.0", optional = true }
+pinocchio-util = { version = "0.1.0", features = ["derive"] }
+
+[dev-dependencies]
+thiserror = "2"
+
+[[example]]
+name = "simple"
+crate-type = ["staticlib"]

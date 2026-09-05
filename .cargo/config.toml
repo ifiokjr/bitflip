@@ -1,11 +1,10 @@
 [alias]
-# bins
+easy-dep = ["bin", "cargo-easy-dep"]
+insta = ["bin", "cargo-insta"]
+interactive-update = ["bin", "cargo-interactive-update"]
+leptos = ["bin", "cargo-leptos"]
 llvm-cov = ["bin", "cargo-llvm-cov"]
 nextest = ["bin", "cargo-nextest"]
-insta = ["bin", "cargo-insta"]
-leptos = ["bin", "cargo-leptos"]
-mutants = ["bin", "cargo-mutants"]
-make = ["bin", "cargo-make"]
 
 test_program = ["nextest", "run", "-p", "bitflip_program_test", "-p", "bitflip_program", "-F", "ssr,client"]
 test_program_validator = ["nextest", "run", "-p", "bitflip_program_test", "-F", "ssr,test_validator"]
