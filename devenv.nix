@@ -329,6 +329,9 @@ in
         set -euo pipefail
         ${resolveFlutterSdk}
         ${releaseAppDefines}
+        if [ "$BITFLIP_ENVIRONMENT" != "production" ]; then
+          export BITFLIP_ALLOW_DEBUG_RELEASE_SIGNING=true
+        fi
         cd "$DEVENV_ROOT/${appDir}"
         exec "$flutter_sdk/bin/flutter" build appbundle \
           --release \

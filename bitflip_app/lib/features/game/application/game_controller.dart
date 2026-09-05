@@ -88,7 +88,9 @@ final class GameViewState {
   BigInt get queuedFee => snapshot.flipFeeLamports * BigInt.from(queued.length);
 
   bool get canTransact =>
-      snapshot.isDemo || (isWalletSupported && walletAddress != null);
+      (loadStatus == GameLoadStatus.ready ||
+          loadStatus == GameLoadStatus.demo) &&
+      (snapshot.isDemo || (isWalletSupported && walletAddress != null));
 
   GameViewState copyWith({
     GameSnapshot? snapshot,

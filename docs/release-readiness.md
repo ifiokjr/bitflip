@@ -18,6 +18,14 @@ Bitflip releases in three deliberately separate milestones. Passing one does not
 - iOS and macOS builds are signed/notarized using store credentials. CI only proves that unsigned release compilation succeeds until those credentials are provisioned.
 - Privacy policy, support URL, store disclosures, screenshots, and irreversible fee/sealing terms have been approved.
 
+### Physical-device evidence
+
+| Device        | OS                  | Artifact                                                    | MWA discovery | Cancellation                                                                | Authorization | Unavailable-state guard                                                          |
+| ------------- | ------------------- | ----------------------------------------------------------- | ------------- | --------------------------------------------------------------------------- | ------------- | -------------------------------------------------------------------------------- |
+| Solana Seeker | Android 16 / API 36 | Release APK, staging configuration, explicitly debug-signed | Pass          | Returns safely to Bitflip; the wallet may restore an existing authorization | Pass          | Pass: claim remains disabled after authorization when chain state is unavailable |
+
+This smoke test does not replace the native-beta matrix above. In particular, no transaction was submitted, the installed artifact was not signed with the production key, and first-time rejection remains covered by automated tests until it can be exercised without deleting wallet-owned key material.
+
 ## 3. Mainnet
 
 - Complete every step in [mainnet-ceremony.md](mainnet-ceremony.md).
@@ -38,6 +46,8 @@ BITFLIP_GAME_INDEX=0..255
 ```
 
 Use `build:web`, `build:android:release`, `build:ios:release`, or `build:macos:release`. These commands refuse to start without every value. Production additionally requires mainnet and public HTTPS endpoints. The app performs the same validation at startup so bypassing the wrapper cannot create a silently misconfigured release.
+
+Android production releases additionally require `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`. Non-production `build:android:release` runs opt in to debug signing so the exact release artifact can be installed on physical devices; production can never take that fallback.
 
 The production server must set:
 
