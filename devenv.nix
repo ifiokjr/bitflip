@@ -35,6 +35,10 @@
     ];
 
   env.EGET_CONFIG = "${config.env.DEVENV_ROOT}/.eget/.eget.toml";
+  # Solana 2.1 vendors a RocksDB release whose public headers use fixed-width
+  # integer types without including <cstdint>. GCC 15 no longer exposes those
+  # names transitively, so inject the missing standard header for C++ builds.
+  env.CXXFLAGS = lib.optionalString pkgs.stdenv.isLinux "-include cstdint";
   env.LIBCLANG_PATH = lib.makeSearchPath "lib" [ pkgs.llvmPackages.libclang.lib ];
   env.LD_LIBRARY_PATH = lib.optionalString pkgs.stdenv.isLinux (
     lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]
