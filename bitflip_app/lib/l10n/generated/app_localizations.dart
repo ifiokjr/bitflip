@@ -184,6 +184,24 @@ abstract class AppLocalizations {
   /// **'Showing a local signal while this deployment has no live game data.'**
   String get demoNotice;
 
+  /// No description provided for @gameLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading live on-chain canvas state…'**
+  String get gameLoading;
+
+  /// No description provided for @gameUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This game has not been initialized on the configured network.'**
+  String get gameUnavailable;
+
+  /// No description provided for @gameOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Live chain state is unavailable. No demo data has been substituted; retry when the connection returns.'**
+  String get gameOffline;
+
   /// No description provided for @canvasLabel.
   ///
   /// In en, this message translates to:
@@ -286,6 +304,18 @@ abstract class AppLocalizations {
   /// **'LIT PIXELS'**
   String get onPixels;
 
+  /// No description provided for @network.
+  ///
+  /// In en, this message translates to:
+  /// **'NETWORK'**
+  String get network;
+
+  /// No description provided for @revision.
+  ///
+  /// In en, this message translates to:
+  /// **'REVISION'**
+  String get revision;
+
   /// No description provided for @pixelCount.
   ///
   /// In en, this message translates to:
@@ -327,6 +357,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'SEAL ARTWORK'**
   String get sealArtwork;
+
+  /// No description provided for @confirmSealTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Seal this artwork permanently?'**
+  String get confirmSealTitle;
+
+  /// No description provided for @confirmSealBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Sealing cannot be undone. Confirm the sector, network, wallet, and final pixels before continuing.'**
+  String get confirmSealBody;
+
+  /// No description provided for @confirmSealAction.
+  ///
+  /// In en, this message translates to:
+  /// **'SEAL PERMANENTLY'**
+  String get confirmSealAction;
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'CANCEL'**
+  String get cancel;
 
   /// No description provided for @claimSector.
   ///
@@ -388,6 +442,12 @@ abstract class AppLocalizations {
   /// **'Wallet connected. You control the signing boundary.'**
   String get activityConnected;
 
+  /// No description provided for @activityClaimed.
+  ///
+  /// In en, this message translates to:
+  /// **'Sector claim confirmed on-chain.'**
+  String get activityClaimed;
+
   /// No description provided for @activitySealed.
   ///
   /// In en, this message translates to:
@@ -405,6 +465,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The chain signal dropped. Your queued moves are still safe locally.'**
   String get connectionIssue;
+
+  /// No description provided for @viewTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'VIEW CONFIRMED TRANSACTION'**
+  String get viewTransaction;
+
+  /// No description provided for @viewAsset.
+  ///
+  /// In en, this message translates to:
+  /// **'VIEW MINTED ASSET'**
+  String get viewAsset;
 
   /// No description provided for @batchFull.
   ///

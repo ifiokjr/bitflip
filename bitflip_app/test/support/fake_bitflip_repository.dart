@@ -9,20 +9,29 @@ final class FakeBitflipRepository implements BitflipRepository {
     this.isWalletSupported = true,
     this.availableWallets,
     this.walletAddress = 'DemoWallet111111111111111111111111111111111',
+    this.returnNullOnLoad = false,
+    this.loadError,
   }) : snapshot = snapshot ?? GameSnapshot.demo(sectionIndex: 12);
 
   GameSnapshot snapshot;
   @override
+  bool get isDemoMode => snapshot.isDemo;
+  @override
   final bool isWalletSupported;
+  @override
+  String get walletChain => 'solana:devnet';
   @override
   final List<BitflipWalletOption>? availableWallets;
   @override
   String? walletAddress;
+  final bool returnNullOnLoad;
+  final Object? loadError;
 
   int claimCalls = 0;
   int flipCalls = 0;
   int mintCalls = 0;
   int sealCalls = 0;
+  int loadCalls = 0;
   List<PixelCoordinate> lastFlips = const [];
   String? lastWalletId;
 
@@ -50,12 +59,21 @@ final class FakeBitflipRepository implements BitflipRepository {
   }
 
   @override
-  Future<GameSnapshot?> loadSection(int sectionIndex) async => snapshot;
+  Future<GameSnapshot?> loadSection(int sectionIndex) async {
+    loadCalls++;
+    final error = loadError;
+    if (error != null) throw error;
+    return returnNullOnLoad ? null : snapshot;
+  }
 
   @override
-  Future<String> mintSection(GameSnapshot snapshot) async {
+  Future<BitflipMintResult> mintSection(GameSnapshot snapshot) async {
     mintCalls++;
-    return 'Asset11111111111111111111111111111111111111';
+    return const BitflipMintResult(
+      assetId: 'Asset11111111111111111111111111111111111111',
+      transactionSignature: 'mint-signature',
+      alreadyMinted: false,
+    );
   }
 
   @override

@@ -60,6 +60,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Showing a local signal while this deployment has no live game data.';
 
   @override
+  String get gameLoading => 'Loading live on-chain canvas state…';
+
+  @override
+  String get gameUnavailable =>
+      'This game has not been initialized on the configured network.';
+
+  @override
+  String get gameOffline =>
+      'Live chain state is unavailable. No demo data has been substituted; retry when the connection returns.';
+
+  @override
   String get canvasLabel => 'Interactive 64 by 64 pixel sector';
 
   @override
@@ -118,6 +129,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onPixels => 'LIT PIXELS';
 
   @override
+  String get network => 'NETWORK';
+
+  @override
+  String get revision => 'REVISION';
+
+  @override
   String pixelCount(int count) {
     return '$count / 4096';
   }
@@ -143,6 +160,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sealArtwork => 'SEAL ARTWORK';
+
+  @override
+  String get confirmSealTitle => 'Seal this artwork permanently?';
+
+  @override
+  String get confirmSealBody =>
+      'Sealing cannot be undone. Confirm the sector, network, wallet, and final pixels before continuing.';
+
+  @override
+  String get confirmSealAction => 'SEAL PERMANENTLY';
+
+  @override
+  String get cancel => 'CANCEL';
 
   @override
   String get claimSector => 'CLAIM THIS SECTOR';
@@ -181,6 +211,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Wallet connected. You control the signing boundary.';
 
   @override
+  String get activityClaimed => 'Sector claim confirmed on-chain.';
+
+  @override
   String get activitySealed =>
       'Artwork sealed. Its pixels can never change again.';
 
@@ -191,6 +224,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get connectionIssue =>
       'The chain signal dropped. Your queued moves are still safe locally.';
+
+  @override
+  String get viewTransaction => 'VIEW CONFIRMED TRANSACTION';
+
+  @override
+  String get viewAsset => 'VIEW MINTED ASSET';
 
   @override
   String get batchFull => 'A transaction can contain at most 16 unique moves.';

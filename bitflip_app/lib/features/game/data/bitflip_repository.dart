@@ -10,7 +10,9 @@ import 'package:solana_kit/solana_kit.dart';
 import 'package:solana_kit_rpc_spec/solana_kit_rpc_spec.dart';
 
 abstract interface class BitflipRepository {
+  bool get isDemoMode;
   bool get isWalletSupported;
+  String get walletChain;
   List<BitflipWalletOption>? get availableWallets;
   String? get walletAddress;
 
@@ -22,14 +24,27 @@ abstract interface class BitflipRepository {
     List<PixelCoordinate> coordinates,
   );
   Future<String> sealSection(GameSnapshot snapshot);
-  Future<String> mintSection(GameSnapshot snapshot);
+  Future<BitflipMintResult> mintSection(GameSnapshot snapshot);
+}
+
+final class BitflipMintResult {
+  const BitflipMintResult({
+    required this.assetId,
+    required this.alreadyMinted,
+    this.transactionSignature,
+  });
+
+  final String assetId;
+  final String? transactionSignature;
+  final bool alreadyMinted;
 }
 
 final class SolanaBitflipRepository implements BitflipRepository {
   SolanaBitflipRepository({
     required BitflipConfig config,
     BitflipWallet? wallet,
-  }) : _gameIndex = config.gameIndex,
+  }) : _config = config,
+       _gameIndex = config.gameIndex,
        _rpc = createSolanaRpc(
          url: config.rpcUrl,
          allowInsecureHttp: _isLoopback(config.rpcUrl),
@@ -37,13 +52,20 @@ final class SolanaBitflipRepository implements BitflipRepository {
        _serverpod = serverpod.Client(config.serverpodUrl),
        _wallet = wallet ?? BitflipWallet(walletChain: config.walletChain);
 
+  final BitflipConfig _config;
   final int _gameIndex;
   final Rpc _rpc;
   final serverpod.Client _serverpod;
   final BitflipWallet _wallet;
 
   @override
+  bool get isDemoMode => false;
+
+  @override
   bool get isWalletSupported => _wallet.isSupported;
+
+  @override
+  String get walletChain => _config.walletChain;
 
   @override
   List<BitflipWalletOption>? get availableWallets => _wallet.availableWallets;
@@ -231,7 +253,7 @@ final class SolanaBitflipRepository implements BitflipRepository {
   }
 
   @override
-  Future<String> mintSection(GameSnapshot snapshot) async {
+  Future<BitflipMintResult> mintSection(GameSnapshot snapshot) async {
     final walletAddress = _requireWalletAddress().value;
     final challenge = await _serverpod.mint.createChallenge(
       walletAddress: walletAddress,
@@ -246,7 +268,11 @@ final class SolanaBitflipRepository implements BitflipRepository {
       nonce: challenge.nonce,
       signatureBase64: signature,
     );
-    return result.assetId;
+    return BitflipMintResult(
+      assetId: result.assetId,
+      transactionSignature: result.transactionSignature,
+      alreadyMinted: result.alreadyMinted,
+    );
   }
 
   Future<String> _send(Instruction instruction, Address feePayer) async {
@@ -262,7 +288,19 @@ final class SolanaBitflipRepository implements BitflipRepository {
           )
           .appendInstructions([instruction]),
     );
-    return _wallet.signAndSend(getBase64EncodedWireTransaction(transaction));
+    final transactionSignature = signature(
+      await _wallet.signAndSend(getBase64EncodedWireTransaction(transaction)),
+    );
+    await waitForTransactionConfirmation(
+      rpc: _rpc,
+      signature: transactionSignature,
+      transaction: transaction,
+      config: const RpcTransactionConfirmationConfig(
+        commitment: Commitment.confirmed,
+        pollInterval: Duration(milliseconds: 400),
+      ),
+    );
+    return transactionSignature.value;
   }
 
   Address _requireWalletAddress() {

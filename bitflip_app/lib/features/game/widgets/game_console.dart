@@ -16,6 +16,7 @@ class GameConsole extends HookWidget {
     required this.onSeal,
     required this.onMint,
     required this.onRefresh,
+    this.onViewResult,
     super.key,
   });
 
@@ -27,6 +28,7 @@ class GameConsole extends HookWidget {
   final VoidCallback onSeal;
   final VoidCallback onMint;
   final VoidCallback onRefresh;
+  final VoidCallback? onViewResult;
 
   @override
   Widget build(BuildContext context) {
@@ -122,6 +124,15 @@ class GameConsole extends HookWidget {
                   label: context.l10n.onPixels,
                   value: context.l10n.pixelCount(state.previewBitmap.onCount),
                 ),
+                ConsoleDatum(
+                  label: context.l10n.network,
+                  value: state.walletChain.split(':').last.toUpperCase(),
+                  accent: BitflipColors.cyan,
+                ),
+                ConsoleDatum(
+                  label: context.l10n.revision,
+                  value: section.revision.toString(),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -210,6 +221,21 @@ class GameConsole extends HookWidget {
             _OwnerRow(owner: section.owner),
             const SizedBox(height: 20),
             _ActivityPulse(activity: state.activity),
+            if (onViewResult != null &&
+                (state.activity.transactionSignature != null ||
+                    state.activity.assetId != null)) ...[
+              const SizedBox(height: 10),
+              TextButton.icon(
+                key: BitflipTestKeys.viewResult,
+                onPressed: onViewResult,
+                icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                label: Text(
+                  state.activity.assetId == null
+                      ? context.l10n.viewTransaction
+                      : context.l10n.viewAsset,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -331,6 +357,7 @@ class _ActivityPulse extends HookWidget {
         formatSectionIndex(activity.sectionIndex ?? 0),
       ),
       GameNotice.connected => context.l10n.activityConnected,
+      GameNotice.claimed => context.l10n.activityClaimed,
       GameNotice.sealed => context.l10n.activitySealed,
       GameNotice.minted => context.l10n.activityMinted,
       GameNotice.batchFull => context.l10n.batchFull,

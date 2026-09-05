@@ -78,6 +78,17 @@ void main() {
         PixelCoordinate(1, 0),
         PixelCoordinate(9, 8),
       ]);
+      expect(
+        container.read(gameControllerProvider).activity.transactionSignature,
+        'flip-signature',
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        container.read(gameControllerProvider).snapshot.section.revision,
+        BigInt.one,
+        reason:
+            'an older RPC response must not overwrite confirmed local state',
+      );
     });
 
     test(
@@ -95,6 +106,8 @@ void main() {
         expect(state.snapshot.section.assetId, startsWith('Asset'));
         expect(state.snapshot.mintedSections, 1);
         expect(state.activity.notice, GameNotice.minted);
+        expect(state.activity.transactionSignature, 'mint-signature');
+        expect(state.activity.assetId, startsWith('Asset'));
       },
     );
 
@@ -106,6 +119,58 @@ void main() {
       await controller.mintSection();
 
       expect(repository.mintCalls, 0);
+    });
+
+    test('live mode starts blank instead of displaying demo art', () {
+      repository = FakeBitflipRepository(
+        snapshot: _liveSnapshot(SectionLifecycle.active),
+      );
+      final liveContainer = ProviderContainer(
+        overrides: [bitflipRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(liveContainer.dispose);
+
+      final state = liveContainer.read(gameControllerProvider);
+
+      expect(state.loadStatus, GameLoadStatus.loading);
+      expect(state.snapshot.isDemo, isFalse);
+      expect(state.snapshot.section.bitmap.onCount, 0);
+    });
+
+    test('missing and failed RPC loads have explicit states', () async {
+      final unavailableRepository = FakeBitflipRepository(
+        snapshot: _liveSnapshot(SectionLifecycle.active),
+        returnNullOnLoad: true,
+      );
+      final unavailableContainer = ProviderContainer(
+        overrides: [
+          bitflipRepositoryProvider.overrideWithValue(unavailableRepository),
+        ],
+      );
+      addTearDown(unavailableContainer.dispose);
+      await unavailableContainer
+          .read(gameControllerProvider.notifier)
+          .refresh();
+      expect(
+        unavailableContainer.read(gameControllerProvider).loadStatus,
+        GameLoadStatus.unavailable,
+      );
+
+      final errorRepository = FakeBitflipRepository(
+        snapshot: _liveSnapshot(SectionLifecycle.active),
+        loadError: StateError('RPC unavailable'),
+      );
+      final errorContainer = ProviderContainer(
+        overrides: [
+          bitflipRepositoryProvider.overrideWithValue(errorRepository),
+        ],
+      );
+      addTearDown(errorContainer.dispose);
+      await errorContainer.read(gameControllerProvider.notifier).refresh();
+      expect(
+        errorContainer.read(gameControllerProvider).loadStatus,
+        GameLoadStatus.error,
+      );
     });
 
     test('unsupported live platforms cannot queue or transact', () async {

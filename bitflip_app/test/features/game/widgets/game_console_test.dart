@@ -172,6 +172,8 @@ GameViewState _state(
     isBusy: false,
     isWalletSupported: isWalletSupported,
     walletAddress: walletAddress,
+    loadStatus: isDemo ? GameLoadStatus.demo : GameLoadStatus.ready,
+    walletChain: 'solana:devnet',
   );
 }
 

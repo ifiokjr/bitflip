@@ -13,7 +13,9 @@ import 'package:bitflip_app/l10n/l10n.dart';
 import 'package:bitflip_app/testing/bitflip_test_keys.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class GameScreen extends HookConsumerWidget {
   const GameScreen({super.key});
@@ -23,10 +25,28 @@ class GameScreen extends HookConsumerWidget {
     final state = ref.watch(gameControllerProvider);
     final controller = ref.read(gameControllerProvider.notifier);
     final workspaceKey = useMemoized(() => GlobalKey());
+    final requestedSection = int.tryParse(
+      GoRouterState.of(context).uri.queryParameters['section'] ?? '',
+    );
     useEffect(() {
-      final timer = Timer(Duration.zero, () => unawaited(controller.refresh()));
-      return () => timer.cancel();
-    }, [controller]);
+      final initialRefresh = Timer(Duration.zero, () {
+        if (requestedSection != null &&
+            requestedSection >= 0 &&
+            requestedSection < sectionCount) {
+          unawaited(controller.selectSection(requestedSection));
+        } else {
+          unawaited(controller.refresh());
+        }
+      });
+      final liveRefresh = Timer.periodic(
+        const Duration(seconds: 12),
+        (_) => unawaited(controller.refresh()),
+      );
+      return () {
+        initialRefresh.cancel();
+        liveRefresh.cancel();
+      };
+    }, [controller, requestedSection]);
 
     return Scaffold(
       body: Stack(
@@ -284,12 +304,16 @@ class _SignalTicker extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
+    final (message, color) = switch (snapshot.isDemo) {
+      true => (context.l10n.demoNotice, BitflipColors.coral),
+      false => (context.l10n.securityNote, BitflipColors.acid),
+    };
     return Container(
-      color: snapshot.isDemo ? BitflipColors.coral : BitflipColors.acid,
+      color: color,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
       child: Center(
         child: Text(
-          snapshot.isDemo ? context.l10n.demoNotice : context.l10n.securityNote,
+          message,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.labelLarge
               ?.copyWith(color: BitflipColors.voidColor, letterSpacing: 0.4),
@@ -317,9 +341,10 @@ class _GameWorkspace extends HookWidget {
           onClaim: () => unawaited(controller.claimSection()),
           onCommit: () => unawaited(controller.commitMoves()),
           onClear: controller.clearQueue,
-          onSeal: () => unawaited(controller.sealSection()),
+          onSeal: () => unawaited(_confirmSeal(context, controller)),
           onMint: () => unawaited(controller.mintSection()),
           onRefresh: () => unawaited(controller.refresh()),
+          onViewResult: () => unawaited(_openResult(state)),
         );
         if (!wide) {
           return Column(
@@ -336,6 +361,49 @@ class _GameWorkspace extends HookWidget {
         );
       },
     );
+  }
+}
+
+Future<void> _confirmSeal(
+  BuildContext context,
+  GameController controller,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      icon: const Icon(Icons.lock_outline_rounded),
+      title: Text(context.l10n.confirmSealTitle),
+      content: Text(context.l10n.confirmSealBody),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(context.l10n.cancel),
+        ),
+        FilledButton(
+          key: BitflipTestKeys.confirmSeal,
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(context.l10n.confirmSealAction),
+        ),
+      ],
+    ),
+  );
+  if (confirmed ?? false) await controller.sealSection();
+}
+
+Future<void> _openResult(GameViewState state) async {
+  final activity = state.activity;
+  final assetId = activity.assetId;
+  final path = assetId == null
+      ? '/tx/${activity.transactionSignature}'
+      : '/account/$assetId';
+  final cluster = state.walletChain.split(':').last;
+  final uri = Uri.https(
+    'solscan.io',
+    path,
+    cluster == 'mainnet' ? null : {'cluster': cluster},
+  );
+  if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    throw StateError('Could not open the Solana explorer.');
   }
 }
 
@@ -481,11 +549,20 @@ class _CanvasPanel extends HookWidget {
           ],
         ),
         const SizedBox(height: 18),
+        if (state.loadStatus != GameLoadStatus.ready &&
+            state.loadStatus != GameLoadStatus.demo) ...[
+          _GameLoadBanner(status: state.loadStatus),
+          const SizedBox(height: 14),
+        ],
         PixelCanvas(
           bitmap: section.bitmap,
           queued: state.queued,
           cursor: state.cursor,
-          enabled: section.isEditable && !state.isBusy,
+          enabled:
+              (state.loadStatus == GameLoadStatus.ready ||
+                  state.loadStatus == GameLoadStatus.demo) &&
+              section.isEditable &&
+              !state.isBusy,
           onPixelPressed: controller.togglePixel,
         ),
         const SizedBox(height: 15),
@@ -556,6 +633,50 @@ class _CanvasPanel extends HookWidget {
           },
         ),
       ],
+    );
+  }
+}
+
+class _GameLoadBanner extends HookWidget {
+  const _GameLoadBanner({required this.status});
+
+  final GameLoadStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, message) = switch (status) {
+      GameLoadStatus.loading => (Icons.sync_rounded, context.l10n.gameLoading),
+      GameLoadStatus.unavailable => (
+        Icons.hourglass_empty_rounded,
+        context.l10n.gameUnavailable,
+      ),
+      GameLoadStatus.error => (
+        Icons.cloud_off_outlined,
+        context.l10n.gameOffline,
+      ),
+      GameLoadStatus.ready || GameLoadStatus.demo => (
+        Icons.check_circle_outline,
+        context.l10n.activityReady,
+      ),
+    };
+    return Semantics(
+      liveRegion: true,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: BitflipColors.raised,
+          border: Border.all(color: BitflipColors.line),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: BitflipColors.coral),
+              const SizedBox(width: 10),
+              Expanded(child: Text(message)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

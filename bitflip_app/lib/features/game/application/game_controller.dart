@@ -15,18 +15,29 @@ enum GameNotice {
   committed,
   sectionChanged,
   connected,
+  claimed,
   sealed,
   minted,
   batchFull,
   connectionIssue,
 }
 
+enum GameLoadStatus { loading, ready, demo, unavailable, error }
+
 final class GameActivity {
-  const GameActivity(this.notice, {this.coordinate, this.sectionIndex});
+  const GameActivity(
+    this.notice, {
+    this.coordinate,
+    this.sectionIndex,
+    this.transactionSignature,
+    this.assetId,
+  });
 
   final GameNotice notice;
   final PixelCoordinate? coordinate;
   final int? sectionIndex;
+  final String? transactionSignature;
+  final String? assetId;
 }
 
 final class GameViewState {
@@ -37,18 +48,28 @@ final class GameViewState {
     required this.isBusy,
     required this.isWalletSupported,
     required this.walletAddress,
+    required this.loadStatus,
+    required this.walletChain,
     this.cursor,
   });
 
-  factory GameViewState.initial({required bool isWalletSupported}) {
+  factory GameViewState.initial({
+    required bool isWalletSupported,
+    required bool isDemoMode,
+    required String walletChain,
+  }) {
     return GameViewState(
-      snapshot: GameSnapshot.demo(sectionIndex: 12),
+      snapshot: isDemoMode
+          ? GameSnapshot.demo(sectionIndex: 12)
+          : GameSnapshot.empty(gameIndex: 0),
       queued: const {},
       cursor: null,
       activity: const GameActivity(GameNotice.ready),
       isBusy: false,
       isWalletSupported: isWalletSupported,
       walletAddress: null,
+      loadStatus: isDemoMode ? GameLoadStatus.demo : GameLoadStatus.loading,
+      walletChain: walletChain,
     );
   }
 
@@ -59,6 +80,8 @@ final class GameViewState {
   final bool isBusy;
   final bool isWalletSupported;
   final String? walletAddress;
+  final GameLoadStatus loadStatus;
+  final String walletChain;
 
   PixelBitmap get previewBitmap => snapshot.section.bitmap.toggled(queued);
 
@@ -75,6 +98,8 @@ final class GameViewState {
     GameActivity? activity,
     bool? isBusy,
     String? walletAddress,
+    GameLoadStatus? loadStatus,
+    String? walletChain,
   }) {
     return GameViewState(
       snapshot: snapshot ?? this.snapshot,
@@ -84,6 +109,8 @@ final class GameViewState {
       isBusy: isBusy ?? this.isBusy,
       isWalletSupported: isWalletSupported,
       walletAddress: walletAddress ?? this.walletAddress,
+      loadStatus: loadStatus ?? this.loadStatus,
+      walletChain: walletChain ?? this.walletChain,
     );
   }
 }
@@ -103,27 +130,54 @@ class GameController extends _$GameController {
   GameViewState build() {
     return GameViewState.initial(
       isWalletSupported: _repository.isWalletSupported,
+      isDemoMode: _repository.isDemoMode,
+      walletChain: _repository.walletChain,
     );
   }
 
   Future<void> refresh() async {
     if (state.isBusy) return;
+    if (_repository.isDemoMode) return;
     state = state.copyWith(isBusy: true);
     try {
       final loaded = await _repository.loadSection(
         state.snapshot.section.index,
       );
+      final snapshot = loaded == null
+          ? GameSnapshot.empty(
+              gameIndex: state.snapshot.gameIndex,
+              sectionIndex: state.snapshot.section.index,
+            )
+          : _reconcileSnapshot(state.snapshot, loaded);
+      final retainQueue =
+          loaded != null &&
+          snapshot.section.lifecycle == SectionLifecycle.active;
       state = state.copyWith(
-        snapshot: loaded ?? state.snapshot,
+        snapshot: snapshot,
+        queued: retainQueue ? state.queued : const {},
+        clearCursor: !retainQueue,
         isBusy: false,
         walletAddress: _repository.walletAddress,
+        loadStatus: loaded == null
+            ? GameLoadStatus.unavailable
+            : GameLoadStatus.ready,
       );
     } on Object {
       state = state.copyWith(
         isBusy: false,
         activity: const GameActivity(GameNotice.connectionIssue),
+        loadStatus: GameLoadStatus.error,
       );
     }
+  }
+
+  GameSnapshot _reconcileSnapshot(GameSnapshot current, GameSnapshot loaded) {
+    if (current.isDemo ||
+        current.section.index != loaded.section.index ||
+        loaded.section.revision >= current.section.revision) {
+      return loaded;
+    }
+    return current;
   }
 
   Future<void> connectWallet([String? walletId]) async {
@@ -185,8 +239,11 @@ class GameController extends _$GameController {
     }
     state = state.copyWith(isBusy: true);
     try {
-      await _repository.flipPixels(state.snapshot, coordinates);
-      _commitLocally(coordinates);
+      final transactionSignature = await _repository.flipPixels(
+        state.snapshot,
+        coordinates,
+      );
+      _commitLocally(coordinates, transactionSignature: transactionSignature);
       unawaited(refresh());
     } on Object {
       state = state.copyWith(
@@ -214,8 +271,16 @@ class GameController extends _$GameController {
     }
     state = state.copyWith(isBusy: true);
     try {
-      await _repository.claimSection(state.snapshot);
-      state = state.copyWith(isBusy: false);
+      final transactionSignature = await _repository.claimSection(
+        state.snapshot,
+      );
+      state = state.copyWith(
+        isBusy: false,
+        activity: GameActivity(
+          GameNotice.claimed,
+          transactionSignature: transactionSignature,
+        ),
+      );
       await refresh();
     } on Object {
       state = state.copyWith(
@@ -234,7 +299,15 @@ class GameController extends _$GameController {
     if (!state.snapshot.isDemo) {
       state = state.copyWith(isBusy: true);
       try {
-        await _repository.sealSection(state.snapshot);
+        final transactionSignature = await _repository.sealSection(
+          state.snapshot,
+        );
+        state = state.copyWith(
+          activity: GameActivity(
+            GameNotice.sealed,
+            transactionSignature: transactionSignature,
+          ),
+        );
       } on Object {
         state = state.copyWith(
           isBusy: false,
@@ -250,7 +323,9 @@ class GameController extends _$GameController {
       snapshot: state.snapshot.copyWith(section: section),
       queued: const {},
       isBusy: false,
-      activity: const GameActivity(GameNotice.sealed),
+      activity: state.snapshot.isDemo
+          ? const GameActivity(GameNotice.sealed)
+          : state.activity,
     );
     if (!state.snapshot.isDemo) unawaited(refresh());
   }
@@ -263,12 +338,15 @@ class GameController extends _$GameController {
     }
     state = state.copyWith(isBusy: true);
     try {
-      final assetId = state.snapshot.isDemo
-          ? 'cnft:demo:${state.snapshot.section.index}'
+      final result = state.snapshot.isDemo
+          ? BitflipMintResult(
+              assetId: 'cnft:demo:${state.snapshot.section.index}',
+              alreadyMinted: false,
+            )
           : await _repository.mintSection(state.snapshot);
       final section = state.snapshot.section.copyWith(
         lifecycle: SectionLifecycle.minted,
-        assetId: assetId,
+        assetId: result.assetId,
       );
       state = state.copyWith(
         snapshot: state.snapshot.copyWith(
@@ -276,7 +354,11 @@ class GameController extends _$GameController {
           section: section,
         ),
         isBusy: false,
-        activity: const GameActivity(GameNotice.minted),
+        activity: GameActivity(
+          GameNotice.minted,
+          transactionSignature: result.transactionSignature,
+          assetId: result.assetId,
+        ),
       );
       if (!state.snapshot.isDemo) unawaited(refresh());
     } on Object {
@@ -289,16 +371,26 @@ class GameController extends _$GameController {
 
   Future<void> selectSection(int index) async {
     if (index < 0 || index >= sectionCount || state.isBusy) return;
+    final demoMode = _repository.isDemoMode;
     state = state.copyWith(
-      snapshot: GameSnapshot.demo(sectionIndex: index),
+      snapshot: demoMode
+          ? GameSnapshot.demo(sectionIndex: index)
+          : GameSnapshot.empty(
+              gameIndex: state.snapshot.gameIndex,
+              sectionIndex: index,
+            ),
       queued: const {},
       clearCursor: true,
       activity: GameActivity(GameNotice.sectionChanged, sectionIndex: index),
+      loadStatus: demoMode ? GameLoadStatus.demo : GameLoadStatus.loading,
     );
-    await refresh();
+    if (!demoMode) await refresh();
   }
 
-  void _commitLocally(List<PixelCoordinate> coordinates) {
+  void _commitLocally(
+    List<PixelCoordinate> coordinates, {
+    String? transactionSignature,
+  }) {
     final current = state.snapshot;
     final section = current.section.copyWith(
       bitmap: current.section.bitmap.toggled(coordinates),
@@ -313,7 +405,10 @@ class GameController extends _$GameController {
       queued: const {},
       clearCursor: true,
       isBusy: false,
-      activity: const GameActivity(GameNotice.committed),
+      activity: GameActivity(
+        GameNotice.committed,
+        transactionSignature: transactionSignature,
+      ),
     );
   }
 }
