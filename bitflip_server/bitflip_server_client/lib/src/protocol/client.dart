@@ -10,7 +10,6 @@
 // ignore_for_file: invalid_use_of_internal_member
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-
 import 'dart:async' as _ida;
 import 'package:bitflip_server_client/src/protocol/minting/mint_challenge_view.dart'
     as _il1kyfw6;

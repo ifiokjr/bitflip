@@ -22,7 +22,7 @@ dependencies:
   hooks_riverpod: 3.4.3
   intl: any
   riverpod_annotation: 4.0.7
-  serverpod_client: 4.0.0-rc.1
+  serverpod_client: 4.0.0-rc.2
   solana_kit: 0.9.1
   solana_kit_mobile_wallet_adapter: 0.5.1
   solana_kit_mobile_wallet_adapter_protocol: 0.5.1

@@ -622,18 +622,18 @@ packages:
     dependency: "direct main"
     description:
       name: serverpod_client
-      sha256: cf750ea7afb16d3225370f744f425c583b89365140c419b632b8fdb8d2a849df
+      sha256: "420fdc4ce9172ea1bd8d0ecf7d3a638d2666cc885538abf11ccf5e8c6ba26220"
       url: "https://pub.dev"
     source: hosted
-    version: "4.0.0-rc.1"
+    version: "4.0.0-rc.2"
   serverpod_serialization:
     dependency: transitive
     description:
       name: serverpod_serialization
-      sha256: "78e41cf0c2cfe311275de4275249067611a8f9d29e04f80c30b4fceea2a198a9"
+      sha256: b170a4cb0f5c3b5a6de0b68302a5cc3feee260f18da1794821a95d0afa190ef3
       url: "https://pub.dev"
     source: hosted
-    version: "4.0.0-rc.1"
+    version: "4.0.0-rc.2"
   shelf:
     dependency: transitive
     description:

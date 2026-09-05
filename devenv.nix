@@ -11,7 +11,7 @@ let
   appDir = "bitflip_app";
   serverWorkspaceDir = "bitflip_server";
   serverDir = "bitflip_server/bitflip_server_server";
-  serverpodVersion = "4.0.0-rc.1";
+  serverpodVersion = "4.0.0-rc.2";
   resolveFlutterSdk = ''
     unset GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_CONFIG GIT_CONFIG_PARAMETERS
     unset GIT_CONFIG_COUNT GIT_OBJECT_DIRECTORY GIT_DIR GIT_WORK_TREE
@@ -481,6 +481,9 @@ in
         set -euo pipefail
         ${resolveFlutterSdk}
         cd "$DEVENV_ROOT/${serverDir}"
+        if [ ! -f config/passwords.yaml ]; then
+          export SERVERPOD_DATABASE_PASSWORD=bitflip-test-only
+        fi
         "$flutter_sdk/bin/dart" test \
           --exclude-tags surfpool \
           --reporter expanded \
