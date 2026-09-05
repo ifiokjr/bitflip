@@ -1,6 +1,7 @@
 import 'package:bitflip_app/app/app.dart';
 import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/application/game_controller.dart';
+import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/testing/bitflip_test_keys.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -102,4 +103,40 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('failed live loads never substitute demo artwork', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          bitflipRepositoryProvider.overrideWithValue(
+            FakeBitflipRepository(
+              snapshot: _liveSnapshot(),
+              loadError: StateError('offline'),
+            ),
+          ),
+        ],
+        child: const BitflipApp(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(
+      find.textContaining('No demo data has been substituted'),
+      findsOneWidget,
+    );
+    expect(find.text('SIGNAL MIRROR'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }
+
+GameSnapshot _liveSnapshot() => GameSnapshot.empty(gameIndex: 0).copyWith(
+  section: GameSnapshot.empty(gameIndex: 0).section.copyWith(
+    lifecycle: SectionLifecycle.active,
+    owner: 'DemoWallet111111111111111111111111111111111',
+  ),
+);

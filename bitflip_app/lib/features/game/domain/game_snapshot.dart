@@ -83,6 +83,27 @@ final class GameSnapshot {
     );
   }
 
+  factory GameSnapshot.empty({required int gameIndex, int sectionIndex = 0}) {
+    return GameSnapshot(
+      gameIndex: gameIndex,
+      isDemo: false,
+      nextSection: 0,
+      totalFlips: BigInt.zero,
+      mintedSections: 0,
+      claimPriceLamports: BigInt.zero,
+      flipFeeLamports: BigInt.zero,
+      treasury: null,
+      section: SectionSnapshot(
+        index: sectionIndex,
+        lifecycle: SectionLifecycle.unclaimed,
+        bitmap: PixelBitmap.empty(),
+        owner: null,
+        flipCount: BigInt.zero,
+        revision: BigInt.zero,
+      ),
+    );
+  }
+
   final int gameIndex;
   final bool isDemo;
   final int nextSection;

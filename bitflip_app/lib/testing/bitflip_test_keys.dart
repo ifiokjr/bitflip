@@ -9,6 +9,8 @@ abstract final class BitflipTestKeys {
   static const nextSection = Key('next-section');
   static const previousSection = Key('previous-section');
   static const sealSection = Key('seal-section');
+  static const confirmSeal = Key('confirm-seal');
   static const mintSection = Key('mint-section');
   static const sectionNavigator = Key('section-navigator');
+  static const viewResult = Key('view-result');
 }
