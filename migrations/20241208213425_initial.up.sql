@@ -4,14 +4,12 @@ PRAGMA journal_mode = wal;
 -- Ensure foreign key constraints are enforced
 PRAGMA foreign_keys = ON;
 
--- Increase cache size (in KB) for better performance
-PRAGMA cache_size = -2000000;
+-- Keep the per-connection page cache bounded to roughly 20 MiB
+PRAGMA cache_size = -20000;
 
--- Uses 2GB of RAM for cache
--- Enable memory-mapped I/O for faster reads
-PRAGMA mmap_size = 30000000000;
+-- Allow a bounded 256 MiB memory-mapped read window
+PRAGMA mmap_size = 268435456;
 
--- 30GB
 -- Set temp store to memory for faster temp operations
 PRAGMA temp_store = memory;
 
@@ -77,18 +75,6 @@ WHERE
 
 END;
 
--- Create section player events table
-CREATE TABLE IF NOT EXISTS section_events (
-	id TEXT PRIMARY KEY,
-	section_id TEXT NOT NULL,
-	player_pubkey TEXT NOT NULL,
-	event_type INTEGER NOT NULL,
-	data BLOB NOT NULL,
-	created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	FOREIGN KEY (section_id) REFERENCES sections (id) ON DELETE CASCADE,
-	FOREIGN KEY (player_pubkey) REFERENCES players (pubkey) ON DELETE CASCADE
-);
-
 -- Create players table for participation in the game
 CREATE TABLE IF NOT EXISTS players (
 	pubkey TEXT PRIMARY KEY,
@@ -104,9 +90,21 @@ UPDATE players
 SET
 	updated_at = CURRENT_TIMESTAMP
 WHERE
-	id = new.id;
+	pubkey = new.pubkey;
 
 END;
+
+-- Create section player events table
+CREATE TABLE IF NOT EXISTS section_events (
+	id TEXT PRIMARY KEY,
+	section_id TEXT NOT NULL,
+	player_pubkey TEXT NOT NULL,
+	event_type INTEGER NOT NULL,
+	data BLOB NOT NULL,
+	created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (section_id) REFERENCES sections (id) ON DELETE CASCADE,
+	FOREIGN KEY (player_pubkey) REFERENCES players (pubkey) ON DELETE CASCADE
+);
 
 -- Create encrypted keypairs table
 CREATE TABLE IF NOT EXISTS encrypted_keypairs (

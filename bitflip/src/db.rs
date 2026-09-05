@@ -601,4 +601,52 @@ mod tests {
 
 		Ok(())
 	}
+
+	#[test(tokio::test)]
+	async fn player_updates_refresh_the_timestamp() -> AppResult<()> {
+		let db = setup_db().await?;
+		let original_timestamp = "2000-01-01 00:00:00";
+
+		sqlx::query("INSERT INTO players (pubkey, signer, updated_at) VALUES (?1, ?2, ?3)")
+			.bind("player")
+			.bind("signer")
+			.bind(original_timestamp)
+			.execute(db.as_sqlx_pool())
+			.await?;
+		sqlx::query("UPDATE players SET status = 1 WHERE pubkey = ?1")
+			.bind("player")
+			.execute(db.as_sqlx_pool())
+			.await?;
+
+		let updated_at: String =
+			sqlx::query_scalar("SELECT updated_at FROM players WHERE pubkey = ?1")
+				.bind("player")
+				.fetch_one(db.as_sqlx_pool())
+				.await?;
+
+		assert_ne!(updated_at, original_timestamp);
+
+		Ok(())
+	}
+
+	#[test(tokio::test)]
+	async fn initial_migration_rolls_back_every_application_table() -> AppResult<()> {
+		let db = setup_db().await?;
+
+		sqlx::migrate!("../migrations")
+			.undo(db.as_sqlx_pool(), 0)
+			.await?;
+
+		let remaining_tables: i64 = sqlx::query_scalar(
+			"SELECT COUNT(*) FROM sqlite_master \
+			 WHERE type = 'table' \
+			 AND name IN ('games', 'sections', 'section_events', 'players', 'encrypted_keypairs')",
+		)
+		.fetch_one(db.as_sqlx_pool())
+		.await?;
+
+		assert_eq!(remaining_tables, 0);
+
+		Ok(())
+	}
 }
