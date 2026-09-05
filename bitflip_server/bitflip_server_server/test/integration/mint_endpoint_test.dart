@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:bitflip_server_server/src/generated/protocol.dart';
 import 'package:bitflip_server_server/src/minting/bitflip_mint_service.dart';
 import 'package:bs58/bs58.dart';
 import 'package:ed25519_edwards/ed25519_edwards.dart' as ed25519;
@@ -76,6 +77,45 @@ void main() {
       );
 
       expect(mintService.mintCalls, 1);
+    });
+
+    test('rejects an expired authorization before operator work', () async {
+      final walletAddress = _walletAddress(owner);
+      final challenge = await endpoints.mint.createChallenge(
+        sessionBuilder,
+        walletAddress: walletAddress,
+        gameIndex: 0,
+        sectionIndex: 12,
+      );
+      final session = sessionBuilder.build();
+      final storedChallenge = await MintChallenge.db.findFirstRow(
+        session,
+        where: (table) => table.nonce.equals(challenge.nonce),
+      );
+      expect(storedChallenge, isNotNull);
+      await MintChallenge.db.updateRow(
+        session,
+        storedChallenge!.copyWith(
+          expiresAt: DateTime.now().toUtc().subtract(
+            const Duration(seconds: 1),
+          ),
+        ),
+      );
+      await session.close();
+
+      await expectLater(
+        endpoints.mint.mintSection(
+          sessionBuilder,
+          walletAddress: walletAddress,
+          gameIndex: 0,
+          sectionIndex: 12,
+          nonce: challenge.nonce,
+          signatureBase64: _signature(owner, challenge.message),
+        ),
+        throwsA(isA<StateError>()),
+      );
+
+      expect(mintService.mintCalls, 0);
     });
 
     test('rejects a valid signature from a different key', () async {
