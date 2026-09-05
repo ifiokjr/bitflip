@@ -6,6 +6,9 @@ pub use stores::*;
 
 pub mod app;
 
+#[cfg(feature = "ssr")]
+pub mod color_projection;
+pub mod colors;
 pub mod components;
 #[cfg(feature = "ssr")]
 pub mod db;
