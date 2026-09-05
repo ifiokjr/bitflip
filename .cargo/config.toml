@@ -4,7 +4,17 @@ insta = ["bin", "cargo-insta"]
 interactive-update = ["bin", "cargo-interactive-update"]
 llvm-cov = ["bin", "cargo-llvm-cov"]
 
-test_program = ["nextest", "run", "-p", "bitflip_program_test", "-p", "bitflip_program", "-F", "ssr,client"]
-test_program_validator = ["nextest", "run", "-p", "bitflip_program_test", "-F", "ssr,test_validator"]
-test_bitflip_ssr = ["nextest", "run", "-p", "bitflip", "-F", "ssr"]
-test_bitflip_js = ["nextest", "run", "-p", "bitflip", "-F", "hydrate"]
+test_program = [
+	"bin",
+	"cargo-nextest",
+	"run",
+	"-p",
+	"bitflip_program_test",
+	"-p",
+	"bitflip_program",
+	"-F",
+	"ssr,client",
+]
+test_program_validator = ["bin", "cargo-nextest", "run", "-p", "bitflip_program_test", "-F", "ssr,test_validator"]
+test_bitflip_ssr = ["bin", "cargo-nextest", "run", "-p", "bitflip", "-F", "ssr"]
+test_bitflip_js = ["bin", "cargo-nextest", "run", "-p", "bitflip", "-F", "hydrate"]
