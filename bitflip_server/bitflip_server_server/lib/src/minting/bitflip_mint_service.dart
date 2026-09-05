@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:bitflip_program/bitflip_program.dart';
@@ -80,6 +81,10 @@ final class SolanaBitflipMintService implements BitflipMintService {
     required this.operatorPrivateKey,
     required String metadataBaseUrl,
     this.gameIndex,
+    this.priorityFeeMicroLamports = 0,
+    this.rpcTimeout = const Duration(seconds: 12),
+    this.confirmationTimeout = const Duration(seconds: 60),
+    this.maximumSubmitAttempts = 3,
   }) : metadataBaseUrl = _validatedMetadataBaseUrl(metadataBaseUrl);
 
   factory SolanaBitflipMintService.fromEnvironment(
@@ -110,6 +115,28 @@ final class SolanaBitflipMintService implements BitflipMintService {
     }
     final tree = environment['BITFLIP_MERKLE_TREE']?.trim();
     final operator = environment['BITFLIP_OPERATOR_PRIVATE_KEY']?.trim();
+    final priorityFeeMicroLamports = _environmentInteger(
+      environment,
+      'BITFLIP_PRIORITY_FEE_MICROLAMPORTS',
+      production: production,
+      developmentDefault: 0,
+      minimum: 0,
+      maximum: 10000000,
+    );
+    final rpcTimeoutSeconds = _optionalEnvironmentInteger(
+      environment,
+      'BITFLIP_RPC_TIMEOUT_SECONDS',
+      defaultValue: 12,
+      minimum: 2,
+      maximum: 60,
+    );
+    final maximumSubmitAttempts = _optionalEnvironmentInteger(
+      environment,
+      'BITFLIP_MINT_MAX_ATTEMPTS',
+      defaultValue: 3,
+      minimum: 1,
+      maximum: 5,
+    );
     if (production) {
       final cluster = _requiredEnvironmentValue(environment, 'BITFLIP_CLUSTER');
       if (cluster != 'mainnet') {
@@ -130,6 +157,9 @@ final class SolanaBitflipMintService implements BitflipMintService {
       operatorPrivateKey: operator,
       metadataBaseUrl: metadataBaseUrl,
       gameIndex: gameIndex,
+      priorityFeeMicroLamports: priorityFeeMicroLamports,
+      rpcTimeout: Duration(seconds: rpcTimeoutSeconds),
+      maximumSubmitAttempts: maximumSubmitAttempts,
     );
     if (production) service.validateSigningConfiguration();
     return service;
@@ -140,6 +170,10 @@ final class SolanaBitflipMintService implements BitflipMintService {
   final String? operatorPrivateKey;
   final String metadataBaseUrl;
   final int? gameIndex;
+  final int priorityFeeMicroLamports;
+  final Duration rpcTimeout;
+  final Duration confirmationTimeout;
+  final int maximumSubmitAttempts;
 
   void validateSigningConfiguration() {
     getAddressEncoder().encode(
@@ -174,7 +208,7 @@ final class SolanaBitflipMintService implements BitflipMintService {
       configAddress,
       gameAddress,
       sectionAddress,
-    ]);
+    ]).timeout(rpcTimeout);
     final configAccount = _requiredProgramAccount(accounts[0], 'config');
     _requiredProgramAccount(accounts[1], 'game');
     final sectionAccount = _requiredProgramAccount(accounts[2], 'section');
@@ -202,6 +236,22 @@ final class SolanaBitflipMintService implements BitflipMintService {
 
   @override
   Future<MintSubmission> mint(MintableSection section) async {
+    Object? lastError;
+    StackTrace? lastStackTrace;
+    for (var attempt = 1; attempt <= maximumSubmitAttempts; attempt++) {
+      try {
+        return await _mintOnce(section);
+      } on Object catch (error, stackTrace) {
+        lastError = error;
+        lastStackTrace = stackTrace;
+        if (attempt == maximumSubmitAttempts) break;
+        await Future<void>.delayed(Duration(milliseconds: 250 * attempt));
+      }
+    }
+    Error.throwWithStackTrace(lastError!, lastStackTrace!);
+  }
+
+  Future<MintSubmission> _mintOnce(MintableSection section) async {
     final fresh = await loadSection(section.gameIndex, section.sectionIndex);
     if (fresh.isMinted) {
       return MintSubmission(
@@ -227,7 +277,10 @@ final class SolanaBitflipMintService implements BitflipMintService {
       final (treeAuthority, _) = await bubblegum.findTreeAuthorityPda(
         merkleTree: tree,
       );
-      final treeConfigAccount = await fetchEncodedAccount(rpc, treeAuthority);
+      final treeConfigAccount = await fetchEncodedAccount(
+        rpc,
+        treeAuthority,
+      ).timeout(rpcTimeout);
       final encodedTreeConfig = switch (treeConfigAccount) {
         ExistingAccount<Uint8List>(:final account) => account,
         NonExistingAccount<Uint8List>() => throw StateError(
@@ -309,7 +362,9 @@ final class SolanaBitflipMintService implements BitflipMintService {
     KeyPairSigner signer,
     List<Instruction> instructions,
   ) async {
-    final latest = await rpc.getLatestBlockhashValue().send();
+    final latest = await rpc.getLatestBlockhashValue().send().timeout(
+      rpcTimeout,
+    );
     final transaction = compileTransaction(
       createTransactionMessage(version: TransactionVersion.v0)
           .withFeePayer(signer.address)
@@ -321,6 +376,8 @@ final class SolanaBitflipMintService implements BitflipMintService {
           )
           .appendInstructions([
             _computeUnitLimitInstruction(1400000),
+            if (priorityFeeMicroLamports > 0)
+              _computeUnitPriceInstruction(priorityFeeMicroLamports),
             ...instructions,
           ]),
     );
@@ -334,13 +391,18 @@ final class SolanaBitflipMintService implements BitflipMintService {
               preflightCommitment: rpc_types.Commitment.confirmed,
             ),
           )
-          .send(),
+          .send()
+          .timeout(rpcTimeout),
     );
     await waitForTransactionConfirmation(
       rpc: rpc,
       signature: transactionSignature,
       transaction: signed,
-    );
+      config: const RpcTransactionConfirmationConfig(
+        commitment: rpc_types.Commitment.confirmed,
+        pollInterval: Duration(milliseconds: 500),
+      ),
+    ).timeout(confirmationTimeout);
     return transactionSignature.value;
   }
 
@@ -401,6 +463,16 @@ final class SolanaBitflipMintService implements BitflipMintService {
 Instruction _computeUnitLimitInstruction(int units) {
   final data = Uint8List(5)..[0] = 2;
   ByteData.sublistView(data).setUint32(1, units, Endian.little);
+  return Instruction(
+    programAddress: _computeBudgetProgram,
+    accounts: const [],
+    data: data,
+  );
+}
+
+Instruction _computeUnitPriceInstruction(int microLamports) {
+  final data = Uint8List(9)..[0] = 3;
+  ByteData.sublistView(data).setUint64(1, microLamports, Endian.little);
   return Instruction(
     programAddress: _computeBudgetProgram,
     accounts: const [],
@@ -470,6 +542,59 @@ String _requiredEnvironmentValue(Map<String, String> environment, String name) {
     throw StateError('$name is required in production.');
   }
   return value;
+}
+
+int _environmentInteger(
+  Map<String, String> environment,
+  String name, {
+  required bool production,
+  required int developmentDefault,
+  required int minimum,
+  required int maximum,
+}) {
+  final value = environment[name]?.trim();
+  if ((value == null || value.isEmpty) && production) {
+    throw StateError('$name is required in production.');
+  }
+  return _validatedInteger(
+    name,
+    value,
+    defaultValue: developmentDefault,
+    minimum: minimum,
+    maximum: maximum,
+  );
+}
+
+int _optionalEnvironmentInteger(
+  Map<String, String> environment,
+  String name, {
+  required int defaultValue,
+  required int minimum,
+  required int maximum,
+}) {
+  return _validatedInteger(
+    name,
+    environment[name]?.trim(),
+    defaultValue: defaultValue,
+    minimum: minimum,
+    maximum: maximum,
+  );
+}
+
+int _validatedInteger(
+  String name,
+  String? value, {
+  required int defaultValue,
+  required int minimum,
+  required int maximum,
+}) {
+  final parsed = value == null || value.isEmpty
+      ? defaultValue
+      : int.tryParse(value);
+  if (parsed == null || parsed < minimum || parsed > maximum) {
+    throw StateError('$name must be between $minimum and $maximum.');
+  }
+  return parsed;
 }
 
 void _requirePublicHttps(String name, String value) {

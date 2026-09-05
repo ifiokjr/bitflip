@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:bitflip_server_server/src/minting/bitflip_mint_service.dart';
 import 'package:test/test.dart';
@@ -13,6 +14,7 @@ void main() {
         'BITFLIP_CLUSTER',
         'BITFLIP_MERKLE_TREE',
         'BITFLIP_OPERATOR_PRIVATE_KEY',
+        'BITFLIP_PRIORITY_FEE_MICROLAMPORTS',
       ];
       for (final name in requiredNames) {
         final environment = _validEnvironment()..remove(name);
@@ -68,6 +70,14 @@ void main() {
         ),
         throwsA(anything),
       );
+      expect(
+        () => SolanaBitflipMintService.fromEnvironment(
+          _validEnvironment()
+            ..['BITFLIP_PRIORITY_FEE_MICROLAMPORTS'] = '-1',
+          production: true,
+        ),
+        throwsA(isA<StateError>()),
+      );
     });
 
     test('accepts a complete production environment', () {
@@ -78,6 +88,7 @@ void main() {
 
       expect(service.gameIndex, 7);
       expect(service.metadataBaseUrl, 'https://metadata.bitflip.xyz');
+      expect(service.priorityFeeMicroLamports, 1000);
     });
 
     test('development retains explicit local defaults', () {
@@ -89,6 +100,12 @@ void main() {
       expect(service.gameIndex, 0);
       expect(service.metadataBaseUrl, 'http://localhost:8082');
     });
+
+    test('does not expose Serverpod Insights in production', () {
+      final configuration = File('config/production.yaml').readAsStringSync();
+
+      expect(configuration, isNot(contains('\ninsightsServer:')));
+    });
   });
 }
 
@@ -99,4 +116,5 @@ Map<String, String> _validEnvironment() => {
   'BITFLIP_CLUSTER': 'mainnet',
   'BITFLIP_MERKLE_TREE': '11111111111111111111111111111111',
   'BITFLIP_OPERATOR_PRIVATE_KEY': jsonEncode(List<int>.filled(32, 1)),
+  'BITFLIP_PRIORITY_FEE_MICROLAMPORTS': '1000',
 };

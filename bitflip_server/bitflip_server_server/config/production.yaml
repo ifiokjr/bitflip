@@ -11,12 +11,8 @@ apiServer:
   publicPort: 443
   publicScheme: https
 
-# Configuration for the Insights server.
-insightsServer:
-  port: 8081
-  publicHost: insights.bitflip.xyz
-  publicPort: 443
-  publicScheme: https
+# Insights is deliberately disabled in production. Use exported logs and
+# metrics; do not expose the administrative Insights service publicly.
 
 webServer:
   port: 8082

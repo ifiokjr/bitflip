@@ -158,9 +158,9 @@ void main() {
       );
     });
 
-    test('rate limits repeated challenges for one wallet', () async {
+    test('does not let abandoned challenges exhaust an owner quota', () async {
       final walletAddress = _walletAddress(owner);
-      for (var request = 0; request < 6; request++) {
+      for (var request = 0; request < 7; request++) {
         await endpoints.mint.createChallenge(
           sessionBuilder,
           walletAddress: walletAddress,
@@ -169,15 +169,7 @@ void main() {
         );
       }
 
-      await expectLater(
-        endpoints.mint.createChallenge(
-          sessionBuilder,
-          walletAddress: walletAddress,
-          gameIndex: 0,
-          sectionIndex: 12,
-        ),
-        throwsA(isA<StateError>()),
-      );
+      expect(mintService.mintCalls, 0);
     });
   });
 }
