@@ -1,0 +1,7 @@
+{
+	"name": "bitflip-workspace",
+	"private": true,
+	"devDependencies": {
+		"@tailwindcss/cli": "4.1.2"
+	}
+}
