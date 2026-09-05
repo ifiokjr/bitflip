@@ -35,6 +35,10 @@
     ];
 
   env.EGET_CONFIG = "${config.env.DEVENV_ROOT}/.eget/.eget.toml";
+  env.LIBCLANG_PATH = lib.makeSearchPath "lib" [ pkgs.llvmPackages.libclang.lib ];
+  env.LD_LIBRARY_PATH = lib.optionalString pkgs.stdenv.isLinux (
+    lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]
+  );
 
   enterShell = ''
     set -e
@@ -191,7 +195,16 @@
     "build:web" = {
       exec = ''
         set -e
-        cargo leptos build --release --lib-cargo-args="--locked" --bin-cargo-args="--locked"
+        cargo bin wasm-bindgen-cli --version
+
+        CARGO_BIN_ROOT="$DEVENV_ROOT/.bin/rust-$(rustc --version | cut -d ' ' -f 2)"
+        for cargo_bin_dir in "$CARGO_BIN_ROOT"/*/*/bin; do
+          if [ -d "$cargo_bin_dir" ]; then
+            export PATH="$cargo_bin_dir:$PATH"
+          fi
+        done
+
+        cargo bin cargo-leptos build --release --lib-cargo-args="--locked" --bin-cargo-args="--locked"
       '';
       description = "Build the production web application.";
       binary = "bash";
