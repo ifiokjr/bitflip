@@ -134,6 +134,11 @@
     };
     "install:eget" = {
       exec = ''
+        # Agave 2.1.21 scans this directory before its SDK installer gets a
+        # chance to create it. Fresh CI runners otherwise panic in
+        # cargo-build-sbf while looking for cached platform tools.
+        mkdir -p "$HOME/.cache/solana"
+
         HASH=$(nix hash path --base32 ./.eget/.eget.toml)
         echo "HASH: $HASH"
         if [ ! -f ./.eget/bin/hash ] || [ "$HASH" != "$(cat ./.eget/bin/hash)" ]; then
