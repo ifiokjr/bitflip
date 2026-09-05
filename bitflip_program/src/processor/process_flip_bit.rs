@@ -85,22 +85,9 @@ pub fn process_flip_bit(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
 		BitflipError::GameNotRunning,
 	)?;
 
-	let is_changed = section.set_bit(args)?;
-	let flips = if !is_changed {
-		section.flip_on(1)?;
-		section.flip_off(1)?;
-		2
-	} else if args.on() {
-		section.flip_on(1)?;
-		1
-	} else {
-		section.flip_off(1)?;
-		1
-	};
+	record_flip(section, args)?;
 
 	let token_price = section.get_token_price_in_lamports(game.remaining_time(current_time));
-	let lamports_to_transfer = token_price.saturating_mul(flips);
-	msg!("flips: {}", flips);
 	msg!("token price: {}", token_price);
 
 	create_associated_token_account_idempotent(
@@ -113,8 +100,8 @@ pub fn process_flip_bit(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
 		&[],
 	)?;
 
-	msg!("transferring lamports to section: {}", lamports_to_transfer);
-	transfer_lamports_to_section(section_info, player_info, lamports_to_transfer)?;
+	msg!("transferring lamports to section: {}", token_price);
+	transfer_lamports_to_section(section_info, player_info, token_price)?;
 
 	msg!("transferring tokens from section");
 	transfer_tokens_from_section(
@@ -124,10 +111,22 @@ pub fn process_flip_bit(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
 		player_bit_token_account_info,
 		token_program_info,
 		section,
-		flips,
+		1,
 	)?;
 
 	Ok(())
+}
+
+fn record_flip(section: &mut SectionState, args: &FlipBit) -> ProgramResult {
+	if !section.set_bit(args)? {
+		return Err(BitflipError::BitsUnchanged.into());
+	}
+
+	if args.on() {
+		section.flip_on(1)
+	} else {
+		section.flip_off(1)
+	}
 }
 
 pub fn transfer_lamports_to_section<'info>(
@@ -224,6 +223,27 @@ mod tests {
 	use crate::get_player_token_account;
 	use crate::get_section_token_account;
 	use crate::leak;
+
+	#[test]
+	fn unchanged_bits_are_not_counted_or_rewarded() -> anyhow::Result<()> {
+		let mut section = SectionState::new(Pubkey::new_unique(), 0, 0, 0);
+		let args = FlipBit {
+			section_index: 0,
+			array_index: 0,
+			offset: 0,
+			value: 1,
+		};
+
+		record_flip(&mut section, &args)?;
+		let unchanged = record_flip(&mut section, &args);
+
+		assert_eq!(unchanged, Err(BitflipError::BitsUnchanged.into()));
+		assert_eq!(section.flips(), 1);
+		assert_eq!(section.on(), 1);
+		assert_eq!(section.off(), crate::BITFLIP_SECTION_TOTAL_BITS - 1);
+
+		Ok(())
+	}
 
 	#[test_log::test]
 	fn should_pass_validation() -> anyhow::Result<()> {
