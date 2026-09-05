@@ -39,6 +39,13 @@
   enterShell = ''
     set -e
     export PATH="$DEVENV_ROOT/.eget/bin:$PATH"
+
+    CARGO_BIN_ROOT="$DEVENV_ROOT/.bin/rust-$(rustc --version | cut -d ' ' -f 2)"
+    for cargo_bin_dir in "$CARGO_BIN_ROOT"/*/*/bin; do
+      if [ -d "$cargo_bin_dir" ]; then
+        export PATH="$cargo_bin_dir:$PATH"
+      fi
+    done
   '';
 
   # Rely on the global sdk for now as the nix apple sdk is not working for me.
