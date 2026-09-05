@@ -4,6 +4,7 @@ use crate::ConfigInitialize;
 use crate::ConfigUpdateAuthority;
 use crate::FlipBit;
 use crate::GameInitialize;
+use crate::GameResetSigners;
 use crate::GameUpdateTempSigner;
 use crate::SectionUnlock;
 use crate::TokenGroupInitialize;
@@ -220,7 +221,7 @@ pub fn game_reset_signers(
 	Instruction {
 		program_id: crate::ID,
 		accounts,
-		data: GameUpdateTempSigner {}.to_bytes(),
+		data: GameResetSigners {}.to_bytes(),
 	}
 }
 
@@ -315,5 +316,37 @@ pub fn section_unlock(
 		program_id: crate::ID,
 		accounts,
 		data,
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::BitflipInstruction;
+
+	#[test]
+	fn game_update_temp_signer_uses_update_discriminator() {
+		let instruction = game_update_temp_signer(&Pubkey::new_unique(), &Pubkey::new_unique(), 0);
+
+		assert_eq!(
+			instruction.data.first().copied(),
+			Some(BitflipInstruction::GameUpdateTempSigner as u8),
+		);
+	}
+
+	#[test]
+	fn game_reset_signers_uses_reset_discriminator() {
+		let instruction = game_reset_signers(
+			&Pubkey::new_unique(),
+			&Pubkey::new_unique(),
+			&Pubkey::new_unique(),
+			None,
+			0,
+		);
+
+		assert_eq!(
+			instruction.data.first().copied(),
+			Some(BitflipInstruction::GameResetSigners as u8),
+		);
 	}
 }
