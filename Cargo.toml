@@ -165,7 +165,7 @@ solapino = { path = "./solapino" }
 cargo-easy-dep = { version = "0.1.1" }
 cargo-insta = { version = "1.43" }
 cargo-interactive-update = { version = "0.6.2" }
-cargo-leptos = { version = "0.2.42" }
+cargo-leptos = { version = "0.3.7" }
 cargo-llvm-cov = { version = "0.6.18" }
 cargo-nextest = { version = "0.9.103" }
 leptosfmt = { version = "0.1.33", bins = ["leptosfmt"], git = "https://github.com/bram209/leptosfmt", rev = "8b4194b" }
