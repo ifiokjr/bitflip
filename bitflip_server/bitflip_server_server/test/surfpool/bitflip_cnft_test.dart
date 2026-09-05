@@ -23,9 +23,7 @@ const _bubblegumProgram = Address(
 const _compressionProgram = Address(
   'cmtDvXumGCrqC1Age74AVPhSRVXJMd8PJS91L8KbNCK',
 );
-const _noopProgram = Address(
-  'noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV',
-);
+const _noopProgram = Address('noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV');
 const _disableSbpfV0V1V2DeploymentFeature = Address(
   'B8JJXCy5amZyWG9r7EnUYLwzXSXTxG7GZ1qZ1qggo83g',
 );
@@ -68,11 +66,7 @@ void main() {
         _compressionProgram,
         _artifactPath('spl_account_compression-v0.3.3.so'),
       ),
-      _deployProgram(
-        surfpool,
-        _noopProgram,
-        _artifactPath('noop-v0.2.0.so'),
-      ),
+      _deployProgram(surfpool, _noopProgram, _artifactPath('noop-v0.2.0.so')),
     ]);
     await surfpool.airdrop(owner.address, BigInt.from(2_000_000_000));
 
@@ -335,10 +329,10 @@ Future<String> _sendInstructions(
         )
         .appendInstructions(instructions),
   );
-  final signed = await signTransactionWithSigners(
-    [client.payer, ...extraSigners],
-    transaction,
-  );
+  final signed = await signTransactionWithSigners([
+    client.payer,
+    ...extraSigners,
+  ], transaction);
   late final Signature transactionSignature;
   try {
     transactionSignature = signature(

@@ -21,17 +21,17 @@ void main() {
         child: const BitflipApp(),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     final openCanvasButton = find.text('OPEN CANVAS');
     await tester.ensureVisible(openCanvasButton);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 600));
     await tester.tap(openCanvasButton);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 600));
     final canvas = find.byKey(BitflipTestKeys.canvas);
     expect(canvas, findsOneWidget);
     await tester.ensureVisible(canvas);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 600));
 
     await tester.tapAt(tester.getCenter(canvas) + const Offset(2, 2));
     await tester.pump();
@@ -39,9 +39,9 @@ void main() {
 
     final commitButton = find.byKey(BitflipTestKeys.commitFlips);
     await tester.ensureVisible(commitButton);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 600));
     await tester.tap(commitButton);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 600));
     expect(
       find.text('Moves committed as one atomic transaction.'),
       findsOneWidget,

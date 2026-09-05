@@ -16,9 +16,7 @@ const _computeBudgetProgram = Address(
 const _accountCompressionProgram = Address(
   'cmtDvXumGCrqC1Age74AVPhSRVXJMd8PJS91L8KbNCK',
 );
-const _noopProgram = Address(
-  'noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV',
-);
+const _noopProgram = Address('noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV');
 
 final class MintableSection {
   const MintableSection({
@@ -81,33 +79,86 @@ final class SolanaBitflipMintService implements BitflipMintService {
     required this.merkleTreeAddress,
     required this.operatorPrivateKey,
     required String metadataBaseUrl,
+    this.gameIndex,
   }) : metadataBaseUrl = _validatedMetadataBaseUrl(metadataBaseUrl);
 
   factory SolanaBitflipMintService.fromEnvironment(
-    Map<String, String> environment,
-  ) {
-    final rpcUrl = environment['SOLANA_RPC_URL'] ?? 'http://127.0.0.1:8899';
-    return SolanaBitflipMintService(
-      rpc: createSolanaRpc(
-        url: rpcUrl,
-        allowInsecureHttp: _isLoopback(rpcUrl),
-      ),
-      merkleTreeAddress: environment['BITFLIP_MERKLE_TREE']?.trim(),
-      operatorPrivateKey: environment['BITFLIP_OPERATOR_PRIVATE_KEY']?.trim(),
-      metadataBaseUrl:
-          environment['BITFLIP_METADATA_BASE_URL']?.trim() ??
-          'http://localhost:8082',
+    Map<String, String> environment, {
+    required bool production,
+  }) {
+    final rpcUrl = _environmentValue(
+      environment,
+      'SOLANA_RPC_URL',
+      production: production,
+      developmentDefault: 'http://127.0.0.1:8899',
     );
+    final metadataBaseUrl = _environmentValue(
+      environment,
+      'BITFLIP_METADATA_BASE_URL',
+      production: production,
+      developmentDefault: 'http://localhost:8082',
+    );
+    final gameIndexValue = _environmentValue(
+      environment,
+      'BITFLIP_GAME_INDEX',
+      production: production,
+      developmentDefault: '0',
+    );
+    final gameIndex = int.tryParse(gameIndexValue);
+    if (gameIndex == null || gameIndex < 0 || gameIndex > 255) {
+      throw StateError('BITFLIP_GAME_INDEX must be between 0 and 255.');
+    }
+    final tree = environment['BITFLIP_MERKLE_TREE']?.trim();
+    final operator = environment['BITFLIP_OPERATOR_PRIVATE_KEY']?.trim();
+    if (production) {
+      final cluster = _requiredEnvironmentValue(environment, 'BITFLIP_CLUSTER');
+      if (cluster != 'mainnet') {
+        throw StateError('Production BITFLIP_CLUSTER must be mainnet.');
+      }
+      _requirePublicHttps('SOLANA_RPC_URL', rpcUrl);
+      _requirePublicHttps('BITFLIP_METADATA_BASE_URL', metadataBaseUrl);
+      if (rpcUrl.toLowerCase().contains('devnet') ||
+          rpcUrl.toLowerCase().contains('testnet')) {
+        throw StateError('Production SOLANA_RPC_URL must target mainnet.');
+      }
+      _requiredConfiguration(tree, 'BITFLIP_MERKLE_TREE');
+      _requiredConfiguration(operator, 'BITFLIP_OPERATOR_PRIVATE_KEY');
+    }
+    final service = SolanaBitflipMintService(
+      rpc: createSolanaRpc(url: rpcUrl, allowInsecureHttp: _isLoopback(rpcUrl)),
+      merkleTreeAddress: tree,
+      operatorPrivateKey: operator,
+      metadataBaseUrl: metadataBaseUrl,
+      gameIndex: gameIndex,
+    );
+    if (production) service.validateSigningConfiguration();
+    return service;
   }
 
   final rpc_spec.Rpc rpc;
   final String? merkleTreeAddress;
   final String? operatorPrivateKey;
   final String metadataBaseUrl;
+  final int? gameIndex;
+
+  void validateSigningConfiguration() {
+    getAddressEncoder().encode(
+      Address(_requiredConfiguration(merkleTreeAddress, 'BITFLIP_MERKLE_TREE')),
+    );
+    final signer = _operatorSigner();
+    signer.keyPair.dispose();
+  }
 
   @override
   Future<MintableSection> loadSection(int gameIndex, int sectionIndex) async {
     _validateIndices(gameIndex, sectionIndex);
+    if (this.gameIndex case final configuredGameIndex?
+        when configuredGameIndex != gameIndex) {
+      throw StateError(
+        'Requested game $gameIndex does not match configured game '
+        '$configuredGameIndex.',
+      );
+    }
     final (configAddress, _) = await findConfigPda(
       programAddress: bitflipProgramProgramAddress,
     );
@@ -117,15 +168,13 @@ final class SolanaBitflipMintService implements BitflipMintService {
     );
     final (sectionAddress, _) = await findSectionPda(
       programAddress: bitflipProgramProgramAddress,
-      seeds: SectionSeeds(
-        gameIndex: gameIndex,
-        sectionIndex: sectionIndex,
-      ),
+      seeds: SectionSeeds(gameIndex: gameIndex, sectionIndex: sectionIndex),
     );
-    final accounts = await fetchEncodedAccounts(
-      rpc,
-      [configAddress, gameAddress, sectionAddress],
-    );
+    final accounts = await fetchEncodedAccounts(rpc, [
+      configAddress,
+      gameAddress,
+      sectionAddress,
+    ]);
     final configAccount = _requiredProgramAccount(accounts[0], 'config');
     _requiredProgramAccount(accounts[1], 'game');
     final sectionAccount = _requiredProgramAccount(accounts[2], 'section');
@@ -240,10 +289,10 @@ final class SolanaBitflipMintService implements BitflipMintService {
         merkleTree: tree,
         leafIndex: leafIndex,
       );
-      final transactionSignature = await _submit(
-        signer,
-        [mintInstruction, recordInstruction],
-      );
+      final transactionSignature = await _submit(signer, [
+        mintInstruction,
+        recordInstruction,
+      ]);
       return MintSubmission(
         assetId: assetId,
         merkleTree: tree,
@@ -401,6 +450,39 @@ String _requiredConfiguration(String? value, String name) {
     throw StateError('$name is required before compressed NFTs can be minted.');
   }
   return value;
+}
+
+String _environmentValue(
+  Map<String, String> environment,
+  String name, {
+  required bool production,
+  required String developmentDefault,
+}) {
+  final value = environment[name]?.trim();
+  if (value != null && value.isNotEmpty) return value;
+  if (production) return _requiredEnvironmentValue(environment, name);
+  return developmentDefault;
+}
+
+String _requiredEnvironmentValue(Map<String, String> environment, String name) {
+  final value = environment[name]?.trim();
+  if (value == null || value.isEmpty) {
+    throw StateError('$name is required in production.');
+  }
+  return value;
+}
+
+void _requirePublicHttps(String name, String value) {
+  final uri = Uri.tryParse(value);
+  final host = uri?.host.toLowerCase();
+  if (uri == null ||
+      uri.scheme != 'https' ||
+      !uri.hasAuthority ||
+      host == 'localhost' ||
+      host == '127.0.0.1' ||
+      host == '::1') {
+    throw StateError('$name must use a public HTTPS endpoint in production.');
+  }
 }
 
 void _validateIndices(int gameIndex, int sectionIndex) {

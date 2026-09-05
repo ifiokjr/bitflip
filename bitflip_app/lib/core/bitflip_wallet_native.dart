@@ -6,13 +6,10 @@ import 'package:solana_kit/solana_kit.dart';
 import 'package:solana_kit_mobile_wallet_adapter/solana_kit_mobile_wallet_adapter.dart';
 import 'package:solana_kit_mobile_wallet_adapter_protocol/solana_kit_mobile_wallet_adapter_protocol.dart';
 
-const _walletChain = String.fromEnvironment(
-  'SOLANA_WALLET_CHAIN',
-  defaultValue: 'solana:devnet',
-);
-
 class BitflipWallet {
-  BitflipWallet();
+  BitflipWallet({required this.walletChain});
+
+  final String walletChain;
 
   AuthorizationResult? _authorization;
 
@@ -35,7 +32,7 @@ class BitflipWallet {
           uri: Uri.parse('https://bitflip.xyz'),
           name: 'Bitflip',
         ),
-        chain: _walletChain,
+        chain: walletChain,
         features: const [
           'solana:signAndSendTransactions',
           'solana:signMessages',

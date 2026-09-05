@@ -62,10 +62,7 @@ void main() {
         () => decodeBase64Signature(base64Encode([1, 2])),
         throwsFormatException,
       );
-      expect(
-        () => decodeBase64Signature('a' * 129),
-        throwsFormatException,
-      );
+      expect(() => decodeBase64Signature('a' * 129), throwsFormatException);
     });
 
     test('decodes a 32-byte base58 public key', () {

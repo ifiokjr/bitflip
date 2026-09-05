@@ -38,7 +38,7 @@ server:start --no-flutter
 flutter:app run
 ```
 
-Build the Flutter WASM website directly into Serverpod's web root:
+Build the Flutter WASM website directly into Serverpod's web root. Release commands require explicit configuration; see [release readiness](docs/release-readiness.md) for the complete contract.
 
 ```bash
 build:web
@@ -115,4 +115,4 @@ See [security.md](./security.md) for reporting and operational requirements.
 
 ## License
 
-See [license](./license).
+See [LICENSE](./LICENSE).

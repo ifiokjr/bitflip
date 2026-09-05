@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bitflip_app/core/bitflip_config.dart';
 import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/data/bitflip_repository.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
@@ -63,6 +64,9 @@ final class GameViewState {
 
   BigInt get queuedFee => snapshot.flipFeeLamports * BigInt.from(queued.length);
 
+  bool get canTransact =>
+      snapshot.isDemo || (isWalletSupported && walletAddress != null);
+
   GameViewState copyWith({
     GameSnapshot? snapshot,
     Set<PixelCoordinate>? queued,
@@ -85,7 +89,8 @@ final class GameViewState {
 }
 
 @Riverpod(keepAlive: true)
-BitflipRepository bitflipRepository(Ref ref) => SolanaBitflipRepository();
+BitflipRepository bitflipRepository(Ref ref) =>
+    SolanaBitflipRepository(config: ref.watch(bitflipConfigProvider));
 
 @Riverpod(keepAlive: true)
 class GameController extends _$GameController {
@@ -140,7 +145,11 @@ class GameController extends _$GameController {
   }
 
   void togglePixel(PixelCoordinate coordinate) {
-    if (!state.snapshot.section.isEditable || state.isBusy) return;
+    if (!state.snapshot.section.isEditable ||
+        state.isBusy ||
+        (!state.snapshot.isDemo && !state.isWalletSupported)) {
+      return;
+    }
     final queued = {...state.queued};
     if (!queued.remove(coordinate)) {
       if (queued.length == maxFlipBatch) {
@@ -168,7 +177,7 @@ class GameController extends _$GameController {
   }
 
   Future<void> commitMoves() async {
-    if (state.queued.isEmpty || state.isBusy) return;
+    if (state.queued.isEmpty || state.isBusy || !state.canTransact) return;
     final coordinates = state.queued.toList()..sort();
     if (state.snapshot.isDemo) {
       _commitLocally(coordinates);
@@ -188,7 +197,11 @@ class GameController extends _$GameController {
   }
 
   Future<void> claimSection() async {
-    if (state.isBusy || state.snapshot.section.isClaimed) return;
+    if (state.isBusy ||
+        state.snapshot.section.isClaimed ||
+        !state.canTransact) {
+      return;
+    }
     if (state.snapshot.isDemo) {
       final section = state.snapshot.section.copyWith(
         lifecycle: SectionLifecycle.active,
@@ -213,7 +226,11 @@ class GameController extends _$GameController {
   }
 
   Future<void> sealSection() async {
-    if (state.isBusy || !state.snapshot.section.isEditable) return;
+    if (state.isBusy ||
+        !state.snapshot.section.isEditable ||
+        !state.canTransact) {
+      return;
+    }
     if (!state.snapshot.isDemo) {
       state = state.copyWith(isBusy: true);
       try {
@@ -240,7 +257,8 @@ class GameController extends _$GameController {
 
   Future<void> mintSection() async {
     if (state.isBusy ||
-        state.snapshot.section.lifecycle != SectionLifecycle.sealed) {
+        state.snapshot.section.lifecycle != SectionLifecycle.sealed ||
+        !state.canTransact) {
       return;
     }
     state = state.copyWith(isBusy: true);

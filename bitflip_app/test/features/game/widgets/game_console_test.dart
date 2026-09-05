@@ -64,17 +64,94 @@ void main() {
     expect(find.text('1 / 16'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('unsupported native platforms are deliberately view-only', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(500, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _TestApp(
+        child: GameConsole(
+          state: _state(
+            SectionLifecycle.active,
+            queued: {const PixelCoordinate(2, 3)},
+            isDemo: false,
+            isWalletSupported: false,
+            walletAddress: null,
+          ),
+          onConnect: () {},
+          onClaim: () {},
+          onCommit: () {},
+          onClear: () {},
+          onSeal: () {},
+          onMint: () {},
+          onRefresh: () {},
+        ),
+      ),
+    );
+
+    expect(find.textContaining('View only'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(BitflipTestKeys.commitFlips))
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<OutlinedButton>(find.byKey(BitflipTestKeys.sealSection))
+          .onPressed,
+      isNull,
+    );
+  });
+
+  testWidgets('view-only users cannot claim an unclaimed sector', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(500, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _TestApp(
+        child: GameConsole(
+          state: _state(
+            SectionLifecycle.unclaimed,
+            isDemo: false,
+            isWalletSupported: false,
+            walletAddress: null,
+          ),
+          onConnect: () {},
+          onClaim: () {},
+          onCommit: () {},
+          onClear: () {},
+          onSeal: () {},
+          onMint: () {},
+          onRefresh: () {},
+        ),
+      ),
+    );
+
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(BitflipTestKeys.claimSection))
+          .onPressed,
+      isNull,
+    );
+  });
 }
 
 GameViewState _state(
   SectionLifecycle lifecycle, {
   Set<PixelCoordinate> queued = const {},
+  bool isDemo = true,
+  bool isWalletSupported = true,
+  String? walletAddress = 'DemoWallet111111111111111111111111111111111',
 }) {
   const owner = 'DemoWallet111111111111111111111111111111111';
   return GameViewState(
     snapshot: GameSnapshot(
       gameIndex: 0,
-      isDemo: true,
+      isDemo: isDemo,
       nextSection: 1,
       totalFlips: BigInt.zero,
       mintedSections: 0,
@@ -93,8 +170,8 @@ GameViewState _state(
     queued: queued,
     activity: const GameActivity(GameNotice.ready),
     isBusy: false,
-    isWalletSupported: true,
-    walletAddress: owner,
+    isWalletSupported: isWalletSupported,
+    walletAddress: walletAddress,
   );
 }
 

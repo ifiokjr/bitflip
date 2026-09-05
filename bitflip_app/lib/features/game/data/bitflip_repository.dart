@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:bitflip_app/core/bitflip_config.dart';
 import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
@@ -7,16 +8,6 @@ import 'package:bitflip_program/bitflip_program.dart';
 import 'package:bitflip_server_client/bitflip_server_client.dart' as serverpod;
 import 'package:solana_kit/solana_kit.dart';
 import 'package:solana_kit_rpc_spec/solana_kit_rpc_spec.dart';
-
-const _rpcUrl = String.fromEnvironment(
-  'SOLANA_RPC_URL',
-  defaultValue: 'https://api.devnet.solana.com',
-);
-const _gameIndex = int.fromEnvironment('BITFLIP_GAME_INDEX');
-const _serverpodUrl = String.fromEnvironment(
-  'SERVERPOD_URL',
-  defaultValue: 'http://localhost:8080/',
-);
 
 abstract interface class BitflipRepository {
   bool get isWalletSupported;
@@ -36,16 +27,17 @@ abstract interface class BitflipRepository {
 
 final class SolanaBitflipRepository implements BitflipRepository {
   SolanaBitflipRepository({
-    String rpcUrl = _rpcUrl,
-    String serverpodUrl = _serverpodUrl,
+    required BitflipConfig config,
     BitflipWallet? wallet,
-  }) : _rpc = createSolanaRpc(
-         url: rpcUrl,
-         allowInsecureHttp: _isLoopback(rpcUrl),
+  }) : _gameIndex = config.gameIndex,
+       _rpc = createSolanaRpc(
+         url: config.rpcUrl,
+         allowInsecureHttp: _isLoopback(config.rpcUrl),
        ),
-       _serverpod = serverpod.Client(serverpodUrl),
-       _wallet = wallet ?? BitflipWallet();
+       _serverpod = serverpod.Client(config.serverpodUrl),
+       _wallet = wallet ?? BitflipWallet(walletChain: config.walletChain);
 
+  final int _gameIndex;
   final Rpc _rpc;
   final serverpod.Client _serverpod;
   final BitflipWallet _wallet;
@@ -69,7 +61,7 @@ final class SolanaBitflipRepository implements BitflipRepository {
     );
     final (gameAddress, _) = await findGamePda(
       programAddress: bitflipProgramProgramAddress,
-      seeds: const GameSeeds(gameIndex: _gameIndex),
+      seeds: GameSeeds(gameIndex: _gameIndex),
     );
     final (sectionAddress, _) = await findSectionPda(
       programAddress: bitflipProgramProgramAddress,

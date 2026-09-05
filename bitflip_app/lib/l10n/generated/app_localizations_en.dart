@@ -30,7 +30,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletUnavailable =>
-      'Wallet signing is unavailable on this device. The canvas stays fully explorable.';
+      'View only on this device. Signing is currently supported on Android and the web.';
 
   @override
   String get chooseWallet => 'Choose a wallet';
@@ -124,6 +124,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get moveFee => 'MOVE FEE';
+
+  @override
+  String get claimPrice => 'CLAIM PRICE';
 
   @override
   String feeValue(String sol) {

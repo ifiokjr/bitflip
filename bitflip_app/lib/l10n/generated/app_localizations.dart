@@ -133,7 +133,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'Wallet signing is unavailable on this device. The canvas stays fully explorable.'**
+  /// **'View only on this device. Signing is currently supported on Android and the web.'**
   String get walletUnavailable;
 
   /// No description provided for @chooseWallet.
@@ -297,6 +297,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'MOVE FEE'**
   String get moveFee;
+
+  /// No description provided for @claimPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'CLAIM PRICE'**
+  String get claimPrice;
 
   /// No description provided for @feeValue.
   ///
