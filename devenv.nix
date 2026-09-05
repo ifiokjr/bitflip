@@ -195,7 +195,8 @@
     "build:css" = {
       exec = ''
         set -e
-        pnpm dlx @tailwindcss/cli@4.1.2 \
+        pnpm install --frozen-lockfile
+        pnpm exec tailwindcss \
           --input "$DEVENV_ROOT/bitflip/style/input.css" \
           --output "$DEVENV_ROOT/bitflip/style/output.css" \
           --minify
