@@ -5,7 +5,7 @@ edition = { workspace = true }
 homepage = { workspace = true }
 keywords = ["solana", "pinocchio"]
 license = { workspace = true }
-readme = { workspace = true }
+readme = "readme.md"
 repository = { workspace = true }
 description = "Solana pinocchio smart contract framework"
 
