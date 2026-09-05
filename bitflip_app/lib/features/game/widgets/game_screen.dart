@@ -516,6 +516,12 @@ class _CanvasPanel extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final section = state.snapshot.section;
+    final canEdit =
+        (state.loadStatus == GameLoadStatus.ready ||
+            state.loadStatus == GameLoadStatus.demo) &&
+        section.isEditable &&
+        !state.isBusy;
+    final selectedPixel = state.cursor ?? const PixelCoordinate(0, 0);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -558,12 +564,16 @@ class _CanvasPanel extends HookWidget {
           bitmap: section.bitmap,
           queued: state.queued,
           cursor: state.cursor,
-          enabled:
-              (state.loadStatus == GameLoadStatus.ready ||
-                  state.loadStatus == GameLoadStatus.demo) &&
-              section.isEditable &&
-              !state.isBusy,
+          enabled: canEdit,
           onPixelPressed: controller.togglePixel,
+          onCursorMoved: controller.selectPixel,
+        ),
+        const SizedBox(height: 15),
+        _CoordinatePicker(
+          coordinate: selectedPixel,
+          enabled: canEdit,
+          onChanged: controller.selectPixel,
+          onToggle: () => controller.togglePixel(selectedPixel),
         ),
         const SizedBox(height: 15),
         Row(
@@ -603,7 +613,6 @@ class _CanvasPanel extends HookWidget {
               selectedIndex: section.index,
               nextSection: state.snapshot.nextSection,
               mintedSections: state.snapshot.mintedSections,
-              onSelected: (index) => unawaited(controller.selectSection(index)),
             );
             final copy = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -614,6 +623,28 @@ class _CanvasPanel extends HookWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(context.l10n.overviewBody),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<int>(
+                  key: BitflipTestKeys.sectionPicker,
+                  initialValue: section.index,
+                  decoration: InputDecoration(
+                    labelText: context.l10n.selectSection,
+                  ),
+                  items: [
+                    for (var index = 0; index < sectionCount; index++)
+                      DropdownMenuItem(
+                        value: index,
+                        child: Text(formatSectionIndex(index)),
+                      ),
+                  ],
+                  onChanged: state.isBusy
+                      ? null
+                      : (index) {
+                          if (index != null) {
+                            unawaited(controller.selectSection(index));
+                          }
+                        },
+                ),
               ],
             );
             if (constraints.maxWidth < 700) {
@@ -631,6 +662,89 @@ class _CanvasPanel extends HookWidget {
               ],
             );
           },
+        ),
+      ],
+    );
+  }
+}
+
+class _CoordinatePicker extends HookWidget {
+  const _CoordinatePicker({
+    required this.coordinate,
+    required this.enabled,
+    required this.onChanged,
+    required this.onToggle,
+  });
+
+  final PixelCoordinate coordinate;
+  final bool enabled;
+  final ValueChanged<PixelCoordinate> onChanged;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget axisPicker({
+      required Key key,
+      required String label,
+      required int value,
+      required ValueChanged<int> onChanged,
+    }) {
+      return InputDecorator(
+        decoration: InputDecoration(labelText: label),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<int>(
+            key: key,
+            value: value,
+            isExpanded: true,
+            items: [
+              for (var index = 0; index < sectionSide; index++)
+                DropdownMenuItem(value: index, child: Text('$index')),
+            ],
+            onChanged: (next) {
+              if (next != null) onChanged(next);
+            },
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final xPicker = axisPicker(
+              key: BitflipTestKeys.pixelX,
+              label: context.l10n.pixelX,
+              value: coordinate.x,
+              onChanged: (x) => onChanged(PixelCoordinate(x, coordinate.y)),
+            );
+            final yPicker = axisPicker(
+              key: BitflipTestKeys.pixelY,
+              label: context.l10n.pixelY,
+              value: coordinate.y,
+              onChanged: (y) => onChanged(PixelCoordinate(coordinate.x, y)),
+            );
+            if (constraints.maxWidth < 420) {
+              return Column(
+                children: [xPicker, const SizedBox(height: 10), yPicker],
+              );
+            }
+            return Row(
+              children: [
+                Expanded(child: xPicker),
+                const SizedBox(width: 12),
+                Expanded(child: yPicker),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          key: BitflipTestKeys.toggleCoordinate,
+          onPressed: enabled ? onToggle : null,
+          icon: const Icon(Icons.flip_rounded),
+          label: Text(context.l10n.togglePixel(coordinate.x, coordinate.y)),
         ),
       ],
     );
@@ -832,17 +946,18 @@ class _Eyebrow extends HookWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
         const SizedBox(
           width: 28,
           child: Divider(color: BitflipColors.coral, thickness: 2),
         ),
         const SizedBox(width: 10),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelLarge
-              ?.copyWith(color: BitflipColors.coral, letterSpacing: 1.4),
+        Flexible(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelLarge
+                ?.copyWith(color: BitflipColors.coral, letterSpacing: 1.4),
+          ),
         ),
       ],
     );

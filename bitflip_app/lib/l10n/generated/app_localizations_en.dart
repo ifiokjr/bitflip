@@ -71,7 +71,28 @@ class AppLocalizationsEn extends AppLocalizations {
       'Live chain state is unavailable. No demo data has been substituted; retry when the connection returns.';
 
   @override
-  String get canvasLabel => 'Interactive 64 by 64 pixel sector';
+  String get canvasLabel =>
+      'Interactive 64 by 64 pixel sector. Use arrow keys to move the cursor and Space or Enter to toggle a pixel.';
+
+  @override
+  String get zoomOut => 'Zoom out';
+
+  @override
+  String get resetZoom => 'Reset zoom';
+
+  @override
+  String get zoomIn => 'Zoom in';
+
+  @override
+  String get pixelX => 'Pixel X';
+
+  @override
+  String get pixelY => 'Pixel Y';
+
+  @override
+  String togglePixel(int x, int y) {
+    return 'TOGGLE PIXEL $x:$y';
+  }
 
   @override
   String sectionLabel(String section) {
@@ -95,6 +116,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get overviewBody =>
       '256 sectors unlock in sequence. Pick one to inspect its pulse.';
+
+  @override
+  String get selectSection => 'Select sector';
 
   @override
   String get console => 'MOVE CONSOLE';

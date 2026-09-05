@@ -5,6 +5,7 @@ import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
 import 'package:bitflip_app/l10n/l10n.dart';
 import 'package:bitflip_app/testing/bitflip_test_keys.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
 class PixelCanvas extends HookWidget {
@@ -14,6 +15,7 @@ class PixelCanvas extends HookWidget {
     required this.cursor,
     required this.enabled,
     required this.onPixelPressed,
+    required this.onCursorMoved,
     super.key,
   });
 
@@ -22,49 +24,160 @@ class PixelCanvas extends HookWidget {
   final PixelCoordinate? cursor;
   final bool enabled;
   final ValueChanged<PixelCoordinate> onPixelPressed;
+  final ValueChanged<PixelCoordinate> onCursorMoved;
 
   @override
   Widget build(BuildContext context) {
+    final focusNode = useFocusNode();
+    final transform = useMemoized(TransformationController.new);
+    useEffect(() => transform.dispose, [transform]);
+
+    void changeZoom(double delta) {
+      final current = transform.value.getMaxScaleOnAxis();
+      final next = (current + delta).clamp(1.0, 12.0);
+      transform.value = Matrix4.diagonal3Values(next, next, 1);
+    }
+
+    KeyEventResult handleKey(FocusNode _, KeyEvent event) {
+      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+      final selected = cursor ?? const PixelCoordinate(0, 0);
+      final next = switch (event.logicalKey) {
+        LogicalKeyboardKey.arrowLeft => PixelCoordinate(
+          math.max(0, selected.x - 1),
+          selected.y,
+        ),
+        LogicalKeyboardKey.arrowRight => PixelCoordinate(
+          math.min(sectionSide - 1, selected.x + 1),
+          selected.y,
+        ),
+        LogicalKeyboardKey.arrowUp => PixelCoordinate(
+          selected.x,
+          math.max(0, selected.y - 1),
+        ),
+        LogicalKeyboardKey.arrowDown => PixelCoordinate(
+          selected.x,
+          math.min(sectionSide - 1, selected.y + 1),
+        ),
+        _ => null,
+      };
+      if (next != null) {
+        onCursorMoved(next);
+        return KeyEventResult.handled;
+      }
+      if (enabled &&
+          (event.logicalKey == LogicalKeyboardKey.space ||
+              event.logicalKey == LogicalKeyboardKey.enter)) {
+        onPixelPressed(selected);
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final side = math.min(constraints.maxWidth, 720.0);
         return Center(
-          child: Semantics(
-            container: true,
-            image: true,
-            label: context.l10n.canvasLabel,
-            child: MouseRegion(
-              cursor: enabled
-                  ? SystemMouseCursors.precise
-                  : SystemMouseCursors.forbidden,
-              child: GestureDetector(
-                key: BitflipTestKeys.canvas,
-                behavior: HitTestBehavior.opaque,
-                onTapDown: enabled
-                    ? (details) {
-                        final cell = side / sectionSide;
-                        final x = (details.localPosition.dx / cell)
-                            .floor()
-                            .clamp(0, sectionSide - 1);
-                        final y = (details.localPosition.dy / cell)
-                            .floor()
-                            .clamp(0, sectionSide - 1);
-                        onPixelPressed(PixelCoordinate(x, y));
+          child: SizedBox(
+            width: side,
+            child: Column(
+              children: [
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: SegmentedButton<_ZoomAction>(
+                    showSelectedIcon: false,
+                    emptySelectionAllowed: true,
+                    segments: [
+                      ButtonSegment(
+                        value: _ZoomAction.out,
+                        icon: const Icon(
+                          Icons.remove_rounded,
+                          key: BitflipTestKeys.canvasZoomOut,
+                        ),
+                        tooltip: context.l10n.zoomOut,
+                      ),
+                      ButtonSegment(
+                        value: _ZoomAction.reset,
+                        icon: const Icon(
+                          Icons.center_focus_strong_rounded,
+                          key: BitflipTestKeys.canvasZoomReset,
+                        ),
+                        tooltip: context.l10n.resetZoom,
+                      ),
+                      ButtonSegment(
+                        value: _ZoomAction.increase,
+                        icon: const Icon(
+                          Icons.add_rounded,
+                          key: BitflipTestKeys.canvasZoomIn,
+                        ),
+                        tooltip: context.l10n.zoomIn,
+                      ),
+                    ],
+                    selected: const {},
+                    onSelectionChanged: (actions) {
+                      switch (actions.single) {
+                        case _ZoomAction.out:
+                          changeZoom(-1);
+                        case _ZoomAction.reset:
+                          transform.value = Matrix4.identity();
+                        case _ZoomAction.increase:
+                          changeZoom(1);
                       }
-                    : null,
-                child: RepaintBoundary(
-                  child: SizedBox.square(
-                    dimension: side,
-                    child: CustomPaint(
-                      painter: PixelCanvasPainter(
-                        bitmap: bitmap,
-                        queued: queued,
-                        cursor: cursor,
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox.square(
+                  dimension: side,
+                  child: Semantics(
+                    container: true,
+                    focusable: true,
+                    label: context.l10n.canvasLabel,
+                    child: Focus(
+                      focusNode: focusNode,
+                      onKeyEvent: handleKey,
+                      child: InteractiveViewer(
+                        transformationController: transform,
+                        minScale: 1,
+                        maxScale: 12,
+                        child: MouseRegion(
+                          cursor: enabled
+                              ? SystemMouseCursors.precise
+                              : SystemMouseCursors.forbidden,
+                          child: GestureDetector(
+                            key: BitflipTestKeys.canvas,
+                            behavior: HitTestBehavior.opaque,
+                            onTapDown: enabled
+                                ? (details) {
+                                    focusNode.requestFocus();
+                                    final cell = side / sectionSide;
+                                    final x = (details.localPosition.dx / cell)
+                                        .floor()
+                                        .clamp(0, sectionSide - 1);
+                                    final y = (details.localPosition.dy / cell)
+                                        .floor()
+                                        .clamp(0, sectionSide - 1);
+                                    onPixelPressed(PixelCoordinate(x, y));
+                                  }
+                                : (_) => focusNode.requestFocus(),
+                            child: RepaintBoundary(
+                              child: SizedBox.square(
+                                dimension: side,
+                                child: CustomPaint(
+                                  painter: PixelCanvasPainter(
+                                    bitmap: bitmap,
+                                    queued: queued,
+                                    cursor: cursor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         );
@@ -72,6 +185,8 @@ class PixelCanvas extends HookWidget {
     );
   }
 }
+
+enum _ZoomAction { out, reset, increase }
 
 class PixelCanvasPainter extends CustomPainter {
   PixelCanvasPainter({

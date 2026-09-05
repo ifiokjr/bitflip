@@ -222,6 +222,16 @@ class GameController extends _$GameController {
     );
   }
 
+  void selectPixel(PixelCoordinate coordinate) {
+    if (coordinate.x < 0 ||
+        coordinate.x >= sectionSide ||
+        coordinate.y < 0 ||
+        coordinate.y >= sectionSide) {
+      return;
+    }
+    state = state.copyWith(cursor: coordinate);
+  }
+
   void clearQueue() {
     state = state.copyWith(
       queued: const {},

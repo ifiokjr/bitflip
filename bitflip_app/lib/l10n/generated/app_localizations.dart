@@ -205,8 +205,44 @@ abstract class AppLocalizations {
   /// No description provided for @canvasLabel.
   ///
   /// In en, this message translates to:
-  /// **'Interactive 64 by 64 pixel sector'**
+  /// **'Interactive 64 by 64 pixel sector. Use arrow keys to move the cursor and Space or Enter to toggle a pixel.'**
   String get canvasLabel;
+
+  /// No description provided for @zoomOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom out'**
+  String get zoomOut;
+
+  /// No description provided for @resetZoom.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset zoom'**
+  String get resetZoom;
+
+  /// No description provided for @zoomIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom in'**
+  String get zoomIn;
+
+  /// No description provided for @pixelX.
+  ///
+  /// In en, this message translates to:
+  /// **'Pixel X'**
+  String get pixelX;
+
+  /// No description provided for @pixelY.
+  ///
+  /// In en, this message translates to:
+  /// **'Pixel Y'**
+  String get pixelY;
+
+  /// No description provided for @togglePixel.
+  ///
+  /// In en, this message translates to:
+  /// **'TOGGLE PIXEL {x}:{y}'**
+  String togglePixel(int x, int y);
 
   /// No description provided for @sectionLabel.
   ///
@@ -243,6 +279,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'256 sectors unlock in sequence. Pick one to inspect its pulse.'**
   String get overviewBody;
+
+  /// No description provided for @selectSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Select sector'**
+  String get selectSection;
 
   /// No description provided for @console.
   ///
