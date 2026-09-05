@@ -1,0 +1,11 @@
+[package]
+name = "bitflip-program-surfpool-tests"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+pina_test = "0.12.2"
+program_under_test = { package = "bitflip_program", path = "../.." }

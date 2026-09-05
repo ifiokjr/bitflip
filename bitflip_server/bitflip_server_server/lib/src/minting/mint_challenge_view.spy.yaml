@@ -1,0 +1,5 @@
+class: MintChallengeView
+fields:
+  nonce: String
+  message: String
+  expiresAt: DateTime

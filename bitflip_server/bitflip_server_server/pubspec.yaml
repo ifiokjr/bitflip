@@ -1,0 +1,33 @@
+name: bitflip_server_server
+description: Secure mint orchestration and metadata backend for Bitflip.
+
+environment:
+  sdk: "^3.13.0"
+
+resolution: workspace
+
+dependencies:
+  bitflip_program:
+    path: ../../bitflip_program/clients/dart
+  bs58: 1.0.2
+  ed25519_edwards: 0.3.2
+  serverpod: 4.0.0-rc.2
+  solana_kit: 0.9.1
+  solana_kit_mpl_bubblegum: 0.5.1
+  solana_kit_rpc_api: 0.9.1
+  solana_kit_rpc_spec: 0.9.1
+  solana_kit_rpc_types: 0.9.1
+  solana_kit_system: 0.7.1
+
+dev_dependencies:
+  lints: ">=3.0.0 <7.0.0"
+  serverpod_test: 4.0.0-rc.2
+  solana_kit_surfpool: 0.3.1
+  test: ^1.25.5
+
+serverpod:
+  flutter_apps:
+    Bitflip:
+      path: ../../bitflip_app
+      displayName: Bitflip app
+      auto_launch: true

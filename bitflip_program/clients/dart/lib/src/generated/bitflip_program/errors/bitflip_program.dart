@@ -1,0 +1,66 @@
+// Auto-generated. Do not edit.
+// ignore_for_file: type=lint, constant_identifier_names
+
+/// Error codes for the BitflipProgram program.
+
+const int bitflipProgramErrorUnauthorized = 0x0; // 0
+
+const int bitflipProgramErrorInvalidConfiguration = 0x1; // 1
+
+const int bitflipProgramErrorInvalidGameIndex = 0x2; // 2
+
+const int bitflipProgramErrorGameNotLive = 0x3; // 3
+
+const int bitflipProgramErrorGameNotStarted = 0x4; // 4
+
+const int bitflipProgramErrorInvalidSectionIndex = 0x5; // 5
+
+const int bitflipProgramErrorSectionLocked = 0x6; // 6
+
+const int bitflipProgramErrorInvalidFlipCount = 0x7; // 7
+
+const int bitflipProgramErrorInvalidCoordinate = 0x8; // 8
+
+const int bitflipProgramErrorDuplicateCoordinate = 0x9; // 9
+
+const int bitflipProgramErrorPriceSlippage = 0xa; // 10
+
+const int bitflipProgramErrorSectionNotActive = 0xb; // 11
+
+const int bitflipProgramErrorSectionNotSealed = 0xc; // 12
+
+const int bitflipProgramErrorSectionAlreadyMinted = 0xd; // 13
+
+const int bitflipProgramErrorInvalidAsset = 0xe; // 14
+
+const int bitflipProgramErrorInsufficientFunds = 0xf; // 15
+
+/// Map of error codes to human-readable messages.
+const Map<int, String> _bitflipProgramErrorMessages = {
+    bitflipProgramErrorUnauthorized: '',
+    bitflipProgramErrorInvalidConfiguration: '',
+    bitflipProgramErrorInvalidGameIndex: '',
+    bitflipProgramErrorGameNotLive: '',
+    bitflipProgramErrorGameNotStarted: '',
+    bitflipProgramErrorInvalidSectionIndex: '',
+    bitflipProgramErrorSectionLocked: '',
+    bitflipProgramErrorInvalidFlipCount: '',
+    bitflipProgramErrorInvalidCoordinate: '',
+    bitflipProgramErrorDuplicateCoordinate: '',
+    bitflipProgramErrorPriceSlippage: '',
+    bitflipProgramErrorSectionNotActive: '',
+    bitflipProgramErrorSectionNotSealed: '',
+    bitflipProgramErrorSectionAlreadyMinted: '',
+    bitflipProgramErrorInvalidAsset: '',
+    bitflipProgramErrorInsufficientFunds: '',
+};
+
+/// Get the error message for a BitflipProgram program error code.
+String? getBitflipProgramErrorMessage(int code) {
+  return _bitflipProgramErrorMessages[code];
+}
+
+/// Check if an error code belongs to the BitflipProgram program.
+bool isBitflipProgramError(int code) {
+  return _bitflipProgramErrorMessages.containsKey(code);
+}

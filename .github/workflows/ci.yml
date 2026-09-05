@@ -1,133 +1,71 @@
-name: "ci"
+name: ci
 
 on:
   push:
-    branches:
-      - main
-
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
-env:
-  ADMIN_PUBKEY: 4z5X2suocz9szaQnSshj2AW8tuLgUVmYUxiW9hhPaRHs
 
 jobs:
-  lint:
-    timeout-minutes: 60
+  verify:
     runs-on: ubuntu-latest
-    steps:
-      - name: checkout repository
-        uses: actions/checkout@v4
-
-      - name: setup
-        uses: ./.github/actions/devenv
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          nix-cache: /tmp/nixcache
-          deno-cache: /tmp/denocache
-
-      - name: lint formatting
-        run: task lint:format
-        shell: bash
-
-      - name: lint formatting
-        run: task lint:deno
-        shell: bash
-
-      - uses: clechasseur/rs-clippy-check@v3
-        with:
-          args: --all-features
-
-  test:
     timeout-minutes: 60
-    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        test:
-          - test_program
-          - test_bitflip_ssr
+        command:
+          - audit:security
+          - lint:all
+          - test:rust
+          - test:server
+          - test:wallet
+          - test:flutter
+          - test:surfpool
+          - test:surfpool:cnft
+          - build:server
+          - build:web
+          - build:container
     steps:
-      - name: checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
-      - name: setup
+      - name: Set up devenv
         uses: ./.github/actions/devenv
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          nix-cache: /tmp/nixcache
-          deno-cache: /tmp/denocache
 
-      - name: test ${{ matrix.test }}
-        run: cargo ${{ matrix.test }}
-        shell: bash
+      - name: Run ${{ matrix.command }}
+        run: devenv shell -- ${{ matrix.command }}
 
-  build_bitflip_program:
-    timeout-minutes: 60
+  generated-code:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - name: checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
-      - name: setup
+      - name: Set up devenv
         uses: ./.github/actions/devenv
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          nix-cache: /tmp/nixcache
-          deno-cache: /tmp/denocache
 
-      - name: build
-        run: task build:program
-        shell: bash
+      - name: Regenerate typed clients
+        run: |
+          devenv shell -- generate:clients
+          devenv shell -- generate:server
 
-      - name: upload bitflip program
-        uses: actions/upload-artifact@v4
-        with:
-          name: bitflip_program.so
-          path: target/deploy/bitflip_program.so
-
-  test_program_with_validator:
-    timeout-minutes: 60
-    needs: [build_bitflip_program]
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout repository
-        uses: actions/checkout@v4
-
-      - name: setup
-        uses: ./.github/actions/devenv
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          nix-cache: /tmp/nixcache
-          deno-cache: /tmp/denocache
-
-      - name: download bitflip program
-        uses: actions/download-artifact@v4
-        with:
-          name: bitflip_program.so
-          path: target/deploy/bitflip_program.so
-
-      - name: test
-        run: cargo test_program_validator
-        shell: bash
-
-  build_bitflip_website:
-    timeout-minutes: 60
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout repository
-        uses: actions/checkout@v4
-
-      - name: setup
-        uses: ./.github/actions/devenv
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          nix-cache: /tmp/nixcache
-          deno-cache: /tmp/denocache
-
-      - name: build
-        run: task build
-        shell: bash
+      - name: Verify generated code is committed
+        run: git diff --exit-code

@@ -1,19 +1,9 @@
 {
-	"deno.enable": true,
-	"deno.lint": true,
 	"editor.detectIndentation": false,
 	"editor.insertSpaces": false,
 	"editor.tabSize": 2,
 	"dprint.path": ".devenv/profile/bin/dprint",
-	"tailwindCSS.includeLanguages": {
-		"rust": "html"
-	},
-	"tailwindCSS.experimental.classRegex": [
-		["#[tw\\\\([^\\]]*class\\s*=\\s*\"([^\"]*)\"\\)]", "\"([^\"]*)\""]
-	],
-	"emmet.includeLanguages": {
-		"rust": "html"
-	},
+	"dart.flutterSdkPath": ".fvm/flutter_sdk",
 	"rust-analyzer.cargo.features": "all",
 	"rust-analyzer.check.command": "clippy",
 	"[css]": {
@@ -21,6 +11,11 @@
 	},
 	"[dockerfile]": {
 		"editor.defaultFormatter": "dprint.dprint"
+	},
+	"[dart]": {
+		"editor.defaultFormatter": "dart-code.dart-code",
+		"editor.formatOnSave": true,
+		"editor.insertSpaces": true
 	},
 	"[javascript]": {
 		"editor.defaultFormatter": "dprint.dprint"

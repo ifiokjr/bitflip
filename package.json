@@ -1,0 +1,25 @@
+{
+	"name": "@bitflip/generator",
+	"private": true,
+	"type": "module",
+	"packageManager": "pnpm@11.25.0",
+	"scripts": {
+		"wallet:build": "node --experimental-strip-types setup/build_wallet_bridge.ts",
+		"wallet:check": "tsc --noEmit",
+		"wallet:test": "node --experimental-strip-types --test setup/wallet_bridge.test.ts"
+	},
+	"dependencies": {
+		"@solana/wallet-standard-chains": "1.1.2",
+		"@solana/wallet-standard-features": "1.4.0",
+		"@wallet-standard/app": "1.1.1",
+		"@wallet-standard/base": "1.1.1",
+		"@wallet-standard/features": "1.1.1",
+		"codama": "^1.10.2",
+		"codama-renderers-dart": "0.5.3"
+	},
+	"devDependencies": {
+		"@types/node": "26.4.1",
+		"esbuild": "0.28.2",
+		"typescript": "7.0.2"
+	}
+}

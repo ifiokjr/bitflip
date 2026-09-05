@@ -1,0 +1,21 @@
+class: MintChallenge
+serverOnly: true
+table: bitflip_mint_challenge
+fields:
+  id: UuidValue?, defaultPersist=random_v7
+  walletAddress: String
+  gameIndex: int
+  sectionIndex: int
+  nonce: String
+  message: String
+  createdAt: DateTime, defaultModel=now
+  expiresAt: DateTime
+  usedAt: DateTime?
+indexes:
+  bitflip_mint_challenge_nonce_idx:
+    fields: nonce
+    unique: true
+  bitflip_mint_challenge_wallet_created_idx:
+    fields: walletAddress, createdAt
+  bitflip_mint_challenge_expiry_idx:
+    fields: expiresAt

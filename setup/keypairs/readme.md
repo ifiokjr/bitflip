@@ -1,5 +1,5 @@
-# keypairs
+# Keypairs
 
-This folder contains the keypairs that are used during testing and development. This ensures reproducible environments across machines.
+Never commit keypairs to this repository. Development and production signers must be supplied through ignored local files or managed secret storage.
 
-Please don't use any of the keypairs listed here!
+Surfpool tests create an ephemeral, pre-funded signer for every isolated run.

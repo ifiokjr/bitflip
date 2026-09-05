@@ -1,4 +1,10 @@
 /target
+**/target/
+/.pre-commit-config.yaml
+/.playwright-cli/
+/.tools/
+/output/
+/setup/keypairs/*.json
 /programs/target
 /.helix
 /result
@@ -25,6 +31,7 @@ devenv.local.nix
 node_modules/
 /.bin/
 /.local-cache/
+/.tools/
 /.sass-cache/
 /.test-results/
 /test-results/
