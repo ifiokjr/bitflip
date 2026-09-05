@@ -230,6 +230,7 @@ pub fn game_reset_signers(
 /// ### Arguments
 ///
 /// * `player` - The player account: must be a signer.
+/// * `color` - An off-chain palette index in the range `0..8`.
 pub fn flip_bit(
 	player: &Pubkey,
 	game_index: u8,
@@ -237,6 +238,7 @@ pub fn flip_bit(
 	array_index: u8,
 	offset: u8,
 	value: u8,
+	color: u8,
 ) -> Instruction {
 	let mint = get_pda_mint(TokenMember::Bit).0;
 	let player_token_account = get_token_account(player, &mint);
@@ -252,6 +254,7 @@ pub fn flip_bit(
 		.array_index(array_index)
 		.offset(offset)
 		.value(value)
+		.color(color)
 		.build()
 		.to_bytes();
 

@@ -145,6 +145,7 @@ async fn shared_flip_bit_test<
 	let array_index = 0;
 	let offset = 0;
 	let value = 1;
+	let color = 6;
 	let provider = create_provider().await?;
 	let rpc = provider.to_rpc();
 	let wallet_keypair = get_wallet_keypair();
@@ -163,6 +164,7 @@ async fn shared_flip_bit_test<
 		array_index,
 		offset,
 		value,
+		color,
 	);
 	let mut transaction =
 		VersionedTransaction::new_unsigned_v0(&player, &[ix], &[], recent_blockhash)?;

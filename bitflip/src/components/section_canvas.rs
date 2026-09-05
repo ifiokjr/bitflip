@@ -99,6 +99,7 @@ pub fn SectionCanvas() -> impl IntoView {
 				array_index,
 				offset,
 				value: u8::from(!is_checked),
+				color: 0,
 			});
 			log::info!("result: {result:?}");
 

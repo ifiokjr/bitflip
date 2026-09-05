@@ -20,6 +20,8 @@ pub const BITFLIP_TOTAL_SECTIONS: usize = 256;
 pub const BITFLIP_SECTION_LENGTH: usize = BITFLIP_TOTAL_BITS / BITFLIP_TOTAL_SECTIONS / 16;
 /// The total number of bits within a section of the game.
 pub const BITFLIP_SECTION_TOTAL_BITS: u32 = BITFLIP_SECTION_LENGTH as u32 * 16;
+/// Number of colors available to off-chain game projections.
+pub const BITFLIP_COLOR_COUNT: u8 = 8;
 
 /// How long a session of the bits canvas game lasts. This can be reduced after
 /// the game starts 30 days.

@@ -54,6 +54,8 @@ pub enum BitflipError {
 	DuplicateAuthority = 21,
 	#[error("The authority is not authorized to update the authority")]
 	Unauthorized = 22,
+	#[error("The color index is invalid and must be less than 8")]
+	InvalidColorIndex = 23,
 }
 
 error!(BitflipError);

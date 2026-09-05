@@ -1,6 +1,7 @@
 use solana_program::msg;
 use steel::*;
 
+use crate::BitFlipped;
 use crate::BitflipError;
 use crate::BitflipInstruction;
 use crate::ConfigState;
@@ -114,6 +115,17 @@ pub fn process_flip_bit(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
 		1,
 	)?;
 
+	BitFlipped {
+		player: *player_info.key,
+		game_index: game.game_index,
+		section_index: args.section_index,
+		array_index: args.array_index,
+		offset: args.offset,
+		value: args.value,
+		color: args.color,
+	}
+	.log();
+
 	Ok(())
 }
 
@@ -184,6 +196,9 @@ pub struct FlipBit {
 	pub offset: u8,
 	/// The value to set the bit to: `0` or `1`.
 	pub value: u8,
+	/// An off-chain palette index. This is emitted but not stored in the section.
+	#[cfg_attr(feature = "client", builder(default = 0))]
+	pub color: u8,
 }
 
 impl FlipBit {
@@ -198,6 +213,10 @@ impl FlipBit {
 
 		if self.value != 0 && self.value != 1 {
 			return Err(BitflipError::InvalidPlayValue.into());
+		}
+
+		if self.color >= crate::BITFLIP_COLOR_COUNT {
+			return Err(BitflipError::InvalidColorIndex.into());
 		}
 
 		Ok(())
@@ -232,6 +251,7 @@ mod tests {
 			array_index: 0,
 			offset: 0,
 			value: 1,
+			color: 0,
 		};
 
 		record_flip(&mut section, &args)?;
@@ -243,6 +263,19 @@ mod tests {
 		assert_eq!(section.off(), crate::BITFLIP_SECTION_TOTAL_BITS - 1);
 
 		Ok(())
+	}
+
+	#[test]
+	fn rejects_colors_outside_the_palette() {
+		let args = FlipBit {
+			section_index: 0,
+			array_index: 0,
+			offset: 0,
+			value: 1,
+			color: crate::BITFLIP_COLOR_COUNT,
+		};
+
+		assert_eq!(args.validate(), Err(BitflipError::InvalidColorIndex.into()));
 	}
 
 	#[test_log::test]
