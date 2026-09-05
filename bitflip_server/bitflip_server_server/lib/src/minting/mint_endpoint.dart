@@ -48,46 +48,44 @@ class MintEndpoint extends Endpoint {
       nonce: nonce,
       expiresAt: expiresAt,
     );
-    await DatabaseUtil.runInTransactionOrSavepoint(
-      session.db,
-      null,
-      (transaction) async {
-        await session.db.unsafeQuery(
-          'SELECT pg_advisory_xact_lock(hashtextextended(@wallet, 0));',
-          transaction: transaction,
-          parameters: QueryParameters.named({'wallet': wallet.value}),
-        );
-        await MintChallenge.db.deleteWhere(
-          session,
-          where: (table) => table.expiresAt < now.subtract(_challengeRetention),
-          transaction: transaction,
-          noReturn: true,
-        );
-        final recent = await MintChallenge.db.count(
-          session,
-          where: (table) =>
-              table.walletAddress.equals(wallet.value) &
-              (table.createdAt >= now.subtract(_rateWindow)),
-          transaction: transaction,
-        );
-        if (recent >= _maximumChallengesPerWindow) {
-          throw StateError('Too many mint requests. Wait before trying again.');
-        }
-        await MintChallenge.db.insertRow(
-          session,
-          MintChallenge(
-            walletAddress: wallet.value,
-            gameIndex: gameIndex,
-            sectionIndex: sectionIndex,
-            nonce: nonce,
-            message: message,
-            createdAt: now,
-            expiresAt: expiresAt,
-          ),
-          transaction: transaction,
-        );
-      },
-    );
+    await DatabaseUtil.runInTransactionOrSavepoint(session.db, null, (
+      transaction,
+    ) async {
+      await session.db.unsafeQuery(
+        'SELECT pg_advisory_xact_lock(hashtextextended(@wallet, 0));',
+        transaction: transaction,
+        parameters: QueryParameters.named({'wallet': wallet.value}),
+      );
+      await MintChallenge.db.deleteWhere(
+        session,
+        where: (table) => table.expiresAt < now.subtract(_challengeRetention),
+        transaction: transaction,
+        noReturn: true,
+      );
+      final recent = await MintChallenge.db.count(
+        session,
+        where: (table) =>
+            table.walletAddress.equals(wallet.value) &
+            (table.createdAt >= now.subtract(_rateWindow)),
+        transaction: transaction,
+      );
+      if (recent >= _maximumChallengesPerWindow) {
+        throw StateError('Too many mint requests. Wait before trying again.');
+      }
+      await MintChallenge.db.insertRow(
+        session,
+        MintChallenge(
+          walletAddress: wallet.value,
+          gameIndex: gameIndex,
+          sectionIndex: sectionIndex,
+          nonce: nonce,
+          message: message,
+          createdAt: now,
+          expiresAt: expiresAt,
+        ),
+        transaction: transaction,
+      );
+    });
     return MintChallengeView(
       nonce: nonce,
       message: message,
@@ -106,68 +104,66 @@ class MintEndpoint extends Endpoint {
     final wallet = _validatedWallet(walletAddress);
     _validateIndices(gameIndex, sectionIndex);
     final validatedNonce = _validatedNonce(nonce);
-    return DatabaseUtil.runInTransactionOrSavepoint(
-      session.db,
-      null,
-      (transaction) async {
-        final challenge = await MintChallenge.db.findFirstRow(
-          session,
-          where: (table) =>
-              table.walletAddress.equals(wallet.value) &
-              table.gameIndex.equals(gameIndex) &
-              table.sectionIndex.equals(sectionIndex) &
-              table.nonce.equals(validatedNonce),
-          transaction: transaction,
-          lockMode: LockMode.forUpdate,
-        );
-        final now = DateTime.now().toUtc();
-        if (challenge == null ||
-            challenge.usedAt != null ||
-            !challenge.expiresAt.isAfter(now)) {
-          throw StateError('The mint authorization is no longer valid.');
-        }
-        final expectedMessage = mintAuthorizationMessage(
-          walletAddress: wallet.value,
-          gameIndex: gameIndex,
-          sectionIndex: sectionIndex,
-          nonce: challenge.nonce,
-          expiresAt: challenge.expiresAt,
-        );
-        if (challenge.message != expectedMessage ||
-            !verifySolanaSignature(
-              publicKeyBytes: decodeBase58PublicKey(wallet.value),
-              message: expectedMessage,
-              signatureBytes: decodeBase64Signature(signatureBase64),
-            )) {
-          throw StateError('The mint authorization signature is invalid.');
-        }
+    return DatabaseUtil.runInTransactionOrSavepoint(session.db, null, (
+      transaction,
+    ) async {
+      final challenge = await MintChallenge.db.findFirstRow(
+        session,
+        where: (table) =>
+            table.walletAddress.equals(wallet.value) &
+            table.gameIndex.equals(gameIndex) &
+            table.sectionIndex.equals(sectionIndex) &
+            table.nonce.equals(validatedNonce),
+        transaction: transaction,
+        lockMode: LockMode.forUpdate,
+      );
+      final now = DateTime.now().toUtc();
+      if (challenge == null ||
+          challenge.usedAt != null ||
+          !challenge.expiresAt.isAfter(now)) {
+        throw StateError('The mint authorization is no longer valid.');
+      }
+      final expectedMessage = mintAuthorizationMessage(
+        walletAddress: wallet.value,
+        gameIndex: gameIndex,
+        sectionIndex: sectionIndex,
+        nonce: challenge.nonce,
+        expiresAt: challenge.expiresAt,
+      );
+      if (challenge.message != expectedMessage ||
+          !verifySolanaSignature(
+            publicKeyBytes: decodeBase58PublicKey(wallet.value),
+            message: expectedMessage,
+            signatureBytes: decodeBase64Signature(signatureBase64),
+          )) {
+        throw StateError('The mint authorization signature is invalid.');
+      }
 
-        await session.db.unsafeQuery(
-          "SELECT pg_advisory_xact_lock(hashtextextended('bitflip-private-tree', 0));",
-          transaction: transaction,
-        );
-        final section = await MintServiceRegistry.service.loadSection(
-          gameIndex,
-          sectionIndex,
-        );
-        if (section.owner != wallet) {
-          throw StateError('The section owner changed before minting.');
-        }
-        await MintChallenge.db.updateRow(
-          session,
-          challenge.copyWith(usedAt: now),
-          transaction: transaction,
-        );
-        final result = await MintServiceRegistry.service.mint(section);
-        return MintSectionResult(
-          assetId: result.assetId.value,
-          merkleTree: result.merkleTree.value,
-          leafIndex: result.leafIndex,
-          transactionSignature: result.transactionSignature,
-          alreadyMinted: result.alreadyMinted,
-        );
-      },
-    );
+      await session.db.unsafeQuery(
+        "SELECT pg_advisory_xact_lock(hashtextextended('bitflip-private-tree', 0));",
+        transaction: transaction,
+      );
+      final section = await MintServiceRegistry.service.loadSection(
+        gameIndex,
+        sectionIndex,
+      );
+      if (section.owner != wallet) {
+        throw StateError('The section owner changed before minting.');
+      }
+      await MintChallenge.db.updateRow(
+        session,
+        challenge.copyWith(usedAt: now),
+        transaction: transaction,
+      );
+      final result = await MintServiceRegistry.service.mint(section);
+      return MintSectionResult(
+        assetId: result.assetId.value,
+        merkleTree: result.merkleTree.value,
+        leafIndex: result.leafIndex,
+        transactionSignature: result.transactionSignature,
+        alreadyMinted: result.alreadyMinted,
+      );
+    });
   }
 }
 

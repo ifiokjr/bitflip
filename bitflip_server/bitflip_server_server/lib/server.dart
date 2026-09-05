@@ -7,11 +7,12 @@ import 'package:bitflip_server_server/src/web/security_headers_middleware.dart';
 
 /// The starting point of the Serverpod server.
 void run(List<String> args) async {
+  final pod = Serverpod(args);
   final mintService = SolanaBitflipMintService.fromEnvironment(
     Platform.environment,
+    production: pod.runMode == ServerpodRunMode.production,
   );
   MintServiceRegistry.configure(mintService);
-  final pod = Serverpod(args);
   pod.webServer.addMiddleware(const SecurityHeadersMiddleware().call, '/');
 
   pod.webServer
@@ -22,10 +23,7 @@ void run(List<String> args) async {
       ),
       '/metadata/:game/:section',
     )
-    ..addRoute(
-      SectionArtRoute(mintService),
-      '/art/:game/:section',
-    );
+    ..addRoute(SectionArtRoute(mintService), '/art/:game/:section');
 
   final flutterWeb = Directory('web/app');
   if (flutterWeb.existsSync()) {

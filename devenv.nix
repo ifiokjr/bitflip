@@ -50,6 +50,20 @@ let
     export PUB_CACHE="$serverpod_cache"
     export PATH="$flutter_sdk/bin:$PATH"
   '';
+  releaseAppDefines = ''
+    : "''${BITFLIP_ENVIRONMENT:?Set BITFLIP_ENVIRONMENT for release builds.}"
+    : "''${SOLANA_WALLET_CHAIN:?Set SOLANA_WALLET_CHAIN for release builds.}"
+    : "''${SOLANA_RPC_URL:?Set SOLANA_RPC_URL for release builds.}"
+    : "''${SERVERPOD_URL:?Set SERVERPOD_URL for release builds.}"
+    : "''${BITFLIP_GAME_INDEX:?Set BITFLIP_GAME_INDEX for release builds.}"
+    app_dart_defines=(
+      "--dart-define=BITFLIP_ENVIRONMENT=$BITFLIP_ENVIRONMENT"
+      "--dart-define=SOLANA_WALLET_CHAIN=$SOLANA_WALLET_CHAIN"
+      "--dart-define=SOLANA_RPC_URL=$SOLANA_RPC_URL"
+      "--dart-define=SERVERPOD_URL=$SERVERPOD_URL"
+      "--dart-define=BITFLIP_GAME_INDEX=$BITFLIP_GAME_INDEX"
+    )
+  '';
 in
 {
   packages =
@@ -148,8 +162,14 @@ in
       exec = ''
         set -euo pipefail
         unset CC CXX LD AR NM RANLIB STRIP OBJCOPY OBJDUMP SIZE STRINGS
-        unset NIX_CC NIX_BINTOOLS NIX_CFLAGS_COMPILE NIX_LDFLAGS
-        unset NIX_HARDENING_ENABLE NIX_ENFORCE_NO_NATIVE
+    unset NIX_CC NIX_BINTOOLS NIX_CFLAGS_COMPILE NIX_LDFLAGS
+    unset NIX_HARDENING_ENABLE NIX_ENFORCE_NO_NATIVE
+    unset NIX_CC_WRAPPER_TARGET_HOST_arm64_apple_darwin
+    unset NIX_BINTOOLS_WRAPPER_TARGET_HOST_arm64_apple_darwin
+    unset NIX_PKG_CONFIG_WRAPPER_TARGET_HOST_arm64_apple_darwin
+    unset NIX_DONT_SET_RPATH NIX_DONT_SET_RPATH_FOR_BUILD
+    unset NIX_IGNORE_LD_THROUGH_GCC NIX_NO_SELF_RPATH
+    unset IN_NIX_SHELL __NIX_DARWIN_SET_ENVIRONMENT_DONE
         unset SDKROOT MACOSX_DEPLOYMENT_TARGET CFLAGS CXXFLAGS LDFLAGS ARCHFLAGS
         unset PKG_CONFIG PKG_CONFIG_PATH LD_LIBRARY_PATH LD_DYLD_PATH cmakeFlags
         ${resolveFlutterSdk}
@@ -290,6 +310,7 @@ in
         cd "$DEVENV_ROOT"
         pnpm wallet:build
         ${resolveFlutterSdk}
+        ${releaseAppDefines}
         cd "$DEVENV_ROOT/${appDir}"
         "$flutter_sdk/bin/flutter" build web \
           --release \
@@ -297,9 +318,67 @@ in
           --no-web-resources-cdn \
           --base-href / \
           --output "$DEVENV_ROOT/${serverDir}/web/app" \
+          "''${app_dart_defines[@]}" \
           "$@"
       '';
       description = "Build the WASM Flutter site into Serverpod's web root.";
+      binary = "bash";
+    };
+    "build:android:release" = {
+      exec = ''
+        set -euo pipefail
+        ${resolveFlutterSdk}
+        ${releaseAppDefines}
+        cd "$DEVENV_ROOT/${appDir}"
+        exec "$flutter_sdk/bin/flutter" build appbundle \
+          --release \
+          "''${app_dart_defines[@]}" \
+          "$@"
+      '';
+      description = "Build the configured Android release app bundle.";
+      binary = "bash";
+    };
+    "build:ios:release" = {
+      exec = ''
+        set -euo pipefail
+        ${resolveFlutterSdk}
+        ${releaseAppDefines}
+        cd "$DEVENV_ROOT/${appDir}"
+        exec /usr/bin/env -i \
+          HOME="$HOME" \
+          USER="''${USER:-runner}" \
+          LOGNAME="''${LOGNAME:-''${USER:-runner}}" \
+          TMPDIR="''${TMPDIR:-/tmp}" \
+          LANG="''${LANG:-en_US.UTF-8}" \
+          PATH="$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin:/run/current-system/sw/bin:$flutter_sdk/bin" \
+          "$flutter_sdk/bin/flutter" build ios \
+          --release \
+          --no-codesign \
+          "''${app_dart_defines[@]}" \
+          "$@"
+      '';
+      description = "Compile the configured iOS release without signing.";
+      binary = "bash";
+    };
+    "build:macos:release" = {
+      exec = ''
+        set -euo pipefail
+        ${resolveFlutterSdk}
+        ${releaseAppDefines}
+        cd "$DEVENV_ROOT/${appDir}"
+        exec /usr/bin/env -i \
+          HOME="$HOME" \
+          USER="''${USER:-runner}" \
+          LOGNAME="''${LOGNAME:-''${USER:-runner}}" \
+          TMPDIR="''${TMPDIR:-/tmp}" \
+          LANG="''${LANG:-en_US.UTF-8}" \
+          PATH="$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin:/run/current-system/sw/bin:$flutter_sdk/bin" \
+          "$flutter_sdk/bin/flutter" build macos \
+          --release \
+          "''${app_dart_defines[@]}" \
+          "$@"
+      '';
+      description = "Build the configured macOS release application.";
       binary = "bash";
     };
     "build:container" = {
@@ -474,6 +553,23 @@ in
         "$flutter_sdk/bin/flutter" test integration_test
       '';
       description = "Run the permanent Flutter integration flow.";
+      binary = "bash";
+    };
+    "test:flutter:integration:macos" = {
+      exec = ''
+        set -euo pipefail
+        ${resolveFlutterSdk}
+        cd "$DEVENV_ROOT/${appDir}"
+        exec /usr/bin/env -i \
+          HOME="$HOME" \
+          USER="''${USER:-runner}" \
+          LOGNAME="''${LOGNAME:-''${USER:-runner}}" \
+          TMPDIR="''${TMPDIR:-/tmp}" \
+          LANG="''${LANG:-en_US.UTF-8}" \
+          PATH="$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin:/run/current-system/sw/bin:$flutter_sdk/bin" \
+          "$flutter_sdk/bin/flutter" test integration_test -d macos
+      '';
+      description = "Run the assembled Flutter journey on macOS.";
       binary = "bash";
     };
     "test:server" = {

@@ -3,11 +3,6 @@ import 'dart:js_interop';
 
 import 'package:bitflip_app/core/bitflip_wallet_option.dart';
 
-const _walletChain = String.fromEnvironment(
-  'SOLANA_WALLET_CHAIN',
-  defaultValue: 'solana:devnet',
-);
-
 @JS('bitflipWallet')
 external _WalletBridge? get _bitflipWalletBridge;
 
@@ -24,14 +19,16 @@ extension type _WalletBridge(JSObject _) implements JSObject {
 }
 
 class BitflipWallet {
-  const BitflipWallet();
+  const BitflipWallet({required this.walletChain});
+
+  final String walletChain;
 
   bool get isSupported => _bitflipWalletBridge != null;
 
   List<BitflipWalletOption>? get availableWallets {
     final bridge = _bitflipWalletBridge;
     if (bridge == null) return const [];
-    final decoded = jsonDecode(bridge.listWallets(_walletChain.toJS).toDart);
+    final decoded = jsonDecode(bridge.listWallets(walletChain.toJS).toDart);
     if (decoded is! List<Object?>) {
       throw StateError('The wallet bridge returned invalid wallet options.');
     }
@@ -49,7 +46,7 @@ class BitflipWallet {
         !options.any((option) => option.id == selectedId)) {
       throw StateError('Choose an available Solana wallet before connecting.');
     }
-    return (await bridge.connect(selectedId.toJS, _walletChain.toJS).toDart)
+    return (await bridge.connect(selectedId.toJS, walletChain.toJS).toDart)
         .toDart;
   }
 

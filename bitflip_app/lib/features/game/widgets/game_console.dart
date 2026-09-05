@@ -31,8 +31,7 @@ class GameConsole extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final section = state.snapshot.section;
-    final walletConnected = state.walletAddress != null;
-    final canSign = state.snapshot.isDemo || walletConnected;
+    final canSign = state.canTransact;
     final canSeal =
         section.isEditable &&
         (state.snapshot.isDemo || state.walletAddress == section.owner);
@@ -72,6 +71,29 @@ class GameConsole extends HookWidget {
                 ),
               ],
             ),
+            if (section.lifecycle == SectionLifecycle.unclaimed) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      context.l10n.claimPrice,
+                      style: Theme.of(context).textTheme.labelLarge
+                          ?.copyWith(color: BitflipColors.muted),
+                    ),
+                  ),
+                  Text(
+                    context.l10n.feeValue(
+                      lamportsToSol(state.snapshot.claimPriceLamports),
+                    ),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: BitflipColors.cyan,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 18),
             Wrap(
               runSpacing: 12,
@@ -133,7 +155,8 @@ class GameConsole extends HookWidget {
               )
             else if (section.lifecycle == SectionLifecycle.unclaimed)
               FilledButton.icon(
-                onPressed: state.isBusy ? null : onClaim,
+                key: BitflipTestKeys.claimSection,
+                onPressed: canSign && !state.isBusy ? onClaim : null,
                 icon: const Icon(Icons.flag_outlined),
                 label: Text(context.l10n.claimSector),
               )
@@ -153,7 +176,7 @@ class GameConsole extends HookWidget {
             else
               FilledButton.icon(
                 key: BitflipTestKeys.commitFlips,
-                onPressed: state.queued.isEmpty || state.isBusy
+                onPressed: state.queued.isEmpty || state.isBusy || !canSign
                     ? null
                     : onCommit,
                 icon: const Icon(Icons.bolt_rounded),

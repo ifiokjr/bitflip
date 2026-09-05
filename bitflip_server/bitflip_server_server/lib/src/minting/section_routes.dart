@@ -82,10 +82,7 @@ final class SectionArtRoute extends Route {
       final sectionIndex = request.pathParameters.get(_sectionParam);
       final section = await _sections.get(gameIndex, sectionIndex);
       return Response.ok(
-        body: Body.fromString(
-          _renderSvg(section),
-          mimeType: _svgMimeType,
-        ),
+        body: Body.fromString(_renderSvg(section), mimeType: _svgMimeType),
       );
     } on FormatException {
       return Response.badRequest();

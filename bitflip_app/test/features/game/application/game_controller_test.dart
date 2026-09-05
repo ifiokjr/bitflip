@@ -107,6 +107,34 @@ void main() {
 
       expect(repository.mintCalls, 0);
     });
+
+    test('unsupported live platforms cannot queue or transact', () async {
+      repository = FakeBitflipRepository(
+        snapshot: _liveSnapshot(SectionLifecycle.active),
+        isWalletSupported: false,
+        walletAddress: null,
+      );
+      final viewOnlyContainer = ProviderContainer(
+        overrides: [bitflipRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(viewOnlyContainer.dispose);
+      final controller = viewOnlyContainer.read(
+        gameControllerProvider.notifier,
+      );
+      await controller.refresh();
+
+      controller.togglePixel(const PixelCoordinate(3, 2));
+      await controller.claimSection();
+      await controller.commitMoves();
+      await controller.sealSection();
+      await controller.mintSection();
+
+      expect(viewOnlyContainer.read(gameControllerProvider).queued, isEmpty);
+      expect(repository.claimCalls, 0);
+      expect(repository.flipCalls, 0);
+      expect(repository.sealCalls, 0);
+      expect(repository.mintCalls, 0);
+    });
   });
 }
 

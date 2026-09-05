@@ -45,6 +45,53 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run ${{ matrix.command }}
+        env:
+          BITFLIP_ENVIRONMENT: staging
+          BITFLIP_GAME_INDEX: "0"
+          SERVERPOD_URL: https://staging.bitflip.invalid/
+          SOLANA_RPC_URL: https://api.devnet.solana.com
+          SOLANA_WALLET_CHAIN: solana:devnet
+        run: devenv shell -- ${{ matrix.command }}
+
+  native-release-builds:
+    name: release / ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: android
+            os: ubuntu-latest
+            command: build:android:release
+          - target: ios
+            os: macos-latest
+            command: build:ios:release
+          - target: macos
+            os: macos-latest
+            command: build:macos:release
+          - target: integration-macos
+            os: macos-latest
+            command: test:flutter:integration:macos
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up devenv
+        uses: ./.github/actions/devenv
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build ${{ matrix.target }} release
+        env:
+          BITFLIP_ENVIRONMENT: staging
+          BITFLIP_GAME_INDEX: "0"
+          SERVERPOD_URL: https://staging.bitflip.invalid/
+          SOLANA_RPC_URL: https://api.devnet.solana.com
+          SOLANA_WALLET_CHAIN: solana:devnet
         run: devenv shell -- ${{ matrix.command }}
 
   generated-code:
