@@ -33,7 +33,7 @@ pub fn initialize_mint<'info>(
 		Some(authority_info.key),
 		decimals,
 	)?;
-	solana_program::program::invoke_signed(&ix, &[mint_info.clone()], signers_seeds)
+	solana_program::program::invoke_signed(&ix, std::slice::from_ref(mint_info), signers_seeds)
 }
 
 pub fn token_metadata_initialize<'info>(

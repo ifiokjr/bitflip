@@ -57,6 +57,7 @@
 		"**/fixtures",
 		"**/snapshots",
 		"**/target",
+		"patches/**",
 		"**/node_modules",
 		"docs/book/**",
 		".bin/",

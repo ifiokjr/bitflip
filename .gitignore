@@ -24,7 +24,7 @@ devenv.local.nix
 **/temp**.bin/
 node_modules/
 /.bin/
-/.eget/
+/.eget/bin/
 /.local-cache/
 /.sass-cache/
 /.test-results/
@@ -43,6 +43,7 @@ node_modules/
 
 **/*.rs.bk
 /.wallet.json
+/setup/keypairs/*.json
 /.anchor
 /test-ledger
 

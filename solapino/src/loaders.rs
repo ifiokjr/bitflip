@@ -3,8 +3,6 @@ use solana_program::account_info::AccountInfo;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 
-use crate::assert;
-use crate::msg;
 use crate::AccountDeserialize;
 use crate::AccountInfoValidation;
 use crate::AccountValidation;
@@ -14,6 +12,8 @@ use crate::AsSplAccount;
 use crate::CloseAccount;
 use crate::Discriminator;
 use crate::LamportTransfer;
+use crate::assert;
+use crate::msg;
 
 impl AccountInfoValidation for AccountInfo<'_> {
 	#[track_caller]
@@ -140,7 +140,7 @@ impl AccountInfoValidation for AccountInfo<'_> {
 	#[track_caller]
 	#[cfg(feature = "spl")]
 	fn assert_spl_owner(&self) -> Result<&Self, ProgramError> {
-		if spl_token_2022::check_spl_token_program_account(&self.owner).is_err() {
+		if spl_token_2022::check_spl_token_program_account(self.owner).is_err() {
 			let caller = std::panic::Location::caller();
 			msg!(
 				"address: {} is not owned by a supported spl token program: {}",
@@ -157,7 +157,7 @@ impl AccountInfoValidation for AccountInfo<'_> {
 
 	#[track_caller]
 	fn assert_address(&self, address: &Pubkey) -> Result<&Self, ProgramError> {
-		if self.key.ne(&address) {
+		if self.key.ne(address) {
 			let caller = std::panic::Location::caller();
 			msg!("address: {} is invalid, expected: {}", self.key, address);
 			msg!("{}", caller);
@@ -263,33 +263,28 @@ impl AccountInfoValidation for AccountInfo<'_> {
 
 impl AsAccount for AccountInfo<'_> {
 	#[track_caller]
-	fn as_account<T>(&self, program_id: &Pubkey) -> Result<&T, ProgramError>
+	fn as_account<T>(&self, program_id: &Pubkey) -> Result<std::cell::Ref<'_, T>, ProgramError>
 	where
 		T: AccountDeserialize + Discriminator + Pod,
 	{
 		self.assert_owner(program_id)?;
-
-		unsafe {
-			T::try_from_bytes(std::slice::from_raw_parts(
-				self.try_borrow_data()?.as_ptr(),
-				8 + std::mem::size_of::<T>(),
-			))
-		}
+		std::cell::Ref::filter_map(self.try_borrow_data()?, |data| T::try_from_bytes(data).ok())
+			.map_err(|_| ProgramError::InvalidAccountData)
 	}
 
 	#[track_caller]
-	fn as_account_mut<T>(&self, program_id: &Pubkey) -> Result<&mut T, ProgramError>
+	fn as_account_mut<T>(
+		&self,
+		program_id: &Pubkey,
+	) -> Result<std::cell::RefMut<'_, T>, ProgramError>
 	where
 		T: AccountDeserialize + Discriminator + Pod,
 	{
 		self.assert_owner(program_id)?;
-
-		unsafe {
-			T::try_from_bytes_mut(std::slice::from_raw_parts_mut(
-				self.try_borrow_mut_data()?.as_mut_ptr(),
-				8 + std::mem::size_of::<T>(),
-			))
-		}
+		std::cell::RefMut::filter_map(self.try_borrow_mut_data()?, |data| {
+			T::try_from_bytes_mut(data).ok()
+		})
+		.map_err(|_| ProgramError::InvalidAccountData)
 	}
 }
 
@@ -330,7 +325,7 @@ impl AccountValidation for spl_token_2022::pod::PodMint {
 		F: Fn(&Self) -> bool,
 	{
 		match assert(condition(self), ProgramError::InvalidAccountData, msg) {
-			Err(err) => Err(err.into()),
+			Err(err) => Err(err),
 			Ok(()) => Ok(self),
 		}
 	}
@@ -372,7 +367,7 @@ impl AccountValidation for spl_token_2022::pod::PodMint {
 		F: Fn(&Self) -> bool,
 	{
 		match assert(condition(self), ProgramError::InvalidAccountData, msg) {
-			Err(err) => Err(err.into()),
+			Err(err) => Err(err),
 			Ok(()) => Ok(self),
 		}
 	}
@@ -415,7 +410,7 @@ impl AccountValidation for spl_token_2022::pod::PodAccount {
 		F: Fn(&Self) -> bool,
 	{
 		match assert(condition(self), ProgramError::InvalidAccountData, msg) {
-			Err(err) => Err(err.into()),
+			Err(err) => Err(err),
 			Ok(()) => Ok(self),
 		}
 	}
@@ -457,7 +452,7 @@ impl AccountValidation for spl_token_2022::pod::PodAccount {
 		F: Fn(&Self) -> bool,
 	{
 		match assert(condition(self), ProgramError::InvalidAccountData, msg) {
-			Err(err) => Err(err.into()),
+			Err(err) => Err(err),
 			Ok(()) => Ok(self),
 		}
 	}
@@ -528,9 +523,7 @@ impl AsSplAccount for AccountInfo<'_> {
 	> {
 		self.assert_address(
 			&spl_associated_token_account::get_associated_token_address_with_program_id(
-				owner,
-				mint,
-				&self.owner,
+				owner, mint, self.owner,
 			),
 		)?
 		.as_token_account_state()

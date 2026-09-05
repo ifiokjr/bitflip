@@ -1,9 +1,9 @@
 use leptos::prelude::*;
 use leptos_meta::Html;
-use leptos_use::use_color_mode_with_options;
 use leptos_use::ColorMode;
 use leptos_use::UseColorModeOptions;
 use leptos_use::UseColorModeReturn;
+use leptos_use::use_color_mode_with_options;
 
 #[component]
 pub fn GameHeader() -> impl IntoView {

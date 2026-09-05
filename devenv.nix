@@ -16,7 +16,7 @@
       coreutils
       curl
       dprint
-      flyctl
+      eget
       jq
       libiconv
       nixfmt-rfc-style
@@ -136,6 +136,20 @@
         else
           echo "eget binaries are up to date"
         fi
+
+        # eget intentionally flattens executable files from release archives.
+        # Restore the SDK script layout expected by cargo-build-sbf.
+        for sdk_root in sdk platform-tools-sdk; do
+          SBF_ROOT="$DEVENV_ROOT/.eget/bin/$sdk_root/sbf"
+          mkdir -p "$SBF_ROOT"
+          cp "$DEVENV_ROOT/.eget/sbf/env.sh" "$SBF_ROOT/env.sh"
+          SBF_SCRIPTS="$DEVENV_ROOT/.eget/bin/$sdk_root/sbf/scripts"
+          mkdir -p "$SBF_SCRIPTS"
+          for script in dump install objcopy package strip; do
+            cp "$DEVENV_ROOT/.eget/bin/$script.sh" "$SBF_SCRIPTS/$script.sh"
+            chmod +x "$SBF_SCRIPTS/$script.sh"
+          done
+        done
       '';
       description = "Install github binaries with eget.";
     };
@@ -162,6 +176,14 @@
       description = "Build all crates with all features activated.";
       binary = "bash";
     };
+    "build:web" = {
+      exec = ''
+        set -e
+        cargo leptos build --release --lib-cargo-args="--locked" --bin-cargo-args="--locked"
+      '';
+      description = "Build the production web application.";
+      binary = "bash";
+    };
     "build:program" = {
       exec = ''
         set -e
@@ -177,6 +199,23 @@
         solana-verify get-executable-hash $DEVENV_ROOT/target/deploy/bitflip_program.so > $DEVENV_ROOT/bitflip_program/program_hash.txt
       '';
       description = "Build the steel program.";
+      binary = "bash";
+    };
+    "lint:format" = {
+      exec = ''
+        set -e
+        cargo fmt --all -- --check
+        dprint check
+      '';
+      description = "Check Rust and repository formatting.";
+      binary = "bash";
+    };
+    "lint:rust" = {
+      exec = ''
+        set -e
+        cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      '';
+      description = "Run Clippy across the workspace.";
       binary = "bash";
     };
   };

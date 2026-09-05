@@ -2,22 +2,32 @@ use solana_program::msg;
 use steel::*;
 use sysvar::rent::Rent;
 
+use crate::BitflipError;
+use crate::BitflipInstruction;
+use crate::ConfigState;
+use crate::ID;
+use crate::TokenMember;
 use crate::cpi::initialize_token_group;
 use crate::cpi::initialize_token_group_member;
 use crate::seeds_config;
 use crate::seeds_mint;
 use crate::seeds_treasury;
-use crate::BitflipError;
-use crate::BitflipInstruction;
-use crate::ConfigState;
-use crate::TokenMember;
-use crate::ID;
 
 pub fn process_token_group_initialize(accounts: &[AccountInfo]) -> ProgramResult {
 	use TokenMember::*;
 	// load accounts
-	let [authority_info, config_info, treasury_info, mint_bit_info, mint_kibibit_info, mint_mebibit_info, mint_gibibit_info, associated_token_program_info, token_program_info, system_program_info] =
-		accounts
+	let [
+		authority_info,
+		config_info,
+		treasury_info,
+		mint_bit_info,
+		mint_kibibit_info,
+		mint_mebibit_info,
+		mint_gibibit_info,
+		associated_token_program_info,
+		token_program_info,
+		system_program_info,
+	] = accounts
 	else {
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};
@@ -121,11 +131,11 @@ mod tests {
 	use solana_sdk::native_loader;
 
 	use super::*;
+	use crate::BitflipError;
 	use crate::get_pda_config;
 	use crate::get_pda_mint;
 	use crate::get_pda_treasury;
 	use crate::leak;
-	use crate::BitflipError;
 
 	#[test_log::test]
 	fn validation_should_pass() -> anyhow::Result<()> {

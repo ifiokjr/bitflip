@@ -2,15 +2,15 @@ use solana_program::msg;
 use steel::*;
 use sysvar::rent::Rent;
 
-use crate::get_pda_mint;
-use crate::seeds_config;
-use crate::seeds_treasury;
+use crate::ADMIN_PUBKEY;
 use crate::BitflipError;
 use crate::BitflipInstruction;
 use crate::ConfigState;
-use crate::TokenMember;
-use crate::ADMIN_PUBKEY;
 use crate::ID;
+use crate::TokenMember;
+use crate::get_pda_mint;
+use crate::seeds_config;
+use crate::seeds_treasury;
 
 /// Initialize the program.
 ///
@@ -22,7 +22,13 @@ use crate::ID;
 /// way to fix.
 pub fn process_config_initialize(accounts: &[AccountInfo<'_>]) -> ProgramResult {
 	// load accounts
-	let [admin_info, authority_info, config_info, treasury_info, system_program_info] = accounts
+	let [
+		admin_info,
+		authority_info,
+		config_info,
+		treasury_info,
+		system_program_info,
+	] = accounts
 	else {
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};

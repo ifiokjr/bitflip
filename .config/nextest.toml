@@ -4,7 +4,7 @@
 # Enable experimental features
 experimental = ["setup-scripts"]
 
-[script.default]
+[scripts.setup.default]
 command = ["setup/scripts/nextest_setup.sh"]
 
 [store]

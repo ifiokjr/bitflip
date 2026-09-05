@@ -17,16 +17,14 @@ pub fn SectionCanvas() -> impl IntoView {
 	let (show_image, set_show_image) = signal(true);
 	let section_resource = Resource::new(
 		move || (use_game_index().get(), use_section_index().get()),
-		move |(game_index, section_index)| {
-			async move {
-				set_show_image.set(true);
-				let (Some(game_index), Some(section_index)) = (game_index, section_index) else {
-					log::error!("Game index or section index not found");
-					return Err(ServerFnError::new("invalid error"));
-				};
+		move |(game_index, section_index)| async move {
+			set_show_image.set(true);
+			let (Some(game_index), Some(section_index)) = (game_index, section_index) else {
+				log::error!("Game index or section index not found");
+				return Err(ServerFnError::new("invalid error"));
+			};
 
-				get_section_state(game_index, section_index).await
-			}
+			get_section_state(game_index, section_index).await
 		},
 	);
 	let section_state = RwSignal::new(None);
@@ -84,13 +82,7 @@ pub fn SectionCanvas() -> impl IntoView {
 		let x = canvas_x / 16;
 		let y = canvas_y / 16;
 		let (array_index, offset) = get_index_offset(x, y);
-		log::info!(
-			"Clicked grid cell: ({}, {}) - index: {} - offset: {}",
-			x,
-			y,
-			array_index,
-			offset
-		);
+		log::info!("Clicked grid cell: ({x}, {y}) - index: {array_index} - offset: {offset}",);
 
 		section_state.update(move |state| {
 			let Some(state) = state else {
@@ -99,7 +91,7 @@ pub fn SectionCanvas() -> impl IntoView {
 			};
 
 			let is_checked = state.is_checked(array_index, offset);
-			log::info!("is_checked: {}", is_checked);
+			log::info!("is_checked: {is_checked}");
 
 			let context = get_2d_context(canvas_ref);
 			let result = state.set_bit(&FlipBit {
@@ -108,7 +100,7 @@ pub fn SectionCanvas() -> impl IntoView {
 				offset,
 				value: u8::from(!is_checked),
 			});
-			log::info!("result: {:?}", result);
+			log::info!("result: {result:?}");
 
 			if is_checked {
 				let _ = state.flip_off(1);

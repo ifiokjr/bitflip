@@ -6,11 +6,13 @@ use std::str::FromStr;
 use std::time::Duration;
 use std::time::SystemTime;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
-use bitflip_cli::emoji;
+use anyhow::anyhow;
 use bitflip_cli::Spinner;
+use bitflip_cli::emoji;
+use bitflip_program::GameStatus;
+use bitflip_program::ID;
 use bitflip_program::config_initialize;
 use bitflip_program::config_update_authority;
 use bitflip_program::game_initialize;
@@ -18,8 +20,6 @@ use bitflip_program::get_pda_config;
 use bitflip_program::get_pda_game;
 use bitflip_program::get_pda_mint;
 use bitflip_program::get_pda_treasury;
-use bitflip_program::GameStatus;
-use bitflip_program::ID;
 use bitflip_program_test::create_config_accounts;
 use bitflip_program_test::create_game_state;
 use bitflip_program_test::create_section_state;
@@ -31,8 +31,8 @@ use colored::*;
 use solana_sdk::account::AccountSharedData;
 use solana_sdk::commitment_config::CommitmentLevel;
 use solana_sdk::instruction::Instruction;
-use solana_sdk::message::v0::Message;
 use solana_sdk::message::VersionedMessage;
+use solana_sdk::message::v0::Message;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signer::EncodableKey;
@@ -459,54 +459,48 @@ async fn main() -> Result<()> {
 
 			shutdown_spinner.info("test validator stopped");
 		}
-		Commands::Config(ref config_cmd) => {
-			match config_cmd {
-				ConfigCommands::Initialize(args) => {
-					eprintln!(
-						"{} {}",
-						format!("{} initializing config with authority:", emoji::CONFIG)
-							.bright_blue(),
-						args.authority.to_string().yellow()
-					);
+		Commands::Config(ref config_cmd) => match config_cmd {
+			ConfigCommands::Initialize(args) => {
+				eprintln!(
+					"{} {}",
+					format!("{} initializing config with authority:", emoji::CONFIG).bright_blue(),
+					args.authority.to_string().yellow()
+				);
 
-					let instruction = config_initialize(&args.admin, &args.authority);
-					process_transaction(&cli, &args.authority, instruction, &rpc, &mut writer)
-						.await?;
-				}
-				ConfigCommands::UpdateAuthority {
-					new_authority,
-					authority,
-				} => {
-					eprintln!(
-						"{} {}",
-						format!("{} updating authority to:", emoji::CONFIG).bright_blue(),
-						new_authority.to_string().yellow()
-					);
-					let instruction = config_update_authority(authority, new_authority);
-					process_transaction(&cli, authority, instruction, &rpc, &mut writer).await?;
-				}
+				let instruction = config_initialize(&args.admin, &args.authority);
+				process_transaction(&cli, &args.authority, instruction, &rpc, &mut writer).await?;
 			}
-		}
-		Commands::Game(ref game_cmd) => {
-			match game_cmd {
-				GameCommands::Initialize {
-					authority,
-					game_signer,
-					temp_signer,
-					index,
-				} => {
-					eprintln!(
-						"{} {} {} {}",
-						format!("{} initializing game with index:", emoji::GAME).bright_blue(),
-						index.to_string().yellow(),
-						"and authority:".bright_blue(),
-						authority.to_string().yellow()
-					);
-					let instruction = game_initialize(authority, game_signer, temp_signer, *index);
-					process_transaction(&cli, authority, instruction, &rpc, &mut writer).await?;
-				}
+			ConfigCommands::UpdateAuthority {
+				new_authority,
+				authority,
+			} => {
+				eprintln!(
+					"{} {}",
+					format!("{} updating authority to:", emoji::CONFIG).bright_blue(),
+					new_authority.to_string().yellow()
+				);
+				let instruction = config_update_authority(authority, new_authority);
+				process_transaction(&cli, authority, instruction, &rpc, &mut writer).await?;
 			}
-		}
+		},
+		Commands::Game(ref game_cmd) => match game_cmd {
+			GameCommands::Initialize {
+				authority,
+				game_signer,
+				temp_signer,
+				index,
+			} => {
+				eprintln!(
+					"{} {} {} {}",
+					format!("{} initializing game with index:", emoji::GAME).bright_blue(),
+					index.to_string().yellow(),
+					"and authority:".bright_blue(),
+					authority.to_string().yellow()
+				);
+				let instruction = game_initialize(authority, game_signer, temp_signer, *index);
+				process_transaction(&cli, authority, instruction, &rpc, &mut writer).await?;
+			}
+		},
 	}
 
 	Ok(())

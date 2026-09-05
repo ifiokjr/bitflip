@@ -1,8 +1,6 @@
 use steel::*;
 use sysvar::rent::Rent;
 
-use crate::seeds_config;
-use crate::seeds_game;
 use crate::BitflipError;
 use crate::BitflipInstruction;
 use crate::ConfigState;
@@ -11,10 +9,18 @@ use crate::ID;
 use crate::SEED_GAME;
 use crate::SEED_PREFIX;
 use crate::TRANSACTION_FEE;
+use crate::seeds_config;
+use crate::seeds_game;
 
 pub fn process_game_initialize(accounts: &[AccountInfo]) -> ProgramResult {
-	let [authority_info, temp_signer_info, funded_signer_info, config_info, game_info, system_program_info] =
-		accounts
+	let [
+		authority_info,
+		temp_signer_info,
+		funded_signer_info,
+		config_info,
+		game_info,
+		system_program_info,
+	] = accounts
 	else {
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};

@@ -33,9 +33,9 @@ pub async fn get_section_state(
 	game_index: u8,
 	section_index: u8,
 ) -> Result<SectionState, ServerFnError> {
-	use bitflip_program::get_pda_section;
 	use bitflip_program::BITFLIP_SECTION_LENGTH;
 	use bitflip_program::BITFLIP_SECTION_TOTAL_BITS;
+	use bitflip_program::get_pda_section;
 	use rand::Rng;
 	use rand::SeedableRng;
 	use solana_sdk::pubkey::Pubkey;

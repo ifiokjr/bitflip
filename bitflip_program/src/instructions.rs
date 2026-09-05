@@ -1,11 +1,5 @@
 use steel::*;
 
-use crate::get_pda_config;
-use crate::get_pda_game;
-use crate::get_pda_mint;
-use crate::get_pda_section;
-use crate::get_pda_treasury;
-use crate::get_token_account;
 use crate::ConfigInitialize;
 use crate::ConfigUpdateAuthority;
 use crate::FlipBit;
@@ -15,6 +9,12 @@ use crate::SectionUnlock;
 use crate::TokenGroupInitialize;
 use crate::TokenInitialize;
 use crate::TokenMember;
+use crate::get_pda_config;
+use crate::get_pda_game;
+use crate::get_pda_mint;
+use crate::get_pda_section;
+use crate::get_pda_treasury;
+use crate::get_token_account;
 
 /// Create an instruction to initialize the mint, treasury and [`ConfigState`].
 ///

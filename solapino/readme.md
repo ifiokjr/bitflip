@@ -25,21 +25,25 @@ Rather than
 ## Get started
 
 Install the pino CLI:
+
 ```sh
 cargo install steel-cli
 ```
 
 Use the `new` command to create a new project:
+
 ```sh
 steel new my-project
 ```
 
 Compile your program using the Solana toolchain:
+
 ```sh
 steel build
 ```
 
 Test your program using the Solana toolchain:
+
 ```sh
 steel test
 ```
@@ -130,7 +134,6 @@ pub struct Initialize {}
 
 instruction!(MyInstruction, Add);
 instruction!(MyInstruction, Initialize);
-
 ```
 
 ### Errors

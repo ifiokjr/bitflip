@@ -5,10 +5,10 @@ use solana_sdk::nonce::state::State as NonceState;
 use solana_sdk::system_instruction::create_nonce_account_with_seed;
 use steel::*;
 use sysvar::rent::Rent;
-use wasm_client_solana::nonce_utils;
 use wasm_client_solana::ClientError;
 use wasm_client_solana::ClientResult;
 use wasm_client_solana::SolanaRpcClient;
+use wasm_client_solana::nonce_utils;
 
 use crate::SEED_PREFIX;
 

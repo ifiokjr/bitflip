@@ -1,17 +1,18 @@
 use std::future::Future;
 
+#[cfg(feature = "test_validator")]
 use assert2::check;
+use bitflip_program::TOKEN_DECIMALS;
+use bitflip_program::TokenMember;
 use bitflip_program::get_pda_mint;
 use bitflip_program::get_pda_treasury;
 use bitflip_program::get_token_account;
 use bitflip_program::token_initialize;
-use bitflip_program::TokenMember;
-use bitflip_program::TOKEN_DECIMALS;
+use bitflip_program_test::ToRpcClient;
 use bitflip_program_test::create_config_accounts;
 use bitflip_program_test::create_program_context_with_factory;
 use bitflip_program_test::set_snapshot_suffix;
 use bitflip_program_test::testname;
-use bitflip_program_test::ToRpcClient;
 use rstest::rstest;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::transaction::VersionedTransaction;

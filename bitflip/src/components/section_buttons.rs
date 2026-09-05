@@ -16,10 +16,9 @@ pub enum Direction {
 /// Can only be used within a `Suspense` component.
 fn use_transformed_section(direction: Direction, jump: u8) -> Resource<(String, bool)> {
 	let url = use_url();
-	let resource = Resource::new(move || {
-		url.get()
-	}, move |mut url| {
-		async move {
+	let resource = Resource::new(
+		move || url.get(),
+		move |mut url| async move {
 			let mut result = (String::new(), true);
 			let section_index = use_section_index().into_future().await;
 
@@ -48,8 +47,8 @@ fn use_transformed_section(direction: Direction, jump: u8) -> Resource<(String, 
 
 			result.0 = format!("{path}{qs}{hash}");
 			result
-		}
-	});
+		},
+	);
 
 	resource
 }

@@ -1,13 +1,13 @@
+use aes_gcm_siv::Aes256GcmSiv;
+use aes_gcm_siv::Nonce;
 use aes_gcm_siv::aead::Aead;
 use aes_gcm_siv::aead::KeyInit;
 use aes_gcm_siv::aead::OsRng;
-use aes_gcm_siv::Aes256GcmSiv;
-use aes_gcm_siv::Nonce;
 use anyhow::Context;
+use argon2::Argon2;
 use argon2::password_hash::PasswordHash;
 use argon2::password_hash::PasswordHasher;
 use argon2::password_hash::SaltString;
-use argon2::Argon2;
 use rand::RngCore;
 use solana_sdk::signature::Keypair;
 

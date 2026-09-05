@@ -1,10 +1,10 @@
 use steel::*;
 
-use crate::seeds_game;
 use crate::BitflipError;
 use crate::BitflipInstruction;
 use crate::GameState;
 use crate::ID;
+use crate::seeds_game;
 
 /// Update the temporary signer of the game. This can be done anytime by the
 /// backend of the game.

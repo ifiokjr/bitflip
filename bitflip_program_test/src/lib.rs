@@ -1,9 +1,21 @@
 use std::collections::HashMap;
+#[cfg(feature = "test_validator")]
 use std::fs;
+#[cfg(feature = "test_validator")]
 use std::hash::RandomState;
+#[cfg(feature = "test_validator")]
 use std::path::Path;
 
+#[cfg(feature = "test_validator")]
 use anyhow::Context;
+use bitflip_program::ConfigState;
+use bitflip_program::EARNED_TOKENS_PER_SECTION;
+use bitflip_program::GameState;
+use bitflip_program::GameStatus;
+use bitflip_program::ID;
+use bitflip_program::MINIMUM_FLIPS_PER_SECTION;
+use bitflip_program::SectionState;
+use bitflip_program::TokenMember;
 use bitflip_program::get_pda_config;
 use bitflip_program::get_pda_game;
 use bitflip_program::get_pda_mint;
@@ -12,20 +24,15 @@ use bitflip_program::get_pda_treasury;
 use bitflip_program::get_section_token_account;
 use bitflip_program::get_token_amount;
 use bitflip_program::get_treasury_token_account;
-use bitflip_program::ConfigState;
-use bitflip_program::GameState;
-use bitflip_program::GameStatus;
-use bitflip_program::SectionState;
-use bitflip_program::TokenMember;
-use bitflip_program::EARNED_TOKENS_PER_SECTION;
-use bitflip_program::ID;
-use bitflip_program::MINIMUM_FLIPS_PER_SECTION;
 use memory_wallet::MemoryWallet;
 use rstest::fixture;
+#[cfg(feature = "test_validator")]
 use serde::Deserialize;
+#[cfg(feature = "test_validator")]
 use serde::Serialize;
 use solana_sdk::account::AccountSharedData;
 use solana_sdk::account::WritableAccount;
+#[cfg(feature = "test_validator")]
 use solana_sdk::commitment_config::CommitmentLevel;
 use solana_sdk::native_token::sol_to_lamports;
 use solana_sdk::pubkey::Pubkey;
@@ -34,13 +41,13 @@ use solana_sdk::signature::Keypair;
 use solana_sdk::signature::Signer;
 use spl_pod::bytemuck::pod_get_packed_len;
 use spl_pod::primitives::PodBool;
+use spl_token_2022::extension::BaseStateWithExtensionsMut;
+use spl_token_2022::extension::ExtensionType;
+use spl_token_2022::extension::PodStateWithExtensionsMut;
 use spl_token_2022::extension::group_member_pointer::GroupMemberPointer;
 use spl_token_2022::extension::group_pointer::GroupPointer;
 use spl_token_2022::extension::metadata_pointer::MetadataPointer;
 use spl_token_2022::extension::mint_close_authority::MintCloseAuthority;
-use spl_token_2022::extension::BaseStateWithExtensionsMut;
-use spl_token_2022::extension::ExtensionType;
-use spl_token_2022::extension::PodStateWithExtensionsMut;
 use spl_token_2022::pod::PodAccount;
 use spl_token_2022::pod::PodCOption;
 use spl_token_2022::pod::PodMint;
@@ -51,12 +58,13 @@ use spl_type_length_value::variable_len_pack::VariableLenPack;
 use steel::*;
 use test_utils_keypairs::get_admin_keypair;
 use test_utils_keypairs::get_authority_keypair;
+#[cfg(feature = "test_validator")]
 use test_utils_keypairs::get_treasury_keypair;
 use test_utils_keypairs::get_wallet_keypair;
-use test_utils_solana::processor;
-use test_utils_solana::solana_sdk::account::Account;
 use test_utils_solana::ProgramTest;
 use test_utils_solana::TestRpcProvider;
+use test_utils_solana::processor;
+use test_utils_solana::solana_sdk::account::Account;
 use wasm_client_solana::SolanaRpcClient;
 
 pub trait ToRpcClient {

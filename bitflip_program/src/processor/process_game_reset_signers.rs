@@ -1,18 +1,24 @@
 use steel::*;
 use sysvar::rent::Rent;
 
-use crate::seeds_config;
-use crate::seeds_game;
 use crate::BitflipError;
 use crate::BitflipInstruction;
 use crate::ConfigState;
 use crate::GameState;
 use crate::ID;
 use crate::TRANSACTION_FEE;
+use crate::seeds_config;
+use crate::seeds_game;
 
 pub fn process_game_reset_signers(accounts: &[AccountInfo]) -> ProgramResult {
-	let [authority_info, funded_signer_info, temp_signer_info, previous_funded_signer_info, config_info, game_info] =
-		accounts
+	let [
+		authority_info,
+		funded_signer_info,
+		temp_signer_info,
+		previous_funded_signer_info,
+		config_info,
+		game_info,
+	] = accounts
 	else {
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};
@@ -88,12 +94,12 @@ mod tests {
 	use assert2::check;
 
 	use super::*;
+	use crate::TokenMember;
 	use crate::get_pda_config;
 	use crate::get_pda_game;
 	use crate::get_pda_mint;
 	use crate::get_pda_treasury;
 	use crate::leak;
-	use crate::TokenMember;
 
 	#[test_log::test]
 	fn should_pass_validation() -> anyhow::Result<()> {

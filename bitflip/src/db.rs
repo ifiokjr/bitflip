@@ -2,9 +2,9 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Context;
+use bitflip_program::BITFLIP_SECTION_LENGTH;
 use bitflip_program::GameStatus;
 use bitflip_program::SectionData;
-use bitflip_program::BITFLIP_SECTION_LENGTH;
 use chrono::DateTime;
 use chrono::Utc;
 use num_enum::IntoPrimitive;
@@ -15,15 +15,15 @@ use serde::Serialize;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 use uuid::Uuid;
-use welds::connections::sqlite::connect;
-use welds::connections::sqlite::SqliteClient;
-use welds::state::DbState;
 use welds::WeldsModel;
+use welds::connections::sqlite::SqliteClient;
+use welds::connections::sqlite::connect;
+use welds::state::DbState;
 
+use crate::AppResult;
 use crate::encryption::decrypt_keypair;
 use crate::encryption::derive_key;
 use crate::state::AppStateConfig;
-use crate::AppResult;
 
 #[derive(derive_more::Debug, Clone, derive_more::From, derive_more::Into, derive_more::Deref)]
 pub struct Db(#[debug(skip)] Arc<SqliteClient>);

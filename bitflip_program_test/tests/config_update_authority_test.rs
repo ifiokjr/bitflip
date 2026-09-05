@@ -1,14 +1,14 @@
 use std::future::Future;
 
 use assert2::check;
-use bitflip_program::config_update_authority;
-use bitflip_program::get_pda_config;
 use bitflip_program::BitflipError;
 use bitflip_program::ConfigState;
+use bitflip_program::config_update_authority;
+use bitflip_program::get_pda_config;
+use bitflip_program_test::ToRpcClient;
 use bitflip_program_test::create_config_accounts;
 use bitflip_program_test::create_program_context_with_factory;
 use bitflip_program_test::create_token_accounts;
-use bitflip_program_test::ToRpcClient;
 use solana_sdk::instruction::InstructionError;
 use solana_sdk::signature::Keypair;
 use solana_sdk::transaction::TransactionError;

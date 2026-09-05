@@ -19,7 +19,7 @@ pub fn use_parsed_param<T: FromStr + Send + Sync + 'static>(key: AppParam) -> Si
 	let parsed_param = move || {
 		let url = use_url().get();
 		let params = url.search_params();
-		log::info!("params: {:?}", params);
+		log::info!("params: {params:?}");
 
 		params.get(key.into()).unwrap_or_default().parse::<T>().ok()
 	};
@@ -47,36 +47,32 @@ pub enum RouterProp<T: Send + Sync + 'static> {
 
 /// Get the section index from the provided props
 pub fn use_section_index() -> Resource<u8> {
-	let section_index_resource = Resource::new(move || use_parsed_param::<u8>(AppParam::Section).get(), move |section_index_signal| {
-		async move {
+	let section_index_resource = Resource::new(
+		move || use_parsed_param::<u8>(AppParam::Section).get(),
+		move |section_index_signal| async move {
 			if let Some(section_index) = section_index_signal {
 				return section_index;
 			}
 
-			match get_default_section_index().await {
-				Ok(section_index) => section_index,
-				Err(_) => 0,
-			}
-		}
-	});
+			get_default_section_index().await.unwrap_or_default()
+		},
+	);
 
 	section_index_resource
 }
 /// Get the game index from the provided props
 pub fn use_game_index() -> Resource<u8> {
-	let game_index_resource = Resource::new(move || use_parsed_param::<u8>(AppParam::Game).get(), move |game_index_signal| {
-		async move {
+	let game_index_resource = Resource::new(
+		move || use_parsed_param::<u8>(AppParam::Game).get(),
+		move |game_index_signal| async move {
 			if let Some(game_index) = game_index_signal {
 				return game_index;
 			}
 
 			log::info!("getting active game index");
-			match get_active_game_index().await {
-					Ok(game_index) => game_index,
-					Err(_) => 0,
-			}
-		}
-	});
+			get_active_game_index().await.unwrap_or_default()
+		},
+	);
 
 	game_index_resource
 

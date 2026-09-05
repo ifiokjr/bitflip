@@ -10,8 +10,13 @@ use crate::SEED_GAME;
 use crate::SEED_PREFIX;
 
 pub fn process_game_start(accounts: &[AccountInfo]) -> Result<(), ProgramError> {
-	let [funded_signer_info, temp_signer_info, config_info, game_info, system_program_info] =
-		accounts
+	let [
+		funded_signer_info,
+		temp_signer_info,
+		config_info,
+		game_info,
+		system_program_info,
+	] = accounts
 	else {
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};

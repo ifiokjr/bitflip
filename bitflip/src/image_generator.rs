@@ -7,8 +7,8 @@ use tiny_skia::Paint;
 use tiny_skia::Pixmap;
 use tiny_skia::Transform;
 
-use crate::get_section_state;
 use crate::AppError;
+use crate::get_section_state;
 
 /// Generate an image for a section of the Bitflip game state.
 ///

@@ -13,6 +13,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 env:
+  # This compromised address is retained only for the deterministic test
+  # fixture. Release builds must override it with a production administrator.
   ADMIN_PUBKEY: 4z5X2suocz9szaQnSshj2AW8tuLgUVmYUxiW9hhPaRHs
 
 jobs:
@@ -30,12 +32,12 @@ jobs:
           nix-cache: /tmp/nixcache
 
       - name: lint formatting
-        run: task lint:format
+        run: lint:format
         shell: devenv shell bash -- -e {0}
 
-      - uses: clechasseur/rs-clippy-check@v3
-        with:
-          args: --all-features
+      - name: lint Rust
+        run: lint:rust
+        shell: devenv shell bash -- -e {0}
 
   test:
     timeout-minutes: 60
@@ -73,7 +75,7 @@ jobs:
           nix-cache: /tmp/nixcache
 
       - name: build
-        run: task build:program
+        run: build:program
         shell: devenv shell bash -- -e {0}
 
       - name: upload bitflip program
@@ -120,5 +122,5 @@ jobs:
           nix-cache: /tmp/nixcache
 
       - name: build
-        run: task build
+        run: build:web
         shell: devenv shell bash -- -e {0}

@@ -1,10 +1,10 @@
 use steel::*;
 
-use crate::seeds_config;
 use crate::BitflipError;
 use crate::BitflipInstruction;
 use crate::ConfigState;
 use crate::ID;
+use crate::seeds_config;
 
 pub fn process_config_update_authority(accounts: &[AccountInfo]) -> ProgramResult {
 	let [config_info, authority_info, new_authority_info] = accounts else {
@@ -57,11 +57,11 @@ mod tests {
 	use solana_sdk::sysvar::rent::Rent;
 
 	use super::*;
+	use crate::TokenMember;
 	use crate::get_pda_config;
 	use crate::get_pda_mint;
 	use crate::get_pda_treasury;
 	use crate::leak;
-	use crate::TokenMember;
 
 	#[test_log::test]
 	fn should_pass_validation() -> anyhow::Result<()> {

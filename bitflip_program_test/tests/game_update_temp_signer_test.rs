@@ -1,16 +1,17 @@
 use std::future::Future;
 
+#[cfg(feature = "test_validator")]
 use assert2::check;
-use bitflip_program::game_update_temp_signer;
-use bitflip_program::get_pda_game;
 use bitflip_program::GameState;
 use bitflip_program::GameStatus;
+use bitflip_program::game_update_temp_signer;
+use bitflip_program::get_pda_game;
+use bitflip_program_test::CreatedGameState;
+use bitflip_program_test::ToRpcClient;
 use bitflip_program_test::create_config_accounts;
 use bitflip_program_test::create_game_state;
 use bitflip_program_test::create_program_context_with_factory;
 use bitflip_program_test::create_token_accounts;
-use bitflip_program_test::CreatedGameState;
-use bitflip_program_test::ToRpcClient;
 use solana_sdk::signature::Keypair;
 use solana_sdk::transaction::VersionedTransaction;
 use steel::*;

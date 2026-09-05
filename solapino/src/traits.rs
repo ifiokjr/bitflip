@@ -157,11 +157,14 @@ pub trait Discriminator {
 /// 2. Discriminator byte check
 /// 3. Checked bytemuck conversion of account data to &T or &mut T.
 pub trait AsAccount {
-	fn as_account<T>(&self, program_id: &Pubkey) -> Result<&T, ProgramError>
+	fn as_account<T>(&self, program_id: &Pubkey) -> Result<std::cell::Ref<'_, T>, ProgramError>
 	where
 		T: AccountDeserialize + Discriminator + Pod;
 
-	fn as_account_mut<T>(&self, program_id: &Pubkey) -> Result<&mut T, ProgramError>
+	fn as_account_mut<T>(
+		&self,
+		program_id: &Pubkey,
+	) -> Result<std::cell::RefMut<'_, T>, ProgramError>
 	where
 		T: AccountDeserialize + Discriminator + Pod;
 }

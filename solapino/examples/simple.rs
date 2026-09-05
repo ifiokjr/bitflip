@@ -1,4 +1,6 @@
-use steel::*;
+#![allow(unexpected_cfgs)]
+
+use solapino::*;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive)]
@@ -74,7 +76,7 @@ pub fn process_instruction(
 				return Err(ProgramError::NotEnoughAccountKeys);
 			};
 
-			let counter = counter_info.as_account_mut::<Counter>(&program_id)?;
+			let mut counter = counter_info.as_account_mut::<Counter>(program_id)?;
 			counter.assert_err(|c| c.value <= 42, MyError::Dummy)?;
 			counter.assert_mut_err(|c| c.value <= 42, MyError::Dummy)?;
 			counter.value += 1;

@@ -12,40 +12,40 @@ crate-type = ["cdylib", "lib"]
 name = "bitflip_program_test"
 
 [dependencies]
-anyhow = { workspace = true , default-features = true }
+anyhow = { workspace = true, default-features = true }
 bitflip_program = { workspace = true, features = ["serde", "client"] }
-bytemuck = { workspace = true , default-features = true }
+bytemuck = { workspace = true, default-features = true }
 indexmap = { workspace = true, features = ["serde"] }
-log = { workspace = true , default-features = true }
-memory_wallet = { workspace = true , default-features = true }
-rstest = { workspace = true , default-features = true }
-serde = { workspace = true, features = ["derive"] , default-features = true }
-serde_json = { workspace = true , default-features = true }
-solana-sdk = { workspace = true , default-features = true }
-spl-pod = { workspace = true, features = ["serde-traits"] , default-features = true }
-spl-token-2022 = { workspace = true, features = ["no-entrypoint"] , default-features = true }
-spl-token-group-interface = { workspace = true , default-features = true }
-spl-token-metadata-interface = { workspace = true , default-features = true }
-spl-type-length-value = { workspace = true , default-features = true }
-steel = { workspace = true, features = ["logs", "spl"] , default-features = true }
-test_utils_insta = { workspace = true , default-features = true }
-test_utils_keypairs = { workspace = true , default-features = true }
-test_utils_solana = { workspace = true, features = [] , default-features = true }
-thiserror = { workspace = true , default-features = true }
-typed-builder = { workspace = true , default-features = true }
-wasm_client_solana = { workspace = true , default-features = true }
+log = { workspace = true, default-features = true }
+memory_wallet = { workspace = true, default-features = true }
+rstest = { workspace = true, default-features = true }
+serde = { workspace = true, features = ["derive"], default-features = true }
+serde_json = { workspace = true, default-features = true }
+solana-sdk = { workspace = true, default-features = true }
+spl-pod = { workspace = true, features = ["serde-traits"], default-features = true }
+spl-token-2022 = { workspace = true, features = ["no-entrypoint"], default-features = true }
+spl-token-group-interface = { workspace = true, default-features = true }
+spl-token-metadata-interface = { workspace = true, default-features = true }
+spl-type-length-value = { workspace = true, default-features = true }
+steel = { workspace = true, features = ["logs", "spl"], default-features = true }
+test_utils_insta = { workspace = true, default-features = true }
+test_utils_keypairs = { workspace = true, default-features = true }
+test_utils_solana = { workspace = true, features = [], default-features = true }
+thiserror = { workspace = true, default-features = true }
+typed-builder = { workspace = true, default-features = true }
+wasm_client_solana = { workspace = true, default-features = true }
 
 [dev-dependencies]
-assert2 = { workspace = true , default-features = true }
-chrono = { workspace = true , default-features = true }
-insta = { workspace = true, features = ["json", "redactions", "ron", "yaml"] , default-features = true }
-serde_json = { workspace = true , default-features = true }
-solana-program-test = { workspace = true , default-features = true }
-spl-associated-token-account = { workspace = true , default-features = true }
-spl-token-2022 = { workspace = true , default-features = true }
+assert2 = { workspace = true, default-features = true }
+chrono = { workspace = true, default-features = true }
+insta = { workspace = true, features = ["json", "redactions", "ron", "yaml"], default-features = true }
+serde_json = { workspace = true, default-features = true }
+solana-program-test = { workspace = true, default-features = true }
+spl-associated-token-account = { workspace = true, default-features = true }
+spl-token-2022 = { workspace = true, default-features = true }
 spl-transfer-hook-interface = { workspace = true }
-test-log = { workspace = true, features = ["log", "trace"] , default-features = true }
-tokio = { workspace = true, features = ["test-util", "rt", "macros", "time"] , default-features = true }
+test-log = { workspace = true, features = ["log", "trace"], default-features = true }
+tokio = { workspace = true, features = ["test-util", "rt", "macros", "time"], default-features = true }
 
 [features]
 no-entrypoint = []

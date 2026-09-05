@@ -1,16 +1,16 @@
 use spl_pod::primitives::PodU64;
 use steel::*;
 
-use crate::seeds_config;
-use crate::seeds_game;
-use crate::seeds_section;
-use crate::seeds_treasury;
 use crate::BitflipError;
 use crate::BitflipInstruction;
 use crate::ConfigState;
 use crate::GameState;
-use crate::SectionState;
 use crate::ID;
+use crate::SectionState;
+use crate::seeds_config;
+use crate::seeds_game;
+use crate::seeds_section;
+use crate::seeds_treasury;
 
 /// This instruction is used to unlock a section. It will use a nonce
 /// transaction to help make each bid private.
@@ -19,8 +19,15 @@ pub fn process_section_unlock(accounts: &[AccountInfo], data: &[u8]) -> Result<(
 	let args = SectionUnlock::try_from_bytes(data)?;
 
 	// load accounts
-	let [owner_info, temp_signer_info, config_info, game_info, section_info, treasury_info, system_program_info] =
-		accounts
+	let [
+		owner_info,
+		temp_signer_info,
+		config_info,
+		game_info,
+		section_info,
+		treasury_info,
+		system_program_info,
+	] = accounts
 	else {
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};

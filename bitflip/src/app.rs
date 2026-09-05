@@ -1,8 +1,8 @@
 use leptos::prelude::*;
-use leptos_meta::provide_meta_context;
 use leptos_meta::MetaTags;
 use leptos_meta::Stylesheet;
 use leptos_meta::Title;
+use leptos_meta::provide_meta_context;
 use leptos_router::components::FlatRoutes;
 use leptos_router::components::Route;
 use leptos_router::components::Router;

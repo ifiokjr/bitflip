@@ -4,24 +4,12 @@ use spl_token_2022::extension::ExtensionType;
 use steel::*;
 use sysvar::rent::Rent;
 
-use crate::cpi::create_associated_token_account;
-use crate::cpi::group_member_pointer_initialize;
-use crate::cpi::group_pointer_initialize;
-use crate::cpi::initialize_mint;
-use crate::cpi::metadata_pointer_initialize;
-use crate::cpi::mint_close_authority_initialize;
-use crate::cpi::mint_to;
-use crate::cpi::token_metadata_initialize;
-use crate::get_token_amount;
-use crate::seeds_config;
-use crate::seeds_mint;
-use crate::seeds_treasury;
-use crate::BitflipError;
-use crate::BitflipInstruction;
-use crate::ConfigState;
 use crate::BIT_TOKEN_NAME;
 use crate::BIT_TOKEN_SYMBOL;
 use crate::BIT_TOKEN_URI;
+use crate::BitflipError;
+use crate::BitflipInstruction;
+use crate::ConfigState;
 use crate::GIBIBIT_TOKEN_NAME;
 use crate::GIBIBIT_TOKEN_SYMBOL;
 use crate::GIBIBIT_TOKEN_URI;
@@ -39,6 +27,18 @@ use crate::SEED_MEBIBIT_MINT;
 use crate::SEED_PREFIX;
 use crate::TOKEN_DECIMALS;
 use crate::TOTAL_BIT_TOKENS;
+use crate::cpi::create_associated_token_account;
+use crate::cpi::group_member_pointer_initialize;
+use crate::cpi::group_pointer_initialize;
+use crate::cpi::initialize_mint;
+use crate::cpi::metadata_pointer_initialize;
+use crate::cpi::mint_close_authority_initialize;
+use crate::cpi::mint_to;
+use crate::cpi::token_metadata_initialize;
+use crate::get_token_amount;
+use crate::seeds_config;
+use crate::seeds_mint;
+use crate::seeds_treasury;
 
 pub fn process_token_initialize(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 	// parse the instruction data.
@@ -46,8 +46,16 @@ pub fn process_token_initialize(accounts: &[AccountInfo], data: &[u8]) -> Progra
 	let member = args.member()?;
 
 	// load accounts
-	let [authority_info, config_info, treasury_info, mint_info, treasury_token_account_info, associated_token_program_info, token_program_info, system_program_info] =
-		accounts
+	let [
+		authority_info,
+		config_info,
+		treasury_info,
+		mint_info,
+		treasury_token_account_info,
+		associated_token_program_info,
+		token_program_info,
+		system_program_info,
+	] = accounts
 	else {
 		return Err(ProgramError::NotEnoughAccountKeys);
 	};
@@ -319,12 +327,12 @@ mod tests {
 	use solana_sdk::native_loader;
 
 	use super::*;
+	use crate::BitflipError;
 	use crate::get_pda_config;
 	use crate::get_pda_mint;
 	use crate::get_pda_treasury;
 	use crate::get_token_account;
 	use crate::leak;
-	use crate::BitflipError;
 
 	#[test_log::test]
 	fn validation_should_pass_for_bit() -> anyhow::Result<()> {

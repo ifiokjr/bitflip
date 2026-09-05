@@ -5,8 +5,8 @@ use leptos::config::LeptosOptions;
 use typed_builder::TypedBuilder;
 use url::Url;
 
-use crate::db::Db;
 use crate::AppEnvironment;
+use crate::db::Db;
 
 #[derive(FromRef, Debug, Clone, TypedBuilder)]
 pub struct AppState {
