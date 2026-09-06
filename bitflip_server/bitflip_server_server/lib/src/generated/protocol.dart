@@ -15,11 +15,13 @@ import 'package:serverpod/protocol.dart' as _isp;
 import 'package:serverpod/serverpod.dart' as _is;
 import 'colour/colour_canvas_state.dart' as _iexdv2yq;
 import 'colour/colour_canvas_view.dart' as _i7up465y;
+import 'colour/colour_indexer_cursor.dart' as _i6sninmd;
 import 'minting/mint_challenge.dart' as _ilupy5f9;
 import 'minting/mint_challenge_view.dart' as _i8azp9qk;
 import 'minting/mint_section_result.dart' as _icvzv24k;
 export 'colour/colour_canvas_state.dart';
 export 'colour/colour_canvas_view.dart';
+export 'colour/colour_indexer_cursor.dart';
 export 'minting/mint_challenge.dart';
 export 'minting/mint_challenge_view.dart';
 export 'minting/mint_section_result.dart';
@@ -101,6 +103,102 @@ class Protocol extends _is.DatabaseSerializationManager {
             _isp.IndexElementDefinition(
               type: _isp.IndexElementDefinitionType.column,
               definition: 'sectionIndex',
+            ),
+          ],
+          type: 'btree',
+          isUnique: true,
+          isPrimary: false,
+        ),
+      ],
+      managed: true,
+    ),
+    _isp.TableDefinition(
+      name: 'bitflip_colour_indexer_cursor',
+      dartName: 'ColourIndexerCursor',
+      schema: 'public',
+      module: 'bitflip_server',
+      columns: [
+        _isp.ColumnDefinition(
+          name: 'id',
+          columnType: _isp.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int?',
+          columnDefault: 'serial',
+        ),
+        _isp.ColumnDefinition(
+          name: 'cluster',
+          columnType: _isp.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+        ),
+        _isp.ColumnDefinition(
+          name: 'programAddress',
+          columnType: _isp.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+        ),
+        _isp.ColumnDefinition(
+          name: 'startSignature',
+          columnType: _isp.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+        ),
+        _isp.ColumnDefinition(
+          name: 'completedHeadSignature',
+          columnType: _isp.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+        ),
+        _isp.ColumnDefinition(
+          name: 'catchUpHeadSignature',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'beforeSignature',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'leaseToken',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'leasedUntil',
+          columnType: _isp.ColumnType.timestampWithoutTimeZone,
+          isNullable: true,
+          dartType: 'DateTime?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'lastSuccessAt',
+          columnType: _isp.ColumnType.timestampWithoutTimeZone,
+          isNullable: true,
+          dartType: 'DateTime?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'updatedAt',
+          columnType: _isp.ColumnType.timestampWithoutTimeZone,
+          isNullable: false,
+          dartType: 'DateTime',
+        ),
+      ],
+      foreignKeys: [],
+      indexes: [
+        _isp.IndexDefinition(
+          indexName: 'bitflip_colour_indexer_source_idx',
+          tableSpace: null,
+          elements: [
+            _isp.IndexElementDefinition(
+              type: _isp.IndexElementDefinitionType.column,
+              definition: 'cluster',
+            ),
+            _isp.IndexElementDefinition(
+              type: _isp.IndexElementDefinitionType.column,
+              definition: 'programAddress',
             ),
           ],
           type: 'btree',
@@ -256,6 +354,9 @@ class Protocol extends _is.DatabaseSerializationManager {
     if (t == _i7up465y.ColourCanvasView) {
       return _i7up465y.ColourCanvasView.fromJson(data) as T;
     }
+    if (t == _i6sninmd.ColourIndexerCursor) {
+      return _i6sninmd.ColourIndexerCursor.fromJson(data) as T;
+    }
     if (t == _ilupy5f9.MintChallenge) {
       return _ilupy5f9.MintChallenge.fromJson(data) as T;
     }
@@ -271,6 +372,12 @@ class Protocol extends _is.DatabaseSerializationManager {
     }
     if (t == _is.getType<_i7up465y.ColourCanvasView?>()) {
       return (data != null ? _i7up465y.ColourCanvasView.fromJson(data) : null)
+          as T;
+    }
+    if (t == _is.getType<_i6sninmd.ColourIndexerCursor?>()) {
+      return (data != null
+              ? _i6sninmd.ColourIndexerCursor.fromJson(data)
+              : null)
           as T;
     }
     if (t == _is.getType<_ilupy5f9.MintChallenge?>()) {
@@ -295,6 +402,7 @@ class Protocol extends _is.DatabaseSerializationManager {
     return switch (type) {
       _iexdv2yq.ColourCanvasState => 'ColourCanvasState',
       _i7up465y.ColourCanvasView => 'ColourCanvasView',
+      _i6sninmd.ColourIndexerCursor => 'ColourIndexerCursor',
       _ilupy5f9.MintChallenge => 'MintChallenge',
       _i8azp9qk.MintChallengeView => 'MintChallengeView',
       _icvzv24k.MintSectionResult => 'MintSectionResult',
@@ -319,6 +427,8 @@ class Protocol extends _is.DatabaseSerializationManager {
         return 'ColourCanvasState';
       case _i7up465y.ColourCanvasView():
         return 'ColourCanvasView';
+      case _i6sninmd.ColourIndexerCursor():
+        return 'ColourIndexerCursor';
       case _ilupy5f9.MintChallenge():
         return 'MintChallenge';
       case _i8azp9qk.MintChallengeView():
@@ -344,6 +454,9 @@ class Protocol extends _is.DatabaseSerializationManager {
     }
     if (dataClassName == 'ColourCanvasView') {
       return deserialize<_i7up465y.ColourCanvasView>(data['data']);
+    }
+    if (dataClassName == 'ColourIndexerCursor') {
+      return deserialize<_i6sninmd.ColourIndexerCursor>(data['data']);
     }
     if (dataClassName == 'MintChallenge') {
       return deserialize<_ilupy5f9.MintChallenge>(data['data']);
@@ -372,6 +485,8 @@ class Protocol extends _is.DatabaseSerializationManager {
     switch (t) {
       case _iexdv2yq.ColourCanvasState:
         return _iexdv2yq.ColourCanvasState.t;
+      case _i6sninmd.ColourIndexerCursor:
+        return _i6sninmd.ColourIndexerCursor.t;
       case _ilupy5f9.MintChallenge:
         return _ilupy5f9.MintChallenge.t;
     }

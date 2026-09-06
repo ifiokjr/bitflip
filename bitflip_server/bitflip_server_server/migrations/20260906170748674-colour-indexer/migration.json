@@ -1,0 +1,132 @@
+{
+	"__className__": "serverpod.DatabaseMigration",
+	"actions": [
+		{
+			"__className__": "serverpod.DatabaseMigrationAction",
+			"type": "createTable",
+			"createTable": {
+				"__className__": "serverpod.TableDefinition",
+				"name": "bitflip_colour_indexer_cursor",
+				"dartName": "ColourIndexerCursor",
+				"module": "bitflip_server",
+				"schema": "public",
+				"columns": [
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "id",
+						"fieldName": "id",
+						"columnType": 6,
+						"isNullable": false,
+						"columnDefault": "serial",
+						"dartType": "int?"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "cluster",
+						"fieldName": "cluster",
+						"columnType": 0,
+						"isNullable": false,
+						"dartType": "String"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "programAddress",
+						"fieldName": "programAddress",
+						"columnType": 0,
+						"isNullable": false,
+						"dartType": "String"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "startSignature",
+						"fieldName": "startSignature",
+						"columnType": 0,
+						"isNullable": false,
+						"dartType": "String"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "completedHeadSignature",
+						"fieldName": "completedHeadSignature",
+						"columnType": 0,
+						"isNullable": false,
+						"dartType": "String"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "catchUpHeadSignature",
+						"fieldName": "catchUpHeadSignature",
+						"columnType": 0,
+						"isNullable": true,
+						"dartType": "String?"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "beforeSignature",
+						"fieldName": "beforeSignature",
+						"columnType": 0,
+						"isNullable": true,
+						"dartType": "String?"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "leaseToken",
+						"fieldName": "leaseToken",
+						"columnType": 0,
+						"isNullable": true,
+						"dartType": "String?"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "leasedUntil",
+						"fieldName": "leasedUntil",
+						"columnType": 4,
+						"isNullable": true,
+						"dartType": "DateTime?"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "lastSuccessAt",
+						"fieldName": "lastSuccessAt",
+						"columnType": 4,
+						"isNullable": true,
+						"dartType": "DateTime?"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "updatedAt",
+						"fieldName": "updatedAt",
+						"columnType": 4,
+						"isNullable": false,
+						"dartType": "DateTime"
+					}
+				],
+				"foreignKeys": [],
+				"indexes": [
+					{
+						"__className__": "serverpod.IndexDefinition",
+						"indexName": "bitflip_colour_indexer_source_idx",
+						"elements": [
+							{
+								"__className__": "serverpod.IndexElementDefinition",
+								"type": 0,
+								"definition": "cluster"
+							},
+							{
+								"__className__": "serverpod.IndexElementDefinition",
+								"type": 0,
+								"definition": "programAddress"
+							}
+						],
+						"type": "btree",
+						"isUnique": true,
+						"isPrimary": false
+					}
+				],
+				"managed": true
+			}
+		}
+	],
+	"warnings": [],
+	"migrationApiVersion": 1
+}

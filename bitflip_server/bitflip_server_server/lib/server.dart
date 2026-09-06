@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:bitflip_program/bitflip_program.dart';
+import 'package:bitflip_server_server/src/colour/colour_event_indexer.dart';
 import 'package:bitflip_server_server/src/colour/colour_flip_event_source.dart';
 import 'package:bitflip_server_server/src/generated/serverpod.dart';
 import 'package:bitflip_server_server/src/minting/bitflip_mint_service.dart';
@@ -18,6 +20,13 @@ void run(List<String> args) async {
     production: runMode == ServerpodRunMode.production,
     requireExplicitConfiguration: runMode == ServerpodRunMode.staging,
   );
+  final strictConfiguration =
+      runMode == ServerpodRunMode.production ||
+      runMode == ServerpodRunMode.staging;
+  final colourIndexerConfiguration = ColourIndexerConfiguration.fromEnvironment(
+    Platform.environment,
+    requireEnabled: strictConfiguration,
+  );
   final pod = Serverpod(
     args,
     healthConfig: HealthConfig(
@@ -28,8 +37,14 @@ void run(List<String> args) async {
     ),
   );
   MintServiceRegistry.configure(mintService);
-  ColourFlipEventSourceRegistry.configure(
-    SolanaColourFlipEventSource(mintService.rpc),
+  final colourEventSource = SolanaColourFlipEventSource(mintService.rpc);
+  ColourFlipEventSourceRegistry.configure(colourEventSource);
+  ColourEventIndexerRegistry.configure(
+    ColourEventIndexer(
+      configuration: colourIndexerConfiguration,
+      signatureSource: colourEventSource,
+      eventSource: colourEventSource,
+    ),
   );
   pod.webServer.addMiddleware(const SecurityHeadersMiddleware().call, '/');
 
@@ -49,6 +64,20 @@ void run(List<String> args) async {
   }
 
   await pod.start();
+  if (colourIndexerConfiguration.enabled) {
+    final identifier =
+        'colour-indexer-${colourIndexerConfiguration.cluster}-'
+        '${bitflipProgramProgramAddress.value}';
+    await pod.futureCalls.cancel(identifier);
+    await pod.futureCalls
+        .callRecurring(identifier: identifier)
+        .every(
+          colourIndexerConfiguration.interval,
+          start: DateTime.now().toUtc(),
+        )
+        .colourIndexer
+        .scan();
+  }
 }
 
 String? _argumentValue(List<String> args, String name) {

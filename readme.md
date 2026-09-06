@@ -98,10 +98,14 @@ Configure these as deployment secrets; never commit them:
 - `BITFLIP_OPERATOR_PRIVATE_KEY` — JSON bytes for the tree delegate and the on-chain Bitflip collection authority.
 - `BITFLIP_METADATA_BASE_URL` — the public Serverpod web origin.
 - `SOLANA_RPC_URL` — the cluster RPC endpoint.
+- `BITFLIP_COLOUR_INDEXER_ENABLED=true` — required outside local development.
+- `BITFLIP_COLOUR_INDEXER_START_SIGNATURE` — the confirmed ABI-v7 launch transaction used as the durable history anchor.
 - `SERVERPOD_DATABASE_PASSWORD` — the managed PostgreSQL password.
 - `SERVERPOD_SERVICE_SECRET` — a unique, high-entropy Serverpod service secret.
 
 The owner requests a five-minute challenge, signs its exact text with their wallet, and submits the signature to Serverpod. The backend re-reads the Pina accounts, verifies ownership and sealed state, rate-limits and consumes the challenge, then sends Bubblegum mint and Bitflip receipt instructions in one transaction. A private tree prevents outside mints from racing the predicted leaf index. The beta must run one mint-capable server process because its operator gate is process-local; durable single-consumer work is a mainnet gate.
+
+The contested colour canvas is reconstructed from confirmed Bitflip program transactions. Client submissions are only low-latency hints: a recurring Serverpod worker scans from a persisted cursor, holds a crash-expiring database lease, and safely replays events using per-pixel section revisions.
 
 ## Security properties
 

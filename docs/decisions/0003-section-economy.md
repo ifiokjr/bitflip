@@ -169,7 +169,7 @@ This lets successful sections recycle activity into prizes instead of depending 
 
 Colour does not occupy the permanent bitmap. During a live colour policy, the flip instruction validates an eight-colour index and emits the colour, player, coordinates, policy version, and resulting section revision. ABI version 7's backend verifies a confirmed successful transaction, accepts event bytes only while the Bitflip program is executing, and uses per-pixel revisions to make replay and out-of-order ingestion deterministic. The on-chain bitmap remains one bit per pixel.
 
-The first-party client submits its confirmed signature as a low-latency indexing hint. That cannot forge the canvas, but omitted hints can make it temporarily incomplete. A durable RPC/indexer worker must backfill every successful Bitflip colour event before this mode is represented as complete in production.
+The first-party client submits its confirmed signature as a low-latency indexing hint. That cannot forge the canvas. A recurring Serverpod worker now independently scans confirmed program history from an explicit launch signature, persists multi-page catch-up state, and uses a crash-expiring lease to provide one logical consumer across replicas. Cursor advancement happens only after every successful transaction in the page has been fetched and reduced; a crash safely replays the page. Release operation must use an archival RPC, monitor completed sweeps, and rehearse catch-up with client hints disabled.
 
 An emitted colour is objectively attributable to a paid on-chain action. The winner of an off-chain drawing or capture-the-flag game is not. The beta may use a configured Bitflip game attestor to issue single-use, expiring claim vouchers that are bounded by the campaign budget. The UI and rules must describe that trust explicitly. A later optimistic Merkle settlement with a challenge window can reduce that trust, but should not be built before a real game needs it.
 
@@ -200,7 +200,7 @@ The config PDA can sign transfers from the launch reserve only. A section PDA ca
 4. Remove the global counter and treasury from the flip hot path, then benchmark the actual one-pixel and 16-pixel Token-2022 paths across many sections. **The locks are removed and two-section concurrent real-SBF coverage is implemented; broader devnet profiling remains.**
 5. Add owner fee sharing and versioned section policies. Policies cannot change during a live campaign and must survive a section sale. **Implemented in ABI version 7; policies deliberately cannot advertise entry charges or rewards until backed campaign custody exists.**
 6. Add owner/sponsor deposits, entry payments, budget exhaustion, cancellation, and refund rules.
-7. Add colour events and the indexed eight-colour canvas without attaching token payouts. **Implemented in ABI version 7 with verified client-fed ingestion; durable independent backfill remains a release gate.**
+7. Add colour events and the indexed eight-colour canvas without attaching token payouts. **Implemented in ABI version 7 with verified client hints plus durable, independently cursored backfill; staging catch-up and RPC-capacity evidence remain release gates.**
 8. Independently review and implement one allowlisted pool distribution policy, then test Sybil splitting, owner farming, replay, equivocation, expiry, sale, seal, and indexer recovery.
 9. Run the economy on devnet before any token or reward code is eligible for mainnet.
 

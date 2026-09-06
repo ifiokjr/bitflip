@@ -1,0 +1,18 @@
+class: ColourIndexerCursor
+serverOnly: true
+table: bitflip_colour_indexer_cursor
+fields:
+  cluster: String
+  programAddress: String
+  startSignature: String
+  completedHeadSignature: String
+  catchUpHeadSignature: String?
+  beforeSignature: String?
+  leaseToken: String?
+  leasedUntil: DateTime?
+  lastSuccessAt: DateTime?
+  updatedAt: DateTime
+indexes:
+  bitflip_colour_indexer_source_idx:
+    fields: cluster, programAddress
+    unique: true
