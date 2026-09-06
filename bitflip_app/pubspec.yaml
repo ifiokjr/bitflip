@@ -12,6 +12,7 @@ dependencies:
     path: ../bitflip_program/clients/dart
   bitflip_server_client:
     path: ../bitflip_server/bitflip_server_client
+  crypto: 3.0.7
   cupertino_icons: 1.0.9
   flutter:
     sdk: flutter

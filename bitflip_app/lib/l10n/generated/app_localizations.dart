@@ -628,6 +628,90 @@ abstract class AppLocalizations {
   /// **'WITHDRAW {amount} SOL IN OWNER FEES'**
   String withdrawOwnerFees(String amount);
 
+  /// No description provided for @sectionMode.
+  ///
+  /// In en, this message translates to:
+  /// **'SECTION MODE'**
+  String get sectionMode;
+
+  /// No description provided for @baseCanvasMode.
+  ///
+  /// In en, this message translates to:
+  /// **'BASE CANVAS'**
+  String get baseCanvasMode;
+
+  /// No description provided for @openCanvasMode.
+  ///
+  /// In en, this message translates to:
+  /// **'OPEN CANVAS'**
+  String get openCanvasMode;
+
+  /// No description provided for @colourCanvasMode.
+  ///
+  /// In en, this message translates to:
+  /// **'8-COLOUR CANVAS'**
+  String get colourCanvasMode;
+
+  /// No description provided for @noCampaign.
+  ///
+  /// In en, this message translates to:
+  /// **'No owner campaign is configured.'**
+  String get noCampaign;
+
+  /// No description provided for @campaignScheduledFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled for {time}.'**
+  String campaignScheduledFor(String time);
+
+  /// No description provided for @campaignLiveUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms locked until {time}.'**
+  String campaignLiveUntil(String time);
+
+  /// No description provided for @campaignEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'This campaign has ended.'**
+  String get campaignEnded;
+
+  /// No description provided for @policyRewardsDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Protocol-pool rewards remain disabled; this round changes mode only.'**
+  String get policyRewardsDisabled;
+
+  /// No description provided for @startOpenRound.
+  ///
+  /// In en, this message translates to:
+  /// **'START 24H OPEN'**
+  String get startOpenRound;
+
+  /// No description provided for @startColourRound.
+  ///
+  /// In en, this message translates to:
+  /// **'START 24H COLOUR'**
+  String get startColourRound;
+
+  /// No description provided for @confirmPolicyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a 24-hour {mode} round?'**
+  String confirmPolicyTitle(String mode);
+
+  /// No description provided for @confirmPolicyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The mode and rules digest are written on-chain. They cannot be changed while the round is live and remain attached if the section is sold.'**
+  String get confirmPolicyBody;
+
+  /// No description provided for @confirmPolicyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'START ROUND'**
+  String get confirmPolicyAction;
+
   /// No description provided for @anonymousOwner.
   ///
   /// In en, this message translates to:
@@ -705,6 +789,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Accrued owner fees withdrawn from this sector.'**
   String get activityOwnerFeesWithdrawn;
+
+  /// No description provided for @activityPolicyConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Section policy published. Live terms are now locked on-chain.'**
+  String get activityPolicyConfigured;
 
   /// No description provided for @activitySealed.
   ///

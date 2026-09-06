@@ -20,6 +20,7 @@ class FlipPixelsInstructionData {
     required this.sectionIndex,
     required this.count,
     required this.coordinates,
+    required this.expectedPolicyVersion,
     required this.expectedWindowId,
     required this.maximumUnitPriceLamports,
     required this.maximumTotalPriceLamports,
@@ -32,6 +33,7 @@ class FlipPixelsInstructionData {
   final int sectionIndex;
   final int count;
   final Uint8List coordinates;
+  final BigInt expectedPolicyVersion;
   final BigInt expectedWindowId;
   final BigInt maximumUnitPriceLamports;
   final BigInt maximumTotalPriceLamports;
@@ -45,6 +47,7 @@ Encoder<FlipPixelsInstructionData> getFlipPixelsInstructionDataEncoder() {
     ('sectionIndex', getU8Encoder()),
     ('count', getU8Encoder()),
     ('coordinates', fixEncoderSize(getBytesEncoder(), 32, allowTruncation: false)),
+    ('expectedPolicyVersion', getU64Encoder()),
     ('expectedWindowId', getU64Encoder()),
     ('maximumUnitPriceLamports', getU64Encoder()),
     ('maximumTotalPriceLamports', getU64Encoder()),
@@ -59,6 +62,7 @@ Encoder<FlipPixelsInstructionData> getFlipPixelsInstructionDataEncoder() {
       'sectionIndex': value.sectionIndex,
       'count': value.count,
       'coordinates': value.coordinates,
+      'expectedPolicyVersion': value.expectedPolicyVersion,
       'expectedWindowId': value.expectedWindowId,
       'maximumUnitPriceLamports': value.maximumUnitPriceLamports,
       'maximumTotalPriceLamports': value.maximumTotalPriceLamports,
@@ -74,6 +78,7 @@ Decoder<FlipPixelsInstructionData> getFlipPixelsInstructionDataDecoder() {
     ('sectionIndex', getU8Decoder()),
     ('count', getU8Decoder()),
     ('coordinates', fixDecoderSize(getBytesDecoder(), 32)),
+    ('expectedPolicyVersion', getU64Decoder()),
     ('expectedWindowId', getU64Decoder()),
     ('maximumUnitPriceLamports', getU64Decoder()),
     ('maximumTotalPriceLamports', getU64Decoder()),
@@ -106,6 +111,7 @@ Decoder<FlipPixelsInstructionData> getFlipPixelsInstructionDataDecoder() {
       sectionIndex: map['sectionIndex']! as int,
       count: map['count']! as int,
       coordinates: map['coordinates']! as Uint8List,
+      expectedPolicyVersion: map['expectedPolicyVersion']! as BigInt,
       expectedWindowId: map['expectedWindowId']! as BigInt,
       maximumUnitPriceLamports: map['maximumUnitPriceLamports']! as BigInt,
       maximumTotalPriceLamports: map['maximumTotalPriceLamports']! as BigInt,
@@ -155,6 +161,7 @@ Instruction getFlipPixelsInstruction({
   required int sectionIndex,
   required int count,
   required Uint8List coordinates,
+  required BigInt expectedPolicyVersion,
   required BigInt expectedWindowId,
   required BigInt maximumUnitPriceLamports,
   required BigInt maximumTotalPriceLamports,
@@ -165,6 +172,7 @@ Instruction getFlipPixelsInstruction({
       sectionIndex: sectionIndex,
       count: count,
       coordinates: coordinates,
+      expectedPolicyVersion: expectedPolicyVersion,
       expectedWindowId: expectedWindowId,
       maximumUnitPriceLamports: maximumUnitPriceLamports,
       maximumTotalPriceLamports: maximumTotalPriceLamports,

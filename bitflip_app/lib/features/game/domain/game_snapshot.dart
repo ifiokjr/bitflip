@@ -1,5 +1,6 @@
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
 import 'package:bitflip_app/features/game/domain/section_economy.dart';
+import 'package:bitflip_app/features/game/domain/section_policy.dart';
 
 enum SectionLifecycle { unclaimed, active, sealed, minted }
 
@@ -16,6 +17,7 @@ final class SectionSnapshot {
     this.assetId,
     this.bitVault,
     this.economy,
+    this.policy,
   });
 
   final int index;
@@ -29,6 +31,7 @@ final class SectionSnapshot {
   final String? assetId;
   final String? bitVault;
   final SectionEconomySnapshot? economy;
+  final SectionPolicySnapshot? policy;
 
   bool get isEditable => lifecycle == SectionLifecycle.active;
   bool get isClaimed => lifecycle != SectionLifecycle.unclaimed;
@@ -45,6 +48,7 @@ final class SectionSnapshot {
     String? assetId,
     String? bitVault,
     SectionEconomySnapshot? economy,
+    SectionPolicySnapshot? policy,
   }) {
     return SectionSnapshot(
       index: index,
@@ -58,6 +62,7 @@ final class SectionSnapshot {
       assetId: assetId ?? this.assetId,
       bitVault: bitVault ?? this.bitVault,
       economy: economy ?? this.economy,
+      policy: policy ?? this.policy,
     );
   }
 }

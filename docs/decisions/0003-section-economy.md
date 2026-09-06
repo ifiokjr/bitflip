@@ -12,7 +12,7 @@ Every section has one 26,214,400 BIT allocation. It begins entirely as base-issu
 
 The pool is an on-chain programme liability, not an owner's wallet. Distribution remains disabled until an independently reviewed, protocol-defined policy can select recipients without relying on the owner or one reward distributor.
 
-The deterministic controller, immutable per-game configuration snapshot, per-section base/pool ledger, permissionless settlement, fixed-mint registry, global launch reserve, lazy section-vault funding, atomic paid-flip issuance, and fixed owner fee sharing are implemented in economy ABI version 5. Protocol-pool payouts and campaign governance remain gated below. ABI version 5 requires a fresh deployment and must stay on devnet until its economics and program have been independently reviewed.
+The deterministic controller, immutable per-game configuration snapshot, per-section base/pool ledger, permissionless settlement, fixed-mint registry, global launch reserve, lazy section-vault funding, atomic paid-flip issuance, fixed owner fee sharing, and bounded versioned section policies are implemented in economy ABI version 6. Protocol-pool payouts and funded campaign budgets remain gated below. ABI version 6 requires a fresh deployment and must stay on devnet until its economics and program have been independently reviewed.
 
 ## Recovered intent
 
@@ -86,7 +86,7 @@ base BIT emitted + reward-pool BIT + unallocated base BIT
 
 At exactly the target for every window over 60 days, 17,694,720 BIT is emitted and 8,519,680 BIT, or 32.5%, enters the pool at expiry. Sustained burst traffic can emit more and leave less for games. This is deliberate: unused base issuance funds future play instead of becoming a late cheap giveaway.
 
-The player's transaction includes the expected window, maximum unit and total SOL charge, and minimum BIT payout. It fails atomically if any bound has changed. ABI version 5 requires one whole BIT for every requested pixel, so a custom client cannot turn depleted capacity into free or unrewarded flips that still advance section activity. A later explicitly unrewarded game mode would need a separate on-chain instruction and policy.
+The player's transaction includes the expected policy version and reward window, maximum unit and total SOL charge, and minimum BIT payout. It fails atomically if any bound has changed. ABI version 6 requires one whole BIT for every requested pixel, so a custom client cannot turn depleted capacity into free or unrewarded flips that still advance section activity. A later explicitly unrewarded game mode would need a separate on-chain instruction and policy.
 
 Base issuance is a finite primary distribution, not risk-free yield. A fixed SOL price cannot track a transferable token's market price without an oracle, and a stale cheap issuance price will be arbitraged. [ADR 0004](0004-section-price-controller.md) proposes an independently paced, time-based price for every section, bounded burst issuance, and a small inventory floor. The first beta must remain on devnet, avoid seeding exchange liquidity, and collect data before those proposed parameters can become a mainnet decision.
 
@@ -136,6 +136,8 @@ For an active section, its owner can configure the next campaign using bounded, 
 
 Rules are versioned and immutable while a campaign is live. Players sign the expected policy version, maximum entry/flip cost, and minimum reward, so an owner cannot change terms between preview and execution. Arbitrary executable code, arbitrary payout accounts, owner-authored payout lists, and arbitrary token minting are not governance options.
 
+ABI version 6 implements the safe first slice: open-canvas and eight-colour modes, the default palette, start/end timestamps capped at 30 days, a rules digest, optimistic policy-version checks, live-policy locking, and sale persistence. A section cannot be sealed while a round is live, so an owner cannot terminate committed play early. Entry price, reward rate, and reward policy are present in the commitment but must remain zero/`none` until stage 6 adds physically backed campaign custody. The first-party client offers a simple 24-hour round; direct clients may choose any valid duration up to the on-chain cap.
+
 Section ownership also receives a protocol-defined share of that section's SOL flip fees. The recommended staging value is 20%, fixed for the lifetime of a game; the remaining 80% goes to the protocol treasury. The owner cannot set this percentage. At today's 10,000-lamport fee, 20% yields:
 
 | Activity                   | Gross application fees |  Owner share | Protocol share |
@@ -143,11 +145,11 @@ Section ownership also receives a protocol-defined share of that section's SOL f
 | One full 4,096-pixel board |            0.04096 SOL | 0.008192 SOL |   0.032768 SOL |
 | 26,214,400 paid flips      |            262.144 SOL |  52.4288 SOL |   209.7152 SOL |
 
-Ignoring rent and transaction fees, the current 0.01 SOL claim price is recovered after 5,000 paid flips at a 20% share. On 2026-09-06, mainnet reported 0.004933407 SOL as the rent-exempt minimum for the former 651-byte section; ABI version 5 now uses 779 bytes. Deployment tooling must query the exact current rent for the deployed layout and include it in the break-even model rather than hard-code that earlier observation.
+Ignoring rent and transaction fees, the current 0.01 SOL claim price is recovered after 5,000 paid flips at a 20% share. On 2026-09-06, mainnet reported 0.004933407 SOL as the rent-exempt minimum for the former 651-byte section; ABI version 6 now uses 854 bytes. Deployment tooling must query the exact current rent for the deployed layout and include it in the break-even model rather than hard-code that earlier observation.
 
 This is only a staging hypothesis, not an income promise. The final share and claim price require observed retention, bot behaviour, SOL price sensitivity, and programme costs.
 
-Protocol-owned section `0` routes both shares to the protocol. ABI version 5 accrues later owners' immutable game-level share inside the section account on every flip. No owner wallet is writable in the flip path, so one wallet can own multiple sections without becoming a cross-section transaction lock. Only the current owner can withdraw the receivable; a purchase settles the seller's accrued balance before transferring ownership, and sealing settles it before the section can be minted. An owner flipping their own section can later recover the owner portion but still pays the protocol portion; Sybil wallets cannot improve that result.
+Protocol-owned section `0` routes both shares to the protocol. ABI version 6 accrues later owners' immutable game-level share inside the section account on every flip. No owner wallet is writable in the flip path, so one wallet can own multiple sections without becoming a cross-section transaction lock. Only the current owner can withdraw the receivable; a purchase settles the seller's accrued balance before transferring ownership, and sealing settles it before the section can be minted. An owner flipping their own section can later recover the owner portion but still pays the protocol portion; Sybil wallets cannot improve that result.
 
 The protocol share accrues as backed lamports in the already-writable section PDA and is swept separately; sending every flip directly to one global treasury would serialize all section shards. The bounded protocol-fee ledger records only that protocol portion and requires no additional rent-bearing revenue account.
 
@@ -173,7 +175,7 @@ Section owners select an approved game and its parameters; they do not become a 
 
 ## Low-rent, sharded custody design
 
-Creating Token-2022 accounts for every possible section up front would undermine the lazy allocation model. ABI version 5 registers one config-PDA-owned launch reserve containing the exact fixed supply. A permissionless `FundSectionVault` instruction creates the active section's canonical Token-2022 associated account, charges its rent to the instruction's funder, and transfers exactly 26,214,400 BIT from the reserve once. The reserve is touched only when a section launches; it is not in the flip hot path.
+Creating Token-2022 accounts for every possible section up front would undermine the lazy allocation model. ABI version 6 registers one config-PDA-owned launch reserve containing the exact fixed supply. A permissionless `FundSectionVault` instruction creates the active section's canonical Token-2022 associated account, charges its rent to the instruction's funder, and transfers exactly 26,214,400 BIT from the reserve once. The reserve is touched only when a section launches; it is not in the flip hot path.
 
 Each funded vault is owned by its section PDA, not the human section owner. This preserves section-level parallelism: flips in unrelated sections write different bitmap, controller, and token accounts. It also makes custody physically match the ledger. Before pool payouts exist:
 
@@ -192,9 +194,9 @@ The config PDA can sign transfers from the launch reserve only. A section PDA ca
 
 1. Simulate the [time-based section price controller](0004-section-price-controller.md), owner share, claim break-even, and likely bot strategies using staging activity assumptions. **Implemented and reproducible.**
 2. Implement and independently review the fixed mint, launch-reserve invariant, lazy per-section vaults, per-section base ledger, and deterministic shortfall-to-pool transition on a fresh devnet program ID. **The program-side registry, vault funding, ledger, transition, and real-SBF custody tests are implemented; the mint ceremony, fresh deployment, and independent review remain.**
-3. Add base paid-flip distribution with SOL/BIT slippage protection and real-SBF tests for exhaustion, batching, custody, rollover, and arithmetic boundaries. Accrue the pool but do not pay it yet. **Implemented in ABI version 5; independent review and devnet evidence remain.**
+3. Add base paid-flip distribution with SOL/BIT slippage protection and real-SBF tests for exhaustion, batching, custody, rollover, and arithmetic boundaries. Accrue the pool but do not pay it yet. **Implemented in ABI version 6; independent review and devnet evidence remain.**
 4. Remove the global counter and treasury from the flip hot path, then benchmark the actual one-pixel and 16-pixel Token-2022 paths across many sections. **The locks are removed and two-section concurrent real-SBF coverage is implemented; broader devnet profiling remains.**
-5. Add owner fee sharing and versioned section policies. Policies cannot change during a live campaign and must survive a section sale. **Fixed atomic fee sharing is implemented in ABI version 5; versioned policies remain.**
+5. Add owner fee sharing and versioned section policies. Policies cannot change during a live campaign and must survive a section sale. **Implemented in ABI version 6; policies deliberately cannot advertise entry charges or rewards until backed campaign custody exists.**
 6. Add owner/sponsor deposits, entry payments, budget exhaustion, cancellation, and refund rules.
 7. Add colour events and the indexed eight-colour canvas without attaching token payouts.
 8. Independently review and implement one allowlisted pool distribution policy, then test Sybil splitting, owner farming, replay, equivocation, expiry, sale, seal, and indexer recovery.

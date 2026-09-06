@@ -1,6 +1,7 @@
 import 'package:bitflip_app/app/theme/bitflip_theme.dart';
 import 'package:bitflip_app/features/game/application/game_controller.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
+import 'package:bitflip_app/features/game/domain/section_policy.dart';
 import 'package:bitflip_app/l10n/l10n.dart';
 import 'package:bitflip_app/testing/bitflip_test_keys.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +21,7 @@ class GameConsole extends HookWidget {
     required this.onMint,
     required this.onRefresh,
     this.onWithdrawOwnerFees,
+    this.onConfigurePolicy,
     this.onViewResult,
     super.key,
   });
@@ -31,6 +33,7 @@ class GameConsole extends HookWidget {
   final VoidCallback onCancelListing;
   final VoidCallback onPurchase;
   final VoidCallback? onWithdrawOwnerFees;
+  final ValueChanged<SectionPolicyMode>? onConfigurePolicy;
   final VoidCallback onCommit;
   final VoidCallback onClear;
   final VoidCallback onSeal;
@@ -46,6 +49,7 @@ class GameConsole extends HookWidget {
     final canClaimSection = state.snapshot.canClaimSectionAt(now);
     final canSeal =
         section.isEditable &&
+        !(section.policy?.isLiveAt(now) ?? false) &&
         (state.snapshot.isDemo || state.walletAddress == section.owner);
     final canMint =
         section.lifecycle == SectionLifecycle.sealed &&
@@ -310,6 +314,10 @@ class GameConsole extends HookWidget {
             ],
             if (section.isClaimed) ...[
               const SizedBox(height: 16),
+              _PolicyPanel(state: state, onConfigure: onConfigurePolicy),
+            ],
+            if (section.isClaimed) ...[
+              const SizedBox(height: 16),
               _MarketplacePanel(
                 state: state,
                 onList: onList,
@@ -461,6 +469,107 @@ class _OwnerRow extends HookWidget {
   }
 }
 
+class _PolicyPanel extends HookWidget {
+  const _PolicyPanel({required this.state, required this.onConfigure});
+
+  final GameViewState state;
+  final ValueChanged<SectionPolicyMode>? onConfigure;
+
+  @override
+  Widget build(BuildContext context) {
+    final section = state.snapshot.section;
+    final policy = section.policy;
+    final now = BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000);
+    final isLive = policy?.isLiveAt(now) ?? false;
+    final modeLabel = switch (policy?.mode) {
+      SectionPolicyMode.openCanvas => context.l10n.openCanvasMode,
+      SectionPolicyMode.colourCanvas => context.l10n.colourCanvasMode,
+      null => context.l10n.baseCanvasMode,
+    };
+    final timingLabel = switch (policy) {
+      null => context.l10n.noCampaign,
+      _ when !policy.isConfigured => context.l10n.noCampaign,
+      _ when now < policy.startsAtUnixSeconds =>
+        context.l10n.campaignScheduledFor(
+          _formatUnlockTime(context, policy.startsAtUnixSeconds),
+        ),
+      _ when isLive => context.l10n.campaignLiveUntil(
+        _formatUnlockTime(context, policy.endsAtUnixSeconds),
+      ),
+      _ => context.l10n.campaignEnded,
+    };
+    final canConfigure =
+        section.isEditable &&
+        !section.isProtocolOwned &&
+        state.walletAddress == section.owner &&
+        !state.isBusy &&
+        !isLive;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: BitflipColors.raised,
+        border: Border.all(color: BitflipColors.line),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    context.l10n.sectionMode,
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
+                Text(
+                  policy?.version.toString() ?? '0',
+                  style: Theme.of(context).textTheme.labelSmall
+                      ?.copyWith(color: BitflipColors.muted),
+                ),
+              ],
+            ),
+            const SizedBox(height: 7),
+            Text(
+              modeLabel,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: isLive ? BitflipColors.acid : BitflipColors.cyan,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(timingLabel, style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: 8),
+            Text(
+              context.l10n.policyRewardsDisabled,
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: BitflipColors.muted),
+            ),
+            if (canConfigure && onConfigure != null) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton(
+                    onPressed: () => onConfigure!(SectionPolicyMode.openCanvas),
+                    child: Text(context.l10n.startOpenRound),
+                  ),
+                  OutlinedButton(
+                    onPressed: () =>
+                        onConfigure!(SectionPolicyMode.colourCanvas),
+                    child: Text(context.l10n.startColourRound),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _MarketplacePanel extends HookWidget {
   const _MarketplacePanel({
     required this.state,
@@ -585,6 +694,7 @@ class _ActivityPulse extends HookWidget {
       GameNotice.listingCancelled => context.l10n.activityListingCancelled,
       GameNotice.purchased => context.l10n.activityPurchased,
       GameNotice.ownerFeesWithdrawn => context.l10n.activityOwnerFeesWithdrawn,
+      GameNotice.policyConfigured => context.l10n.activityPolicyConfigured,
       GameNotice.sealed => context.l10n.activitySealed,
       GameNotice.minted => context.l10n.activityMinted,
       GameNotice.batchFull => context.l10n.batchFull,

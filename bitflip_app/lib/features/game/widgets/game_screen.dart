@@ -6,6 +6,7 @@ import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/application/game_controller.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
+import 'package:bitflip_app/features/game/domain/section_policy.dart';
 import 'package:bitflip_app/features/game/widgets/game_console.dart';
 import 'package:bitflip_app/features/game/widgets/pixel_canvas.dart';
 import 'package:bitflip_app/features/game/widgets/section_navigator.dart';
@@ -361,6 +362,8 @@ class _GameWorkspace extends HookWidget {
           onPurchase: () => unawaited(controller.purchaseSection()),
           onWithdrawOwnerFees: () =>
               unawaited(controller.withdrawSectionOwnerFees()),
+          onConfigurePolicy: (mode) =>
+              unawaited(_confirmPolicy(context, controller, mode)),
           onCommit: () => unawaited(controller.commitMoves()),
           onClear: controller.clearQueue,
           onSeal: () => unawaited(_confirmSeal(context, controller)),
@@ -384,6 +387,42 @@ class _GameWorkspace extends HookWidget {
       },
     );
   }
+}
+
+Future<void> _confirmPolicy(
+  BuildContext context,
+  GameController controller,
+  SectionPolicyMode mode,
+) async {
+  final modeLabel = switch (mode) {
+    SectionPolicyMode.openCanvas => context.l10n.openCanvasMode,
+    SectionPolicyMode.colourCanvas => context.l10n.colourCanvasMode,
+  };
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      icon: const Icon(Icons.tune_rounded),
+      title: Text(context.l10n.confirmPolicyTitle(modeLabel)),
+      content: Text(context.l10n.confirmPolicyBody),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(context.l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(context.l10n.confirmPolicyAction),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
+  await controller.configureSectionPolicy(
+    SectionPolicyDraft.startingNow(
+      mode: mode,
+      duration: const Duration(hours: 24),
+    ),
+  );
 }
 
 Future<void> _confirmSeal(

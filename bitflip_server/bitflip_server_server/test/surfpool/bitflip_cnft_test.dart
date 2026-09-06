@@ -262,7 +262,8 @@ Future<void> _setTestSectionPixel(
     ),
   };
   final data = Uint8List.fromList(section.data);
-  const pixelsOffset = 267;
+  // Economy ABI v6: the versioned policy occupies bytes 267-341.
+  const pixelsOffset = 342;
   final pixelIndex = y * 64 + x;
   data
     ..[133] = 1

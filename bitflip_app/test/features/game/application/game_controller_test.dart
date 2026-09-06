@@ -3,6 +3,7 @@ import 'package:bitflip_app/features/game/application/game_controller.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
 import 'package:bitflip_app/features/game/domain/section_economy.dart';
+import 'package:bitflip_app/features/game/domain/section_policy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -227,6 +228,60 @@ void main() {
       );
     });
 
+    test('current owner can publish a bounded section policy', () async {
+      repository.snapshot = _liveSnapshot(SectionLifecycle.active);
+      final controller = container.read(gameControllerProvider.notifier);
+      await controller.refresh();
+      final draft = SectionPolicyDraft.startingNow(
+        mode: SectionPolicyMode.colourCanvas,
+        duration: const Duration(hours: 24),
+      );
+
+      await controller.configureSectionPolicy(draft);
+
+      final state = container.read(gameControllerProvider);
+      expect(repository.configurePolicyCalls, 1);
+      expect(repository.lastPolicyDraft, same(draft));
+      expect(state.snapshot.section.policy?.version, BigInt.one);
+      expect(
+        state.snapshot.section.policy?.mode,
+        SectionPolicyMode.colourCanvas,
+      );
+      expect(state.activity.notice, GameNotice.policyConfigured);
+      expect(state.activity.transactionSignature, 'configure-policy-signature');
+    });
+
+    test('even the current owner cannot replace a live policy', () async {
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      repository.snapshot = _liveSnapshot(
+        SectionLifecycle.active,
+        policy: SectionPolicySnapshot(
+          version: BigInt.one,
+          startsAtUnixSeconds: BigInt.from(now - 10),
+          endsAtUnixSeconds: BigInt.from(now + 600),
+          entryPriceTokens: BigInt.zero,
+          rewardPerActionTokens: BigInt.zero,
+          rulesDigest: List.filled(32, 1),
+          mode: SectionPolicyMode.openCanvas,
+          paletteId: 0,
+          rewardPolicy: SectionRewardPolicy.none,
+        ),
+      );
+      final controller = container.read(gameControllerProvider.notifier);
+      await controller.refresh();
+
+      await controller.configureSectionPolicy(
+        SectionPolicyDraft.startingNow(
+          mode: SectionPolicyMode.colourCanvas,
+          duration: const Duration(hours: 24),
+        ),
+      );
+      await controller.sealSection();
+
+      expect(repository.configurePolicyCalls, 0);
+      expect(repository.sealCalls, 0);
+    });
+
     test('live mode starts blank instead of displaying demo art', () {
       repository = FakeBitflipRepository(
         snapshot: _liveSnapshot(SectionLifecycle.active),
@@ -390,6 +445,7 @@ GameSnapshot _liveSnapshot(
   BigInt? salePriceLamports,
   bool isProtocolOwned = false,
   BigInt? ownerFeeLamports,
+  SectionPolicySnapshot? policy,
 }) {
   return GameSnapshot(
     gameIndex: 0,
@@ -413,6 +469,7 @@ GameSnapshot _liveSnapshot(
       revision: BigInt.zero,
       salePriceLamports: salePriceLamports ?? BigInt.zero,
       isProtocolOwned: isProtocolOwned,
+      policy: policy,
       economy: ownerFeeLamports == null
           ? null
           : SectionEconomySnapshot(

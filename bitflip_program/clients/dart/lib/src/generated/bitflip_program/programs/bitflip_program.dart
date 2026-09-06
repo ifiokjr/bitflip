@@ -41,6 +41,7 @@ enum BitflipProgramInstruction {
   configureBitCustody,
   fundSectionVault,
   withdrawSectionOwnerFees,
+  configureSectionPolicy,
 }
 
 /// Identifies the type of a BitflipProgram instruction.
@@ -94,6 +95,9 @@ BitflipProgramInstruction identifyBitflipProgramInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(15), 0)) {
     return BitflipProgramInstruction.withdrawSectionOwnerFees;
+  }
+  if (containsBytes(data, getU8Encoder().encode(16), 0)) {
+    return BitflipProgramInstruction.configureSectionPolicy;
   }
 
   throw SolanaError(
@@ -240,6 +244,14 @@ final class ParsedWithdrawSectionOwnerFees extends ParsedBitflipProgramInstructi
   final WithdrawSectionOwnerFeesInstructionData data;
 }
 
+/// A parsed ConfigureSectionPolicy instruction.
+final class ParsedConfigureSectionPolicy extends ParsedBitflipProgramInstruction {
+  const ParsedConfigureSectionPolicy({required this.data})
+      : super(BitflipProgramInstruction.configureSectionPolicy);
+
+  final ConfigureSectionPolicyInstructionData data;
+}
+
 /// Parses a BitflipProgram instruction.
 ParsedBitflipProgramInstruction parseBitflipProgramInstruction(
   Instruction instruction,
@@ -294,6 +306,9 @@ ParsedBitflipProgramInstruction parseBitflipProgramInstruction(
     ),
     BitflipProgramInstruction.withdrawSectionOwnerFees => ParsedWithdrawSectionOwnerFees(
       data: parseWithdrawSectionOwnerFeesInstruction(instruction),
+    ),
+    BitflipProgramInstruction.configureSectionPolicy => ParsedConfigureSectionPolicy(
+      data: parseConfigureSectionPolicyInstruction(instruction),
     ),
   };
 }

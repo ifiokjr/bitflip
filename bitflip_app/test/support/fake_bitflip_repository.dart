@@ -2,6 +2,7 @@ import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/data/bitflip_repository.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
+import 'package:bitflip_app/features/game/domain/section_policy.dart';
 
 final class FakeBitflipRepository implements BitflipRepository {
   FakeBitflipRepository({
@@ -23,6 +24,7 @@ final class FakeBitflipRepository implements BitflipRepository {
     this.cancelListingError,
     this.purchaseError,
     this.withdrawOwnerFeesError,
+    this.configurePolicyError,
     this.flipError,
     this.sealError,
     this.mintError,
@@ -56,6 +58,7 @@ final class FakeBitflipRepository implements BitflipRepository {
   final Object? cancelListingError;
   final Object? purchaseError;
   final Object? withdrawOwnerFeesError;
+  final Object? configurePolicyError;
   final Object? flipError;
   final Object? sealError;
   final Object? mintError;
@@ -65,6 +68,7 @@ final class FakeBitflipRepository implements BitflipRepository {
   int cancelListingCalls = 0;
   int purchaseCalls = 0;
   int withdrawOwnerFeesCalls = 0;
+  int configurePolicyCalls = 0;
   int connectCalls = 0;
   int fundCalls = 0;
   int initializeCalls = 0;
@@ -76,6 +80,7 @@ final class FakeBitflipRepository implements BitflipRepository {
   String? lastWalletId;
   BigInt? lastFundingLamports;
   BigInt? lastListingPriceLamports;
+  SectionPolicyDraft? lastPolicyDraft;
 
   @override
   Future<void> initializeWallet() async {
@@ -156,6 +161,34 @@ final class FakeBitflipRepository implements BitflipRepository {
     final error = withdrawOwnerFeesError;
     if (error != null) throw error;
     return 'withdraw-owner-fees-signature';
+  }
+
+  @override
+  Future<String> configureSectionPolicy(
+    GameSnapshot snapshot,
+    SectionPolicyDraft policy,
+  ) async {
+    configurePolicyCalls++;
+    lastPolicyDraft = policy;
+    final error = configurePolicyError;
+    if (error != null) throw error;
+    final currentVersion = this.snapshot.section.policy?.version ?? BigInt.zero;
+    this.snapshot = this.snapshot.copyWith(
+      section: this.snapshot.section.copyWith(
+        policy: SectionPolicySnapshot(
+          version: currentVersion + BigInt.one,
+          startsAtUnixSeconds: policy.startsAtUnixSeconds,
+          endsAtUnixSeconds: policy.endsAtUnixSeconds,
+          entryPriceTokens: BigInt.zero,
+          rewardPerActionTokens: BigInt.zero,
+          rulesDigest: policy.rulesDigest,
+          mode: policy.mode,
+          paletteId: 0,
+          rewardPolicy: SectionRewardPolicy.none,
+        ),
+      ),
+    );
+    return 'configure-policy-signature';
   }
 
   @override

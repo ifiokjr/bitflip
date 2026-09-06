@@ -6,6 +6,7 @@ import 'package:bitflip_app/features/game/data/bitflip_repository.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
 import 'package:bitflip_app/features/game/domain/section_economy.dart';
+import 'package:bitflip_app/features/game/domain/section_policy.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'game_controller.g.dart';
@@ -22,6 +23,7 @@ enum GameNotice {
   listingCancelled,
   purchased,
   ownerFeesWithdrawn,
+  policyConfigured,
   sealed,
   minted,
   batchFull,
@@ -572,9 +574,68 @@ class GameController extends _$GameController {
     }
   }
 
-  Future<void> sealSection() async {
+  Future<void> configureSectionPolicy(SectionPolicyDraft policy) async {
+    final section = state.snapshot.section;
+    final now = BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000);
     if (state.isBusy ||
-        !state.snapshot.section.isEditable ||
+        !state.canTransact ||
+        !section.isEditable ||
+        section.isProtocolOwned ||
+        state.walletAddress != section.owner ||
+        (section.policy?.isLiveAt(now) ?? false)) {
+      return;
+    }
+    if (state.snapshot.isDemo) {
+      final currentVersion = section.policy?.version ?? BigInt.zero;
+      final snapshot = SectionPolicySnapshot(
+        version: currentVersion + BigInt.one,
+        startsAtUnixSeconds: policy.startsAtUnixSeconds,
+        endsAtUnixSeconds: policy.endsAtUnixSeconds,
+        entryPriceTokens: BigInt.zero,
+        rewardPerActionTokens: BigInt.zero,
+        rulesDigest: policy.rulesDigest,
+        mode: policy.mode,
+        paletteId: 0,
+        rewardPolicy: SectionRewardPolicy.none,
+      );
+      state = state.copyWith(
+        snapshot: state.snapshot.copyWith(
+          section: section.copyWith(policy: snapshot),
+        ),
+        activity: const GameActivity(GameNotice.policyConfigured),
+      );
+      return;
+    }
+    state = state.copyWith(isBusy: true);
+    try {
+      final transactionSignature = await _repository.configureSectionPolicy(
+        state.snapshot,
+        policy,
+      );
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        isBusy: false,
+        activity: GameActivity(
+          GameNotice.policyConfigured,
+          transactionSignature: transactionSignature,
+        ),
+      );
+      await refresh();
+    } on Object {
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        isBusy: false,
+        activity: const GameActivity(GameNotice.connectionIssue),
+      );
+    }
+  }
+
+  Future<void> sealSection() async {
+    final section = state.snapshot.section;
+    final now = BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000);
+    if (state.isBusy ||
+        !section.isEditable ||
+        (section.policy?.isLiveAt(now) ?? false) ||
         !state.canTransact) {
       return;
     }
@@ -598,11 +659,11 @@ class GameController extends _$GameController {
         return;
       }
     }
-    final section = state.snapshot.section.copyWith(
+    final updatedSection = state.snapshot.section.copyWith(
       lifecycle: SectionLifecycle.sealed,
     );
     state = state.copyWith(
-      snapshot: state.snapshot.copyWith(section: section),
+      snapshot: state.snapshot.copyWith(section: updatedSection),
       queued: const {},
       isBusy: false,
       activity: state.snapshot.isDemo

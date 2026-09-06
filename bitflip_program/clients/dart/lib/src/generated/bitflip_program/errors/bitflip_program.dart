@@ -65,6 +65,12 @@ const int bitflipProgramErrorInsufficientReward = 0x1d; // 29
 
 const int bitflipProgramErrorNoOwnerFees = 0x1e; // 30
 
+const int bitflipProgramErrorInvalidSectionPolicy = 0x1f; // 31
+
+const int bitflipProgramErrorSectionPolicyLocked = 0x20; // 32
+
+const int bitflipProgramErrorSectionPolicyChanged = 0x21; // 33
+
 /// Map of error codes to human-readable messages.
 const Map<int, String> _bitflipProgramErrorMessages = {
     bitflipProgramErrorUnauthorized: '',
@@ -98,6 +104,9 @@ const Map<int, String> _bitflipProgramErrorMessages = {
     bitflipProgramErrorStalePriceWindow: '',
     bitflipProgramErrorInsufficientReward: '',
     bitflipProgramErrorNoOwnerFees: '',
+    bitflipProgramErrorInvalidSectionPolicy: '',
+    bitflipProgramErrorSectionPolicyLocked: '',
+    bitflipProgramErrorSectionPolicyChanged: '',
 };
 
 /// Get the error message for a BitflipProgram program error code.
