@@ -11,6 +11,9 @@ class GameConsole extends HookWidget {
     required this.state,
     required this.onConnect,
     required this.onClaim,
+    required this.onList,
+    required this.onCancelListing,
+    required this.onPurchase,
     required this.onCommit,
     required this.onClear,
     required this.onSeal,
@@ -23,6 +26,9 @@ class GameConsole extends HookWidget {
   final GameViewState state;
   final VoidCallback onConnect;
   final VoidCallback onClaim;
+  final ValueChanged<BigInt> onList;
+  final VoidCallback onCancelListing;
+  final VoidCallback onPurchase;
   final VoidCallback onCommit;
   final VoidCallback onClear;
   final VoidCallback onSeal;
@@ -34,6 +40,8 @@ class GameConsole extends HookWidget {
   Widget build(BuildContext context) {
     final section = state.snapshot.section;
     final canSign = state.canTransact;
+    final now = BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000);
+    final canClaimSection = state.snapshot.canClaimSectionAt(now);
     final canSeal =
         section.isEditable &&
         (state.snapshot.isDemo || state.walletAddress == section.owner);
@@ -94,6 +102,30 @@ class GameConsole extends HookWidget {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                section.index == state.snapshot.nextSection
+                    ? canClaimSection
+                          ? context.l10n.sectorReady
+                          : context.l10n.sectorUnlockProgress(
+                              (state.snapshot.previousSectionFlipCount ??
+                                      BigInt.zero)
+                                  .toString(),
+                              state.snapshot.earlyUnlockFlips,
+                              _formatUnlockTime(
+                                context,
+                                state.snapshot.selectedSectionUnlockAt,
+                              ),
+                            )
+                    : context.l10n.waitingForSector(
+                        formatSectionIndex(state.snapshot.nextSection),
+                      ),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: canClaimSection
+                      ? BitflipColors.acid
+                      : BitflipColors.muted,
+                ),
               ),
             ],
             const SizedBox(height: 18),
@@ -167,9 +199,15 @@ class GameConsole extends HookWidget {
             else if (section.lifecycle == SectionLifecycle.unclaimed)
               FilledButton.icon(
                 key: BitflipTestKeys.claimSection,
-                onPressed: canSign && !state.isBusy ? onClaim : null,
+                onPressed: canSign && !state.isBusy && canClaimSection
+                    ? onClaim
+                    : null,
                 icon: const Icon(Icons.flag_outlined),
-                label: Text(context.l10n.claimSector),
+                label: Text(
+                  canClaimSection
+                      ? context.l10n.claimSector
+                      : context.l10n.sectorLocked,
+                ),
               )
             else if (section.lifecycle == SectionLifecycle.sealed)
               FilledButton.icon(
@@ -218,7 +256,16 @@ class GameConsole extends HookWidget {
             const SizedBox(height: 22),
             const Divider(height: 1),
             const SizedBox(height: 20),
-            _OwnerRow(owner: section.owner),
+            _OwnerRow(section: section),
+            if (section.isClaimed) ...[
+              const SizedBox(height: 16),
+              _MarketplacePanel(
+                state: state,
+                onList: onList,
+                onCancelListing: onCancelListing,
+                onPurchase: onPurchase,
+              ),
+            ],
             const SizedBox(height: 20),
             _ActivityPulse(activity: state.activity),
             if (onViewResult != null &&
@@ -310,15 +357,20 @@ class _SignalMeter extends HookWidget {
 }
 
 class _OwnerRow extends HookWidget {
-  const _OwnerRow({required this.owner});
+  const _OwnerRow({required this.section});
 
-  final String? owner;
+  final SectionSnapshot section;
 
   @override
   Widget build(BuildContext context) {
-    final ownerLabel = owner == null
-        ? context.l10n.anonymousOwner
-        : _shortAddress(owner!);
+    late final String ownerLabel;
+    if (section.isProtocolOwned) {
+      ownerLabel = context.l10n.bitflipProgram;
+    } else if (section.owner == null) {
+      ownerLabel = context.l10n.anonymousOwner;
+    } else {
+      ownerLabel = _shortAddress(section.owner!);
+    }
     return Row(
       children: [
         const Icon(Icons.person_outline_rounded, size: 19),
@@ -333,6 +385,106 @@ class _OwnerRow extends HookWidget {
           ownerLabel,
           style: Theme.of(context).textTheme.labelLarge
               ?.copyWith(color: BitflipColors.cyan),
+        ),
+      ],
+    );
+  }
+}
+
+class _MarketplacePanel extends HookWidget {
+  const _MarketplacePanel({
+    required this.state,
+    required this.onList,
+    required this.onCancelListing,
+    required this.onPurchase,
+  });
+
+  final GameViewState state;
+  final ValueChanged<BigInt> onList;
+  final VoidCallback onCancelListing;
+  final VoidCallback onPurchase;
+
+  @override
+  Widget build(BuildContext context) {
+    final section = state.snapshot.section;
+    final isOwner = state.walletAddress == section.owner;
+    final canTransfer =
+        !section.isProtocolOwned &&
+        section.lifecycle != SectionLifecycle.minted;
+    final priceController = useTextEditingController();
+    final enteredPrice = useState<BigInt?>(null);
+
+    if (section.isListed) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: BitflipColors.raised,
+          border: Border.all(color: BitflipColors.cyan.withValues(alpha: 0.5)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                context.l10n.forSale,
+                style: Theme.of(context).textTheme.labelLarge
+                    ?.copyWith(color: BitflipColors.cyan),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                context.l10n.feeValue(lamportsToSol(section.salePriceLamports)),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              if (isOwner)
+                OutlinedButton(
+                  key: BitflipTestKeys.cancelSectionListing,
+                  onPressed: state.isBusy ? null : onCancelListing,
+                  child: Text(context.l10n.cancelListing),
+                )
+              else
+                FilledButton.icon(
+                  key: BitflipTestKeys.purchaseSection,
+                  onPressed: state.canTransact && !state.isBusy
+                      ? onPurchase
+                      : null,
+                  icon: const Icon(Icons.shopping_bag_outlined),
+                  label: Text(context.l10n.buySection),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (!isOwner || !canTransfer) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          key: BitflipTestKeys.sectionSalePrice,
+          controller: priceController,
+          enabled: !state.isBusy,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            labelText: context.l10n.salePrice,
+            suffixText: context.l10n.solUnit,
+            helperText: context.l10n.salePriceHelp,
+            errorText:
+                priceController.text.isNotEmpty && enteredPrice.value == null
+                ? context.l10n.invalidSalePrice
+                : null,
+          ),
+          onChanged: (value) => enteredPrice.value = trySolToLamports(value),
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          key: BitflipTestKeys.listSection,
+          onPressed: state.isBusy || enteredPrice.value == null
+              ? null
+              : () => onList(enteredPrice.value!),
+          icon: const Icon(Icons.sell_outlined),
+          label: Text(context.l10n.listSection),
         ),
       ],
     );
@@ -359,6 +511,9 @@ class _ActivityPulse extends HookWidget {
       GameNotice.connected => context.l10n.activityConnected,
       GameNotice.funded => context.l10n.activityFunded,
       GameNotice.claimed => context.l10n.activityClaimed,
+      GameNotice.listed => context.l10n.activityListed,
+      GameNotice.listingCancelled => context.l10n.activityListingCancelled,
+      GameNotice.purchased => context.l10n.activityPurchased,
       GameNotice.sealed => context.l10n.activitySealed,
       GameNotice.minted => context.l10n.activityMinted,
       GameNotice.batchFull => context.l10n.batchFull,
@@ -418,4 +573,14 @@ Color _lifecycleColor(SectionLifecycle lifecycle) {
 String _shortAddress(String value) {
   if (value.length <= 12) return value;
   return '${value.substring(0, 5)}…${value.substring(value.length - 4)}';
+}
+
+String _formatUnlockTime(BuildContext context, BigInt unixSeconds) {
+  final date = DateTime.fromMillisecondsSinceEpoch(
+    unixSeconds.toInt() * 1000,
+    isUtc: true,
+  ).toLocal();
+  final localizations = MaterialLocalizations.of(context);
+  return '${localizations.formatMediumDate(date)} '
+      '${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(date))}';
 }

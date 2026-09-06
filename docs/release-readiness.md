@@ -36,6 +36,8 @@ The 2026-09-06 smoke installed SHA-256 `bc3bdf672075ade1e71ca7f58423e5a65870a9da
 - Obtain an independent review of the Pina program and mint operator. Findings must be fixed or explicitly accepted by the named release owner.
 - Use newly generated production keys. Never reuse repository or development key material.
 - Run a canary claim, flip, seal, and compressed mint with bounded funds before opening the application publicly.
+- Confirm game initialization creates only sector `0`, its logical owner is the game PDA, and the authority paid rent for no later sector.
+- Exercise activity and scheduled unlocks, claimant-funded sector creation, listing, cancellation, purchase slippage, and ownership transfer on staging.
 - Replace the beta's user-driven mint reconciliation with the durable worker described in the [operations runbook](operations/runbook.md).
 - Record the final marketplace-authenticity choice from [ADR 0002](decisions/0002-marketplace-authenticity.md).
 

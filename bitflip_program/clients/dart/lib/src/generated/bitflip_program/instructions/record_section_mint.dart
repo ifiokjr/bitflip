@@ -18,6 +18,7 @@ class RecordSectionMintInstructionData {
   const RecordSectionMintInstructionData({
     required this.gameIndex,
     required this.sectionIndex,
+    required this.expectedOwner,
     required this.assetId,
     required this.merkleTree,
     required this.leafIndex,
@@ -27,6 +28,7 @@ class RecordSectionMintInstructionData {
   final int discriminator;
   final int gameIndex;
   final int sectionIndex;
+  final Address expectedOwner;
   final Address assetId;
   final Address merkleTree;
   final int leafIndex;
@@ -37,6 +39,7 @@ Encoder<RecordSectionMintInstructionData> getRecordSectionMintInstructionDataEnc
     ('discriminator', getU8Encoder()),
     ('gameIndex', getU8Encoder()),
     ('sectionIndex', getU8Encoder()),
+    ('expectedOwner', getAddressEncoder()),
     ('assetId', getAddressEncoder()),
     ('merkleTree', getAddressEncoder()),
     ('leafIndex', getU32Encoder()),
@@ -48,6 +51,7 @@ Encoder<RecordSectionMintInstructionData> getRecordSectionMintInstructionDataEnc
       'discriminator': 8,
       'gameIndex': value.gameIndex,
       'sectionIndex': value.sectionIndex,
+      'expectedOwner': value.expectedOwner,
       'assetId': value.assetId,
       'merkleTree': value.merkleTree,
       'leafIndex': value.leafIndex,
@@ -60,6 +64,7 @@ Decoder<RecordSectionMintInstructionData> getRecordSectionMintInstructionDataDec
     ('discriminator', getU8Decoder()),
     ('gameIndex', getU8Decoder()),
     ('sectionIndex', getU8Decoder()),
+    ('expectedOwner', getAddressDecoder()),
     ('assetId', getAddressDecoder()),
     ('merkleTree', getAddressDecoder()),
     ('leafIndex', getU32Decoder()),
@@ -89,6 +94,7 @@ Decoder<RecordSectionMintInstructionData> getRecordSectionMintInstructionDataDec
       RecordSectionMintInstructionData(
       gameIndex: map['gameIndex']! as int,
       sectionIndex: map['sectionIndex']! as int,
+      expectedOwner: map['expectedOwner']! as Address,
       assetId: map['assetId']! as Address,
       merkleTree: map['merkleTree']! as Address,
       leafIndex: map['leafIndex']! as int,
@@ -130,6 +136,7 @@ Instruction getRecordSectionMintInstruction({
   required Address section,
   required int gameIndex,
   required int sectionIndex,
+  required Address expectedOwner,
   required Address assetId,
   required Address merkleTree,
   required int leafIndex,
@@ -137,6 +144,7 @@ Instruction getRecordSectionMintInstruction({
   final instructionData = RecordSectionMintInstructionData(
       gameIndex: gameIndex,
       sectionIndex: sectionIndex,
+      expectedOwner: expectedOwner,
       assetId: assetId,
       merkleTree: merkleTree,
       leafIndex: leafIndex,

@@ -10,6 +10,8 @@ final class SectionSnapshot {
     required this.owner,
     required this.flipCount,
     required this.revision,
+    required this.salePriceLamports,
+    this.isProtocolOwned = false,
     this.assetId,
   });
 
@@ -19,10 +21,13 @@ final class SectionSnapshot {
   final String? owner;
   final BigInt flipCount;
   final BigInt revision;
+  final BigInt salePriceLamports;
+  final bool isProtocolOwned;
   final String? assetId;
 
   bool get isEditable => lifecycle == SectionLifecycle.active;
   bool get isClaimed => lifecycle != SectionLifecycle.unclaimed;
+  bool get isListed => salePriceLamports > BigInt.zero;
 
   SectionSnapshot copyWith({
     SectionLifecycle? lifecycle,
@@ -30,6 +35,8 @@ final class SectionSnapshot {
     String? owner,
     BigInt? flipCount,
     BigInt? revision,
+    BigInt? salePriceLamports,
+    bool? isProtocolOwned,
     String? assetId,
   }) {
     return SectionSnapshot(
@@ -39,6 +46,8 @@ final class SectionSnapshot {
       owner: owner ?? this.owner,
       flipCount: flipCount ?? this.flipCount,
       revision: revision ?? this.revision,
+      salePriceLamports: salePriceLamports ?? this.salePriceLamports,
+      isProtocolOwned: isProtocolOwned ?? this.isProtocolOwned,
       assetId: assetId ?? this.assetId,
     );
   }
@@ -53,6 +62,10 @@ final class GameSnapshot {
     required this.mintedSections,
     required this.claimPriceLamports,
     required this.flipFeeLamports,
+    required this.startsAtUnixSeconds,
+    required this.unlockIntervalSeconds,
+    required this.earlyUnlockFlips,
+    required this.previousSectionFlipCount,
     required this.treasury,
     required this.section,
   });
@@ -66,6 +79,10 @@ final class GameSnapshot {
       mintedSections: 5,
       claimPriceLamports: BigInt.from(100000000),
       flipFeeLamports: BigInt.from(5000),
+      startsAtUnixSeconds: BigInt.zero,
+      unlockIntervalSeconds: 3600,
+      earlyUnlockFlips: 1024,
+      previousSectionFlipCount: BigInt.from(2048),
       treasury: null,
       section: SectionSnapshot(
         index: sectionIndex,
@@ -78,6 +95,7 @@ final class GameSnapshot {
         owner: sectionIndex < 18 ? '8iT…fL1P' : null,
         flipCount: BigInt.from(2048 + sectionIndex * 13),
         revision: BigInt.from(120 + sectionIndex),
+        salePriceLamports: BigInt.zero,
         assetId: sectionIndex < 5 ? 'cnft:$sectionIndex' : null,
       ),
     );
@@ -92,6 +110,10 @@ final class GameSnapshot {
       mintedSections: 0,
       claimPriceLamports: BigInt.zero,
       flipFeeLamports: BigInt.zero,
+      startsAtUnixSeconds: BigInt.zero,
+      unlockIntervalSeconds: 0,
+      earlyUnlockFlips: 0,
+      previousSectionFlipCount: null,
       treasury: null,
       section: SectionSnapshot(
         index: sectionIndex,
@@ -100,6 +122,7 @@ final class GameSnapshot {
         owner: null,
         flipCount: BigInt.zero,
         revision: BigInt.zero,
+        salePriceLamports: BigInt.zero,
       ),
     );
   }
@@ -111,10 +134,27 @@ final class GameSnapshot {
   final int mintedSections;
   final BigInt claimPriceLamports;
   final BigInt flipFeeLamports;
+  final BigInt startsAtUnixSeconds;
+  final int unlockIntervalSeconds;
+  final int earlyUnlockFlips;
+  final BigInt? previousSectionFlipCount;
   final String? treasury;
   final SectionSnapshot section;
 
   int get claimedSections => nextSection.clamp(0, sectionCount);
+
+  BigInt get selectedSectionUnlockAt =>
+      startsAtUnixSeconds + BigInt.from(section.index * unlockIntervalSeconds);
+
+  bool canClaimSectionAt(BigInt unixSeconds) {
+    if (section.isClaimed || section.index != nextSection) return false;
+    final unlockedByTime = unixSeconds >= selectedSectionUnlockAt;
+    final unlockedByActivity =
+        section.index > 0 &&
+        (previousSectionFlipCount ?? BigInt.zero) >=
+            BigInt.from(earlyUnlockFlips);
+    return unlockedByTime || unlockedByActivity;
+  }
 
   GameSnapshot copyWith({
     bool? isDemo,
@@ -131,6 +171,10 @@ final class GameSnapshot {
       mintedSections: mintedSections ?? this.mintedSections,
       claimPriceLamports: claimPriceLamports,
       flipFeeLamports: flipFeeLamports,
+      startsAtUnixSeconds: startsAtUnixSeconds,
+      unlockIntervalSeconds: unlockIntervalSeconds,
+      earlyUnlockFlips: earlyUnlockFlips,
+      previousSectionFlipCount: previousSectionFlipCount,
       treasury: treasury,
       section: section ?? this.section,
     );
@@ -146,4 +190,16 @@ String lamportsToSol(BigInt lamports) {
       .padLeft(9, '0')
       .replaceFirst(RegExp(r'0+$'), '');
   return fraction.isEmpty ? '$whole' : '$whole.$fraction';
+}
+
+BigInt? trySolToLamports(String value) {
+  final match = RegExp(r'^(\d+)(?:\.(\d{0,9}))?$').firstMatch(value.trim());
+  if (match == null) return null;
+  final whole = BigInt.parse(match.group(1)!);
+  final fraction = (match.group(2) ?? '').padRight(9, '0');
+  final lamports =
+      whole * BigInt.from(1000000000) +
+      (fraction.isEmpty ? BigInt.zero : BigInt.parse(fraction));
+  final maximumU64 = (BigInt.one << 64) - BigInt.one;
+  return lamports > BigInt.zero && lamports <= maximumU64 ? lamports : null;
 }

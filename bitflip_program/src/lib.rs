@@ -1,10 +1,10 @@
 //! Bitflip's on-chain canvas, implemented with Pina's zero-copy account model.
 //!
-//! A game is a 16×16 grid of independently claimed sections. Each section is a
-//! 64×64 bitmap, so the complete canvas remains 1024×1024 pixels. Players pay
-//! a bounded per-flip fee to toggle pixels. Section owners can freeze their
-//! finished art and the configured collection authority can attest the
-//! compressed NFT created for that frozen section.
+//! A game is a 16×16 grid of lazily created sections. The program bootstraps
+//! one public 64×64 bitmap, then claimants fund each later account as play
+//! unlocks it. Players pay a bounded per-flip fee to toggle pixels. Section
+//! owners can trade or freeze their art, and the configured collection
+//! authority can attest the compressed NFT created for a frozen section.
 
 #![allow(clippy::inline_always)]
 #![no_std]
@@ -78,6 +78,11 @@ pub enum BitflipError {
 	SectionAlreadyMinted = 13,
 	InvalidAsset = 14,
 	InsufficientFunds = 15,
+	InvalidSalePrice = 16,
+	SectionNotForSale = 17,
+	SectionNotTransferable = 18,
+	CannotPurchaseOwnSection = 19,
+	OwnerChanged = 20,
 }
 
 #[discriminator]
@@ -91,6 +96,9 @@ pub enum BitflipInstruction {
 	FlipPixels = 6,
 	SealSection = 7,
 	RecordSectionMint = 8,
+	ListSection = 9,
+	CancelSectionListing = 10,
+	PurchaseSection = 11,
 }
 
 #[discriminator]
@@ -149,6 +157,7 @@ pub struct SectionState {
 	pub flip_count: u64,
 	pub revision: u64,
 	pub last_flip_at: i64,
+	pub sale_price_lamports: u64,
 	pub pixels: [u8; 512],
 }
 
@@ -180,7 +189,9 @@ pub struct AcceptAuthorityInstruction {}
 #[instruction(discriminator = BitflipInstruction::InitializeGame)]
 pub struct InitializeGameInstruction {
 	pub game_index: u8,
-	pub bump: u8,
+	pub section_index: u8,
+	pub game_bump: u8,
+	pub section_bump: u8,
 }
 
 #[instruction(discriminator = BitflipInstruction::ClaimSection)]
@@ -210,9 +221,30 @@ pub struct SealSectionInstruction {
 pub struct RecordSectionMintInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
+	pub expected_owner: Address,
 	pub asset_id: Address,
 	pub merkle_tree: Address,
 	pub leaf_index: u32,
+}
+
+#[instruction(discriminator = BitflipInstruction::ListSection)]
+pub struct ListSectionInstruction {
+	pub game_index: u8,
+	pub section_index: u8,
+	pub price_lamports: u64,
+}
+
+#[instruction(discriminator = BitflipInstruction::CancelSectionListing)]
+pub struct CancelSectionListingInstruction {
+	pub game_index: u8,
+	pub section_index: u8,
+}
+
+#[instruction(discriminator = BitflipInstruction::PurchaseSection)]
+pub struct PurchaseSectionInstruction {
+	pub game_index: u8,
+	pub section_index: u8,
+	pub maximum_price_lamports: u64,
 }
 
 #[derive(Accounts, Debug)]
@@ -245,6 +277,7 @@ pub struct InitializeGameAccounts<'a> {
 	pub payer: &'a mut AccountView,
 	pub config: &'a mut AccountView,
 	pub game: &'a mut AccountView,
+	pub section: &'a mut AccountView,
 	pub system_program: &'a AccountView,
 }
 
@@ -282,6 +315,29 @@ pub struct RecordSectionMintAccounts<'a> {
 	pub config: &'a AccountView,
 	pub game: &'a mut AccountView,
 	pub section: &'a mut AccountView,
+}
+
+#[derive(Accounts, Debug)]
+pub struct ListSectionAccounts<'a> {
+	pub owner: &'a AccountView,
+	pub game: &'a AccountView,
+	pub section: &'a mut AccountView,
+}
+
+#[derive(Accounts, Debug)]
+pub struct CancelSectionListingAccounts<'a> {
+	pub owner: &'a AccountView,
+	pub game: &'a AccountView,
+	pub section: &'a mut AccountView,
+}
+
+#[derive(Accounts, Debug)]
+pub struct PurchaseSectionAccounts<'a> {
+	pub buyer: &'a mut AccountView,
+	pub seller: &'a mut AccountView,
+	pub game: &'a AccountView,
+	pub section: &'a mut AccountView,
+	pub system_program: &'a AccountView,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -554,6 +610,9 @@ impl<'a> ProcessAccountInfos<'a> for AcceptAuthorityAccounts<'a> {
 impl<'a> ProcessAccountInfos<'a> for InitializeGameAccounts<'a> {
 	fn process(self, data: &[u8]) -> ProgramResult {
 		let args = InitializeGameInstruction::try_from_bytes(data)?;
+		if args.section_index != 0 {
+			return Err(BitflipError::InvalidSectionIndex.into());
+		}
 		assert_config_account(self.config)?;
 		self.payer
 			.assert_signer()?
@@ -571,9 +630,9 @@ impl<'a> ProcessAccountInfos<'a> for InitializeGameAccounts<'a> {
 		};
 
 		let seeds = GameState::seeds(args.game_index);
-		let seeds_with_bump = seeds.with_bump(args.bump);
+		let seeds_with_bump = seeds.with_bump(args.game_bump);
 		let canonical_bump = self.game.assert_canonical_bump(&seeds.as_slices(), &ID)?;
-		if canonical_bump != args.bump {
+		if canonical_bump != args.game_bump {
 			return Err(ProgramError::InvalidSeeds);
 		}
 		self.game
@@ -586,20 +645,59 @@ impl<'a> ProcessAccountInfos<'a> for InitializeGameAccounts<'a> {
 			payer: self.payer,
 			owner: &ID,
 			seeds: &seeds.as_slices(),
-			bump: args.bump,
+			bump: args.game_bump,
 		}
 		.invoke::<GameState>()?;
 
+		let section_seeds = SectionState::seeds(args.game_index, args.section_index);
+		let section_seeds_with_bump = section_seeds.with_bump(args.section_bump);
+		let canonical_section_bump = self
+			.section
+			.assert_canonical_bump(&section_seeds.as_slices(), &ID)?;
+		if canonical_section_bump != args.section_bump {
+			return Err(ProgramError::InvalidSeeds);
+		}
+		self.section
+			.assert_empty()?
+			.assert_writable()?
+			.assert_seeds_with_bump(&section_seeds_with_bump.as_slices(), &ID)?;
+
+		CreateProgramAccountWithBump {
+			account: self.section,
+			payer: self.payer,
+			owner: &ID,
+			seeds: &section_seeds.as_slices(),
+			bump: args.section_bump,
+		}
+		.invoke::<SectionState>()?;
+
 		let clock = Clock::get()?;
+		let game_address = *self.game.address();
 		let mut game = self.game.as_account_mut::<GameState>(&ID)?;
 		game.game_index = args.game_index;
 		game.status = GAME_STATUS_LIVE;
-		game.bump = args.bump;
+		game.bump = args.game_bump;
 		game.starts_at.set(clock.unix_timestamp);
-		game.next_section.set(0);
+		game.next_section.set(1);
 		game.minted_sections.set(0);
 		game.flip_fee_lamports.set(flip_fee_lamports);
 		game.total_flips.set(0);
+
+		let mut initial_section = self.section.as_account_mut::<SectionState>(&ID)?;
+		initial_section.owner = game_address;
+		initial_section.asset_id = ZERO_ADDRESS;
+		initial_section.merkle_tree = ZERO_ADDRESS;
+		initial_section.game_index = args.game_index;
+		initial_section.section_index = args.section_index;
+		initial_section.status = SECTION_STATUS_ACTIVE;
+		initial_section.bump = args.section_bump;
+		initial_section.on_pixels.set(0);
+		initial_section.leaf_index.set(0);
+		initial_section.flip_count.set(0);
+		initial_section.revision.set(0);
+		initial_section.last_flip_at.set(0);
+		initial_section.sale_price_lamports.set(0);
+		initial_section.pixels.fill(0);
 
 		let mut config = self.config.as_account_mut::<ConfigState>(&ID)?;
 		let game_count = config
@@ -711,6 +809,7 @@ impl<'a> ProcessAccountInfos<'a> for ClaimSectionAccounts<'a> {
 		section.flip_count.set(0);
 		section.revision.set(0);
 		section.last_flip_at.set(0);
+		section.sale_price_lamports.set(0);
 		section.pixels.fill(0);
 
 		let next_section = next_section
@@ -860,7 +959,10 @@ impl<'a> ProcessAccountInfos<'a> for RecordSectionMintAccounts<'a> {
 		let config = self.config.as_account::<ConfigState>(&ID)?;
 		self.collection_authority
 			.assert_address(&config.collection_authority)?;
-		if args.asset_id == ZERO_ADDRESS || args.merkle_tree == ZERO_ADDRESS {
+		if args.expected_owner == ZERO_ADDRESS
+			|| args.asset_id == ZERO_ADDRESS
+			|| args.merkle_tree == ZERO_ADDRESS
+		{
 			return Err(BitflipError::InvalidAsset.into());
 		}
 
@@ -872,12 +974,16 @@ impl<'a> ProcessAccountInfos<'a> for RecordSectionMintAccounts<'a> {
 			if section.status != SECTION_STATUS_SEALED {
 				return Err(BitflipError::SectionNotSealed.into());
 			}
+			if section.owner != args.expected_owner {
+				return Err(BitflipError::OwnerChanged.into());
+			}
 		}
 
 		let mut section = self.section.as_account_mut::<SectionState>(&ID)?;
 		section.asset_id = args.asset_id;
 		section.merkle_tree = args.merkle_tree;
 		section.leaf_index = args.leaf_index;
+		section.sale_price_lamports.set(0);
 		section.status = SECTION_STATUS_MINTED;
 
 		let mut game = self.game.as_account_mut::<GameState>(&ID)?;
@@ -889,6 +995,108 @@ impl<'a> ProcessAccountInfos<'a> for RecordSectionMintAccounts<'a> {
 		game.minted_sections.set(next_minted_sections);
 
 		log!("Bitflip section mint recorded");
+		Ok(())
+	}
+}
+
+impl<'a> ProcessAccountInfos<'a> for ListSectionAccounts<'a> {
+	fn process(self, data: &[u8]) -> ProgramResult {
+		let args = ListSectionInstruction::try_from_bytes(data)?;
+		assert_game_account(self.game, args.game_index)?;
+		assert_section_account(self.section, args.game_index, args.section_index)?;
+		self.owner.assert_signer()?;
+		if args.price_lamports.get() == 0 {
+			return Err(BitflipError::InvalidSalePrice.into());
+		}
+
+		{
+			let section = self.section.as_account::<SectionState>(&ID)?;
+			self.owner.assert_address(&section.owner)?;
+			if section.status != SECTION_STATUS_ACTIVE && section.status != SECTION_STATUS_SEALED {
+				return Err(BitflipError::SectionNotTransferable.into());
+			}
+		}
+
+		self.section
+			.as_account_mut::<SectionState>(&ID)?
+			.sale_price_lamports = args.price_lamports;
+
+		log!("Bitflip section listed");
+		Ok(())
+	}
+}
+
+impl<'a> ProcessAccountInfos<'a> for CancelSectionListingAccounts<'a> {
+	fn process(self, data: &[u8]) -> ProgramResult {
+		let args = CancelSectionListingInstruction::try_from_bytes(data)?;
+		assert_game_account(self.game, args.game_index)?;
+		assert_section_account(self.section, args.game_index, args.section_index)?;
+		self.owner.assert_signer()?;
+
+		{
+			let section = self.section.as_account::<SectionState>(&ID)?;
+			self.owner.assert_address(&section.owner)?;
+			if section.sale_price_lamports.get() == 0 {
+				return Err(BitflipError::SectionNotForSale.into());
+			}
+		}
+
+		self.section
+			.as_account_mut::<SectionState>(&ID)?
+			.sale_price_lamports
+			.set(0);
+
+		log!("Bitflip section listing cancelled");
+		Ok(())
+	}
+}
+
+impl<'a> ProcessAccountInfos<'a> for PurchaseSectionAccounts<'a> {
+	fn process(self, data: &[u8]) -> ProgramResult {
+		let args = PurchaseSectionInstruction::try_from_bytes(data)?;
+		assert_game_account(self.game, args.game_index)?;
+		assert_section_account(self.section, args.game_index, args.section_index)?;
+		self.buyer
+			.assert_signer()?
+			.assert_writable()?
+			.assert_owner(&system::ID)?;
+		self.seller.assert_writable()?.assert_owner(&system::ID)?;
+		self.system_program.assert_address(&system::ID)?;
+
+		let price = {
+			let section = self.section.as_account::<SectionState>(&ID)?;
+			self.seller.assert_address(&section.owner)?;
+			if self.buyer.address() == self.seller.address() {
+				return Err(BitflipError::CannotPurchaseOwnSection.into());
+			}
+			if section.status != SECTION_STATUS_ACTIVE && section.status != SECTION_STATUS_SEALED {
+				return Err(BitflipError::SectionNotTransferable.into());
+			}
+			let price = section.sale_price_lamports.get();
+			if price == 0 {
+				return Err(BitflipError::SectionNotForSale.into());
+			}
+			if price > args.maximum_price_lamports.get() {
+				return Err(BitflipError::PriceSlippage.into());
+			}
+			price
+		};
+
+		if self.buyer.lamports() < price {
+			return Err(BitflipError::InsufficientFunds.into());
+		}
+		system::instructions::Transfer {
+			from: self.buyer,
+			to: self.seller,
+			lamports: price,
+		}
+		.invoke()?;
+
+		let mut section = self.section.as_account_mut::<SectionState>(&ID)?;
+		section.owner = *self.buyer.address();
+		section.sale_price_lamports.set(0);
+
+		log!("Bitflip section purchased");
 		Ok(())
 	}
 }
@@ -935,6 +1143,15 @@ pub mod entrypoint {
 			BitflipInstruction::RecordSectionMint => {
 				RecordSectionMintAccounts::try_from((program_id, accounts))?.process(data)
 			}
+			BitflipInstruction::ListSection => {
+				ListSectionAccounts::try_from((program_id, accounts))?.process(data)
+			}
+			BitflipInstruction::CancelSectionListing => {
+				CancelSectionListingAccounts::try_from((program_id, accounts))?.process(data)
+			}
+			BitflipInstruction::PurchaseSection => {
+				PurchaseSectionAccounts::try_from((program_id, accounts))?.process(data)
+			}
 		}
 	}
 }
@@ -957,14 +1174,18 @@ mod tests {
 	fn account_layouts_are_stable() {
 		assert_eq!(ConfigState::SIZE, 173);
 		assert_eq!(GameState::SIZE, 32);
-		assert_eq!(SectionState::SIZE, 643);
+		assert_eq!(SectionState::SIZE, 651);
 	}
 
 	#[test]
 	fn instruction_layouts_are_stable() {
 		assert_eq!(InitializeConfigInstruction::SIZE, 2);
+		assert_eq!(InitializeGameInstruction::SIZE, 5);
 		assert_eq!(FlipPixelsInstruction::SIZE, 44);
-		assert_eq!(RecordSectionMintInstruction::SIZE, 71);
+		assert_eq!(RecordSectionMintInstruction::SIZE, 103);
+		assert_eq!(ListSectionInstruction::SIZE, 11);
+		assert_eq!(CancelSectionListingInstruction::SIZE, 3);
+		assert_eq!(PurchaseSectionInstruction::SIZE, 11);
 	}
 
 	#[test]

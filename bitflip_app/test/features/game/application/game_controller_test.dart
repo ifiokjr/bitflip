@@ -132,6 +132,79 @@ void main() {
       expect(repository.mintCalls, 0);
     });
 
+    test('owner can list and cancel a section at an exact SOL price', () async {
+      repository.snapshot = _liveSnapshot(SectionLifecycle.active);
+      final controller = container.read(gameControllerProvider.notifier);
+      await controller.refresh();
+
+      await controller.listSection(BigInt.from(250000000));
+      expect(repository.listCalls, 1);
+      expect(repository.lastListingPriceLamports, BigInt.from(250000000));
+      expect(
+        container
+            .read(gameControllerProvider)
+            .snapshot
+            .section
+            .salePriceLamports,
+        BigInt.from(250000000),
+      );
+
+      await controller.cancelSectionListing();
+      expect(repository.cancelListingCalls, 1);
+      expect(
+        container
+            .read(gameControllerProvider)
+            .snapshot
+            .section
+            .salePriceLamports,
+        BigInt.zero,
+      );
+      expect(
+        container.read(gameControllerProvider).activity.notice,
+        GameNotice.listingCancelled,
+      );
+    });
+
+    test(
+      'buyer can purchase a listed section but cannot list section zero',
+      () async {
+        repository = FakeBitflipRepository(
+          snapshot: _liveSnapshot(
+            SectionLifecycle.active,
+            owner: 'Seller111111111111111111111111111111111111111',
+            salePriceLamports: BigInt.from(500000000),
+          ),
+          walletAddress: 'Buyer1111111111111111111111111111111111111111',
+        );
+        final buyerContainer = ProviderContainer(
+          overrides: [bitflipRepositoryProvider.overrideWithValue(repository)],
+        );
+        addTearDown(buyerContainer.dispose);
+        final controller = buyerContainer.read(gameControllerProvider.notifier);
+        await controller.refresh();
+
+        await controller.purchaseSection();
+
+        expect(repository.purchaseCalls, 1);
+        expect(
+          buyerContainer.read(gameControllerProvider).snapshot.section.owner,
+          repository.walletAddress,
+        );
+        expect(
+          buyerContainer.read(gameControllerProvider).activity.notice,
+          GameNotice.purchased,
+        );
+
+        repository.snapshot = _liveSnapshot(
+          SectionLifecycle.active,
+          isProtocolOwned: true,
+        );
+        await controller.refresh();
+        await controller.listSection(BigInt.one);
+        expect(repository.listCalls, 0);
+      },
+    );
+
     test('live mode starts blank instead of displaying demo art', () {
       repository = FakeBitflipRepository(
         snapshot: _liveSnapshot(SectionLifecycle.active),
@@ -289,8 +362,12 @@ void main() {
   });
 }
 
-GameSnapshot _liveSnapshot(SectionLifecycle lifecycle) {
-  const owner = 'DemoWallet111111111111111111111111111111111';
+GameSnapshot _liveSnapshot(
+  SectionLifecycle lifecycle, {
+  String owner = 'DemoWallet111111111111111111111111111111111',
+  BigInt? salePriceLamports,
+  bool isProtocolOwned = false,
+}) {
   return GameSnapshot(
     gameIndex: 0,
     isDemo: false,
@@ -299,6 +376,10 @@ GameSnapshot _liveSnapshot(SectionLifecycle lifecycle) {
     mintedSections: 0,
     claimPriceLamports: BigInt.from(1000000),
     flipFeeLamports: BigInt.from(5000),
+    startsAtUnixSeconds: BigInt.zero,
+    unlockIntervalSeconds: 3600,
+    earlyUnlockFlips: 1024,
+    previousSectionFlipCount: BigInt.from(1024),
     treasury: '11111111111111111111111111111111',
     section: SectionSnapshot(
       index: 0,
@@ -307,6 +388,8 @@ GameSnapshot _liveSnapshot(SectionLifecycle lifecycle) {
       owner: owner,
       flipCount: BigInt.zero,
       revision: BigInt.zero,
+      salePriceLamports: salePriceLamports ?? BigInt.zero,
+      isProtocolOwned: isProtocolOwned,
     ),
   );
 }

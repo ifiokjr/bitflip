@@ -77,9 +77,13 @@ void main() {
       programAddress: bitflipProgramProgramAddress,
       seeds: const GameSeeds(gameIndex: 0),
     );
-    final (derivedSectionAddress, sectionBump) = await findSectionPda(
+    final (initialSectionAddress, initialSectionBump) = await findSectionPda(
       programAddress: bitflipProgramProgramAddress,
       seeds: const SectionSeeds(gameIndex: 0, sectionIndex: 0),
+    );
+    final (derivedSectionAddress, sectionBump) = await findSectionPda(
+      programAddress: bitflipProgramProgramAddress,
+      seeds: const SectionSeeds(gameIndex: 0, sectionIndex: 1),
     );
     configAddress = derivedConfigAddress;
     gameAddress = derivedGameAddress;
@@ -101,9 +105,12 @@ void main() {
         payer: surfpool.payer.address,
         config: configAddress,
         game: gameAddress,
+        section: initialSectionAddress,
         systemProgram: system.systemProgramAddress,
         gameIndex: 0,
-        bump: gameBump,
+        sectionIndex: 0,
+        gameBump: gameBump,
+        sectionBump: initialSectionBump,
       ),
     ]);
     final coordinates = Uint8List(32)
@@ -112,17 +119,31 @@ void main() {
     await _sendInstructions(
       surfpool,
       [
+        getFlipPixelsInstruction(
+          programAddress: bitflipProgramProgramAddress,
+          player: owner.address,
+          config: configAddress,
+          game: gameAddress,
+          section: initialSectionAddress,
+          treasury: surfpool.payer.address,
+          systemProgram: system.systemProgramAddress,
+          gameIndex: 0,
+          sectionIndex: 0,
+          count: 1,
+          coordinates: coordinates,
+          maximumTotalFeeLamports: BigInt.from(10_000),
+        ),
         getClaimSectionInstruction(
           programAddress: bitflipProgramProgramAddress,
           owner: owner.address,
           config: configAddress,
           game: gameAddress,
-          previousSection: system.systemProgramAddress,
+          previousSection: initialSectionAddress,
           section: sectionAddress,
           treasury: surfpool.payer.address,
           systemProgram: system.systemProgramAddress,
           gameIndex: 0,
-          sectionIndex: 0,
+          sectionIndex: 1,
           bump: sectionBump,
           maximumPriceLamports: BigInt.from(10_000_000),
         ),
@@ -135,7 +156,7 @@ void main() {
           treasury: surfpool.payer.address,
           systemProgram: system.systemProgramAddress,
           gameIndex: 0,
-          sectionIndex: 0,
+          sectionIndex: 1,
           count: 1,
           coordinates: coordinates,
           maximumTotalFeeLamports: BigInt.from(10_000),
@@ -146,7 +167,7 @@ void main() {
           game: gameAddress,
           section: sectionAddress,
           gameIndex: 0,
-          sectionIndex: 0,
+          sectionIndex: 1,
         ),
       ],
       extraSigners: [owner],
@@ -182,7 +203,7 @@ void main() {
         operatorPrivateKey: jsonEncode(operatorSecretKey),
         metadataBaseUrl: 'https://bitflip.invalid',
       );
-      final before = await service.loadSection(0, 0);
+      final before = await service.loadSection(0, 1);
       expect(before.isSealed, isTrue);
       expect(before.owner, owner.address);
       expect(before.bitmap[72], 128, reason: 'pixel (7, 9) should be on');
@@ -193,7 +214,7 @@ void main() {
       expect(result.merkleTree, merkleTree.address);
       expect(result.leafIndex, 0);
 
-      final after = await service.loadSection(0, 0);
+      final after = await service.loadSection(0, 1);
       expect(after.isMinted, isTrue);
       expect(after.assetId, result.assetId);
       expect(after.merkleTree, merkleTree.address);
@@ -238,7 +259,7 @@ void main() {
       operatorPrivateKey: jsonEncode(operatorSecretKey),
       metadataBaseUrl: 'https://bitflip.invalid',
     );
-    final minted = await service.loadSection(0, 0);
+    final minted = await service.loadSection(0, 1);
     final result = await service.mint(minted);
 
     expect(result.alreadyMinted, isTrue);
@@ -308,7 +329,8 @@ Future<void> _setTestConfigAuthorities(
   data
     ..setRange(2, 34, authority)
     ..setRange(66, 98, authority)
-    ..setRange(98, 130, authority);
+    ..setRange(98, 130, authority)
+    ..setRange(166, 170, const [1, 0, 0, 0]);
   await client.cheatcodes.setAccount(configAddress, data: data);
 }
 

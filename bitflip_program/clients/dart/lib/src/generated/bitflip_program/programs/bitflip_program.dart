@@ -34,6 +34,9 @@ enum BitflipProgramInstruction {
   flipPixels,
   sealSection,
   recordSectionMint,
+  listSection,
+  cancelSectionListing,
+  purchaseSection,
 }
 
 /// Identifies the type of a BitflipProgram instruction.
@@ -66,6 +69,15 @@ BitflipProgramInstruction identifyBitflipProgramInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(8), 0)) {
     return BitflipProgramInstruction.recordSectionMint;
+  }
+  if (containsBytes(data, getU8Encoder().encode(9), 0)) {
+    return BitflipProgramInstruction.listSection;
+  }
+  if (containsBytes(data, getU8Encoder().encode(10), 0)) {
+    return BitflipProgramInstruction.cancelSectionListing;
+  }
+  if (containsBytes(data, getU8Encoder().encode(11), 0)) {
+    return BitflipProgramInstruction.purchaseSection;
   }
 
   throw SolanaError(
@@ -156,6 +168,30 @@ final class ParsedRecordSectionMint extends ParsedBitflipProgramInstruction {
   final RecordSectionMintInstructionData data;
 }
 
+/// A parsed ListSection instruction.
+final class ParsedListSection extends ParsedBitflipProgramInstruction {
+  const ParsedListSection({required this.data})
+      : super(BitflipProgramInstruction.listSection);
+
+  final ListSectionInstructionData data;
+}
+
+/// A parsed CancelSectionListing instruction.
+final class ParsedCancelSectionListing extends ParsedBitflipProgramInstruction {
+  const ParsedCancelSectionListing({required this.data})
+      : super(BitflipProgramInstruction.cancelSectionListing);
+
+  final CancelSectionListingInstructionData data;
+}
+
+/// A parsed PurchaseSection instruction.
+final class ParsedPurchaseSection extends ParsedBitflipProgramInstruction {
+  const ParsedPurchaseSection({required this.data})
+      : super(BitflipProgramInstruction.purchaseSection);
+
+  final PurchaseSectionInstructionData data;
+}
+
 /// Parses a BitflipProgram instruction.
 ParsedBitflipProgramInstruction parseBitflipProgramInstruction(
   Instruction instruction,
@@ -189,6 +225,15 @@ ParsedBitflipProgramInstruction parseBitflipProgramInstruction(
     ),
     BitflipProgramInstruction.recordSectionMint => ParsedRecordSectionMint(
       data: parseRecordSectionMintInstruction(instruction),
+    ),
+    BitflipProgramInstruction.listSection => ParsedListSection(
+      data: parseListSectionInstruction(instruction),
+    ),
+    BitflipProgramInstruction.cancelSectionListing => ParsedCancelSectionListing(
+      data: parseCancelSectionListingInstruction(instruction),
+    ),
+    BitflipProgramInstruction.purchaseSection => ParsedPurchaseSection(
+      data: parsePurchaseSectionInstruction(instruction),
     ),
   };
 }

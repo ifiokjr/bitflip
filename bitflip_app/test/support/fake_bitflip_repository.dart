@@ -19,6 +19,9 @@ final class FakeBitflipRepository implements BitflipRepository {
     this.connectError,
     this.fundError,
     this.claimError,
+    this.listError,
+    this.cancelListingError,
+    this.purchaseError,
     this.flipError,
     this.sealError,
     this.mintError,
@@ -48,11 +51,17 @@ final class FakeBitflipRepository implements BitflipRepository {
   final Object? connectError;
   final Object? fundError;
   final Object? claimError;
+  final Object? listError;
+  final Object? cancelListingError;
+  final Object? purchaseError;
   final Object? flipError;
   final Object? sealError;
   final Object? mintError;
 
   int claimCalls = 0;
+  int listCalls = 0;
+  int cancelListingCalls = 0;
+  int purchaseCalls = 0;
   int connectCalls = 0;
   int fundCalls = 0;
   int initializeCalls = 0;
@@ -63,6 +72,7 @@ final class FakeBitflipRepository implements BitflipRepository {
   List<PixelCoordinate> lastFlips = const [];
   String? lastWalletId;
   BigInt? lastFundingLamports;
+  BigInt? lastListingPriceLamports;
 
   @override
   Future<void> initializeWallet() async {
@@ -95,6 +105,46 @@ final class FakeBitflipRepository implements BitflipRepository {
       ),
     );
     return 'claim-signature';
+  }
+
+  @override
+  Future<String> listSection(
+    GameSnapshot snapshot,
+    BigInt priceLamports,
+  ) async {
+    listCalls++;
+    lastListingPriceLamports = priceLamports;
+    final error = listError;
+    if (error != null) throw error;
+    this.snapshot = this.snapshot.copyWith(
+      section: this.snapshot.section.copyWith(salePriceLamports: priceLamports),
+    );
+    return 'list-signature';
+  }
+
+  @override
+  Future<String> cancelSectionListing(GameSnapshot snapshot) async {
+    cancelListingCalls++;
+    final error = cancelListingError;
+    if (error != null) throw error;
+    this.snapshot = this.snapshot.copyWith(
+      section: this.snapshot.section.copyWith(salePriceLamports: BigInt.zero),
+    );
+    return 'cancel-listing-signature';
+  }
+
+  @override
+  Future<String> purchaseSection(GameSnapshot snapshot) async {
+    purchaseCalls++;
+    final error = purchaseError;
+    if (error != null) throw error;
+    this.snapshot = this.snapshot.copyWith(
+      section: this.snapshot.section.copyWith(
+        owner: walletAddress,
+        salePriceLamports: BigInt.zero,
+      ),
+    );
+    return 'purchase-signature';
   }
 
   @override
