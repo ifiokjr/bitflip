@@ -13,7 +13,7 @@ It is not economically safe to give every new section owner a large, freely dist
 1. a finite, protocol-priced BIT allocation that players receive for paid pixel flips; and
 2. an owner/sponsor-funded campaign budget that the owner can distribute under bounded rules.
 
-The second half of the historical supply allocation remains locked unless a later, independently reviewed matching programme defines how it can be earned. It is not silently granted to section purchasers.
+The second half of the scaled supply allocation remains locked unless a later, independently reviewed matching programme defines how it can be earned. It is not silently granted to section purchasers.
 
 This ADR is a design gate, not a claim that token rewards or campaign governance exist in the rebuilt program today.
 
@@ -33,24 +33,38 @@ The pre-rebuild program contained a coherent binary-themed allocation:
 
 It also used a zero-decimal Token-2022 BIT mint and attempted to pace paid distribution with a square-root/time price curve. A player paid SOL into the section and received BIT from the section's token account.
 
+The selected staging scale is exactly 100 times larger while retaining those proportions and whole-token semantics:
+
+| Quantity                           |                         Amount |
+| ---------------------------------- | -----------------------------: |
+| Total BIT supply                   | 107,374,182,400 (`100 × 2^30`) |
+| Games/seasons                      |                              8 |
+| Allocation per game                |                 13,421,772,800 |
+| Sections per game                  |                            256 |
+| Allocation per section             |                     52,428,800 |
+| Paid-flip allocation per section   |                     26,214,400 |
+| Locked matching allocation/section |                     26,214,400 |
+
+This is 100 times more reward-bearing flip capacity, not fractional BIT: the mint still has zero decimals and every rewarded pixel earns one whole BIT.
+
 The design was incomplete. Production code did not fund newly created section token accounts, the discretionary `reward_tokens` value existed only in the backend database, and there was no enforceable reward policy or anti-self-dealing mechanism. The rebuilt program correctly removed that unfinished faucet.
 
 ## Why the discretionary grant is unsafe
 
-At the current defaults, a section costs 0.01 SOL to claim and each pixel costs 0.00001 SOL to flip. Handing the purchaser 262,144 discretionary BIT with the section would price that grant at about 38 lamports per BIT before rent, while the proposed one-BIT-per-paid-flip path would charge 10,000 lamports. That is a roughly 262-fold discount before considering owner revenue.
+At the current defaults, a section costs 0.01 SOL to claim and each pixel costs 0.00001 SOL to flip. Handing the purchaser 26,214,400 discretionary BIT with the section would price that grant at less than one lamport per BIT before rent, while the proposed one-BIT-per-paid-flip path would charge 10,000 lamports. That is a roughly 26,214-fold discount before considering owner revenue.
 
-Restricting the owner to a maximum reward rate does not solve the problem. At a 16 BIT bonus per flip, a purchaser could route the entire grant through fresh wallets in 16,384 flips for 0.16384 SOL of application fees. Sybil wallets make "the owner cannot reward themselves" unenforceable.
+Restricting the owner to a maximum reward rate does not solve the problem. At a 16 BIT bonus per flip, a purchaser could route the entire grant through fresh wallets in 1,638,400 flips for 16.384 SOL of application fees. Sybil wallets make "the owner cannot reward themselves" unenforceable.
 
 The system must treat owner-controlled rewards as a marketing or prize budget, not as a free asset bundled with ownership. Owners and sponsors can deposit BIT they already hold. A future protocol match may add funds, but only under a separately approved policy with a hard global and per-section cap.
 
-If every claimed section must start with a discretionary budget, the claimant has to buy that budget at no less than the active issuance price. At the current 10,000-lamport flip fee, preloading the historical 262,144 BIT would add at least 2.62144 SOL to the claim before rent and protocol fees. That conflicts with inexpensive lazy expansion. A much smaller prepaid starter budget can use the same invariant, but a free full allocation cannot.
+If every claimed section must start with a discretionary budget, the claimant has to buy that budget at no less than the active issuance price. At the current 10,000-lamport flip fee, preloading 26,214,400 BIT would add at least 262.144 SOL to the claim before rent and protocol fees. That conflicts with inexpensive lazy expansion. A much smaller prepaid starter budget can use the same invariant, but a free full allocation cannot.
 
 ## Token model
 
 The recommended BIT mint has these properties:
 
 - one Token-2022 mint with zero decimals;
-- a fixed maximum supply of `2^30` BIT, minted once into a program-controlled distribution vault;
+- a fixed maximum supply of `100 × 2^30` BIT (107,374,182,400 whole BIT), minted once into a program-controlled distribution vault;
 - mint and freeze authority revoked after the supply and metadata are verified;
 - no permanent delegate, transfer fee, interest, rebasing, or additional denomination mints; and
 - KiB, MiB, and GiB are display units calculated by clients, not separate assets.
@@ -61,11 +75,11 @@ Solana supports revoking mint and freeze roles with `SetAuthority`. Avoiding a p
 - <https://solana.com/docs/tokens/extensions>
 - <https://solana.com/docs/tokens/extensions/permanent-delegate>
 
-The historical `2^30` cap and eight-game allocation retain the project's binary identity, but they do not create economic value. BIT must have useful, visible sinks and Bitflip must make no promise of a SOL or fiat redemption price.
+The historical `2^30` cap inspired the scaled 100-GiB cap, and the eight-game allocation retains the project's binary identity, but neither creates economic value. BIT must have useful, visible sinks and Bitflip must make no promise of a SOL or fiat redemption price.
 
 ## Paid-flip allocation
 
-Each section may distribute at most `2^18` BIT through ordinary paid flips. The starting rule is one BIT per successfully toggled pixel. A 16-pixel transaction therefore earns 16 BIT; batching already reduces the network fee per pixel, so a second hidden batch subsidy is unnecessary.
+Each section may distribute at most `100 × 2^18` BIT (26,214,400 whole BIT) through ordinary paid flips. The starting rule is one BIT per successfully toggled pixel. A 16-pixel transaction therefore earns 16 BIT; batching already reduces the network fee per pixel, so a second hidden batch subsidy is unnecessary.
 
 The player's transaction includes both a maximum SOL charge and a minimum BIT payout. It fails if either side has changed. If the section's paid allocation is exhausted, flipping can continue, but the UI must say that no base BIT remains before signing.
 
@@ -75,15 +89,15 @@ The paid allocation is a finite primary distribution, not risk-free yield. A fix
 
 An owner or sponsor can deposit BIT into the section's campaign budget. Once a campaign begins, the committed budget cannot be withdrawn or redirected. A higher configured payout consumes the same finite budget sooner.
 
-For a 262,144 BIT budget, the simple per-pixel case looks like this:
+For a 26,214,400 BIT budget, the simple per-pixel case looks like this:
 
 | Bonus per qualifying pixel | Qualifying pixels | Full 64 × 64 board equivalents |
 | -------------------------: | ----------------: | -----------------------------: |
-|                      1 BIT |           262,144 |                             64 |
-|                      2 BIT |           131,072 |                             32 |
-|                      4 BIT |            65,536 |                             16 |
-|                      8 BIT |            32,768 |                              8 |
-|                     16 BIT |            16,384 |                              4 |
+|                      1 BIT |        26,214,400 |                          6,400 |
+|                      2 BIT |        13,107,200 |                          3,200 |
+|                      4 BIT |         6,553,600 |                          1,600 |
+|                      8 BIT |         3,276,800 |                            800 |
+|                     16 BIT |         1,638,400 |                            400 |
 
 The UI should present both "BIT per action" and an estimated number of remaining actions. When a budget reaches zero, the campaign either continues without a bonus or ends according to its published rules; it must never mint more BIT.
 
@@ -108,7 +122,7 @@ Section ownership also receives a protocol-defined share of that section's SOL f
 | Activity                   | Gross application fees |  Owner share | Protocol share |
 | -------------------------- | ---------------------: | -----------: | -------------: |
 | One full 4,096-pixel board |            0.04096 SOL | 0.008192 SOL |   0.032768 SOL |
-| 262,144 paid flips         |            2.62144 SOL | 0.524288 SOL |   2.097152 SOL |
+| 26,214,400 paid flips      |            262.144 SOL |  52.4288 SOL |   209.7152 SOL |
 
 Ignoring rent and transaction fees, the current 0.01 SOL claim price is recovered after 5,000 paid flips at a 20% share. On 2026-09-06, mainnet reported 0.004933407 SOL as the rent-exempt minimum for the current 651-byte section; including that capital raises the illustrative break-even to 7,467 flips, or just under two full-board equivalents. Adding 64 bytes of policy and ledger state would raise rent by approximately 0.000405312 SOL at the same schedule. Deployment tooling must recalculate rent rather than hard-code either observation.
 
@@ -159,7 +173,7 @@ The vault PDA can sign only transfers from the vault. With mint/freeze authority
 
 Mainnet remains blocked until all of the following are recorded:
 
-- exact Token-2022 extension set, mint address, supply, vault balance, revoked authorities, and reproducible transaction signatures;
+- exact Token-2022 extension set, mint address, `decimals = 0`, supply, vault balance, revoked authorities, and reproducible transaction signatures;
 - an independent program and token-economics review;
 - evidence that section allocations always reconcile to the vault;
 - an explicit decision on transferability, exchange/liquidity support, legal presentation, and tax/accounting treatment;

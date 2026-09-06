@@ -1,3 +1,4 @@
+use bitflip_program::pricing::DEFAULT_SECTION_ALLOCATION_TOKENS;
 use bitflip_program::pricing::MAX_REWARD_TOKENS_PER_TRANSACTION;
 use bitflip_program::pricing::PriceControllerConfig;
 use bitflip_program::pricing::PriceControllerError;
@@ -56,8 +57,8 @@ proptest! {
 
 	#[test]
 	fn inventory_floor_is_monotonic(
-		first in 0u64..=262_144,
-		second in 0u64..=262_144,
+		first in 0u64..=DEFAULT_SECTION_ALLOCATION_TOKENS,
+		second in 0u64..=DEFAULT_SECTION_ALLOCATION_TOKENS,
 	) {
 		let config = PriceControllerConfig::STAGING;
 		let low = first.min(second);
@@ -138,26 +139,26 @@ proptest! {
 #[test]
 fn sybil_splitting_does_not_increase_reward_or_reduce_price() {
 	let config = PriceControllerConfig::STAGING;
-	let mut two_batches = PriceControllerState::new(&config, 0).expect("valid controller");
-	let mut thirty_two_wallets = two_batches;
+	let mut full_batches = PriceControllerState::new(&config, 0).expect("valid controller");
+	let mut split_wallets = full_batches;
 	let mut batched_paid = 0;
 	let mut sybil_paid = 0;
 
-	for _ in 0..2 {
-		batched_paid += execute_exact(&mut two_batches, &config, 1, 16).total_price_lamports;
+	for _ in 0..200 {
+		batched_paid += execute_exact(&mut full_batches, &config, 1, 16).total_price_lamports;
 	}
-	for _ in 0..32 {
-		sybil_paid += execute_exact(&mut thirty_two_wallets, &config, 1, 1).total_price_lamports;
+	for _ in 0..3_200 {
+		sybil_paid += execute_exact(&mut split_wallets, &config, 1, 1).total_price_lamports;
 	}
 
-	assert_eq!(two_batches, thirty_two_wallets);
+	assert_eq!(full_batches, split_wallets);
 	assert_eq!(batched_paid, sybil_paid);
-	assert_eq!(two_batches.emitted_tokens, 32);
+	assert_eq!(full_batches.emitted_tokens, 3_200);
 	assert_eq!(
-		two_batches.preview(&config, 1, 1),
+		full_batches.preview(&config, 1, 1),
 		Ok(PriceQuote {
 			window_id: 0,
-			target_tokens: 16,
+			target_tokens: 1_600,
 			reward_tokens: 0,
 			unit_price_lamports: 10_000,
 			total_price_lamports: 0,
@@ -173,19 +174,22 @@ fn fixed_window_boundary_allows_two_caps_but_charges_the_higher_second_price() {
 	let mut rewards = 0;
 	let mut paid = 0;
 
-	for _ in 0..2 {
+	for _ in 0..200 {
 		let quote = execute_exact(&mut state, &config, 299, 16);
 		rewards += quote.reward_tokens;
 		paid += quote.total_price_lamports;
 	}
-	for _ in 0..2 {
+	for _ in 0..200 {
 		let quote = execute_exact(&mut state, &config, 300, 16);
 		rewards += quote.reward_tokens;
 		paid += quote.total_price_lamports;
 	}
 
-	assert_eq!(rewards, 64, "two adjacent windows expose two finite caps");
-	assert_eq!(paid, 680_000, "the second cap costs 12.5% more");
+	assert_eq!(
+		rewards, 6_400,
+		"two adjacent windows expose two finite caps"
+	);
+	assert_eq!(paid, 68_000_000, "the second cap costs 12.5% more");
 	assert_eq!(state.posted_price_lamports, 11_250);
 }
 
@@ -196,7 +200,7 @@ fn alternating_equal_pressure_cannot_ratchet_the_price_down() {
 
 	for cycle in 0..64 {
 		let busy_at = cycle * config.window_seconds * 2;
-		for _ in 0..2 {
+		for _ in 0..200 {
 			let _ = execute_exact(&mut state, &config, busy_at, 16);
 		}
 		let idle_at = busy_at + config.window_seconds;
