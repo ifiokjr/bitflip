@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:bitflip_program/bitflip_program_constraints.dart';
 import 'package:bitflip_server_server/src/minting/bitflip_mint_service.dart';
 import 'package:serverpod/serverpod.dart';
 
@@ -152,11 +153,21 @@ int _countEnabledPixels(List<int> bitmap) {
 }
 
 void _validateIndices(int gameIndex, int sectionIndex) {
-  if (gameIndex < 0 || gameIndex > 255) {
-    throw RangeError.range(gameIndex, 0, 255, 'gameIndex');
+  if (gameIndex < 0 || gameIndex > bitflipMaximumGameIndex) {
+    throw RangeError.range(
+      gameIndex,
+      0,
+      bitflipMaximumGameIndex,
+      'gameIndex',
+    );
   }
-  if (sectionIndex < 0 || sectionIndex > 255) {
-    throw RangeError.range(sectionIndex, 0, 255, 'sectionIndex');
+  if (sectionIndex < 0 || sectionIndex > bitflipMaximumSectionIndex) {
+    throw RangeError.range(
+      sectionIndex,
+      0,
+      bitflipMaximumSectionIndex,
+      'sectionIndex',
+    );
   }
 }
 

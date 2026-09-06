@@ -1,3 +1,4 @@
+import 'package:bitflip_program/bitflip_program_constraints.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -82,8 +83,11 @@ final class BitflipConfig {
     final parsedGameIndex = int.tryParse(gameIndex);
     if (parsedGameIndex == null ||
         parsedGameIndex < 0 ||
-        parsedGameIndex > 255) {
-      throw StateError('BITFLIP_GAME_INDEX must be between 0 and 255.');
+        parsedGameIndex > bitflipMaximumGameIndex) {
+      throw StateError(
+        'BITFLIP_GAME_INDEX must be between 0 and '
+        '$bitflipMaximumGameIndex.',
+      );
     }
 
     if (parsedEnvironment == BitflipEnvironment.production) {

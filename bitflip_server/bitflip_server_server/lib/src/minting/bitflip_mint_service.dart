@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:bitflip_program/bitflip_program.dart';
+import 'package:bitflip_program/bitflip_program_constraints.dart';
 import 'package:solana_kit/solana_kit.dart';
 import 'package:solana_kit_mpl_bubblegum/solana_kit_mpl_bubblegum.dart'
     as bubblegum;
@@ -112,8 +113,13 @@ final class SolanaBitflipMintService implements BitflipMintService {
       developmentDefault: '0',
     );
     final gameIndex = int.tryParse(gameIndexValue);
-    if (gameIndex == null || gameIndex < 0 || gameIndex > 255) {
-      throw StateError('BITFLIP_GAME_INDEX must be between 0 and 255.');
+    if (gameIndex == null ||
+        gameIndex < 0 ||
+        gameIndex > bitflipMaximumGameIndex) {
+      throw StateError(
+        'BITFLIP_GAME_INDEX must be between 0 and '
+        '$bitflipMaximumGameIndex.',
+      );
     }
     final tree = environment['BITFLIP_MERKLE_TREE']?.trim();
     final operator = environment['BITFLIP_OPERATOR_PRIVATE_KEY']?.trim();
@@ -618,11 +624,21 @@ void _requirePublicHttps(String name, String value) {
 }
 
 void _validateIndices(int gameIndex, int sectionIndex) {
-  if (gameIndex < 0 || gameIndex > 255) {
-    throw RangeError.range(gameIndex, 0, 255, 'gameIndex');
+  if (gameIndex < 0 || gameIndex > bitflipMaximumGameIndex) {
+    throw RangeError.range(
+      gameIndex,
+      0,
+      bitflipMaximumGameIndex,
+      'gameIndex',
+    );
   }
-  if (sectionIndex < 0 || sectionIndex > 255) {
-    throw RangeError.range(sectionIndex, 0, 255, 'sectionIndex');
+  if (sectionIndex < 0 || sectionIndex > bitflipMaximumSectionIndex) {
+    throw RangeError.range(
+      sectionIndex,
+      0,
+      bitflipMaximumSectionIndex,
+      'sectionIndex',
+    );
   }
 }
 

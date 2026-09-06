@@ -85,7 +85,7 @@ void main() {
         production: true,
       );
 
-      expect(service.gameIndex, 7);
+      expect(service.gameIndex, 3);
       expect(service.metadataBaseUrl, 'https://metadata.bitflip.xyz');
       expect(service.priorityFeeMicroLamports, 1000);
     });
@@ -108,7 +108,7 @@ void main() {
         requireExplicitConfiguration: true,
       );
 
-      expect(service.gameIndex, 7);
+      expect(service.gameIndex, 3);
       expect(service.priorityFeeMicroLamports, 1000);
     });
 
@@ -120,6 +120,22 @@ void main() {
           requireExplicitConfiguration: true,
         ),
         throwsA(isA<StateError>()),
+      );
+    });
+
+    test('rejects a game outside the four configured games', () {
+      expect(
+        () => SolanaBitflipMintService.fromEnvironment(
+          _validEnvironment()..['BITFLIP_GAME_INDEX'] = '4',
+          production: true,
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('between 0 and 3'),
+          ),
+        ),
       );
     });
 
@@ -144,7 +160,7 @@ void main() {
 Map<String, String> _validEnvironment() => {
   'SOLANA_RPC_URL': 'https://rpc.bitflip.xyz',
   'BITFLIP_METADATA_BASE_URL': 'https://metadata.bitflip.xyz',
-  'BITFLIP_GAME_INDEX': '7',
+  'BITFLIP_GAME_INDEX': '3',
   'BITFLIP_CLUSTER': 'mainnet',
   'BITFLIP_MERKLE_TREE': '11111111111111111111111111111111',
   'BITFLIP_OPERATOR_PRIVATE_KEY': jsonEncode(List<int>.filled(32, 1)),

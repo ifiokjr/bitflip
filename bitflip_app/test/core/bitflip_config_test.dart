@@ -60,7 +60,20 @@ void main() {
 
       expect(config.environment, BitflipEnvironment.production);
       expect(config.walletChain, 'solana:mainnet');
-      expect(config.gameIndex, 7);
+      expect(config.gameIndex, 3);
+    });
+
+    test('rejects a game outside the four configured games', () {
+      expect(
+        () => _productionConfig(gameIndex: '4'),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('between 0 and 3'),
+          ),
+        ),
+      );
     });
   });
 }
@@ -69,13 +82,14 @@ BitflipConfig _productionConfig({
   String walletChain = 'solana:mainnet',
   String rpcUrl = 'https://rpc.bitflip.xyz',
   String serverpodUrl = 'https://api.bitflip.xyz/',
+  String gameIndex = '3',
 }) {
   return BitflipConfig.parse(
     environment: 'production',
     walletChain: walletChain,
     rpcUrl: rpcUrl,
     serverpodUrl: serverpodUrl,
-    gameIndex: '7',
+    gameIndex: gameIndex,
     releaseMode: true,
   );
 }

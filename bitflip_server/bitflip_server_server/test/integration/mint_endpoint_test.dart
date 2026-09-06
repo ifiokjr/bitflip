@@ -159,7 +159,7 @@ void main() {
         endpoints.mint.mintSection(
           sessionBuilder,
           walletAddress: _walletAddress(owner),
-          gameIndex: 256,
+          gameIndex: 4,
           sectionIndex: 12,
           nonce: 'a' * 32,
           signatureBase64: base64Encode(Uint8List(64)),

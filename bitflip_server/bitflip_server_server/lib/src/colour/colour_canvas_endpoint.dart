@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:bitflip_program/bitflip_program_constraints.dart';
 import 'package:bitflip_server_server/src/colour/colour_canvas_reducer.dart';
 import 'package:bitflip_server_server/src/colour/colour_canvas_store.dart';
 import 'package:bitflip_server_server/src/colour/colour_flip_event_source.dart';
@@ -87,11 +88,21 @@ ColourCanvasView _viewFor(
 }
 
 void _validateIndices(int gameIndex, int sectionIndex) {
-  if (gameIndex < 0 || gameIndex >= 4) {
-    throw RangeError.range(gameIndex, 0, 3, 'gameIndex');
+  if (gameIndex < 0 || gameIndex > bitflipMaximumGameIndex) {
+    throw RangeError.range(
+      gameIndex,
+      0,
+      bitflipMaximumGameIndex,
+      'gameIndex',
+    );
   }
-  if (sectionIndex < 0 || sectionIndex > 255) {
-    throw RangeError.range(sectionIndex, 0, 255, 'sectionIndex');
+  if (sectionIndex < 0 || sectionIndex > bitflipMaximumSectionIndex) {
+    throw RangeError.range(
+      sectionIndex,
+      0,
+      bitflipMaximumSectionIndex,
+      'sectionIndex',
+    );
   }
 }
 

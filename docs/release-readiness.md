@@ -55,7 +55,7 @@ BITFLIP_ENVIRONMENT=development|staging|production
 SOLANA_WALLET_CHAIN=solana:devnet|solana:testnet|solana:mainnet
 SOLANA_RPC_URL=https://...
 SERVERPOD_URL=https://.../
-BITFLIP_GAME_INDEX=0..255
+BITFLIP_GAME_INDEX=0..3
 ```
 
 Use `build:web`, `build:android:release`, `build:ios:release`, or `build:macos:release`. These commands refuse to start without every value. Production additionally requires mainnet and public HTTPS endpoints. The app performs the same validation at startup so bypassing the wrapper cannot create a silently misconfigured release.
@@ -66,7 +66,7 @@ Staging and production servers must set:
 
 ```text
 BITFLIP_CLUSTER=devnet|mainnet
-BITFLIP_GAME_INDEX=0..255
+BITFLIP_GAME_INDEX=0..3
 SOLANA_RPC_URL=https://...
 BITFLIP_METADATA_BASE_URL=https://...
 BITFLIP_MERKLE_TREE=<private Bubblegum tree address>
