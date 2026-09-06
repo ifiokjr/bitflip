@@ -330,7 +330,7 @@ Future<void> _setTestConfigAuthorities(
     ..setRange(2, 34, authority)
     ..setRange(66, 98, authority)
     ..setRange(98, 130, authority)
-    ..setRange(166, 170, const [1, 0, 0, 0]);
+    ..setRange(230, 234, const [1, 0, 0, 0]);
   await client.cheatcodes.setAccount(configAddress, data: data);
 }
 
