@@ -108,12 +108,12 @@ fn main() -> Result<(), PriceControllerError> {
 		"scenario\trewarded_bit\tpaid_lamports\towner_recovery\tprotocol_revenue\tnext_price\temitted_bit"
 	);
 	run_pattern("idle", &config, &[0; 12])?;
-	run_pattern("at_target", &config, &[16; 12])?;
-	run_pattern("saturated", &config, &[64; 12])?;
+	run_pattern("at_target", &config, &[1_600; 12])?;
+	run_pattern("saturated", &config, &[6_400; 12])?;
 	run_pattern(
 		"oscillating",
 		&config,
-		&[32, 0, 32, 0, 32, 0, 32, 0, 32, 0, 32, 0],
+		&[3_200, 0, 3_200, 0, 3_200, 0, 3_200, 0, 3_200, 0, 3_200, 0],
 	)?;
 
 	let mut late = PriceControllerState::new(&config, 0)?;
@@ -122,7 +122,7 @@ fn main() -> Result<(), PriceControllerError> {
 		&mut late,
 		&config,
 		final_window,
-		1_024,
+		102_400,
 		DEFAULT_OWNER_SHARE_BASIS_POINTS,
 	)?;
 	println!(

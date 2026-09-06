@@ -9,8 +9,11 @@ use core::cmp::{max, min};
 /// Number of base BIT that one flip transaction can request.
 pub const MAX_REWARD_TOKENS_PER_TRANSACTION: u64 = 16;
 
-/// Historical paid-flip allocation assigned to each section.
-pub const DEFAULT_SECTION_ALLOCATION_TOKENS: u64 = 262_144;
+/// Staging paid-flip allocation assigned to each section.
+pub const DEFAULT_SECTION_ALLOCATION_TOKENS: u64 = crate::BIT_PAID_FLIP_ALLOCATION_TOKENS;
+
+/// Staging rewarded-pixel target for one control window.
+pub const DEFAULT_TARGET_TOKENS_PER_WINDOW: u64 = 1_600;
 
 /// Sixty-day staging emission period.
 pub const DEFAULT_EMISSION_DURATION_SECONDS: u64 = 60 * 24 * 60 * 60;
@@ -94,7 +97,7 @@ impl PriceControllerConfig {
 		allocation_tokens: DEFAULT_SECTION_ALLOCATION_TOKENS,
 		emission_duration_seconds: DEFAULT_EMISSION_DURATION_SECONDS,
 		window_seconds: DEFAULT_WINDOW_SECONDS,
-		target_tokens_per_window: 16,
+		target_tokens_per_window: DEFAULT_TARGET_TOKENS_PER_WINDOW,
 		start_price_lamports: DEFAULT_START_PRICE_LAMPORTS,
 		minimum_price_lamports: DEFAULT_MIN_PRICE_LAMPORTS,
 		maximum_price_lamports: DEFAULT_MAX_PRICE_LAMPORTS,
@@ -551,14 +554,16 @@ mod tests {
 	}
 
 	#[test]
-	fn staging_target_is_one_binary_batch_per_window() {
+	fn staging_target_and_capacity_are_one_hundred_times_larger() {
 		let state = PriceControllerState::new(&PriceControllerConfig::STAGING, 0)
 			.expect("valid staging controller");
 
-		assert_eq!(state.window_target_tokens, 16);
+		assert_eq!(DEFAULT_SECTION_ALLOCATION_TOKENS, 100 * 262_144);
+		assert_eq!(DEFAULT_TARGET_TOKENS_PER_WINDOW, 100 * 16);
+		assert_eq!(state.window_target_tokens, 1_600);
 		assert_eq!(
 			window_capacity(&PriceControllerConfig::STAGING, state.window_target_tokens,),
-			Ok(32)
+			Ok(3_200)
 		);
 	}
 
@@ -566,22 +571,28 @@ mod tests {
 	fn bounded_adjustment_matches_the_decision_examples() {
 		let config = PriceControllerConfig::STAGING;
 
-		assert_eq!(adjusted_controller_price(&config, 10_000, 0, 16), Ok(8_750));
-		assert_eq!(adjusted_controller_price(&config, 10_000, 8, 16), Ok(9_375));
 		assert_eq!(
-			adjusted_controller_price(&config, 10_000, 16, 16),
+			adjusted_controller_price(&config, 10_000, 0, 1_600),
+			Ok(8_750)
+		);
+		assert_eq!(
+			adjusted_controller_price(&config, 10_000, 800, 1_600),
+			Ok(9_375)
+		);
+		assert_eq!(
+			adjusted_controller_price(&config, 10_000, 1_600, 1_600),
 			Ok(10_000)
 		);
 		assert_eq!(
-			adjusted_controller_price(&config, 10_000, 24, 16),
+			adjusted_controller_price(&config, 10_000, 2_400, 1_600),
 			Ok(10_625)
 		);
 		assert_eq!(
-			adjusted_controller_price(&config, 10_000, 32, 16),
+			adjusted_controller_price(&config, 10_000, 3_200, 1_600),
 			Ok(11_250)
 		);
 		assert_eq!(
-			adjusted_controller_price(&config, 10_000, u64::MAX, 16),
+			adjusted_controller_price(&config, 10_000, u64::MAX, 1_600),
 			Ok(11_250)
 		);
 	}
@@ -594,15 +605,17 @@ mod tests {
 		state
 			.execute(&config, 1_001, 16, exact_limits(first))
 			.expect("first batch");
-		let second = state.preview(&config, 1_299, 16).expect("second quote");
-		state
-			.execute(&config, 1_299, 16, exact_limits(second))
-			.expect("second batch");
+		for _ in 1..200 {
+			let quote = state.preview(&config, 1_299, 16).expect("next quote");
+			state
+				.execute(&config, 1_299, 16, exact_limits(quote))
+				.expect("next batch");
+		}
 		let exhausted = state.preview(&config, 1_299, 1).expect("exhausted quote");
 
 		assert_eq!(first.unit_price_lamports, DEFAULT_START_PRICE_LAMPORTS);
-		assert_eq!(second.unit_price_lamports, first.unit_price_lamports);
-		assert_eq!(state.window_rewarded_tokens, 32);
+		assert_eq!(state.posted_price_lamports, first.unit_price_lamports);
+		assert_eq!(state.window_rewarded_tokens, 3_200);
 		assert_eq!(exhausted.reward_tokens, 0);
 		assert_eq!(exhausted.total_price_lamports, 0);
 	}
@@ -684,9 +697,9 @@ mod tests {
 			.preview(&config, final_window, MAX_REWARD_TOKENS_PER_TRANSACTION)
 			.expect("final-window quote");
 
-		assert_eq!(quote.target_tokens, 16);
+		assert_eq!(quote.target_tokens, 1_600);
 		assert_eq!(quote.reward_tokens, 16);
-		assert_eq!(quote.remaining_window_capacity, 16);
+		assert_eq!(quote.remaining_window_capacity, 3_184);
 		assert_eq!(quote.unit_price_lamports, config.minimum_price_lamports);
 	}
 

@@ -36,20 +36,20 @@ That constant was never used by the price calculation. It also treated the 200,0
 
 ## Capacity and emission target
 
-The historical allocation and duration imply:
+The selected 100-times-scaled staging allocation and historical duration imply:
 
 ```text
-section target = 262,144 / 5,184,000 seconds
-               = 0.0505679 rewarded pixels/second
-               = 3.03407 rewarded pixels/minute
+section target = 26,214,400 / 5,184,000 seconds
+               = 5.05679 rewarded pixels/second
+               = 303.407 rewarded pixels/minute
 
 game target    = 256 × section target
-               = 12.9454 rewarded pixels/second
+               = 1,294.54 rewarded pixels/second
 ```
 
-A five-minute control window therefore targets approximately 15.17 rewarded pixels per section. The simulator rounds the staging target to one full 16-pixel batch. If users submit smaller batches, the same economic target can require more transactions; if they submit full batches, transaction pressure falls substantially.
+A five-minute control window therefore targets approximately 1,517 rewarded pixels per section. The simulator rounds the staging target to 1,600 pixels: exactly 100 full 16-pixel batches and exactly 100 times the earlier 16-pixel staging target. At full batch size that is 100 transactions per section per five minutes at target and 200 at the burst cap. Smaller batches consume more transaction capacity for the same BIT emission.
 
-The target is fixed for the lifetime of the section and must ultimately come from measured real-SBF capacity with headroom. It is not increased to force the allocation to empty by a deadline. If the section is quiet, undistributed BIT remains locked. This avoids a final-window attack in which a bot waits for the price floor and then drains an inflated catch-up target.
+The target is fixed for the lifetime of the section and must ultimately come from measured real-SBF capacity with headroom. The 1,600/3,200 staging values are emission parameters, not a claim of measured Solana throughput. The target is not increased to force the allocation to empty by a deadline. If the section is quiet, undistributed BIT remains locked. This avoids a final-window attack in which a bot waits for the price floor and then drains an inflated catch-up target.
 
 The economic counter must count rewarded pixels, not transactions. A one-pixel and a 16-pixel transaction consume different amounts of the finite BIT reserve. Capacity testing must separately record transactions, pixel count, and compute units.
 
@@ -109,15 +109,15 @@ This retains the useful target-utilisation shape of EIP-1559: usage at target le
 - <https://eips.ethereum.org/EIPS/eip-1559>
 - <https://arxiv.org/abs/2102.10567>
 
-With a 10,000-lamport controller price and a target of 16 integer flip units for an illustrative window:
+With a 10,000-lamport controller price and a target of 1,600 integer flip units for an illustrative window:
 
 | Rewarded pixels | Target utilisation | Next controller price |
 | --------------: | -----------------: | --------------------: |
 |               0 |                 0% |        8,750 lamports |
-|               8 |                50% |        9,375 lamports |
-|              16 |               100% |       10,000 lamports |
-|              24 |               150% |       10,625 lamports |
-|      32 or more |       200% or more |       11,250 lamports |
+|             800 |                50% |        9,375 lamports |
+|           1,600 |               100% |       10,000 lamports |
+|           2,400 |               150% |       10,625 lamports |
+|   3,200 or more |       200% or more |       11,250 lamports |
 
 Six consecutive windows at or above twice the target raise the staging controller from 10,000 to 17,500 lamports. Four empty windows take it from 10,000 to the configured 5,000-lamport minimum. Transactions in one window use one posted price, so transaction ordering cannot change that price. Ordering can still decide who receives the last available rewards near the window cap; `minimum_reward_tokens` makes that race fail safely instead of silently changing the payout.
 
@@ -141,11 +141,11 @@ A linear floor is preferred over the historical square root because it is easy t
 
 ## Burst handling
 
-A posted price that updates only every five minutes must not sell the entire reserve during one cheap window. Base BIT rewards in a window are therefore capped at the configured elasticity multiplied by that window's target. With an elasticity of two, approximately 30–32 BIT can be distributed before the next price update.
+A posted price that updates only every five minutes must not sell the entire reserve during one cheap window. Base BIT rewards in a window are therefore capped at the configured elasticity multiplied by that window's target. With an elasticity of two, exactly 3,200 whole BIT can be distributed before the next price update.
 
 Players may continue flipping after the reward capacity is used, but the quote must show zero base BIT and their signed `minimum_reward_tokens` must protect them from an unexpected zero payout. The next window restores capacity at its new price. Owner-funded campaign rewards are a separate budget and do not bypass the base-emission cap.
 
-This cap prevents a bot from draining a stale-price reserve and keeps maximum reward throughput related to the modelled capacity. A transaction immediately before and after a boundary can access two caps—64 staging BIT—within seconds, but the second cap is posted at the higher price and the exposure remains 0.0244% of one section allocation. A continuous leaky-bucket controller could remove that edge later, but it introduces more state and has less precedent. Start with the auditable windowed mechanism and monitor boundary concentration on devnet.
+This cap prevents a bot from draining a stale-price reserve and keeps maximum reward throughput related to the modelled capacity. Transactions immediately before and after a boundary can access two caps—6,400 staging BIT—within seconds, but the second cap is posted at the higher price and the exposure remains 0.0244% of one section allocation. A continuous leaky-bucket controller could remove that edge later, but it introduces more state and has less precedent. Start with the auditable windowed mechanism and monitor boundary concentration on devnet.
 
 ## Manipulation resistance
 
