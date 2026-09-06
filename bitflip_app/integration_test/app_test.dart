@@ -205,6 +205,10 @@ GameSnapshot _liveSnapshot(
     mintedSections: lifecycle == SectionLifecycle.minted ? 1 : 0,
     claimPriceLamports: BigInt.from(100000000),
     flipFeeLamports: BigInt.from(5000),
+    startsAtUnixSeconds: BigInt.zero,
+    unlockIntervalSeconds: 3600,
+    earlyUnlockFlips: 1024,
+    previousSectionFlipCount: BigInt.from(1024),
     treasury: '11111111111111111111111111111111',
     section: SectionSnapshot(
       index: 0,
@@ -213,6 +217,7 @@ GameSnapshot _liveSnapshot(
       owner: owner,
       flipCount: BigInt.zero,
       revision: BigInt.zero,
+      salePriceLamports: BigInt.zero,
       assetId: lifecycle == SectionLifecycle.minted
           ? 'Asset11111111111111111111111111111111111111'
           : null,

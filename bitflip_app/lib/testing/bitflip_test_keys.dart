@@ -14,6 +14,10 @@ abstract final class BitflipTestKeys {
   static const pixelY = Key('pixel-y');
   static const toggleCoordinate = Key('toggle-coordinate');
   static const claimSection = Key('claim-section');
+  static const sectionSalePrice = Key('section-sale-price');
+  static const listSection = Key('list-section');
+  static const cancelSectionListing = Key('cancel-section-listing');
+  static const purchaseSection = Key('purchase-section');
   static const commitFlips = Key('commit-flips');
   static const clearFlips = Key('clear-flips');
   static const nextSection = Key('next-section');

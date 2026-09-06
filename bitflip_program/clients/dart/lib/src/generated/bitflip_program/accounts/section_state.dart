@@ -28,6 +28,7 @@ class SectionState {
     required this.flipCount,
     required this.revision,
     required this.lastFlipAt,
+    required this.salePriceLamports,
     required this.pixels,
   }) :
       discriminator = 3;
@@ -45,6 +46,7 @@ class SectionState {
   final BigInt flipCount;
   final BigInt revision;
   final BigInt lastFlipAt;
+  final BigInt salePriceLamports;
   final Uint8List pixels;
 
   @override
@@ -65,13 +67,14 @@ class SectionState {
           flipCount == other.flipCount &&
           revision == other.revision &&
           lastFlipAt == other.lastFlipAt &&
+          salePriceLamports == other.salePriceLamports &&
           pixels == other.pixels;
 
   @override
-  int get hashCode => Object.hash(discriminator, owner, assetId, merkleTree, gameIndex, sectionIndex, status, bump, onPixels, leafIndex, flipCount, revision, lastFlipAt, pixels);
+  int get hashCode => Object.hash(discriminator, owner, assetId, merkleTree, gameIndex, sectionIndex, status, bump, onPixels, leafIndex, flipCount, revision, lastFlipAt, salePriceLamports, pixels);
 
   @override
-  String toString() => 'SectionState(discriminator: $discriminator, owner: $owner, assetId: $assetId, merkleTree: $merkleTree, gameIndex: $gameIndex, sectionIndex: $sectionIndex, status: $status, bump: $bump, onPixels: $onPixels, leafIndex: $leafIndex, flipCount: $flipCount, revision: $revision, lastFlipAt: $lastFlipAt, pixels: $pixels)';
+  String toString() => 'SectionState(discriminator: $discriminator, owner: $owner, assetId: $assetId, merkleTree: $merkleTree, gameIndex: $gameIndex, sectionIndex: $sectionIndex, status: $status, bump: $bump, onPixels: $onPixels, leafIndex: $leafIndex, flipCount: $flipCount, revision: $revision, lastFlipAt: $lastFlipAt, salePriceLamports: $salePriceLamports, pixels: $pixels)';
 }
 
 
@@ -90,6 +93,7 @@ Encoder<SectionState> getSectionStateEncoder() {
     ('flipCount', getU64Encoder()),
     ('revision', getU64Encoder()),
     ('lastFlipAt', getI64Encoder()),
+    ('salePriceLamports', getU64Encoder()),
     ('pixels', fixEncoderSize(getBytesEncoder(), 512, allowTruncation: false)),
   ]);
 
@@ -109,6 +113,7 @@ Encoder<SectionState> getSectionStateEncoder() {
       'flipCount': value.flipCount,
       'revision': value.revision,
       'lastFlipAt': value.lastFlipAt,
+      'salePriceLamports': value.salePriceLamports,
       'pixels': value.pixels,
     },
   );
@@ -129,6 +134,7 @@ Decoder<SectionState> getSectionStateDecoder() {
     ('flipCount', getU64Decoder()),
     ('revision', getU64Decoder()),
     ('lastFlipAt', getI64Decoder()),
+    ('salePriceLamports', getU64Decoder()),
     ('pixels', fixDecoderSize(getBytesDecoder(), 512)),
   ]);
 
@@ -163,6 +169,7 @@ Decoder<SectionState> getSectionStateDecoder() {
       flipCount: map['flipCount']! as BigInt,
       revision: map['revision']! as BigInt,
       lastFlipAt: map['lastFlipAt']! as BigInt,
+      salePriceLamports: map['salePriceLamports']! as BigInt,
       pixels: map['pixels']! as Uint8List,
       ),
       newOffset,

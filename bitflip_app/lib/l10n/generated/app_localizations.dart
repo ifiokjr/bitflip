@@ -115,7 +115,7 @@ abstract class AppLocalizations {
   /// No description provided for @heroBody.
   ///
   /// In en, this message translates to:
-  /// **'Claim a 64 × 64 sector, draw in public, then seal the final state into a compressed NFT. Every mark is a tiny on-chain decision.'**
+  /// **'One public sector starts the signal. As play grows, new 64 × 64 sectors unlock for players to own, trade, draw on, and eventually seal.'**
   String get heroBody;
 
   /// No description provided for @openCanvas.
@@ -508,6 +508,84 @@ abstract class AppLocalizations {
   /// **'CLAIM THIS SECTOR'**
   String get claimSector;
 
+  /// No description provided for @sectorLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'SECTOR NOT YET UNLOCKED'**
+  String get sectorLocked;
+
+  /// No description provided for @sectorReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocked and available to claim.'**
+  String get sectorReady;
+
+  /// No description provided for @sectorUnlockProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocks at {current} / {required} previous-sector flips, or after {time}.'**
+  String sectorUnlockProgress(String current, int required, String time);
+
+  /// No description provided for @waitingForSector.
+  ///
+  /// In en, this message translates to:
+  /// **'Sector {section} must be claimed first.'**
+  String waitingForSector(String section);
+
+  /// No description provided for @bitflipProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'BITFLIP PROGRAM'**
+  String get bitflipProgram;
+
+  /// No description provided for @forSale.
+  ///
+  /// In en, this message translates to:
+  /// **'LISTED FOR SALE'**
+  String get forSale;
+
+  /// No description provided for @salePrice.
+  ///
+  /// In en, this message translates to:
+  /// **'SALE PRICE'**
+  String get salePrice;
+
+  /// No description provided for @salePriceHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'The buyer pays you directly. Up to 9 decimal places.'**
+  String get salePriceHelp;
+
+  /// No description provided for @invalidSalePrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a positive SOL amount with no more than 9 decimal places.'**
+  String get invalidSalePrice;
+
+  /// No description provided for @solUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'SOL'**
+  String get solUnit;
+
+  /// No description provided for @listSection.
+  ///
+  /// In en, this message translates to:
+  /// **'LIST SECTOR FOR SALE'**
+  String get listSection;
+
+  /// No description provided for @cancelListing.
+  ///
+  /// In en, this message translates to:
+  /// **'CANCEL LISTING'**
+  String get cancelListing;
+
+  /// No description provided for @buySection.
+  ///
+  /// In en, this message translates to:
+  /// **'BUY THIS SECTOR'**
+  String get buySection;
+
   /// No description provided for @mintCompressedNft.
   ///
   /// In en, this message translates to:
@@ -517,7 +595,7 @@ abstract class AppLocalizations {
   /// No description provided for @sectionOwner.
   ///
   /// In en, this message translates to:
-  /// **'CREATOR'**
+  /// **'OWNER'**
   String get sectionOwner;
 
   /// No description provided for @anonymousOwner.
@@ -573,6 +651,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sector claim confirmed on-chain.'**
   String get activityClaimed;
+
+  /// No description provided for @activityListed.
+  ///
+  /// In en, this message translates to:
+  /// **'Sector listed for a fixed on-chain price.'**
+  String get activityListed;
+
+  /// No description provided for @activityListingCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Sector listing cancelled.'**
+  String get activityListingCancelled;
+
+  /// No description provided for @activityPurchased.
+  ///
+  /// In en, this message translates to:
+  /// **'Sector purchased. Ownership transferred atomically.'**
+  String get activityPurchased;
 
   /// No description provided for @activitySealed.
   ///
@@ -631,7 +727,7 @@ abstract class AppLocalizations {
   /// No description provided for @claimStepBody.
   ///
   /// In en, this message translates to:
-  /// **'Sectors open from top-left to bottom-right—by time or by collective activity.'**
+  /// **'Bitflip funds one public starting sector. Each later buyer creates the next sector only after time or collective activity unlocks it.'**
   String get claimStepBody;
 
   /// No description provided for @flipStep.

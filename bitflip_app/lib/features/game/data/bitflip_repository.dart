@@ -24,6 +24,9 @@ abstract interface class BitflipRepository {
   Future<String> connectWallet([String? walletId]);
   Future<String> fundWithMobileWallet(BigInt lamports);
   Future<String> claimSection(GameSnapshot snapshot);
+  Future<String> listSection(GameSnapshot snapshot, BigInt priceLamports);
+  Future<String> cancelSectionListing(GameSnapshot snapshot);
+  Future<String> purchaseSection(GameSnapshot snapshot);
   Future<String> flipPixels(
     GameSnapshot snapshot,
     List<PixelCoordinate> coordinates,
@@ -116,11 +119,22 @@ final class SolanaBitflipRepository implements BitflipRepository {
       programAddress: bitflipProgramProgramAddress,
       seeds: SectionSeeds(gameIndex: _gameIndex, sectionIndex: sectionIndex),
     );
-    final accounts = await fetchEncodedAccounts(_rpc, [
+    final previousSectionAddress = sectionIndex == 0
+        ? null
+        : (await findSectionPda(
+            programAddress: bitflipProgramProgramAddress,
+            seeds: SectionSeeds(
+              gameIndex: _gameIndex,
+              sectionIndex: sectionIndex - 1,
+            ),
+          )).$1;
+    final addresses = [
       configAddress,
       gameAddress,
       sectionAddress,
-    ]);
+      ?previousSectionAddress,
+    ];
+    final accounts = await fetchEncodedAccounts(_rpc, addresses);
     final configAccount = _existingAccount(accounts[0]);
     final gameAccount = _existingAccount(accounts[1]);
     if (configAccount == null || gameAccount == null) {
@@ -131,6 +145,12 @@ final class SolanaBitflipRepository implements BitflipRepository {
     final config = decodeConfigState(configAccount.account).data;
     final game = decodeGameState(gameAccount.account).data;
     final encodedSection = _existingAccount(accounts[2]);
+    final encodedPreviousSection = sectionIndex == 0
+        ? null
+        : _existingAccount(accounts[3]);
+    if (encodedPreviousSection != null) {
+      _assertProgramOwner(encodedPreviousSection);
+    }
     final section = encodedSection == null
         ? SectionSnapshot(
             index: sectionIndex,
@@ -139,8 +159,9 @@ final class SolanaBitflipRepository implements BitflipRepository {
             owner: null,
             flipCount: BigInt.zero,
             revision: BigInt.zero,
+            salePriceLamports: BigInt.zero,
           )
-        : _decodeSection(encodedSection);
+        : _decodeSection(encodedSection, gameAddress: gameAddress);
 
     return GameSnapshot(
       gameIndex: game.gameIndex,
@@ -150,6 +171,12 @@ final class SolanaBitflipRepository implements BitflipRepository {
       mintedSections: game.mintedSections,
       claimPriceLamports: config.claimPriceLamports,
       flipFeeLamports: game.flipFeeLamports,
+      startsAtUnixSeconds: game.startsAt,
+      unlockIntervalSeconds: config.unlockIntervalSeconds,
+      earlyUnlockFlips: config.earlyUnlockFlips,
+      previousSectionFlipCount: encodedPreviousSection == null
+          ? null
+          : decodeSectionState(encodedPreviousSection.account).data.flipCount,
       treasury: config.treasury.value,
       section: section,
     );
@@ -205,6 +232,69 @@ final class SolanaBitflipRepository implements BitflipRepository {
       maximumPriceLamports: snapshot.claimPriceLamports,
     );
     return _send(instruction, owner);
+  }
+
+  @override
+  Future<String> listSection(
+    GameSnapshot snapshot,
+    BigInt priceLamports,
+  ) async {
+    if (priceLamports <= BigInt.zero) {
+      throw ArgumentError.value(priceLamports, 'priceLamports');
+    }
+    final owner = _requireWalletAddress();
+    final (game, section) = await _gameAndSectionAddresses(snapshot);
+    final instruction = getListSectionInstruction(
+      programAddress: bitflipProgramProgramAddress,
+      owner: owner,
+      game: game,
+      section: section,
+      gameIndex: snapshot.gameIndex,
+      sectionIndex: snapshot.section.index,
+      priceLamports: priceLamports,
+    );
+    return _send(instruction, owner);
+  }
+
+  @override
+  Future<String> cancelSectionListing(GameSnapshot snapshot) async {
+    final owner = _requireWalletAddress();
+    final (game, section) = await _gameAndSectionAddresses(snapshot);
+    final instruction = getCancelSectionListingInstruction(
+      programAddress: bitflipProgramProgramAddress,
+      owner: owner,
+      game: game,
+      section: section,
+      gameIndex: snapshot.gameIndex,
+      sectionIndex: snapshot.section.index,
+    );
+    return _send(instruction, owner);
+  }
+
+  @override
+  Future<String> purchaseSection(GameSnapshot snapshot) async {
+    final buyer = _requireWalletAddress();
+    final seller = snapshot.section.owner;
+    if (seller == null) {
+      throw StateError('The listed section has no seller.');
+    }
+    final price = snapshot.section.salePriceLamports;
+    if (price <= BigInt.zero) {
+      throw StateError('The section is not listed for sale.');
+    }
+    final (game, section) = await _gameAndSectionAddresses(snapshot);
+    final instruction = getPurchaseSectionInstruction(
+      programAddress: bitflipProgramProgramAddress,
+      buyer: buyer,
+      seller: Address(seller),
+      game: game,
+      section: section,
+      systemProgram: systemProgramAddress,
+      gameIndex: snapshot.gameIndex,
+      sectionIndex: snapshot.section.index,
+      maximumPriceLamports: price,
+    );
+    return _send(instruction, buyer);
   }
 
   @override
@@ -281,6 +371,23 @@ final class SolanaBitflipRepository implements BitflipRepository {
       sectionIndex: snapshot.section.index,
     );
     return _send(instruction, owner);
+  }
+
+  Future<(Address, Address)> _gameAndSectionAddresses(
+    GameSnapshot snapshot,
+  ) async {
+    final (game, _) = await findGamePda(
+      programAddress: bitflipProgramProgramAddress,
+      seeds: GameSeeds(gameIndex: snapshot.gameIndex),
+    );
+    final (section, _) = await findSectionPda(
+      programAddress: bitflipProgramProgramAddress,
+      seeds: SectionSeeds(
+        gameIndex: snapshot.gameIndex,
+        sectionIndex: snapshot.section.index,
+      ),
+    );
+    return (game, section);
   }
 
   @override
@@ -365,7 +472,10 @@ final class SolanaBitflipRepository implements BitflipRepository {
     }
   }
 
-  static SectionSnapshot _decodeSection(ExistingAccount<Uint8List> account) {
+  static SectionSnapshot _decodeSection(
+    ExistingAccount<Uint8List> account, {
+    required Address gameAddress,
+  }) {
     _assertProgramOwner(account);
     final data = decodeSectionState(account.account).data;
     final lifecycle = switch (data.status) {
@@ -381,6 +491,8 @@ final class SolanaBitflipRepository implements BitflipRepository {
       owner: data.owner.value,
       flipCount: data.flipCount,
       revision: data.revision,
+      salePriceLamports: data.salePriceLamports,
+      isProtocolOwned: data.owner == gameAddress,
       assetId: lifecycle == SectionLifecycle.minted ? data.assetId.value : null,
     );
   }

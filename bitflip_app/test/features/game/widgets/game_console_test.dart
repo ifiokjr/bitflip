@@ -20,6 +20,9 @@ void main() {
           state: _state(SectionLifecycle.sealed),
           onConnect: () {},
           onClaim: () {},
+          onList: (_) {},
+          onCancelListing: () {},
+          onPurchase: () {},
           onCommit: () {},
           onClear: () {},
           onSeal: () {},
@@ -51,6 +54,9 @@ void main() {
           ),
           onConnect: () {},
           onClaim: () {},
+          onList: (_) {},
+          onCancelListing: () {},
+          onPurchase: () {},
           onCommit: () {},
           onClear: () {},
           onSeal: () {},
@@ -83,6 +89,9 @@ void main() {
           ),
           onConnect: () {},
           onClaim: () {},
+          onList: (_) {},
+          onCancelListing: () {},
+          onPurchase: () {},
           onCommit: () {},
           onClear: () {},
           onSeal: () {},
@@ -123,6 +132,9 @@ void main() {
           ),
           onConnect: () {},
           onClaim: () {},
+          onList: (_) {},
+          onCancelListing: () {},
+          onPurchase: () {},
           onCommit: () {},
           onClear: () {},
           onSeal: () {},
@@ -155,6 +167,9 @@ void main() {
           ),
           onConnect: () {},
           onClaim: () {},
+          onList: (_) {},
+          onCancelListing: () {},
+          onPurchase: () {},
           onCommit: () {},
           onClear: () {},
           onSeal: () {},
@@ -171,6 +186,77 @@ void main() {
       isNull,
     );
   });
+
+  testWidgets('owner enters an exact SOL price before listing a sector', (
+    tester,
+  ) async {
+    var listedPrice = BigInt.zero;
+    await tester.binding.setSurfaceSize(const Size(500, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _TestApp(
+        child: GameConsole(
+          state: _state(SectionLifecycle.active),
+          onConnect: () {},
+          onClaim: () {},
+          onList: (price) => listedPrice = price,
+          onCancelListing: () {},
+          onPurchase: () {},
+          onCommit: () {},
+          onClear: () {},
+          onSeal: () {},
+          onMint: () {},
+          onRefresh: () {},
+        ),
+      ),
+    );
+
+    final priceField = find.byKey(BitflipTestKeys.sectionSalePrice);
+    await tester.ensureVisible(priceField);
+    await tester.enterText(priceField, '0.25');
+    await tester.pump();
+    final listButton = find.byKey(BitflipTestKeys.listSection);
+    await tester.ensureVisible(listButton);
+    await tester.tap(listButton);
+
+    expect(listedPrice, BigInt.from(250000000));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('listed sector lets another wallet purchase it', (tester) async {
+    var purchaseCalls = 0;
+    await tester.binding.setSurfaceSize(const Size(500, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _TestApp(
+        child: GameConsole(
+          state: _state(
+            SectionLifecycle.active,
+            owner: 'Seller111111111111111111111111111111111111111',
+            walletAddress: 'Buyer1111111111111111111111111111111111111111',
+            salePriceLamports: BigInt.from(500000000),
+          ),
+          onConnect: () {},
+          onClaim: () {},
+          onList: (_) {},
+          onCancelListing: () {},
+          onPurchase: () => purchaseCalls++,
+          onCommit: () {},
+          onClear: () {},
+          onSeal: () {},
+          onMint: () {},
+          onRefresh: () {},
+        ),
+      ),
+    );
+
+    expect(find.text('0.5 SOL'), findsOneWidget);
+    final buyButton = find.byKey(BitflipTestKeys.purchaseSection);
+    await tester.ensureVisible(buyButton);
+    await tester.tap(buyButton);
+    expect(purchaseCalls, 1);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 GameViewState _state(
@@ -179,9 +265,11 @@ GameViewState _state(
   bool isDemo = true,
   bool isWalletSupported = true,
   String? walletAddress = 'DemoWallet111111111111111111111111111111111',
+  String owner = 'DemoWallet111111111111111111111111111111111',
+  BigInt? salePriceLamports,
+  bool isProtocolOwned = false,
   GameLoadStatus? loadStatus,
 }) {
-  const owner = 'DemoWallet111111111111111111111111111111111';
   return GameViewState(
     snapshot: GameSnapshot(
       gameIndex: 0,
@@ -191,6 +279,10 @@ GameViewState _state(
       mintedSections: 0,
       claimPriceLamports: BigInt.zero,
       flipFeeLamports: BigInt.from(5000),
+      startsAtUnixSeconds: BigInt.zero,
+      unlockIntervalSeconds: 3600,
+      earlyUnlockFlips: 1024,
+      previousSectionFlipCount: BigInt.from(1024),
       treasury: null,
       section: SectionSnapshot(
         index: 0,
@@ -199,6 +291,8 @@ GameViewState _state(
         owner: owner,
         flipCount: BigInt.zero,
         revision: BigInt.zero,
+        salePriceLamports: salePriceLamports ?? BigInt.zero,
+        isProtocolOwned: isProtocolOwned,
       ),
     ),
     queued: queued,

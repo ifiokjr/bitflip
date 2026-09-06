@@ -20,7 +20,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get heroBody =>
-      'Claim a 64 × 64 sector, draw in public, then seal the final state into a compressed NFT. Every mark is a tiny on-chain decision.';
+      'One public sector starts the signal. As play grows, new 64 × 64 sectors unlock for players to own, trade, draw on, and eventually seal.';
 
   @override
   String get openCanvas => 'OPEN CANVAS';
@@ -246,10 +246,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get claimSector => 'CLAIM THIS SECTOR';
 
   @override
+  String get sectorLocked => 'SECTOR NOT YET UNLOCKED';
+
+  @override
+  String get sectorReady => 'Unlocked and available to claim.';
+
+  @override
+  String sectorUnlockProgress(String current, int required, String time) {
+    return 'Unlocks at $current / $required previous-sector flips, or after $time.';
+  }
+
+  @override
+  String waitingForSector(String section) {
+    return 'Sector $section must be claimed first.';
+  }
+
+  @override
+  String get bitflipProgram => 'BITFLIP PROGRAM';
+
+  @override
+  String get forSale => 'LISTED FOR SALE';
+
+  @override
+  String get salePrice => 'SALE PRICE';
+
+  @override
+  String get salePriceHelp =>
+      'The buyer pays you directly. Up to 9 decimal places.';
+
+  @override
+  String get invalidSalePrice =>
+      'Enter a positive SOL amount with no more than 9 decimal places.';
+
+  @override
+  String get solUnit => 'SOL';
+
+  @override
+  String get listSection => 'LIST SECTOR FOR SALE';
+
+  @override
+  String get cancelListing => 'CANCEL LISTING';
+
+  @override
+  String get buySection => 'BUY THIS SECTOR';
+
+  @override
   String get mintCompressedNft => 'MINT COMPRESSED NFT';
 
   @override
-  String get sectionOwner => 'CREATOR';
+  String get sectionOwner => 'OWNER';
 
   @override
   String get anonymousOwner => 'NOT CLAIMED';
@@ -285,6 +330,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activityClaimed => 'Sector claim confirmed on-chain.';
 
   @override
+  String get activityListed => 'Sector listed for a fixed on-chain price.';
+
+  @override
+  String get activityListingCancelled => 'Sector listing cancelled.';
+
+  @override
+  String get activityPurchased =>
+      'Sector purchased. Ownership transferred atomically.';
+
+  @override
   String get activitySealed =>
       'Artwork sealed. Its pixels can never change again.';
 
@@ -317,7 +372,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get claimStepBody =>
-      'Sectors open from top-left to bottom-right—by time or by collective activity.';
+      'Bitflip funds one public starting sector. Each later buyer creates the next sector only after time or collective activity unlocks it.';
 
   @override
   String get flipStep => '02 / FLIP';

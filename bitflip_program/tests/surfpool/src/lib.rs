@@ -21,6 +21,7 @@ use program_under_test::ID;
 use program_under_test::SECTION_STATUS_ACTIVE;
 use program_under_test::SECTION_STATUS_MINTED;
 use program_under_test::SECTION_STATUS_SEALED;
+use program_under_test::SectionState;
 
 const CONFIG_SEED: &[u8] = b"config";
 const GAME_SEED: &[u8] = b"game";
@@ -88,6 +89,7 @@ async fn start_game(early_unlock_flips: u32) -> (ProgramTest, Keypair, Pubkey, P
 			.expect("configure test progression");
 	}
 	let (game, game_bump) = game_address(&program_id, 0);
+	let (initial_section, section_bump) = section_address(&program_id, 0, 0);
 	program
 		.send_with_signers(
 			initialize_game_instruction(
@@ -95,8 +97,10 @@ async fn start_game(early_unlock_flips: u32) -> (ProgramTest, Keypair, Pubkey, P
 				&authority.pubkey(),
 				&config,
 				&game,
+				&initial_section,
 				0,
 				game_bump,
+				section_bump,
 			),
 			&[&authority],
 		)
@@ -125,15 +129,24 @@ fn initialize_game_instruction(
 	payer: &Pubkey,
 	config: &Pubkey,
 	game: &Pubkey,
+	initial_section: &Pubkey,
 	game_index: u8,
-	bump: u8,
+	game_bump: u8,
+	section_bump: u8,
 ) -> pina_test::Instruction {
 	program.instruction(
-		&[BitflipInstruction::InitializeGame as u8, game_index, bump],
+		&[
+			BitflipInstruction::InitializeGame as u8,
+			game_index,
+			0,
+			game_bump,
+			section_bump,
+		],
 		vec![
 			AccountMeta::new(*payer, true),
 			AccountMeta::new(*config, false),
 			AccountMeta::new(*game, false),
+			AccountMeta::new(*initial_section, false),
 			AccountMeta::new_readonly(Pubkey::default(), false),
 		],
 	)
@@ -271,18 +284,130 @@ fn flip_pixels_instruction(
 	)
 }
 
+async fn claim_first_user_section(
+	program: &mut ProgramTest,
+	authority: &Keypair,
+	config: &Pubkey,
+	game: &Pubkey,
+	owner: &Keypair,
+) -> Pubkey {
+	let (initial_section, _) = section_address(&program.program_id(), 0, 0);
+	program
+		.send_with_signers(
+			flip_pixels_instruction(
+				program,
+				&owner.pubkey(),
+				config,
+				game,
+				&initial_section,
+				&authority.pubkey(),
+				&[(0, 0)],
+				DEFAULT_FLIP_FEE_LAMPORTS,
+			),
+			&[owner],
+		)
+		.expect("unlock first purchasable section");
+	let (section, bump) = section_address(&program.program_id(), 0, 1);
+	program
+		.send_with_signers(
+			claim_section_instruction(
+				program,
+				&owner.pubkey(),
+				config,
+				game,
+				&initial_section,
+				&section,
+				&authority.pubkey(),
+				1,
+				bump,
+				DEFAULT_CLAIM_PRICE_LAMPORTS,
+			),
+			&[owner],
+		)
+		.expect("claim first purchasable section");
+	section
+}
+
 fn seal_section_instruction(
 	program: &ProgramTest,
 	owner: &Pubkey,
 	game: &Pubkey,
 	section: &Pubkey,
+	section_index: u8,
 ) -> pina_test::Instruction {
 	program.instruction(
-		&[BitflipInstruction::SealSection as u8, 0, 0],
+		&[BitflipInstruction::SealSection as u8, 0, section_index],
 		vec![
 			AccountMeta::new_readonly(*owner, true),
 			AccountMeta::new_readonly(*game, false),
 			AccountMeta::new(*section, false),
+		],
+	)
+}
+
+fn list_section_instruction(
+	program: &ProgramTest,
+	owner: &Pubkey,
+	game: &Pubkey,
+	section: &Pubkey,
+	section_index: u8,
+	price_lamports: u64,
+) -> pina_test::Instruction {
+	let mut data = Vec::with_capacity(11);
+	data.extend_from_slice(&[BitflipInstruction::ListSection as u8, 0, section_index]);
+	data.extend_from_slice(&price_lamports.to_le_bytes());
+	program.instruction(
+		&data,
+		vec![
+			AccountMeta::new_readonly(*owner, true),
+			AccountMeta::new_readonly(*game, false),
+			AccountMeta::new(*section, false),
+		],
+	)
+}
+
+fn cancel_section_listing_instruction(
+	program: &ProgramTest,
+	owner: &Pubkey,
+	game: &Pubkey,
+	section: &Pubkey,
+	section_index: u8,
+) -> pina_test::Instruction {
+	program.instruction(
+		&[
+			BitflipInstruction::CancelSectionListing as u8,
+			0,
+			section_index,
+		],
+		vec![
+			AccountMeta::new_readonly(*owner, true),
+			AccountMeta::new_readonly(*game, false),
+			AccountMeta::new(*section, false),
+		],
+	)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn purchase_section_instruction(
+	program: &ProgramTest,
+	buyer: &Pubkey,
+	seller: &Pubkey,
+	game: &Pubkey,
+	section: &Pubkey,
+	section_index: u8,
+	maximum_price_lamports: u64,
+) -> pina_test::Instruction {
+	let mut data = Vec::with_capacity(11);
+	data.extend_from_slice(&[BitflipInstruction::PurchaseSection as u8, 0, section_index]);
+	data.extend_from_slice(&maximum_price_lamports.to_le_bytes());
+	program.instruction(
+		&data,
+		vec![
+			AccountMeta::new(*buyer, true),
+			AccountMeta::new(*seller, false),
+			AccountMeta::new_readonly(*game, false),
+			AccountMeta::new(*section, false),
+			AccountMeta::new_readonly(Pubkey::default(), false),
 		],
 	)
 }
@@ -294,12 +419,19 @@ fn record_mint_instruction(
 	config: &Pubkey,
 	game: &Pubkey,
 	section: &Pubkey,
+	section_index: u8,
+	expected_owner: &Pubkey,
 	asset_id: &Pubkey,
 	merkle_tree: &Pubkey,
 	leaf_index: u32,
 ) -> pina_test::Instruction {
-	let mut data = Vec::with_capacity(71);
-	data.extend_from_slice(&[BitflipInstruction::RecordSectionMint as u8, 0, 0]);
+	let mut data = Vec::with_capacity(103);
+	data.extend_from_slice(&[
+		BitflipInstruction::RecordSectionMint as u8,
+		0,
+		section_index,
+	]);
+	data.extend_from_slice(&expected_owner.to_bytes());
 	data.extend_from_slice(&asset_id.to_bytes());
 	data.extend_from_slice(&merkle_tree.to_bytes());
 	data.extend_from_slice(&leaf_index.to_le_bytes());
@@ -440,9 +572,17 @@ fn untrusted_sponsor_cannot_start_the_unlock_clock() {
 			.expect("initialize configuration");
 
 		let (game, game_bump) = game_address(&program_id, 0);
+		let (initial_section, section_bump) = section_address(&program_id, 0, 0);
 		let error = program
 			.send_instruction(initialize_game_instruction(
-				&program, &payer, &config, &game, 0, game_bump,
+				&program,
+				&payer,
+				&config,
+				&game,
+				&initial_section,
+				0,
+				game_bump,
+				section_bump,
 			))
 			.expect_err("only the configured authority can start a game");
 
@@ -451,6 +591,36 @@ fn untrusted_sponsor_cannot_start_the_unlock_clock() {
 			program.account(&game).is_err(),
 			"failed start creates no PDA"
 		);
+		assert!(
+			program.account(&initial_section).is_err(),
+			"failed start creates no section PDA"
+		);
+		program.stop().expect("stop isolated program test");
+	});
+}
+
+#[test]
+#[ignore = "run with test:surfpool"]
+fn game_bootstraps_one_program_owned_section() {
+	pina_test::run(async {
+		let (mut program, _, _, game) = start_game(DEFAULT_EARLY_UNLOCK_FLIPS).await;
+		let (initial_section, _) = section_address(&program.program_id(), 0, 0);
+
+		let game_account = program.account(&game).expect("fetch game account");
+		assert_eq!(
+			u16::from_le_bytes([game_account.data[12], game_account.data[13]]),
+			1,
+			"only the bootstrapped section exists"
+		);
+		let section_account = program
+			.account(&initial_section)
+			.expect("fetch initial section");
+		assert_eq!(section_account.owner, program.program_id());
+		assert_eq!(section_account.data.len(), SectionState::SIZE);
+		assert_eq!(&section_account.data[1..33], game.to_bytes().as_slice());
+		assert_eq!(section_account.data[98], 0, "initial section index");
+		assert_eq!(section_account.data[99], SECTION_STATUS_ACTIVE);
+
 		program.stop().expect("stop isolated program test");
 	});
 }
@@ -461,35 +631,17 @@ fn claims_enforce_order_and_activity_unlocks() {
 	pina_test::run(async {
 		let (mut program, authority, config, game) = start_game(1).await;
 		let program_id = program.program_id();
-		let owner_zero = Keypair::new();
+		let player = Keypair::new();
 		let owner_one = Keypair::new();
 		program
-			.fund(&owner_zero.pubkey(), 100_000_000)
-			.expect("fund first section owner");
+			.fund(&player.pubkey(), 100_000_000)
+			.expect("fund initial section player");
 		program
 			.fund(&owner_one.pubkey(), 100_000_000)
 			.expect("fund second section owner");
-		let (section_zero, section_zero_bump) = section_address(&program_id, 0, 0);
+		let (section_zero, _) = section_address(&program_id, 0, 0);
 		let (section_one, section_one_bump) = section_address(&program_id, 0, 1);
 		let (section_two, section_two_bump) = section_address(&program_id, 0, 2);
-
-		program
-			.send_with_signers(
-				claim_section_instruction(
-					&program,
-					&owner_zero.pubkey(),
-					&config,
-					&game,
-					&Pubkey::default(),
-					&section_zero,
-					&authority.pubkey(),
-					0,
-					section_zero_bump,
-					DEFAULT_CLAIM_PRICE_LAMPORTS,
-				),
-				&[&owner_zero],
-			)
-			.expect("claim first section");
 
 		let out_of_order = program
 			.send_with_signers(
@@ -533,7 +685,7 @@ fn claims_enforce_order_and_activity_unlocks() {
 			.send_with_signers(
 				flip_pixels_instruction(
 					&program,
-					&owner_zero.pubkey(),
+					&player.pubkey(),
 					&config,
 					&game,
 					&section_zero,
@@ -541,7 +693,7 @@ fn claims_enforce_order_and_activity_unlocks() {
 					&[(4, 9)],
 					DEFAULT_FLIP_FEE_LAMPORTS,
 				),
-				&[&owner_zero],
+				&[&player],
 			)
 			.expect("one paid flip reaches the configured activity threshold");
 		program
@@ -576,12 +728,28 @@ fn claims_enforce_order_and_activity_unlocks() {
 #[ignore = "run with test:surfpool"]
 fn claim_price_slippage_is_atomic() {
 	pina_test::run(async {
-		let (mut program, authority, config, game) = start_game(DEFAULT_EARLY_UNLOCK_FLIPS).await;
+		let (mut program, authority, config, game) = start_game(1).await;
 		let owner = Keypair::new();
 		program
 			.fund(&owner.pubkey(), 100_000_000)
 			.expect("fund section owner");
-		let (section, bump) = section_address(&program.program_id(), 0, 0);
+		let (previous_section, _) = section_address(&program.program_id(), 0, 0);
+		let (section, bump) = section_address(&program.program_id(), 0, 1);
+		program
+			.send_with_signers(
+				flip_pixels_instruction(
+					&program,
+					&owner.pubkey(),
+					&config,
+					&game,
+					&previous_section,
+					&authority.pubkey(),
+					&[(0, 0)],
+					DEFAULT_FLIP_FEE_LAMPORTS,
+				),
+				&[&owner],
+			)
+			.expect("unlock first purchasable section");
 		let before_owner = program.balance(&owner.pubkey()).expect("owner balance");
 		let before_treasury = program
 			.balance(&authority.pubkey())
@@ -594,10 +762,10 @@ fn claim_price_slippage_is_atomic() {
 					&owner.pubkey(),
 					&config,
 					&game,
-					&Pubkey::default(),
+					&previous_section,
 					&section,
 					&authority.pubkey(),
-					0,
+					1,
 					bump,
 					DEFAULT_CLAIM_PRICE_LAMPORTS - 1,
 				),
@@ -624,10 +792,10 @@ fn claim_price_slippage_is_atomic() {
 					&owner.pubkey(),
 					&config,
 					&game,
-					&Pubkey::default(),
+					&previous_section,
 					&section,
 					&authority.pubkey(),
-					0,
+					1,
 					bump,
 					DEFAULT_CLAIM_PRICE_LAMPORTS,
 				),
@@ -657,25 +825,8 @@ fn duplicate_and_underpriced_flips_are_atomic() {
 		let owner = Keypair::new();
 		program
 			.fund(&owner.pubkey(), 100_000_000)
-			.expect("fund section owner");
-		let (section, bump) = section_address(&program.program_id(), 0, 0);
-		program
-			.send_with_signers(
-				claim_section_instruction(
-					&program,
-					&owner.pubkey(),
-					&config,
-					&game,
-					&Pubkey::default(),
-					&section,
-					&authority.pubkey(),
-					0,
-					bump,
-					DEFAULT_CLAIM_PRICE_LAMPORTS,
-				),
-				&[&owner],
-			)
-			.expect("claim section");
+			.expect("fund section player");
+		let (section, _) = section_address(&program.program_id(), 0, 0);
 		let before = program.account(&section).expect("fetch section");
 		let before_treasury = program
 			.balance(&authority.pubkey())
@@ -725,6 +876,150 @@ fn duplicate_and_underpriced_flips_are_atomic() {
 				.expect("treasury balance"),
 			before_treasury
 		);
+		program.stop().expect("stop isolated program test");
+	});
+}
+
+#[test]
+#[ignore = "run with test:surfpool"]
+fn owner_can_list_cancel_and_sell_a_section_atomically() {
+	pina_test::run(async {
+		const SALE_PRICE: u64 = 25_000_000;
+		let (mut program, authority, config, game) = start_game(1).await;
+		let seller = Keypair::new();
+		let buyer = Keypair::new();
+		program
+			.fund(&seller.pubkey(), 100_000_000)
+			.expect("fund seller");
+		program
+			.fund(&buyer.pubkey(), 100_000_000)
+			.expect("fund buyer");
+		let section =
+			claim_first_user_section(&mut program, &authority, &config, &game, &seller).await;
+
+		let list =
+			|| list_section_instruction(&program, &seller.pubkey(), &game, &section, 1, SALE_PRICE);
+		program
+			.send_with_signers(list(), &[&seller])
+			.expect("owner lists the section");
+		assert_eq!(
+			u64_at(&program.account(&section).expect("fetch listing").data, 131,),
+			SALE_PRICE
+		);
+
+		program
+			.send_with_signers(
+				cancel_section_listing_instruction(&program, &seller.pubkey(), &game, &section, 1),
+				&[&seller],
+			)
+			.expect("owner cancels the listing");
+		let not_for_sale = program
+			.send_with_signers(
+				purchase_section_instruction(
+					&program,
+					&buyer.pubkey(),
+					&seller.pubkey(),
+					&game,
+					&section,
+					1,
+					SALE_PRICE,
+				),
+				&[&buyer],
+			)
+			.expect_err("a cancelled listing cannot be purchased");
+		assert_custom_error(&not_for_sale, BitflipError::SectionNotForSale);
+
+		program
+			.send_with_signers(list(), &[&seller])
+			.expect("owner relists the section");
+		let before_seller = program.balance(&seller.pubkey()).expect("seller balance");
+		let before_buyer = program.balance(&buyer.pubkey()).expect("buyer balance");
+		let slippage = program
+			.send_with_signers(
+				purchase_section_instruction(
+					&program,
+					&buyer.pubkey(),
+					&seller.pubkey(),
+					&game,
+					&section,
+					1,
+					SALE_PRICE - 1,
+				),
+				&[&buyer],
+			)
+			.expect_err("buyer maximum protects against a changed listing price");
+		assert_custom_error(&slippage, BitflipError::PriceSlippage);
+		assert_eq!(
+			program.balance(&seller.pubkey()).expect("seller balance"),
+			before_seller
+		);
+		assert_eq!(
+			program.balance(&buyer.pubkey()).expect("buyer balance"),
+			before_buyer
+		);
+
+		program
+			.send_with_signers(
+				purchase_section_instruction(
+					&program,
+					&buyer.pubkey(),
+					&seller.pubkey(),
+					&game,
+					&section,
+					1,
+					SALE_PRICE,
+				),
+				&[&buyer],
+			)
+			.expect("buyer purchases at the listed price");
+		let section_account = program.account(&section).expect("fetch sold section");
+		assert_eq!(
+			&section_account.data[1..33],
+			buyer.pubkey().to_bytes().as_slice()
+		);
+		assert_eq!(u64_at(&section_account.data, 131), 0);
+		assert_eq!(
+			program.balance(&seller.pubkey()).expect("seller balance"),
+			before_seller + SALE_PRICE
+		);
+		assert_eq!(
+			program.balance(&buyer.pubkey()).expect("buyer balance"),
+			before_buyer - SALE_PRICE
+		);
+
+		let old_owner = program
+			.send_with_signers(
+				seal_section_instruction(&program, &seller.pubkey(), &game, &section, 1),
+				&[&seller],
+			)
+			.expect_err("seller loses owner authority immediately");
+		assert!(!old_owner.message().is_empty());
+		program
+			.send_with_signers(
+				seal_section_instruction(&program, &buyer.pubkey(), &game, &section, 1),
+				&[&buyer],
+			)
+			.expect("buyer receives owner authority");
+
+		let stale_mint = program
+			.send_with_signers(
+				record_mint_instruction(
+					&program,
+					&authority.pubkey(),
+					&config,
+					&game,
+					&section,
+					1,
+					&seller.pubkey(),
+					&Keypair::new().pubkey(),
+					&Keypair::new().pubkey(),
+					0,
+				),
+				&[&authority],
+			)
+			.expect_err("a stale mint cannot target the seller after purchase");
+		assert_custom_error(&stale_mint, BitflipError::OwnerChanged);
+
 		program.stop().expect("stop isolated program test");
 	});
 }
@@ -810,7 +1105,7 @@ fn authority_rotation_requires_both_signers_and_revokes_the_old_authority() {
 #[ignore = "run with test:surfpool"]
 fn only_the_owner_can_seal_an_active_section() {
 	pina_test::run(async {
-		let (mut program, authority, config, game) = start_game(DEFAULT_EARLY_UNLOCK_FLIPS).await;
+		let (mut program, authority, config, game) = start_game(1).await;
 		let owner = Keypair::new();
 		let outsider = Keypair::new();
 		program
@@ -819,28 +1114,12 @@ fn only_the_owner_can_seal_an_active_section() {
 		program
 			.fund(&outsider.pubkey(), 1_000_000)
 			.expect("fund outsider");
-		let (section, bump) = section_address(&program.program_id(), 0, 0);
-		program
-			.send_with_signers(
-				claim_section_instruction(
-					&program,
-					&owner.pubkey(),
-					&config,
-					&game,
-					&Pubkey::default(),
-					&section,
-					&authority.pubkey(),
-					0,
-					bump,
-					DEFAULT_CLAIM_PRICE_LAMPORTS,
-				),
-				&[&owner],
-			)
-			.expect("claim section");
+		let section =
+			claim_first_user_section(&mut program, &authority, &config, &game, &owner).await;
 
 		let unauthorized = program
 			.send_with_signers(
-				seal_section_instruction(&program, &outsider.pubkey(), &game, &section),
+				seal_section_instruction(&program, &outsider.pubkey(), &game, &section, 1),
 				&[&outsider],
 			)
 			.expect_err("non-owner cannot seal a section");
@@ -852,7 +1131,7 @@ fn only_the_owner_can_seal_an_active_section() {
 
 		program
 			.send_with_signers(
-				seal_section_instruction(&program, &owner.pubkey(), &game, &section),
+				seal_section_instruction(&program, &owner.pubkey(), &game, &section, 1),
 				&[&owner],
 			)
 			.expect("owner seals the section");
@@ -868,7 +1147,7 @@ fn only_the_owner_can_seal_an_active_section() {
 #[ignore = "run with test:surfpool"]
 fn mint_recording_requires_sealed_state_and_collection_authority() {
 	pina_test::run(async {
-		let (mut program, authority, config, game) = start_game(DEFAULT_EARLY_UNLOCK_FLIPS).await;
+		let (mut program, authority, config, game) = start_game(1).await;
 		let owner = Keypair::new();
 		let outsider = Keypair::new();
 		program
@@ -877,24 +1156,8 @@ fn mint_recording_requires_sealed_state_and_collection_authority() {
 		program
 			.fund(&outsider.pubkey(), 1_000_000)
 			.expect("fund outsider");
-		let (section, bump) = section_address(&program.program_id(), 0, 0);
-		program
-			.send_with_signers(
-				claim_section_instruction(
-					&program,
-					&owner.pubkey(),
-					&config,
-					&game,
-					&Pubkey::default(),
-					&section,
-					&authority.pubkey(),
-					0,
-					bump,
-					DEFAULT_CLAIM_PRICE_LAMPORTS,
-				),
-				&[&owner],
-			)
-			.expect("claim section");
+		let section =
+			claim_first_user_section(&mut program, &authority, &config, &game, &owner).await;
 		let asset_id = Keypair::new().pubkey();
 		let merkle_tree = Keypair::new().pubkey();
 		let record = |collection_authority: &Pubkey| {
@@ -904,6 +1167,8 @@ fn mint_recording_requires_sealed_state_and_collection_authority() {
 				&config,
 				&game,
 				&section,
+				1,
+				&owner.pubkey(),
 				&asset_id,
 				&merkle_tree,
 				42,
@@ -916,7 +1181,7 @@ fn mint_recording_requires_sealed_state_and_collection_authority() {
 		assert_custom_error(&active, BitflipError::SectionNotSealed);
 		program
 			.send_with_signers(
-				seal_section_instruction(&program, &owner.pubkey(), &game, &section),
+				seal_section_instruction(&program, &owner.pubkey(), &game, &section, 1),
 				&[&owner],
 			)
 			.expect("seal section");

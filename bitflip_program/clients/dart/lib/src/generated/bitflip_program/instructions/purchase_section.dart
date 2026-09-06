@@ -14,66 +14,61 @@ import 'package:solana_kit_instructions/solana_kit_instructions.dart';
 
 
 @immutable
-class InitializeGameInstructionData {
-  const InitializeGameInstructionData({
+class PurchaseSectionInstructionData {
+  const PurchaseSectionInstructionData({
     required this.gameIndex,
     required this.sectionIndex,
-    required this.gameBump,
-    required this.sectionBump,
+    required this.maximumPriceLamports,
   }) :
-      discriminator = 4;
+      discriminator = 11;
 
   final int discriminator;
   final int gameIndex;
   final int sectionIndex;
-  final int gameBump;
-  final int sectionBump;
+  final BigInt maximumPriceLamports;
 }
 
-Encoder<InitializeGameInstructionData> getInitializeGameInstructionDataEncoder() {
+Encoder<PurchaseSectionInstructionData> getPurchaseSectionInstructionDataEncoder() {
   final structEncoder = getStructEncoder(<(String, Encoder<Object?>)>[
     ('discriminator', getU8Encoder()),
     ('gameIndex', getU8Encoder()),
     ('sectionIndex', getU8Encoder()),
-    ('gameBump', getU8Encoder()),
-    ('sectionBump', getU8Encoder()),
+    ('maximumPriceLamports', getU64Encoder()),
   ]);
 
   return transformEncoder(
     structEncoder,
-    (InitializeGameInstructionData value) => <String, Object?>{
-      'discriminator': 4,
+    (PurchaseSectionInstructionData value) => <String, Object?>{
+      'discriminator': 11,
       'gameIndex': value.gameIndex,
       'sectionIndex': value.sectionIndex,
-      'gameBump': value.gameBump,
-      'sectionBump': value.sectionBump,
+      'maximumPriceLamports': value.maximumPriceLamports,
     },
   );
 }
 
-Decoder<InitializeGameInstructionData> getInitializeGameInstructionDataDecoder() {
+Decoder<PurchaseSectionInstructionData> getPurchaseSectionInstructionDataDecoder() {
   final structDecoder = getStructDecoder(<(String, Decoder<Object?>)>[
     ('discriminator', getU8Decoder()),
     ('gameIndex', getU8Decoder()),
     ('sectionIndex', getU8Decoder()),
-    ('gameBump', getU8Decoder()),
-    ('sectionBump', getU8Decoder()),
+    ('maximumPriceLamports', getU64Decoder()),
   ]);
 
   Never throwInvalidByteLength(int expected, int bytesLength) {
     throw SolanaError(
       SolanaErrorCode.codecsInvalidByteLength,
       {
-        'codecDescription': 'initializeGame instruction decoder',
+        'codecDescription': 'purchaseSection instruction decoder',
         'expected': expected,
         'bytesLength': bytesLength,
       },
     );
   }
 
-  (InitializeGameInstructionData, int) readTopLevel(Uint8List bytes, int offset) {
+  (PurchaseSectionInstructionData, int) readTopLevel(Uint8List bytes, int offset) {
     getConstantDecoder(
-      getU8Encoder().encode(4),
+      getU8Encoder().encode(11),
     ).read(bytes, offset + 0);
     final (map, newOffset) = structDecoder.read(bytes, offset);
     if (newOffset != bytes.length) {
@@ -81,11 +76,10 @@ Decoder<InitializeGameInstructionData> getInitializeGameInstructionDataDecoder()
     }
 
     return (
-      InitializeGameInstructionData(
+      PurchaseSectionInstructionData(
       gameIndex: map['gameIndex']! as int,
       sectionIndex: map['sectionIndex']! as int,
-      gameBump: map['gameBump']! as int,
-      sectionBump: map['sectionBump']! as int,
+      maximumPriceLamports: map['maximumPriceLamports']! as BigInt,
       ),
       newOffset,
     );
@@ -93,7 +87,7 @@ Decoder<InitializeGameInstructionData> getInitializeGameInstructionDataDecoder()
 
   return switch (structDecoder) {
     FixedSizeDecoder<Map<String, Object?>>() =>
-      FixedSizeDecoder<InitializeGameInstructionData>(
+      FixedSizeDecoder<PurchaseSectionInstructionData>(
         fixedSize: structDecoder.fixedSize,
         read: (bytes, offset) {
           final bytesLength = bytes.length - offset;
@@ -104,51 +98,49 @@ Decoder<InitializeGameInstructionData> getInitializeGameInstructionDataDecoder()
         },
       ),
     VariableSizeDecoder<Map<String, Object?>>() =>
-      VariableSizeDecoder<InitializeGameInstructionData>(
+      VariableSizeDecoder<PurchaseSectionInstructionData>(
         read: readTopLevel,
         maxSize: structDecoder.maxSize,
       ),
   };
 }
 
-Codec<InitializeGameInstructionData, InitializeGameInstructionData> getInitializeGameInstructionDataCodec() {
-  return combineCodec(getInitializeGameInstructionDataEncoder(), getInitializeGameInstructionDataDecoder());
+Codec<PurchaseSectionInstructionData, PurchaseSectionInstructionData> getPurchaseSectionInstructionDataCodec() {
+  return combineCodec(getPurchaseSectionInstructionDataEncoder(), getPurchaseSectionInstructionDataDecoder());
 }
 
-/// Creates a [InitializeGame] instruction.
-Instruction getInitializeGameInstruction({
+/// Creates a [PurchaseSection] instruction.
+Instruction getPurchaseSectionInstruction({
   required Address programAddress,
-  required Address payer,
-  required Address config,
+  required Address buyer,
+  required Address seller,
   required Address game,
   required Address section,
   required Address systemProgram,
   required int gameIndex,
   required int sectionIndex,
-  required int gameBump,
-  required int sectionBump,
+  required BigInt maximumPriceLamports,
 }) {
-  final instructionData = InitializeGameInstructionData(
+  final instructionData = PurchaseSectionInstructionData(
       gameIndex: gameIndex,
       sectionIndex: sectionIndex,
-      gameBump: gameBump,
-      sectionBump: sectionBump,
+      maximumPriceLamports: maximumPriceLamports,
   );
 
   return Instruction(
     programAddress: programAddress,
     accounts: [
-    AccountMeta(address: payer, role: AccountRole.writableSigner),
-    AccountMeta(address: config, role: AccountRole.writable),
-    AccountMeta(address: game, role: AccountRole.writable),
+    AccountMeta(address: buyer, role: AccountRole.writableSigner),
+    AccountMeta(address: seller, role: AccountRole.writable),
+    AccountMeta(address: game, role: AccountRole.readonly),
     AccountMeta(address: section, role: AccountRole.writable),
     AccountMeta(address: systemProgram, role: AccountRole.readonly),
     ],
-    data: getInitializeGameInstructionDataEncoder().encode(instructionData),
+    data: getPurchaseSectionInstructionDataEncoder().encode(instructionData),
   );
 }
 
-/// Parses a [InitializeGame] instruction from raw instruction data.
-InitializeGameInstructionData parseInitializeGameInstruction(Instruction instruction) {
-  return getInitializeGameInstructionDataDecoder().decode(instruction.data!);
+/// Parses a [PurchaseSection] instruction from raw instruction data.
+PurchaseSectionInstructionData parsePurchaseSectionInstruction(Instruction instruction) {
+  return getPurchaseSectionInstructionDataDecoder().decode(instruction.data!);
 }

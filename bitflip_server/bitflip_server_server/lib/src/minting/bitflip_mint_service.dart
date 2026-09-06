@@ -344,6 +344,7 @@ final class SolanaBitflipMintService implements BitflipMintService {
         section: fresh.sectionAddress,
         gameIndex: fresh.gameIndex,
         sectionIndex: fresh.sectionIndex,
+        expectedOwner: fresh.owner,
         assetId: assetId,
         merkleTree: tree,
         leafIndex: leafIndex,

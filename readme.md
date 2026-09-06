@@ -15,6 +15,8 @@ The product is one responsive Flutter codebase for Android, iOS, macOS, and the 
 
 The canvas is 1024 × 1024 pixels split into 256 sectors. Each sector coordinate is two `u8` values (`x`, `y`), avoiding ambiguous packed integers. A raw bitmap uses 512 bytes per sector and is easy to validate, render, and hash.
 
+The canvas is allocated lazily: game initialization creates one protocol-owned public sector, and each later claimant funds the rent for exactly one newly unlocked sector. Owners can list active or sealed sectors at a fixed on-chain SOL price without creating a separate listing account. See the [sector lifecycle and cost model](docs/section-lifecycle.md).
+
 ## Development
 
 All commands run inside the reproducible `devenv` shell. `install:all` installs the exact Serverpod CLI into the gitignored workspace tool cache and runs it with the Dart SDK bundled by the pinned Flutter release, avoiding host SDK drift:
@@ -106,7 +108,9 @@ The owner requests a five-minute challenge, signs its exact text with their wall
 - No reward faucet or no-op payout exists.
 - Duplicate pixel coordinates are rejected on-chain.
 - Claim and flip prices include explicit client slippage ceilings.
-- Claims unlock deterministically and in sequence.
+- Game initialization creates exactly one protocol-owned public sector.
+- Later claims unlock deterministically and in sequence, with the claimant paying account rent.
+- Fixed-price sector resale transfers payment and ownership atomically; minted sectors cannot split ownership from their cNFT.
 - Only the configured authority can start the next game and its unlock clock.
 - Only a sector owner can seal; sealing is irreversible.
 - Only the attested collection authority can record a mint.

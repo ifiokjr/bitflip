@@ -17,6 +17,9 @@ enum GameNotice {
   connected,
   funded,
   claimed,
+  listed,
+  listingCancelled,
+  purchased,
   sealed,
   minted,
   batchFull,
@@ -348,8 +351,10 @@ class GameController extends _$GameController {
   }
 
   Future<void> claimSection() async {
+    final now = BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000);
     if (state.isBusy ||
         state.snapshot.section.isClaimed ||
+        !state.snapshot.canClaimSectionAt(now) ||
         !state.canTransact) {
       return;
     }
@@ -377,6 +382,132 @@ class GameController extends _$GameController {
       );
       await refresh();
     } on Object {
+      state = state.copyWith(
+        isBusy: false,
+        activity: const GameActivity(GameNotice.connectionIssue),
+      );
+    }
+  }
+
+  Future<void> listSection(BigInt priceLamports) async {
+    final section = state.snapshot.section;
+    if (state.isBusy ||
+        !state.canTransact ||
+        priceLamports <= BigInt.zero ||
+        section.isProtocolOwned ||
+        section.lifecycle == SectionLifecycle.minted ||
+        state.walletAddress != section.owner) {
+      return;
+    }
+    if (state.snapshot.isDemo) {
+      state = state.copyWith(
+        snapshot: state.snapshot.copyWith(
+          section: section.copyWith(salePriceLamports: priceLamports),
+        ),
+        activity: const GameActivity(GameNotice.listed),
+      );
+      return;
+    }
+    state = state.copyWith(isBusy: true);
+    try {
+      final transactionSignature = await _repository.listSection(
+        state.snapshot,
+        priceLamports,
+      );
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        isBusy: false,
+        activity: GameActivity(
+          GameNotice.listed,
+          transactionSignature: transactionSignature,
+        ),
+      );
+      await refresh();
+    } on Object {
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        isBusy: false,
+        activity: const GameActivity(GameNotice.connectionIssue),
+      );
+    }
+  }
+
+  Future<void> cancelSectionListing() async {
+    final section = state.snapshot.section;
+    if (state.isBusy ||
+        !state.canTransact ||
+        !section.isListed ||
+        state.walletAddress != section.owner) {
+      return;
+    }
+    if (state.snapshot.isDemo) {
+      state = state.copyWith(
+        snapshot: state.snapshot.copyWith(
+          section: section.copyWith(salePriceLamports: BigInt.zero),
+        ),
+        activity: const GameActivity(GameNotice.listingCancelled),
+      );
+      return;
+    }
+    state = state.copyWith(isBusy: true);
+    try {
+      final transactionSignature = await _repository.cancelSectionListing(
+        state.snapshot,
+      );
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        isBusy: false,
+        activity: GameActivity(
+          GameNotice.listingCancelled,
+          transactionSignature: transactionSignature,
+        ),
+      );
+      await refresh();
+    } on Object {
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        isBusy: false,
+        activity: const GameActivity(GameNotice.connectionIssue),
+      );
+    }
+  }
+
+  Future<void> purchaseSection() async {
+    final section = state.snapshot.section;
+    if (state.isBusy ||
+        !state.canTransact ||
+        !section.isListed ||
+        state.walletAddress == section.owner) {
+      return;
+    }
+    if (state.snapshot.isDemo) {
+      state = state.copyWith(
+        snapshot: state.snapshot.copyWith(
+          section: section.copyWith(
+            owner: state.walletAddress ?? 'YOU…DEMO',
+            salePriceLamports: BigInt.zero,
+          ),
+        ),
+        activity: const GameActivity(GameNotice.purchased),
+      );
+      return;
+    }
+    state = state.copyWith(isBusy: true);
+    try {
+      final transactionSignature = await _repository.purchaseSection(
+        state.snapshot,
+      );
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        isBusy: false,
+        activity: GameActivity(
+          GameNotice.purchased,
+          transactionSignature: transactionSignature,
+        ),
+      );
+      await refresh();
+    } on Object {
+      if (!ref.mounted) return;
       state = state.copyWith(
         isBusy: false,
         activity: const GameActivity(GameNotice.connectionIssue),
