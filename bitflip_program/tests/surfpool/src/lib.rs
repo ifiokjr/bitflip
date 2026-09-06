@@ -464,6 +464,16 @@ fn u32_at(data: &[u8], offset: usize) -> u32 {
 	u32::from_le_bytes(data[offset..offset + 4].try_into().expect("u32 field"))
 }
 
+fn coordinates_for_batch(batch_index: usize) -> [(u8, u8); 16] {
+	core::array::from_fn(|coordinate_index| {
+		let pixel_index = (batch_index * 16 + coordinate_index) % 4_096;
+		(
+			u8::try_from(pixel_index % 64).expect("x coordinate"),
+			u8::try_from(pixel_index / 64).expect("y coordinate"),
+		)
+	})
+}
+
 #[test]
 #[ignore = "run with pina test"]
 fn permissionless_sponsor_initializes_safe_fixed_configuration() {
@@ -1215,6 +1225,111 @@ fn mint_recording_requires_sealed_state_and_collection_authority() {
 			.send_with_signers(record(&authority.pubkey()), &[&authority])
 			.expect_err("a recorded mint cannot be overwritten");
 		assert_custom_error(&duplicate, BitflipError::SectionAlreadyMinted);
+		program.stop().expect("stop isolated program test");
+	});
+}
+
+#[test]
+#[ignore = "run with test:surfpool"]
+fn burst_traffic_preserves_real_sbf_accounting() {
+	const TRANSACTION_COUNT: usize = 128;
+	const PIXELS_PER_TRANSACTION: u64 = 16;
+
+	pina_test::run(async {
+		let (mut program, authority, config, game) = start_game(DEFAULT_EARLY_UNLOCK_FLIPS).await;
+		let (section, _) = section_address(&program.program_id(), 0, 0);
+		let player = program.payer();
+
+		let treasury_before = program
+			.balance(&authority.pubkey())
+			.expect("treasury balance before burst");
+		std::thread::scope(|scope| {
+			let program_ref = &program;
+			let handles: Vec<_> = (0..TRANSACTION_COUNT)
+				.map(|batch_index| {
+					let coordinates = coordinates_for_batch(batch_index);
+					let instruction = flip_pixels_instruction(
+						program_ref,
+						&player,
+						&config,
+						&game,
+						&section,
+						&authority.pubkey(),
+						&coordinates,
+						DEFAULT_FLIP_FEE_LAMPORTS * PIXELS_PER_TRANSACTION,
+					);
+
+					scope.spawn(move || program_ref.send_instruction(instruction))
+				})
+				.collect();
+
+			for handle in handles {
+				handle
+					.join()
+					.expect("burst worker does not panic")
+					.expect("contended flip transaction succeeds");
+			}
+		});
+
+		let expected_flips =
+			u64::try_from(TRANSACTION_COUNT).expect("transaction count") * PIXELS_PER_TRANSACTION;
+		let section_account = program.account(&section).expect("section after burst");
+		let game_account = program.account(&game).expect("game after burst");
+		assert_eq!(u64_at(&section_account.data, 107), expected_flips);
+		assert_eq!(
+			u64_at(&section_account.data, 115),
+			u64::try_from(TRANSACTION_COUNT).expect("transaction count")
+		);
+		assert_eq!(u64_at(&game_account.data, 24), expected_flips);
+		assert_eq!(
+			program
+				.balance(&authority.pubkey())
+				.expect("treasury balance after burst"),
+			treasury_before + expected_flips * DEFAULT_FLIP_FEE_LAMPORTS
+		);
+
+		let other_section = Pubkey::new_unique();
+		let first = flip_pixels_instruction(
+			&program,
+			&player,
+			&config,
+			&game,
+			&section,
+			&authority.pubkey(),
+			&[(0, 0)],
+			DEFAULT_FLIP_FEE_LAMPORTS,
+		);
+		let second = flip_pixels_instruction(
+			&program,
+			&player,
+			&config,
+			&game,
+			&other_section,
+			&authority.pubkey(),
+			&[(0, 0)],
+			DEFAULT_FLIP_FEE_LAMPORTS,
+		);
+		let shared_writable: Vec<Pubkey> = first
+			.accounts
+			.iter()
+			.filter(|account| account.is_writable)
+			.filter(|account| {
+				second
+					.accounts
+					.iter()
+					.any(|candidate| candidate.is_writable && candidate.pubkey == account.pubkey)
+			})
+			.map(|account| account.pubkey)
+			.collect();
+		assert!(
+			shared_writable.contains(&game),
+			"the current global flip counter serializes section shards"
+		);
+		assert!(
+			shared_writable.contains(&authority.pubkey()),
+			"the current treasury transfer also serializes section shards"
+		);
+
 		program.stop().expect("stop isolated program test");
 	});
 }

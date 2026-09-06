@@ -22,6 +22,9 @@ sbf-test-authority = []
 [dependencies]
 pina = { workspace = true, default-features = false, features = ["derive", "logs"] }
 
+[dev-dependencies]
+proptest = "=1.11.0"
+
 [lints]
 workspace = true
 
