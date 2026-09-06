@@ -157,7 +157,7 @@ class GameConsole extends HookWidget {
               ],
             ),
             const SizedBox(height: 18),
-            if (!canSign && state.isWalletSupported)
+            if (state.walletAddress == null && state.isWalletSupported)
               FilledButton.icon(
                 key: BitflipTestKeys.connectWallet,
                 onPressed: state.isBusy ? null : onConnect,

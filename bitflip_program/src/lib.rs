@@ -24,7 +24,12 @@ declare_id!("5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM");
 
 /// Fresh external bootstrap authority. One-time config creation is safe to
 /// sponsor permissionlessly because callers cannot replace this value.
+#[cfg(not(feature = "sbf-test-authority"))]
 pub const BOOTSTRAP_AUTHORITY: Address = address!("B8yibwGRtrnp55T8uRyt19J6KTTRAZMTD9DgEgjQqVNi");
+
+/// Public, throwaway authority used only by the isolated real-SBF test build.
+#[cfg(feature = "sbf-test-authority")]
+pub const BOOTSTRAP_AUTHORITY: Address = address!("HMvYWLX41QFw8C3umdL1mbcRDyhGgLWKJK5Zf1dDvFm9");
 
 pub const CANVAS_SIDE: u16 = 1_024;
 pub const SECTION_GRID_SIDE: u8 = 16;

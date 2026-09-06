@@ -181,6 +181,7 @@ void main() {
         errorContainer.read(gameControllerProvider).loadStatus,
         GameLoadStatus.error,
       );
+      expect(errorContainer.read(gameControllerProvider).canTransact, isFalse);
     });
 
     test('unsupported live platforms cannot queue or transact', () async {

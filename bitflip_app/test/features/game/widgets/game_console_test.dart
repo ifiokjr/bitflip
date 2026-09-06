@@ -138,6 +138,38 @@ void main() {
       isNull,
     );
   });
+
+  testWidgets('wallet users cannot transact from unavailable chain state', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(500, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _TestApp(
+        child: GameConsole(
+          state: _state(
+            SectionLifecycle.unclaimed,
+            isDemo: false,
+            loadStatus: GameLoadStatus.unavailable,
+          ),
+          onConnect: () {},
+          onClaim: () {},
+          onCommit: () {},
+          onClear: () {},
+          onSeal: () {},
+          onMint: () {},
+          onRefresh: () {},
+        ),
+      ),
+    );
+
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(BitflipTestKeys.claimSection))
+          .onPressed,
+      isNull,
+    );
+  });
 }
 
 GameViewState _state(
@@ -146,6 +178,7 @@ GameViewState _state(
   bool isDemo = true,
   bool isWalletSupported = true,
   String? walletAddress = 'DemoWallet111111111111111111111111111111111',
+  GameLoadStatus? loadStatus,
 }) {
   const owner = 'DemoWallet111111111111111111111111111111111';
   return GameViewState(
@@ -172,7 +205,8 @@ GameViewState _state(
     isBusy: false,
     isWalletSupported: isWalletSupported,
     walletAddress: walletAddress,
-    loadStatus: isDemo ? GameLoadStatus.demo : GameLoadStatus.ready,
+    loadStatus:
+        loadStatus ?? (isDemo ? GameLoadStatus.demo : GameLoadStatus.ready),
     walletChain: 'solana:devnet',
   );
 }
