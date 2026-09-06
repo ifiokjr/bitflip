@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:bitflip_program/bitflip_program_constraints.dart';
 import 'package:bs58/bs58.dart';
 
 const colourPixelsFlippedEventDiscriminator = 1;
@@ -61,7 +62,7 @@ ColourPixelsFlipped decodeColourPixelsFlippedEvent(String encoded) {
       policyVersion > 0x7fffffffffffffff ||
       revision == 0 ||
       revision > 0x7fffffffffffffff ||
-      gameIndex >= 4 ||
+      gameIndex >= bitflipGameCount ||
       count == 0 ||
       count > maximumColourFlipBatch ||
       colour >= colourPaletteSize) {
