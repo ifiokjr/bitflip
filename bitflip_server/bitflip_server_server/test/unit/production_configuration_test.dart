@@ -72,8 +72,7 @@ void main() {
       );
       expect(
         () => SolanaBitflipMintService.fromEnvironment(
-          _validEnvironment()
-            ..['BITFLIP_PRIORITY_FEE_MICROLAMPORTS'] = '-1',
+          _validEnvironment()..['BITFLIP_PRIORITY_FEE_MICROLAMPORTS'] = '-1',
           production: true,
         ),
         throwsA(isA<StateError>()),

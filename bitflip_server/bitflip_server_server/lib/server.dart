@@ -4,13 +4,26 @@ import 'package:bitflip_server_server/src/generated/serverpod.dart';
 import 'package:bitflip_server_server/src/minting/bitflip_mint_service.dart';
 import 'package:bitflip_server_server/src/minting/section_routes.dart';
 import 'package:bitflip_server_server/src/web/security_headers_middleware.dart';
+import 'package:bitflip_server_server/src/web/solana_rpc_health_indicator.dart';
 
 /// The starting point of the Serverpod server.
 void run(List<String> args) async {
-  final pod = Serverpod(args);
+  final runMode =
+      _argumentValue(args, '--mode') ??
+      Platform.environment['runmode'] ??
+      ServerpodRunMode.development;
   final mintService = SolanaBitflipMintService.fromEnvironment(
     Platform.environment,
-    production: pod.runMode == ServerpodRunMode.production,
+    production: runMode == ServerpodRunMode.production,
+  );
+  final pod = Serverpod(
+    args,
+    healthConfig: HealthConfig(
+      cacheTtl: const Duration(seconds: 5),
+      additionalReadinessIndicators: [
+        SolanaRpcHealthIndicator.forService(mintService),
+      ],
+    ),
   );
   MintServiceRegistry.configure(mintService);
   pod.webServer.addMiddleware(const SecurityHeadersMiddleware().call, '/');
@@ -31,4 +44,15 @@ void run(List<String> args) async {
   }
 
   await pod.start();
+}
+
+String? _argumentValue(List<String> args, String name) {
+  for (var index = 0; index < args.length; index++) {
+    final argument = args[index];
+    if (argument == name && index + 1 < args.length) return args[index + 1];
+    if (argument.startsWith('$name=')) {
+      return argument.substring(name.length + 1);
+    }
+  }
+  return null;
 }

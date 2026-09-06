@@ -53,5 +53,8 @@ USER bitflip
 EXPOSE 8080
 EXPOSE 8082
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget --quiet --output-document=- http://127.0.0.1:8080/livez >/dev/null || exit 1
+
 # Define the entrypoint command
 ENTRYPOINT ["sh", "-c", "exec ./bin/server --mode=\"$runmode\" --server-id=\"$serverid\" --logging=\"$logging\" --role=\"$role\""]
