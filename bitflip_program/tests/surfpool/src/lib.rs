@@ -571,6 +571,25 @@ fn settle_section_economy_instruction(
 	)
 }
 
+fn withdraw_section_owner_fees_instruction(
+	program: &ProgramTest,
+	owner: &Pubkey,
+	section: &Pubkey,
+	section_index: u8,
+) -> pina_test::Instruction {
+	program.instruction(
+		&[
+			BitflipInstruction::WithdrawSectionOwnerFees as u8,
+			0,
+			section_index,
+		],
+		vec![
+			AccountMeta::new(*owner, true),
+			AccountMeta::new(*section, false),
+		],
+	)
+}
+
 async fn claim_first_user_section(
 	program: &mut ProgramTest,
 	authority: &Keypair,
@@ -641,7 +660,7 @@ fn seal_section_instruction(
 	program.instruction(
 		&[BitflipInstruction::SealSection as u8, 0, section_index],
 		vec![
-			AccountMeta::new_readonly(*owner, true),
+			AccountMeta::new(*owner, true),
 			AccountMeta::new_readonly(*game, false),
 			AccountMeta::new(*section, false),
 		],
@@ -1550,6 +1569,196 @@ fn duplicate_and_underpriced_flips_are_atomic() {
 
 #[test]
 #[ignore = "run with test:surfpool"]
+fn user_owned_section_receives_fixed_fee_share_atomically() {
+	pina_test::run(async {
+		let CustodyGame {
+			mut program,
+			authority,
+			config,
+			game,
+			bit_mint,
+			bit_reserve,
+			..
+		} = start_game_with_custody(1).await;
+		let owner = Keypair::new();
+		let player = Keypair::new();
+		program
+			.fund(&owner.pubkey(), 200_000_000)
+			.expect("fund section owner");
+		program
+			.fund(&player.pubkey(), 100_000_000)
+			.expect("fund section player");
+		let section = claim_first_user_section(
+			&mut program,
+			&authority,
+			&config,
+			&game,
+			&owner,
+			&bit_mint.pubkey(),
+			&bit_reserve,
+		)
+		.await;
+		let player_bits = create_player_bit_account(&program, &player.pubkey(), &bit_mint.pubkey());
+		let owner_bits = get_associated_token_address_with_program_id(
+			&owner.pubkey(),
+			&bit_mint.pubkey(),
+			&spl_token_2022_interface::id(),
+		);
+		let split = program_under_test::pricing::split_fee(
+			DEFAULT_START_PRICE_LAMPORTS,
+			DEFAULT_OWNER_SHARE_BASIS_POINTS,
+		)
+		.expect("valid fixed owner share");
+
+		let owner_before = program.balance(&owner.pubkey()).expect("owner before flip");
+		let player_before = program
+			.balance(&player.pubkey())
+			.expect("player before flip");
+
+		let section_lamports_before = program.balance(&section).expect("section before paid flip");
+		program
+			.send_with_signers(
+				flip_pixels_instruction(
+					&program,
+					[
+						&player.pubkey(),
+						&config,
+						&game,
+						&section,
+						&bit_mint.pubkey(),
+					],
+					&[(2, 2)],
+					TestFlipLimits {
+						section_index: 1,
+						..TestFlipLimits::full_reward(1)
+					},
+				),
+				&[&player],
+			)
+			.expect("pay a non-owner flip fee");
+		assert_eq!(
+			program
+				.balance(&owner.pubkey())
+				.expect("owner before withdrawal"),
+			owner_before,
+		);
+		assert_eq!(
+			program
+				.balance(&player.pubkey())
+				.expect("player after paid flip"),
+			player_before - DEFAULT_START_PRICE_LAMPORTS,
+		);
+		assert_eq!(
+			program.balance(&section).expect("section after paid flip"),
+			section_lamports_before + DEFAULT_START_PRICE_LAMPORTS,
+		);
+		assert_eq!(token_amount(&program, &player_bits), 1);
+		let accrued = program.account(&section).expect("section fee ledgers");
+		assert_eq!(u64_at(&accrued.data, 251), split.protocol_lamports);
+		assert_eq!(u64_at(&accrued.data, 259), split.owner_lamports);
+		let attacker = Keypair::new();
+		program
+			.fund(&attacker.pubkey(), 1_000_000)
+			.expect("fund false owner");
+		program
+			.send_with_signers(
+				withdraw_section_owner_fees_instruction(&program, &attacker.pubkey(), &section, 1),
+				&[&attacker],
+			)
+			.expect_err("a false owner cannot withdraw accrued fees");
+		assert_eq!(
+			program
+				.account(&section)
+				.expect("section after false owner")
+				.data,
+			accrued.data,
+		);
+
+		program
+			.send_with_signers(
+				withdraw_section_owner_fees_instruction(&program, &owner.pubkey(), &section, 1),
+				&[&owner],
+			)
+			.expect("owner withdraws their accrued share");
+		assert_eq!(
+			program
+				.balance(&owner.pubkey())
+				.expect("owner after withdrawal"),
+			owner_before + split.owner_lamports,
+		);
+		assert_eq!(
+			program.balance(&section).expect("section after withdrawal"),
+			section_lamports_before + split.protocol_lamports,
+		);
+		let withdrawn = program.account(&section).expect("withdrawn fee ledgers");
+		assert_eq!(u64_at(&withdrawn.data, 251), split.protocol_lamports);
+		assert_eq!(u64_at(&withdrawn.data, 259), 0);
+		let empty = program
+			.send_with_signers(
+				withdraw_section_owner_fees_instruction(&program, &owner.pubkey(), &section, 1),
+				&[&owner],
+			)
+			.expect_err("an owner cannot withdraw the same share twice");
+		assert_custom_error(&empty, BitflipError::NoOwnerFees);
+
+		let owner_lamports_before = program
+			.balance(&owner.pubkey())
+			.expect("owner before self flip");
+		let section_lamports_before = program.balance(&section).expect("section before self flip");
+		let owner_tokens_before = token_amount(&program, &owner_bits);
+		program
+			.send_with_signers(
+				flip_pixels_instruction(
+					&program,
+					[
+						&owner.pubkey(),
+						&config,
+						&game,
+						&section,
+						&bit_mint.pubkey(),
+					],
+					&[(3, 3)],
+					TestFlipLimits {
+						section_index: 1,
+						..TestFlipLimits::full_reward(1)
+					},
+				),
+				&[&owner],
+			)
+			.expect("an owner can flip but retains only their fixed share");
+		assert_eq!(
+			program
+				.balance(&owner.pubkey())
+				.expect("owner after self flip"),
+			owner_lamports_before - DEFAULT_START_PRICE_LAMPORTS,
+		);
+		assert_eq!(
+			program.balance(&section).expect("section after self flip"),
+			section_lamports_before + DEFAULT_START_PRICE_LAMPORTS,
+		);
+		assert_eq!(token_amount(&program, &owner_bits), owner_tokens_before + 1);
+		let self_flip = program.account(&section).expect("self-flip fee ledgers");
+		assert_eq!(u64_at(&self_flip.data, 251), split.protocol_lamports * 2);
+		assert_eq!(u64_at(&self_flip.data, 259), split.owner_lamports);
+		program
+			.send_with_signers(
+				withdraw_section_owner_fees_instruction(&program, &owner.pubkey(), &section, 1),
+				&[&owner],
+			)
+			.expect("owner withdraws their self-flip share");
+		assert_eq!(
+			program
+				.balance(&owner.pubkey())
+				.expect("owner after self withdrawal"),
+			owner_lamports_before - split.protocol_lamports,
+		);
+
+		program.stop().expect("stop isolated program test");
+	});
+}
+
+#[test]
+#[ignore = "run with test:surfpool"]
 fn owner_can_list_cancel_and_sell_a_section_atomically() {
 	pina_test::run(async {
 		const SALE_PRICE: u64 = 25_000_000;
@@ -1580,6 +1789,32 @@ fn owner_can_list_cancel_and_sell_a_section_atomically() {
 			&bit_reserve,
 		)
 		.await;
+		program
+			.send_with_signers(
+				flip_pixels_instruction(
+					&program,
+					[
+						&seller.pubkey(),
+						&config,
+						&game,
+						&section,
+						&bit_mint.pubkey(),
+					],
+					&[(4, 4)],
+					TestFlipLimits {
+						section_index: 1,
+						..TestFlipLimits::full_reward(1)
+					},
+				),
+				&[&seller],
+			)
+			.expect("seller accrues a fee share before listing");
+		let owner_share = program_under_test::pricing::split_fee(
+			DEFAULT_START_PRICE_LAMPORTS,
+			DEFAULT_OWNER_SHARE_BASIS_POINTS,
+		)
+		.expect("valid owner share")
+		.owner_lamports;
 
 		let list =
 			|| list_section_instruction(&program, &seller.pubkey(), &game, &section, 1, SALE_PRICE);
@@ -1618,6 +1853,7 @@ fn owner_can_list_cancel_and_sell_a_section_atomically() {
 			.expect("owner relists the section");
 		let before_seller = program.balance(&seller.pubkey()).expect("seller balance");
 		let before_buyer = program.balance(&buyer.pubkey()).expect("buyer balance");
+		let before_section = program.balance(&section).expect("section balance");
 		let slippage = program
 			.send_with_signers(
 				purchase_section_instruction(
@@ -1662,13 +1898,18 @@ fn owner_can_list_cancel_and_sell_a_section_atomically() {
 			buyer.pubkey().to_bytes().as_slice()
 		);
 		assert_eq!(u64_at(&section_account.data, 163), 0);
+		assert_eq!(u64_at(&section_account.data, 259), 0);
 		assert_eq!(
 			program.balance(&seller.pubkey()).expect("seller balance"),
-			before_seller + SALE_PRICE
+			before_seller + SALE_PRICE + owner_share
 		);
 		assert_eq!(
 			program.balance(&buyer.pubkey()).expect("buyer balance"),
 			before_buyer - SALE_PRICE
+		);
+		assert_eq!(
+			program.balance(&section).expect("section balance"),
+			before_section - owner_share
 		);
 
 		let old_owner = program

@@ -181,7 +181,7 @@ pub struct PriceQuote {
 pub struct FeeSplit {
 	/// Lamports retained by the protocol.
 	pub protocol_lamports: u64,
-	/// Lamports sent to the section owner.
+	/// Lamports accrued for the section owner.
 	pub owner_lamports: u64,
 }
 

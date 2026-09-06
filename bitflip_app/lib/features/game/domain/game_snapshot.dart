@@ -77,6 +77,7 @@ final class GameSnapshot {
     required this.previousSectionFlipCount,
     required this.treasury,
     required this.section,
+    this.ownerShareBasisPoints = 0,
     this.bitMint,
     this.bitReserve,
     this.priceConfig,
@@ -152,6 +153,7 @@ final class GameSnapshot {
   final BigInt? previousSectionFlipCount;
   final String? treasury;
   final SectionSnapshot section;
+  final int ownerShareBasisPoints;
   final String? bitMint;
   final String? bitReserve;
   final SectionPriceConfig? priceConfig;
@@ -192,6 +194,7 @@ final class GameSnapshot {
       previousSectionFlipCount: previousSectionFlipCount,
       treasury: treasury,
       section: section ?? this.section,
+      ownerShareBasisPoints: ownerShareBasisPoints,
       bitMint: bitMint,
       bitReserve: bitReserve,
       priceConfig: priceConfig,

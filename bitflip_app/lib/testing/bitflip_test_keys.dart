@@ -18,6 +18,7 @@ abstract final class BitflipTestKeys {
   static const listSection = Key('list-section');
   static const cancelSectionListing = Key('cancel-section-listing');
   static const purchaseSection = Key('purchase-section');
+  static const withdrawOwnerFees = Key('withdraw-owner-fees');
   static const commitFlips = Key('commit-flips');
   static const clearFlips = Key('clear-flips');
   static const nextSection = Key('next-section');

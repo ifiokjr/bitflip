@@ -262,7 +262,7 @@ Future<void> _setTestSectionPixel(
     ),
   };
   final data = Uint8List.fromList(section.data);
-  const pixelsOffset = 259;
+  const pixelsOffset = 267;
   final pixelIndex = y * 64 + x;
   data
     ..[133] = 1

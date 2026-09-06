@@ -23,7 +23,7 @@ The defaults are 1,024 paid flips or one hour per sector. Both values are config
 
 The claimant is the payer for the new sector PDA and, when BIT rewards are enabled, its lazily created Token-2022 vault. Their launch flow therefore pays:
 
-- Solana rent for the 771-byte bitmap and section-economy account;
+- Solana rent for the 779-byte bitmap and section-economy account;
 - current rent for one section-PDA-owned Token-2022 associated account; and
 - `claim_price_lamports`, transferred to the configured treasury.
 
@@ -31,7 +31,7 @@ Creation, payment, ownership assignment, and advancing `next_section` are one cl
 
 ## Play and ownership
 
-Flipping is public while a sector is active. A player can toggle up to 16 unique pixels per transaction. The section controller calculates one posted SOL price for its current five-minute window, and each successfully rewarded pixel transfers one whole zero-decimal BIT from that section's vault. The player signs the window identifier, maximum unit and total charge, and minimum reward. Any mismatch rolls back payment, BIT, controller state, and all pixel toggles together. Ownership controls the scarce lifecycle actions: listing, cancelling a listing, and sealing.
+Flipping is public while a sector is active. A player can toggle up to 16 unique pixels per transaction. The section controller calculates one posted SOL price for its current five-minute window, and each successfully rewarded pixel transfers one whole zero-decimal BIT from that section's vault. The player signs the window identifier, maximum unit and total charge, and minimum reward. Any mismatch rolls back payment, owner fee accrual, BIT, controller state, and all pixel toggles together. User-owned sections accrue the game's fixed 20% staging share in their own account; section `0` remains protocol-owned and routes 100% to the protocol. The current owner can withdraw accrued fees, a sale settles the seller automatically, and sealing settles before minting. Ownership also controls the scarce lifecycle actions: listing, cancelling a listing, and sealing.
 
 The section now stores its immutable issuance-controller state and separately accounts for base BIT emitted and BIT moved into the protocol reward pool. Anyone can settle elapsed windows, but no instruction can yet distribute BIT or withdraw the pool. The intended later campaign layer gives owners bounded governance over an approved game mode, entry price, rules digest, and an owner/sponsor-funded reward budget. It deliberately does not give owners mint authority or a free reward allocation that they could route back to themselves. The economics, custody model, fee-share hypothesis, and implementation gates are specified in [ADR 0003](decisions/0003-section-economy.md).
 
@@ -45,4 +45,4 @@ Minted sectors cannot use this listing mechanism. After minting, the compressed 
 
 ## Deployment compatibility
 
-Economy ABI version 4 uses a 237-byte config, 123-byte game, and 771-byte section. It includes the immutable BIT mint/reserve registry, a canonical vault for every funded section, atomic paid issuance, and a shard-local SOL fee ledger, and rejects initialization beyond the four configured games. Do not point the updated app at accounts from an older layout. For staging and launch, deploy the reviewed program under a fresh program ID and initialize fresh games so every section uses the current layout, controller configuration, and custody rules.
+Economy ABI version 5 uses a 237-byte config, 123-byte game, and 779-byte section. It includes the immutable BIT mint/reserve registry, a canonical vault for every funded section, atomic paid issuance, fixed owner fee sharing, shard-local protocol and owner fee ledgers, and owner-only withdrawal, and rejects initialization beyond the four configured games. Do not point the updated app at accounts from an older layout. For staging and launch, deploy the reviewed program under a fresh program ID and initialize fresh games so every section uses the current layout, controller configuration, and custody rules.

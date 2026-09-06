@@ -616,6 +616,18 @@ abstract class AppLocalizations {
   /// **'OWNER'**
   String get sectionOwner;
 
+  /// No description provided for @ownerFeeShare.
+  ///
+  /// In en, this message translates to:
+  /// **'EARNS {percent}% OF FLIP FEES'**
+  String ownerFeeShare(String percent);
+
+  /// No description provided for @withdrawOwnerFees.
+  ///
+  /// In en, this message translates to:
+  /// **'WITHDRAW {amount} SOL IN OWNER FEES'**
+  String withdrawOwnerFees(String amount);
+
   /// No description provided for @anonymousOwner.
   ///
   /// In en, this message translates to:
@@ -687,6 +699,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sector purchased. Ownership transferred atomically.'**
   String get activityPurchased;
+
+  /// No description provided for @activityOwnerFeesWithdrawn.
+  ///
+  /// In en, this message translates to:
+  /// **'Accrued owner fees withdrawn from this sector.'**
+  String get activityOwnerFeesWithdrawn;
 
   /// No description provided for @activitySealed.
   ///

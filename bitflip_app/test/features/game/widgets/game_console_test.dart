@@ -102,6 +102,7 @@ void main() {
       controllerPriceLamports: BigInt.from(10_000),
       postedPriceLamports: BigInt.from(10_000),
       protocolFeeLamports: BigInt.from(20_480_000),
+      ownerFeeLamports: BigInt.zero,
     );
     await tester.binding.setSurfaceSize(const Size(500, 1000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -324,6 +325,58 @@ void main() {
     expect(purchaseCalls, 1);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('owner sees and can withdraw the section-local fee share', (
+    tester,
+  ) async {
+    var withdrawCalls = 0;
+    final economy = SectionEconomySnapshot(
+      launchedAt: BigInt.zero,
+      windowStartedAt: BigInt.zero,
+      lastUpdatedAt: BigInt.zero,
+      windowId: BigInt.zero,
+      windowTargetTokens: BigInt.from(1024),
+      windowRewardedTokens: BigInt.zero,
+      emittedTokens: BigInt.zero,
+      rewardPoolTokens: BigInt.zero,
+      controllerPriceLamports: BigInt.from(10_000),
+      postedPriceLamports: BigInt.from(10_000),
+      protocolFeeLamports: BigInt.from(8000),
+      ownerFeeLamports: BigInt.from(2000),
+    );
+    await tester.binding.setSurfaceSize(const Size(500, 1150));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _TestApp(
+        child: GameConsole(
+          state: _state(
+            SectionLifecycle.active,
+            economy: economy,
+            ownerShareBasisPoints: 2000,
+          ),
+          onConnect: () {},
+          onClaim: () {},
+          onList: (_) {},
+          onCancelListing: () {},
+          onPurchase: () {},
+          onWithdrawOwnerFees: () => withdrawCalls++,
+          onCommit: () {},
+          onClear: () {},
+          onSeal: () {},
+          onMint: () {},
+          onRefresh: () {},
+        ),
+      ),
+    );
+
+    expect(find.text('EARNS 20% OF FLIP FEES'), findsOneWidget);
+    final withdraw = find.byKey(BitflipTestKeys.withdrawOwnerFees);
+    expect(find.text('WITHDRAW 0.000002 SOL IN OWNER FEES'), findsOneWidget);
+    await tester.ensureVisible(withdraw);
+    await tester.tap(withdraw);
+    expect(withdrawCalls, 1);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 GameViewState _state(
@@ -338,6 +391,7 @@ GameViewState _state(
   GameLoadStatus? loadStatus,
   SectionEconomySnapshot? economy,
   SectionPriceConfig? priceConfig,
+  int ownerShareBasisPoints = 0,
 }) {
   return GameViewState(
     snapshot: GameSnapshot(
@@ -364,6 +418,7 @@ GameViewState _state(
         isProtocolOwned: isProtocolOwned,
         economy: economy,
       ),
+      ownerShareBasisPoints: ownerShareBasisPoints,
       priceConfig: priceConfig,
     ),
     queued: queued,
