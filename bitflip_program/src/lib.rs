@@ -44,18 +44,14 @@ pub const FLIP_COORDINATE_BYTES: usize = MAX_FLIPS_PER_TRANSACTION * 2;
 
 /// BIT is always denominated in indivisible whole tokens.
 pub const BIT_MINT_DECIMALS: u8 = 0;
-/// Fixed supply reserved for eight games under the scaled staging economy.
-pub const BIT_TOTAL_SUPPLY_TOKENS: u64 = 107_374_182_400;
+/// Fixed supply reserved for four games under the scaled staging economy.
+pub const BIT_TOTAL_SUPPLY_TOKENS: u64 = 26_843_545_600;
 /// Number of games funded by the fixed BIT supply.
-pub const BIT_GAME_COUNT: u8 = 8;
+pub const BIT_GAME_COUNT: u8 = 4;
 /// BIT reserved for one game.
-pub const BIT_GAME_ALLOCATION_TOKENS: u64 = 13_421_772_800;
+pub const BIT_GAME_ALLOCATION_TOKENS: u64 = 6_710_886_400;
 /// BIT reserved for one of a game's 256 sections.
-pub const BIT_SECTION_ALLOCATION_TOKENS: u64 = 52_428_800;
-/// Section allocation available for base paid-flip rewards.
-pub const BIT_PAID_FLIP_ALLOCATION_TOKENS: u64 = 26_214_400;
-/// Section allocation locked for a separately reviewed matching programme.
-pub const BIT_LOCKED_MATCHING_ALLOCATION_TOKENS: u64 = 26_214_400;
+pub const BIT_SECTION_ALLOCATION_TOKENS: u64 = 26_214_400;
 
 pub const DEFAULT_CLAIM_PRICE_LAMPORTS: u64 = 10_000_000;
 pub const DEFAULT_FLIP_FEE_LAMPORTS: u64 = 10_000;
@@ -1190,8 +1186,8 @@ mod tests {
 	#[test]
 	fn scaled_bit_supply_keeps_zero_decimal_and_allocation_invariants() {
 		assert_eq!(BIT_MINT_DECIMALS, 0);
-		assert_eq!(BIT_TOTAL_SUPPLY_TOKENS, 100 * 1_073_741_824);
-		assert_eq!(BIT_PAID_FLIP_ALLOCATION_TOKENS, 100 * 262_144);
+		assert_eq!(BIT_TOTAL_SUPPLY_TOKENS, 25 * 1_073_741_824);
+		assert_eq!(BIT_SECTION_ALLOCATION_TOKENS, 100 * 262_144);
 		assert_eq!(
 			BIT_TOTAL_SUPPLY_TOKENS,
 			BIT_GAME_ALLOCATION_TOKENS * u64::from(BIT_GAME_COUNT)
@@ -1199,10 +1195,6 @@ mod tests {
 		assert_eq!(
 			BIT_GAME_ALLOCATION_TOKENS,
 			BIT_SECTION_ALLOCATION_TOKENS * u64::from(SECTION_COUNT)
-		);
-		assert_eq!(
-			BIT_SECTION_ALLOCATION_TOKENS,
-			BIT_PAID_FLIP_ALLOCATION_TOKENS + BIT_LOCKED_MATCHING_ALLOCATION_TOKENS
 		);
 	}
 

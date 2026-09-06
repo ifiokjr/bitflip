@@ -89,15 +89,17 @@ fn run_pattern(
 		.map_err(|_| PriceControllerError::ArithmeticOverflow)?
 		.checked_mul(config.window_seconds)
 		.ok_or(PriceControllerError::ArithmeticOverflow)?;
+	state.settle(config, after_pattern)?;
 	let next = state.preview(config, after_pattern, 1)?;
 	println!(
-		"{name}\t{}\t{}\t{}\t{}\t{}\t{}",
+		"{name}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
 		totals.rewarded_tokens,
 		totals.player_paid_lamports,
 		totals.owner_recovered_lamports,
 		totals.protocol_received_lamports,
 		next.unit_price_lamports,
 		state.emitted_tokens,
+		state.reward_pool_tokens,
 	);
 	Ok(())
 }
@@ -105,15 +107,15 @@ fn run_pattern(
 fn main() -> Result<(), PriceControllerError> {
 	let config = PriceControllerConfig::STAGING;
 	println!(
-		"scenario\trewarded_bit\tpaid_lamports\towner_recovery\tprotocol_revenue\tnext_price\temitted_bit"
+		"scenario\trewarded_bit\tpaid_lamports\towner_recovery\tprotocol_revenue\tnext_price\temitted_bit\treward_pool_bit"
 	);
 	run_pattern("idle", &config, &[0; 12])?;
-	run_pattern("at_target", &config, &[1_600; 12])?;
-	run_pattern("saturated", &config, &[6_400; 12])?;
+	run_pattern("at_target", &config, &[1_024; 12])?;
+	run_pattern("saturated", &config, &[4_096; 12])?;
 	run_pattern(
 		"oscillating",
 		&config,
-		&[3_200, 0, 3_200, 0, 3_200, 0, 3_200, 0, 3_200, 0, 3_200, 0],
+		&[2_048, 0, 2_048, 0, 2_048, 0, 2_048, 0, 2_048, 0, 2_048, 0],
 	)?;
 
 	let mut late = PriceControllerState::new(&config, 0)?;
@@ -125,14 +127,17 @@ fn main() -> Result<(), PriceControllerError> {
 		102_400,
 		DEFAULT_OWNER_SHARE_BASIS_POINTS,
 	)?;
+	let final_window_price = late.posted_price_lamports;
+	late.settle(&config, config.emission_duration_seconds)?;
 	println!(
-		"idle_then_final_burst\t{}\t{}\t{}\t{}\t{}\t{}",
+		"idle_then_final_burst\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
 		late_totals.rewarded_tokens,
 		late_totals.player_paid_lamports,
 		late_totals.owner_recovered_lamports,
 		late_totals.protocol_received_lamports,
-		late.posted_price_lamports,
+		final_window_price,
 		late.emitted_tokens,
+		late.reward_pool_tokens,
 	);
 
 	Ok(())

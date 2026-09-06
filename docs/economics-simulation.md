@@ -14,15 +14,15 @@ devenv shell -- test:surfpool
 
 ## Staging scenario output
 
-The staging model uses a 1,600-BIT target, 3,200-BIT window cap, five-minute windows, 10,000-lamport starting price, 5,000-lamport minimum, 100,000-lamport ending inventory floor, and a 20% owner fee share. BIT has zero decimals: one rewarded pixel always means one whole BIT.
+The staging model uses a 1,024-BIT target, 2,048-BIT window cap, five-minute windows, 10,000-lamport starting price, 5,000-lamport minimum, 100,000-lamport ending inventory floor, and a 20% owner fee share. BIT has zero decimals: one rewarded pixel always means one whole BIT. Target shortfall moves into the section reward pool when a window settles.
 
-| Scenario                     | Rewarded BIT | Paid lamports | Owner recovery | Protocol revenue | Next price |
-| ---------------------------- | -----------: | ------------: | -------------: | ---------------: | ---------: |
-| 12 idle windows              |            0 |             0 |              0 |                0 |      5,000 |
-| 12 windows at target         |       19,200 |   192,000,000 |     38,400,000 |      153,600,000 |     10,000 |
-| 12 saturated windows         |       38,400 |   648,000,000 |    129,600,000 |      518,400,000 |     25,000 |
-| 6 alternating burst/idle     |       19,200 |   192,000,000 |     38,400,000 |      153,600,000 |     10,000 |
-| 59-day idle then 102,400 ask |        3,200 |    16,000,000 |      3,200,000 |       12,800,000 |      5,000 |
+| Scenario                     | Rewarded BIT | Paid lamports | Owner recovery | Protocol revenue | Next price | Reward pool BIT |
+| ---------------------------- | -----------: | ------------: | -------------: | ---------------: | ---------: | --------------: |
+| 12 idle windows              |            0 |             0 |              0 |                0 |      5,000 |          12,288 |
+| 12 windows at target         |       12,288 |   122,880,000 |     24,576,000 |       98,304,000 |     10,000 |               0 |
+| 12 saturated windows         |       24,576 |   414,720,000 |     82,944,000 |      331,776,000 |     25,000 |               0 |
+| 6 alternating burst/idle     |       12,288 |   122,880,000 |     24,576,000 |       98,304,000 |     10,000 |           6,144 |
+| 59-day idle then 102,400 ask |        2,048 |    10,240,000 |      2,048,000 |        8,192,000 |      5,000 |      26,212,352 |
 
 Amounts exclude Solana transaction fees and token-account rent. Owner recovery is money returned to the owner, so an owner using Sybil wallets to create artificial demand has a net SOL cost equal to the protocol-revenue column while acquiring the finite BIT payout.
 
@@ -32,7 +32,7 @@ Amounts exclude Solana transaction fees and token-account rent. Owner recovery i
 
 The original proposal recalculated each target from remaining inventory divided by remaining time. After a 59-day idle period, the final target approached the entire 26,214,400-BIT reserve while the price had reached its minimum. A bot could wait and drain the reserve during the cheapest window.
 
-The target is now immutable. A final-window request for 102,400 BIT receives only the 3,200-BIT cap. Unissued BIT stays locked after expiry.
+The target is now immutable. A final-window request for 102,400 BIT receives only the 2,048-BIT cap. Unissued base BIT moves to the programme-controlled reward pool at expiry; the late caller cannot claim it.
 
 ### Multiplicative burst/idle ratchet: fixed
 
@@ -42,7 +42,7 @@ The controller now adds or subtracts a fixed utilisation-weighted step based on 
 
 ### Sybil splitting: bounded
 
-Two hundred 16-BIT batches and 3,200 one-BIT wallets produce identical state, rewards, and issuance charges. Wallet identity is not an input. An owner can still manufacture demand, but the proposed 20% owner share leaves 80% of every charge with the protocol and the attacker consumes finite inventory.
+One hundred twenty-eight 16-BIT batches and 2,048 one-BIT wallets produce identical state, rewards, and issuance charges. Wallet identity is not an input. An owner can still manufacture demand, but the proposed 20% owner share leaves 80% of every charge with the protocol and the attacker consumes finite inventory. Protocol reward-pool payouts therefore must not be controlled by the owner, and reward-eligible owner activity must not receive the owner fee share.
 
 This does not prevent ordinary market arbitrage. If transferable BIT is worth more than the posted issuance price, buyers will rationally consume all available capacity. Devnet data and an independent economic review must set the minimum and starting prices.
 
@@ -50,7 +50,11 @@ That arbitrage is especially important because BIT is fungible while section pri
 
 ### Window-boundary double capacity: accepted for devnet
 
-An attacker can receive 3,200 BIT immediately before a boundary and another 3,200 immediately after it. The second batch costs 12.5% more, total exposure is 6,400 BIT, and that is approximately 0.0244% of one section's paid allocation. A rolling token bucket would remove the edge but adds state and custom arithmetic. Devnet telemetry should measure boundary concentration before adding that complexity.
+An attacker can receive 2,048 BIT immediately before a boundary and another 2,048 immediately after it. The second batch costs 12.5% more, total exposure is 4,096 BIT, and that is exactly 0.015625% of one section's allocation. A rolling token bucket would remove the edge but adds state and custom arithmetic. Devnet telemetry should measure boundary concentration before adding that complexity.
+
+### Malicious reward distributor: disabled by design
+
+The current controller accrues reward-pool liabilities but exposes no payout authority. A section owner cannot provide a payout list or withdraw the pool. Before payouts are enabled, one protocol-defined epoch policy must make its inputs and weights independently reconstructible from paid, confirmed actions; claims must be capped, pull-based, and replay-protected. Off-chain judged games still require a disclosed attestor or a challengeable result root and a separate adversarial review.
 
 ### Stale quotes and capacity races: fixed
 
