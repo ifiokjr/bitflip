@@ -15,6 +15,8 @@ import 'dart:async' as _ida;
 import 'dart:io' as _idi;
 import 'package:bitflip_server_server/src/generated/colour/colour_canvas_view.dart'
     as _ict6a318;
+import 'package:bitflip_server_server/src/generated/future_calls.dart'
+    as _ibxc289e;
 import 'package:bitflip_server_server/src/generated/minting/mint_challenge_view.dart'
     as _i5q6wjqb;
 import 'package:bitflip_server_server/src/generated/minting/mint_section_result.dart'
@@ -149,6 +151,8 @@ void withServerpod(
 }
 
 class TestEndpoints {
+  late final futureCalls = _FutureCalls();
+
   late final _ColourCanvasEndpoint colourCanvas;
 
   late final _MintEndpoint mint;
@@ -170,6 +174,10 @@ class _InternalTestEndpoints extends TestEndpoints
       serializationManager,
     );
   }
+}
+
+class _FutureCalls {
+  late final colourIndexer = _ColourIndexerFutureCall();
 }
 
 class _ColourCanvasEndpoint {
@@ -341,5 +349,20 @@ class _MintEndpoint {
         await _localUniqueSession.close();
       }
     });
+  }
+}
+
+class _ColourIndexerFutureCall {
+  Future<void> scan(_ist.TestSessionBuilder sessionBuilder) async {
+    var _localUniqueSession =
+        (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild();
+    try {
+      await _ibxc289e.ColourIndexerScanFutureCall().invoke(
+        _localUniqueSession,
+        null,
+      );
+    } finally {
+      await _localUniqueSession.close();
+    }
   }
 }

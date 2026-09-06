@@ -10,14 +10,74 @@ abstract interface class ColourFlipEventSource {
   Future<List<ColourPixelsFlipped>> eventsForSignature(String signature);
 }
 
-final class SolanaColourFlipEventSource implements ColourFlipEventSource {
+abstract interface class ColourProgramSignatureSource {
+  Future<ColourProgramSignaturePage> signatures({
+    required int limit,
+    String? before,
+    String? until,
+  });
+}
+
+final class ColourProgramSignaturePage {
+  const ColourProgramSignaturePage(this.entries);
+
+  final List<ColourProgramSignature> entries;
+
+  String? get newestSignature => entries.firstOrNull?.signature;
+  String? get oldestSignature => entries.lastOrNull?.signature;
+}
+
+final class ColourProgramSignature {
+  const ColourProgramSignature({
+    required this.signature,
+    required this.succeeded,
+  });
+
+  final String signature;
+  final bool succeeded;
+}
+
+final class SolanaColourFlipEventSource
+    implements ColourFlipEventSource, ColourProgramSignatureSource {
   const SolanaColourFlipEventSource(this.rpc);
 
   final Rpc rpc;
 
   @override
+  Future<ColourProgramSignaturePage> signatures({
+    required int limit,
+    String? before,
+    String? until,
+  }) async {
+    if (limit < 1 || limit > 1000) {
+      throw RangeError.range(limit, 1, 1000, 'limit');
+    }
+    final response = await rpc
+        .request<List<Object?>>(
+          'getSignaturesForAddress',
+          rpc_api.getSignaturesForAddressParams(
+            bitflipProgramProgramAddress,
+            rpc_api.GetSignaturesForAddressConfig(
+              before: before == null
+                  ? null
+                  : Signature(validateTransactionSignature(before)),
+              until: until == null
+                  ? null
+                  : Signature(validateTransactionSignature(until)),
+              commitment: rpc_types.Commitment.confirmed,
+              limit: limit,
+            ),
+          ),
+        )
+        .send();
+    return ColourProgramSignaturePage(
+      List.unmodifiable(response.map(_parseProgramSignature)),
+    );
+  }
+
+  @override
   Future<List<ColourPixelsFlipped>> eventsForSignature(String signature) async {
-    final normalized = _validatedTransactionSignature(signature);
+    final normalized = validateTransactionSignature(signature);
     final transaction = await rpc
         .getTransaction(
           Signature(normalized),
@@ -45,7 +105,21 @@ final class SolanaColourFlipEventSource implements ColourFlipEventSource {
   }
 }
 
-String _validatedTransactionSignature(String value) {
+ColourProgramSignature _parseProgramSignature(Object? value) {
+  if (value is! Map) {
+    throw const FormatException('Invalid Solana signature history response.');
+  }
+  final signature = value['signature'];
+  if (signature is! String) {
+    throw const FormatException('Invalid Solana signature history response.');
+  }
+  return ColourProgramSignature(
+    signature: validateTransactionSignature(signature),
+    succeeded: value['err'] == null,
+  );
+}
+
+String validateTransactionSignature(String value) {
   final normalized = value.trim();
   if (normalized.length < 80 || normalized.length > 90) {
     throw const FormatException('Invalid Solana transaction signature.');

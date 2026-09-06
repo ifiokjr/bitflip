@@ -10,9 +10,12 @@
 // ignore_for_file: invalid_use_of_internal_member
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+import 'package:bitflip_server_server/src/generated/future_calls.dart'
+    as _ibxc289e;
 import 'package:serverpod/serverpod.dart' as _is;
 import '../colour/colour_canvas_endpoint.dart' as _ixrwsudz;
 import '../minting/mint_endpoint.dart' as _iy6fwn2n;
+export 'future_calls.dart' show ServerpodFutureCallsGetter;
 
 class Endpoints extends _is.EndpointDispatch {
   @override
@@ -175,5 +178,10 @@ class Endpoints extends _is.EndpointDispatch {
         ),
       },
     );
+  }
+
+  @override
+  _is.FutureCallDispatch? get futureCalls {
+    return _ibxc289e.FutureCalls();
   }
 }

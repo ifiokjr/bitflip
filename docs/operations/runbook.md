@@ -9,6 +9,7 @@ For every deployment, record:
 - release owner and UTC window;
 - git commit and immutable container digest;
 - environment, game index, program address, RPC origin, metadata origin, and Merkle tree public key;
+- colour-indexer launch signature and the latest durable completed sweep;
 - migration identifier and backup checksum;
 - mobile/web build numbers;
 - canary wallet public key, transaction signatures, and asset ID;
@@ -32,8 +33,9 @@ Never record database passwords, signing keys, seed phrases, or the operator pri
 2. Wait for `/startupz`; then require `/livez` and `/readyz`. Readiness includes PostgreSQL and a bounded Solana `getSlot` request.
 3. Run the `staging verification` GitHub workflow from outside the hosting network. For a sealed canary section, provide both optional indices so its metadata and SVG are checked too.
 4. Exercise wallet cancellation, insufficient funds, stale revision, and RPC failure. Confirm each path preserves queued work and does not report success.
-5. Run a bounded devnet canary: connect, claim, flip, confirm, seal, authorize mint, and verify both the cNFT and Bitflip receipt on chain. Record signatures and the asset ID.
-6. Hold staging for the soak period required by the Serverpod ADR. Review errors, latency, RPC usage, database connections, and operator saturation.
+5. Disable client colour-signature hints, make confirmed colour flips, and verify the recurring indexer catches up from its durable cursor. Restart the server during a multi-page sweep and prove replay neither loses nor overwrites a newer pixel revision.
+6. Run a bounded devnet canary: connect, claim, flip, confirm, seal, authorize mint, and verify both the cNFT and Bitflip receipt on chain. Record signatures and the asset ID.
+7. Hold staging for the soak period required by the Serverpod ADR. Review errors, latency, RPC usage, database connections, indexer sweep age, and operator saturation.
 
 ## Production rollout
 

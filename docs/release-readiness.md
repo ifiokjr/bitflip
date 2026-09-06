@@ -39,7 +39,7 @@ The 2026-09-06 smoke installed SHA-256 `bc3bdf672075ade1e71ca7f58423e5a65870a9da
 - Confirm game initialization creates only sector `0`, its logical owner is the game PDA, and the authority paid rent for no later sector.
 - Exercise activity and scheduled unlocks, claimant-funded sector creation, listing, cancellation, purchase slippage, and ownership transfer on staging.
 - Replace the beta's user-driven mint reconciliation with the durable worker described in the [operations runbook](operations/runbook.md).
-- Backfill and continuously index authenticated colour events independently of client submissions before treating the contested canvas as complete; client submission is only a low-latency hint.
+- Rehearse the durable colour indexer from its recorded ABI-v7 launch signature, prove it catches up after disabled-client and process-loss tests, and alert on a sweep that cannot reach its previous durable head. Client submission remains only a low-latency hint.
 - Record the final marketplace-authenticity choice from [ADR 0002](decisions/0002-marketplace-authenticity.md).
 - Do not enable BIT rewards or section campaigns until the token, custody, economic, integrity, and product-copy gates in [ADR 0003](decisions/0003-section-economy.md) are implemented and independently reviewed. A release without those features may proceed only if the UI continues to make their absence explicit.
 - Verify ABI version 7 rejects a mint with live authority, nonzero decimals, the wrong supply, or unsupported extensions; reconcile the launch reserve, every funded section vault, emitted BIT, reward-pool ledger, protocol-fee ledger, owner payments, live policy versions, and indexed colour revisions after the canary.
@@ -72,11 +72,13 @@ BITFLIP_METADATA_BASE_URL=https://...
 BITFLIP_MERKLE_TREE=<private Bubblegum tree address>
 BITFLIP_OPERATOR_PRIVATE_KEY=<secret JSON byte array>
 BITFLIP_PRIORITY_FEE_MICROLAMPORTS=<explicit non-negative integer>
+BITFLIP_COLOUR_INDEXER_ENABLED=true
+BITFLIP_COLOUR_INDEXER_START_SIGNATURE=<confirmed ABI-v7 launch transaction>
 ```
 
-Optional bounded reliability settings are `BITFLIP_RPC_TIMEOUT_SECONDS` (2–60, default 12) and `BITFLIP_MINT_MAX_ATTEMPTS` (1–5, default 3). Serverpod database passwords and service secrets remain required by Serverpod. The server validates the tree address, signer encoding, and operator fee policy before it starts.
+Optional bounded reliability settings are `BITFLIP_RPC_TIMEOUT_SECONDS` (2–60, default 12), `BITFLIP_MINT_MAX_ATTEMPTS` (1–5, default 3), `BITFLIP_COLOUR_INDEXER_INTERVAL_SECONDS` (2–60, default 2), `BITFLIP_COLOUR_INDEXER_PAGE_SIZE` (1–256, default 128), and `BITFLIP_COLOUR_INDEXER_CONCURRENCY` (1–32, default 16). Serverpod database passwords and service secrets remain required by Serverpod. The server validates the tree address, signer encoding, operator fee policy, indexer switch, and base58 history anchor before it starts.
 
-Staging requires `BITFLIP_CLUSTER=devnet`; production requires `BITFLIP_CLUSTER=mainnet`. Both require public HTTPS RPC and metadata origins plus explicit tree, operator, game, and priority-fee values. Local development retains loopback defaults.
+Staging requires `BITFLIP_CLUSTER=devnet`; production requires `BITFLIP_CLUSTER=mainnet`. Both require public HTTPS RPC and metadata origins plus explicit tree, operator, game, priority-fee, and colour-indexer values. The selected RPC must retain transaction history back to the configured anchor. Local development retains loopback defaults and leaves the indexer disabled unless explicitly configured.
 
 The public challenge endpoint is rate limited per source and globally within each process before any Solana RPC work begins. Production ingress must enforce the same policy across replicas; abandoned challenges never consume a wallet-specific quota. Mint work is rejected when operator capacity is full, runs outside database transactions, uses explicit RPC deadlines and priority fees, and retries from fresh on-chain state. Until a durable single-consumer worker exists, a beta deployment must run exactly one mint-capable server process so two replicas cannot race private-tree leaf allocation.
 
