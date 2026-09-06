@@ -1,6 +1,6 @@
 # Economics simulation and adversarial findings
 
-This is reproducible engineering evidence for [ADR 0004](decisions/0004-section-price-controller.md), not a mainnet parameter recommendation. The controller configuration is now snapshotted in each game, and every section stores an independently launched controller and custody ledger. `SettleSectionEconomy` permissionlessly moves completed-window shortfalls into the pool. ABI version 3 validates the immutable Token-2022 mint and funds one sharded vault per active section, but `FlipPixels` does not transfer BIT yet, so this ABI must not be deployed as a reward-bearing release on its own.
+This is reproducible engineering evidence for [ADR 0004](decisions/0004-section-price-controller.md), not a mainnet parameter recommendation. The controller configuration is snapshotted in each game, and every section stores an independently launched controller and custody ledger. `SettleSectionEconomy` permissionlessly moves completed-window shortfalls into the pool. ABI version 4 validates the immutable zero-decimal Token-2022 mint, funds one sharded vault per active section, and atomically exchanges the signed SOL charge for the signed minimum BIT reward while toggling pixels.
 
 ## Run it
 
@@ -62,15 +62,12 @@ Every execution binds the window identifier, maximum unit price, maximum total p
 
 ## Real-SBF Surfpool stress
 
-The Surfpool test deploys the actual SBF artifact and submits 128 signed maximum-size flip transactions concurrently. All 2,048 pixel changes, 128 section revisions, the game counter, and 20,480,000 lamports of application fees reconcile exactly after contention.
+The Surfpool test deploys the actual SBF artifact and submits 128 signed maximum-size flip transactions concurrently. All 2,048 pixel changes, 128 section revisions, 2,048 BIT debited from the section vault and credited to the player, and 20,480,000 lamports of application fees reconcile exactly after contention. A 2,049th reward-bearing flip is rejected without changing pixels, tokens, or the fee ledger.
 
 An initial attempt to fund 128 separate accounts through 128 setup transactions caused the isolated Surfpool RPC to become unreachable after approximately 103 seconds. Reusing Surfpool's pre-funded payer removed that test-harness bottleneck; the 128-transaction burst then completed successfully. Sybil equivalence remains covered by the controller property tests rather than expensive account setup.
 
-This is a correctness stress test, not a throughput benchmark. It exposed two shared writable accounts in every current `FlipPixels` transaction:
+This remains a correctness stress test, not a validator-throughput benchmark. ABI version 4 removes the shared writable `GameState` counter and global-treasury payment from `FlipPixels`; the game and configuration are read-only, while pixels, controller state, BIT custody, and gross application fees are isolated in the section shard. Aggregate flip telemetry must therefore be indexed from confirmed section transactions rather than trusted from `GameState.total_flips`.
 
-- `GameState`, because every section increments one global `total_flips`; and
-- the global treasury, because every section transfers fees directly to it.
+A second real-SBF scenario concurrently submits 64 maximum-size transactions to each of two independently owned and funded sections. Their players, vaults, bitmaps, controllers, and fee accounts are disjoint, and both 1,024-BIT streams reconcile after contention. Wider devnet profiling is still required because Surfpool timing does not establish production validator capacity or RPC quality.
 
-Those accounts serialize otherwise independent sections. Before measuring sharded capacity, remove the global counter from the hot path, emit/index aggregate activity off-chain, and accrue the protocol fee in each section PDA for later sweeping. Then repeat the real-SBF stress test across multiple sections with transaction profiling enabled.
-
-The real-SBF suite now creates a zero-decimal Token-2022 mint and config-owned reserve, rejects custody while mint authority remains live, revokes it, registers the exact fixed supply, creates a section ATA through CPI, transfers exactly one section allocation, and proves duplicate funding rolls back without moving BIT. Paid-flip transfer and first-time player-ATA compute remain unmeasured until atomic issuance is implemented. The suite also verifies the enlarged account ABI, four-game cap, independent controller initialization, permissionless settlement, and contention against the deployed SBF artifact.
+The suite also creates a zero-decimal Token-2022 mint and config-owned reserve, rejects custody while mint authority remains live, revokes it, registers the exact fixed supply, creates section ATAs through CPI, transfers exactly one allocation to each active shard, and proves duplicate funding rolls back without moving BIT. Stale windows, underpriced quotes, excessive minimum rewards, duplicates, capacity exhaustion, arithmetic extremes, and Sybil splitting all fail or reconcile without partial state.

@@ -1143,6 +1143,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.5.1"
+  solana_kit_token:
+    dependency: "direct main"
+    description:
+      name: solana_kit_token
+      sha256: "6e45e54c9d499b6c28130a1831d1329cf5fd865c530ede302374b312aad8c387"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.8.1"
   solana_kit_transaction_confirmation:
     dependency: transitive
     description:

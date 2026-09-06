@@ -12,7 +12,7 @@ Every section has one 26,214,400 BIT allocation. It begins entirely as base-issu
 
 The pool is an on-chain programme liability, not an owner's wallet. Distribution remains disabled until an independently reviewed, protocol-defined policy can select recipients without relying on the owner or one reward distributor.
 
-The deterministic controller, immutable per-game configuration snapshot, per-section base/pool ledger, permissionless settlement, fixed-mint registry, global launch reserve, and lazy section-vault funding are implemented in economy ABI version 3. Paid-flip issuance, reward payouts, and campaign governance remain gated below. ABI version 3 requires a fresh deployment and must not be used as a reward-bearing release until atomic paid-flip distribution is connected.
+The deterministic controller, immutable per-game configuration snapshot, per-section base/pool ledger, permissionless settlement, fixed-mint registry, global launch reserve, lazy section-vault funding, and atomic paid-flip issuance are implemented in economy ABI version 4. Protocol-pool payouts, owner fee sharing, and campaign governance remain gated below. ABI version 4 requires a fresh deployment and must stay on devnet until its economics and program have been independently reviewed.
 
 ## Recovered intent
 
@@ -86,7 +86,7 @@ base BIT emitted + reward-pool BIT + unallocated base BIT
 
 At exactly the target for every window over 60 days, 17,694,720 BIT is emitted and 8,519,680 BIT, or 32.5%, enters the pool at expiry. Sustained burst traffic can emit more and leave less for games. This is deliberate: unused base issuance funds future play instead of becoming a late cheap giveaway.
 
-The player's transaction includes both a maximum SOL charge and a minimum BIT payout. It fails if either side has changed. If the section's base inventory is exhausted, flipping can continue, but the UI must say that no base BIT remains before signing.
+The player's transaction includes the expected window, maximum unit and total SOL charge, and minimum BIT payout. It fails atomically if any bound has changed. ABI version 4 itself requires one whole BIT for every requested pixel, so a custom client cannot turn depleted capacity into free or unrewarded flips that still advance section activity. A later explicitly unrewarded game mode would need a separate on-chain instruction and policy.
 
 Base issuance is a finite primary distribution, not risk-free yield. A fixed SOL price cannot track a transferable token's market price without an oracle, and a stale cheap issuance price will be arbitraged. [ADR 0004](0004-section-price-controller.md) proposes an independently paced, time-based price for every section, bounded burst issuance, and a small inventory floor. The first beta must remain on devnet, avoid seeding exchange liquidity, and collect data before those proposed parameters can become a mainnet decision.
 
@@ -169,7 +169,7 @@ Section owners select an approved game and its parameters; they do not become a 
 
 ## Low-rent, sharded custody design
 
-Creating Token-2022 accounts for every possible section up front would undermine the lazy allocation model. ABI version 3 instead registers one config-PDA-owned launch reserve containing the exact fixed supply. A permissionless `FundSectionVault` instruction creates the active section's canonical Token-2022 associated account, charges its rent to the instruction's funder, and transfers exactly 26,214,400 BIT from the reserve once. The reserve is touched only when a section launches; it is not in the flip hot path.
+Creating Token-2022 accounts for every possible section up front would undermine the lazy allocation model. ABI version 4 registers one config-PDA-owned launch reserve containing the exact fixed supply. A permissionless `FundSectionVault` instruction creates the active section's canonical Token-2022 associated account, charges its rent to the instruction's funder, and transfers exactly 26,214,400 BIT from the reserve once. The reserve is touched only when a section launches; it is not in the flip hot path.
 
 Each funded vault is owned by its section PDA, not the human section owner. This preserves section-level parallelism: flips in unrelated sections write different bitmap, controller, and token accounts. It also makes custody physically match the ledger. Before pool payouts exist:
 
@@ -188,8 +188,8 @@ The config PDA can sign transfers from the launch reserve only. A section PDA ca
 
 1. Simulate the [time-based section price controller](0004-section-price-controller.md), owner share, claim break-even, and likely bot strategies using staging activity assumptions. **Implemented and reproducible.**
 2. Implement and independently review the fixed mint, launch-reserve invariant, lazy per-section vaults, per-section base ledger, and deterministic shortfall-to-pool transition on a fresh devnet program ID. **The program-side registry, vault funding, ledger, transition, and real-SBF custody tests are implemented; the mint ceremony, fresh deployment, and independent review remain.**
-3. Add base paid-flip distribution with SOL/BIT slippage protection and real-SBF tests for exhaustion, batching, custody, rollover, and arithmetic boundaries. Accrue the pool but do not pay it yet.
-4. Remove the global counter and treasury from the flip hot path, then benchmark the actual one-pixel and 16-pixel Token-2022 paths across many sections.
+3. Add base paid-flip distribution with SOL/BIT slippage protection and real-SBF tests for exhaustion, batching, custody, rollover, and arithmetic boundaries. Accrue the pool but do not pay it yet. **Implemented in ABI version 4; independent review and devnet evidence remain.**
+4. Remove the global counter and treasury from the flip hot path, then benchmark the actual one-pixel and 16-pixel Token-2022 paths across many sections. **The locks are removed and two-section concurrent real-SBF coverage is implemented; broader devnet profiling remains.**
 5. Add owner fee sharing and versioned section policies. Policies cannot change during a live campaign and must survive a section sale.
 6. Add owner/sponsor deposits, entry payments, budget exhaustion, cancellation, and refund rules.
 7. Add colour events and the indexed eight-colour canvas without attaching token payouts.

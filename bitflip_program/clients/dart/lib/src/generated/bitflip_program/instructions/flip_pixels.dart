@@ -20,7 +20,10 @@ class FlipPixelsInstructionData {
     required this.sectionIndex,
     required this.count,
     required this.coordinates,
-    required this.maximumTotalFeeLamports,
+    required this.expectedWindowId,
+    required this.maximumUnitPriceLamports,
+    required this.maximumTotalPriceLamports,
+    required this.minimumRewardTokens,
   }) :
       discriminator = 6;
 
@@ -29,7 +32,10 @@ class FlipPixelsInstructionData {
   final int sectionIndex;
   final int count;
   final Uint8List coordinates;
-  final BigInt maximumTotalFeeLamports;
+  final BigInt expectedWindowId;
+  final BigInt maximumUnitPriceLamports;
+  final BigInt maximumTotalPriceLamports;
+  final BigInt minimumRewardTokens;
 }
 
 Encoder<FlipPixelsInstructionData> getFlipPixelsInstructionDataEncoder() {
@@ -39,7 +45,10 @@ Encoder<FlipPixelsInstructionData> getFlipPixelsInstructionDataEncoder() {
     ('sectionIndex', getU8Encoder()),
     ('count', getU8Encoder()),
     ('coordinates', fixEncoderSize(getBytesEncoder(), 32, allowTruncation: false)),
-    ('maximumTotalFeeLamports', getU64Encoder()),
+    ('expectedWindowId', getU64Encoder()),
+    ('maximumUnitPriceLamports', getU64Encoder()),
+    ('maximumTotalPriceLamports', getU64Encoder()),
+    ('minimumRewardTokens', getU64Encoder()),
   ]);
 
   return transformEncoder(
@@ -50,7 +59,10 @@ Encoder<FlipPixelsInstructionData> getFlipPixelsInstructionDataEncoder() {
       'sectionIndex': value.sectionIndex,
       'count': value.count,
       'coordinates': value.coordinates,
-      'maximumTotalFeeLamports': value.maximumTotalFeeLamports,
+      'expectedWindowId': value.expectedWindowId,
+      'maximumUnitPriceLamports': value.maximumUnitPriceLamports,
+      'maximumTotalPriceLamports': value.maximumTotalPriceLamports,
+      'minimumRewardTokens': value.minimumRewardTokens,
     },
   );
 }
@@ -62,7 +74,10 @@ Decoder<FlipPixelsInstructionData> getFlipPixelsInstructionDataDecoder() {
     ('sectionIndex', getU8Decoder()),
     ('count', getU8Decoder()),
     ('coordinates', fixDecoderSize(getBytesDecoder(), 32)),
-    ('maximumTotalFeeLamports', getU64Decoder()),
+    ('expectedWindowId', getU64Decoder()),
+    ('maximumUnitPriceLamports', getU64Decoder()),
+    ('maximumTotalPriceLamports', getU64Decoder()),
+    ('minimumRewardTokens', getU64Decoder()),
   ]);
 
   Never throwInvalidByteLength(int expected, int bytesLength) {
@@ -91,7 +106,10 @@ Decoder<FlipPixelsInstructionData> getFlipPixelsInstructionDataDecoder() {
       sectionIndex: map['sectionIndex']! as int,
       count: map['count']! as int,
       coordinates: map['coordinates']! as Uint8List,
-      maximumTotalFeeLamports: map['maximumTotalFeeLamports']! as BigInt,
+      expectedWindowId: map['expectedWindowId']! as BigInt,
+      maximumUnitPriceLamports: map['maximumUnitPriceLamports']! as BigInt,
+      maximumTotalPriceLamports: map['maximumTotalPriceLamports']! as BigInt,
+      minimumRewardTokens: map['minimumRewardTokens']! as BigInt,
       ),
       newOffset,
     );
@@ -128,20 +146,29 @@ Instruction getFlipPixelsInstruction({
   required Address config,
   required Address game,
   required Address section,
-  required Address treasury,
+  required Address bitMint,
+  required Address sectionVault,
+  required Address playerBitAccount,
+  required Address tokenProgram,
   required Address systemProgram,
   required int gameIndex,
   required int sectionIndex,
   required int count,
   required Uint8List coordinates,
-  required BigInt maximumTotalFeeLamports,
+  required BigInt expectedWindowId,
+  required BigInt maximumUnitPriceLamports,
+  required BigInt maximumTotalPriceLamports,
+  required BigInt minimumRewardTokens,
 }) {
   final instructionData = FlipPixelsInstructionData(
       gameIndex: gameIndex,
       sectionIndex: sectionIndex,
       count: count,
       coordinates: coordinates,
-      maximumTotalFeeLamports: maximumTotalFeeLamports,
+      expectedWindowId: expectedWindowId,
+      maximumUnitPriceLamports: maximumUnitPriceLamports,
+      maximumTotalPriceLamports: maximumTotalPriceLamports,
+      minimumRewardTokens: minimumRewardTokens,
   );
 
   return Instruction(
@@ -149,9 +176,12 @@ Instruction getFlipPixelsInstruction({
     accounts: [
     AccountMeta(address: player, role: AccountRole.writableSigner),
     AccountMeta(address: config, role: AccountRole.readonly),
-    AccountMeta(address: game, role: AccountRole.writable),
+    AccountMeta(address: game, role: AccountRole.readonly),
     AccountMeta(address: section, role: AccountRole.writable),
-    AccountMeta(address: treasury, role: AccountRole.writable),
+    AccountMeta(address: bitMint, role: AccountRole.readonly),
+    AccountMeta(address: sectionVault, role: AccountRole.writable),
+    AccountMeta(address: playerBitAccount, role: AccountRole.writable),
+    AccountMeta(address: tokenProgram, role: AccountRole.readonly),
     AccountMeta(address: systemProgram, role: AccountRole.readonly),
     ],
     data: getFlipPixelsInstructionDataEncoder().encode(instructionData),

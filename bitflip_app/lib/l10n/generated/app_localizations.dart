@@ -448,6 +448,12 @@ abstract class AppLocalizations {
   /// **'MOVE FEE'**
   String get moveFee;
 
+  /// No description provided for @moveReward.
+  ///
+  /// In en, this message translates to:
+  /// **'BIT REWARD'**
+  String get moveReward;
+
   /// No description provided for @claimPrice.
   ///
   /// In en, this message translates to:
@@ -459,6 +465,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{sol} SOL'**
   String feeValue(String sol);
+
+  /// No description provided for @rewardValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{bits} BIT'**
+  String rewardValue(String bits);
+
+  /// No description provided for @rewardWindowUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This five-minute reward window cannot cover the full batch. Refresh after the next window.'**
+  String get rewardWindowUnavailable;
 
   /// No description provided for @commitMoves.
   ///
@@ -727,7 +745,7 @@ abstract class AppLocalizations {
   /// No description provided for @claimStepBody.
   ///
   /// In en, this message translates to:
-  /// **'Bitflip funds one public starting sector. Each later buyer creates the next sector only after time or collective activity unlocks it.'**
+  /// **'Bitflip funds one public starting sector. Each later buyer creates and fully funds the BIT vault for the next sector only after time or collective activity unlocks it.'**
   String get claimStepBody;
 
   /// No description provided for @flipStep.
@@ -763,7 +781,7 @@ abstract class AppLocalizations {
   /// No description provided for @securityNote.
   ///
   /// In en, this message translates to:
-  /// **'No reward faucet. No no-op payout. Fixed fees are checked on-chain.'**
+  /// **'BIT has zero decimals. Dynamic fees and exact rewards are checked on-chain before any pixel changes.'**
   String get securityNote;
 
   /// No description provided for @status.

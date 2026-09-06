@@ -23,15 +23,15 @@ The defaults are 1,024 paid flips or one hour per sector. Both values are config
 
 The claimant is the payer for the new sector PDA and, when BIT rewards are enabled, its lazily created Token-2022 vault. Their launch flow therefore pays:
 
-- Solana rent for the 763-byte bitmap and section-economy account;
+- Solana rent for the 771-byte bitmap and section-economy account;
 - current rent for one section-PDA-owned Token-2022 associated account; and
 - `claim_price_lamports`, transferred to the configured treasury.
 
-Creation, payment, ownership assignment, and advancing `next_section` are one atomic claim instruction. Vault funding is a permissionless, one-time follow-up instruction in ABI version 3; the product must submit and confirm it before enabling reward-bearing flips for that section. A failed claim creates no bitmap account and transfers no claim payment; a failed vault funding call transfers no BIT or records no vault. At most one bitmap and one token account are created per active section, so an unused game never allocates the other 255 pairs.
+Creation, payment, ownership assignment, and advancing `next_section` are one claim instruction. Vault funding remains a permissionless, one-time instruction; the first-party client submits claim and funding together in one atomic transaction, so a claimant never receives an active but unfunded section. Direct integrations must do the same or keep reward-bearing controls disabled until funding confirms. A failed transaction creates no bitmap or token account, transfers no claim payment or BIT, and does not advance the game. At most one bitmap and one token account are created per active section, so an unused game never allocates the other 255 pairs.
 
 ## Play and ownership
 
-Flipping is public while a sector is active. A player can toggle up to 16 unique pixels per transaction and pays the game fee for every flip. Ownership controls the scarce lifecycle actions: listing, cancelling a listing, and sealing.
+Flipping is public while a sector is active. A player can toggle up to 16 unique pixels per transaction. The section controller calculates one posted SOL price for its current five-minute window, and each successfully rewarded pixel transfers one whole zero-decimal BIT from that section's vault. The player signs the window identifier, maximum unit and total charge, and minimum reward. Any mismatch rolls back payment, BIT, controller state, and all pixel toggles together. Ownership controls the scarce lifecycle actions: listing, cancelling a listing, and sealing.
 
 The section now stores its immutable issuance-controller state and separately accounts for base BIT emitted and BIT moved into the protocol reward pool. Anyone can settle elapsed windows, but no instruction can yet distribute BIT or withdraw the pool. The intended later campaign layer gives owners bounded governance over an approved game mode, entry price, rules digest, and an owner/sponsor-funded reward budget. It deliberately does not give owners mint authority or a free reward allocation that they could route back to themselves. The economics, custody model, fee-share hypothesis, and implementation gates are specified in [ADR 0003](decisions/0003-section-economy.md).
 
@@ -45,4 +45,4 @@ Minted sectors cannot use this listing mechanism. After minting, the compressed 
 
 ## Deployment compatibility
 
-Economy ABI version 3 uses a 237-byte config, 123-byte game, and 763-byte section. It adds an immutable BIT mint/reserve registry and a canonical vault address to every funded section, and rejects initialization beyond the four configured games. Do not point the updated app at accounts from an older layout. For staging and launch, deploy the reviewed program under a fresh program ID and initialize fresh games so every section uses the current layout, controller configuration, and custody rules.
+Economy ABI version 4 uses a 237-byte config, 123-byte game, and 771-byte section. It includes the immutable BIT mint/reserve registry, a canonical vault for every funded section, atomic paid issuance, and a shard-local SOL fee ledger, and rejects initialization beyond the four configured games. Do not point the updated app at accounts from an older layout. For staging and launch, deploy the reviewed program under a fresh program ID and initialize fresh games so every section uses the current layout, controller configuration, and custody rules.

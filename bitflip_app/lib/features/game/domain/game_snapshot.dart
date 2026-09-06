@@ -1,4 +1,5 @@
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
+import 'package:bitflip_app/features/game/domain/section_economy.dart';
 
 enum SectionLifecycle { unclaimed, active, sealed, minted }
 
@@ -13,6 +14,8 @@ final class SectionSnapshot {
     required this.salePriceLamports,
     this.isProtocolOwned = false,
     this.assetId,
+    this.bitVault,
+    this.economy,
   });
 
   final int index;
@@ -24,6 +27,8 @@ final class SectionSnapshot {
   final BigInt salePriceLamports;
   final bool isProtocolOwned;
   final String? assetId;
+  final String? bitVault;
+  final SectionEconomySnapshot? economy;
 
   bool get isEditable => lifecycle == SectionLifecycle.active;
   bool get isClaimed => lifecycle != SectionLifecycle.unclaimed;
@@ -38,6 +43,8 @@ final class SectionSnapshot {
     BigInt? salePriceLamports,
     bool? isProtocolOwned,
     String? assetId,
+    String? bitVault,
+    SectionEconomySnapshot? economy,
   }) {
     return SectionSnapshot(
       index: index,
@@ -49,6 +56,8 @@ final class SectionSnapshot {
       salePriceLamports: salePriceLamports ?? this.salePriceLamports,
       isProtocolOwned: isProtocolOwned ?? this.isProtocolOwned,
       assetId: assetId ?? this.assetId,
+      bitVault: bitVault ?? this.bitVault,
+      economy: economy ?? this.economy,
     );
   }
 }
@@ -68,6 +77,9 @@ final class GameSnapshot {
     required this.previousSectionFlipCount,
     required this.treasury,
     required this.section,
+    this.bitMint,
+    this.bitReserve,
+    this.priceConfig,
   });
 
   factory GameSnapshot.demo({int sectionIndex = 0}) {
@@ -140,6 +152,9 @@ final class GameSnapshot {
   final BigInt? previousSectionFlipCount;
   final String? treasury;
   final SectionSnapshot section;
+  final String? bitMint;
+  final String? bitReserve;
+  final SectionPriceConfig? priceConfig;
 
   int get claimedSections => nextSection.clamp(0, sectionCount);
 
@@ -177,6 +192,9 @@ final class GameSnapshot {
       previousSectionFlipCount: previousSectionFlipCount,
       treasury: treasury,
       section: section ?? this.section,
+      bitMint: bitMint,
+      bitReserve: bitReserve,
+      priceConfig: priceConfig,
     );
   }
 }

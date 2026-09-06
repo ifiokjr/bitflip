@@ -113,26 +113,12 @@ void main() {
         sectionBump: initialSectionBump,
       ),
     ]);
-    final coordinates = Uint8List(32)
-      ..[0] = 7
-      ..[1] = 9;
+    await surfpool.cheatcodes.timeTravel(
+      absoluteTimestamp: DateTime.now().millisecondsSinceEpoch + 2000,
+    );
     await _sendInstructions(
       surfpool,
       [
-        getFlipPixelsInstruction(
-          programAddress: bitflipProgramProgramAddress,
-          player: owner.address,
-          config: configAddress,
-          game: gameAddress,
-          section: initialSectionAddress,
-          treasury: surfpool.payer.address,
-          systemProgram: system.systemProgramAddress,
-          gameIndex: 0,
-          sectionIndex: 0,
-          count: 1,
-          coordinates: coordinates,
-          maximumTotalFeeLamports: BigInt.from(10_000),
-        ),
         getClaimSectionInstruction(
           programAddress: bitflipProgramProgramAddress,
           owner: owner.address,
@@ -147,20 +133,13 @@ void main() {
           bump: sectionBump,
           maximumPriceLamports: BigInt.from(10_000_000),
         ),
-        getFlipPixelsInstruction(
-          programAddress: bitflipProgramProgramAddress,
-          player: owner.address,
-          config: configAddress,
-          game: gameAddress,
-          section: sectionAddress,
-          treasury: surfpool.payer.address,
-          systemProgram: system.systemProgramAddress,
-          gameIndex: 0,
-          sectionIndex: 1,
-          count: 1,
-          coordinates: coordinates,
-          maximumTotalFeeLamports: BigInt.from(10_000),
-        ),
+      ],
+      extraSigners: [owner],
+    );
+    await _setTestSectionPixel(surfpool, sectionAddress, x: 7, y: 9);
+    await _sendInstructions(
+      surfpool,
+      [
         getSealSectionInstruction(
           programAddress: bitflipProgramProgramAddress,
           owner: owner.address,
@@ -269,6 +248,29 @@ void main() {
   });
 }
 
+Future<void> _setTestSectionPixel(
+  SurfpoolClient client,
+  Address sectionAddress, {
+  required int x,
+  required int y,
+}) async {
+  final maybeSection = await fetchEncodedAccount(client.rpc, sectionAddress);
+  final section = switch (maybeSection) {
+    ExistingAccount<Uint8List>(:final account) => account,
+    NonExistingAccount<Uint8List>() => throw StateError(
+      'Bitflip section should exist before test setup.',
+    ),
+  };
+  final data = Uint8List.fromList(section.data);
+  const pixelsOffset = 259;
+  final pixelIndex = y * 64 + x;
+  data
+    ..[133] = 1
+    ..[134] = 0
+    ..[pixelsOffset + pixelIndex ~/ 8] |= 1 << (pixelIndex % 8);
+  await client.cheatcodes.setAccount(sectionAddress, data: data);
+}
+
 Future<void> _createPrivateTree(
   SurfpoolClient client,
   KeyPairSigner merkleTree,
@@ -330,6 +332,7 @@ Future<void> _setTestConfigAuthorities(
     ..setRange(2, 34, authority)
     ..setRange(66, 98, authority)
     ..setRange(98, 130, authority)
+    ..setRange(226, 230, const [1, 0, 0, 0])
     ..setRange(230, 234, const [1, 0, 0, 0]);
   await client.cheatcodes.setAccount(configAddress, data: data);
 }

@@ -31,6 +31,7 @@ dependencies:
   solana_kit_rpc_spec: 0.9.1
   solana_kit_rpc_types: 0.9.1
   solana_kit_system: 0.7.1
+  solana_kit_token: 0.8.1
   url_launcher: 6.3.2
 
 dev_dependencies:

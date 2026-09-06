@@ -211,12 +211,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get moveFee => 'MOVE FEE';
 
   @override
+  String get moveReward => 'BIT REWARD';
+
+  @override
   String get claimPrice => 'CLAIM PRICE';
 
   @override
   String feeValue(String sol) {
     return '$sol SOL';
   }
+
+  @override
+  String rewardValue(String bits) {
+    return '$bits BIT';
+  }
+
+  @override
+  String get rewardWindowUnavailable =>
+      'This five-minute reward window cannot cover the full batch. Refresh after the next window.';
 
   @override
   String commitMoves(int count) {
@@ -372,7 +384,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get claimStepBody =>
-      'Bitflip funds one public starting sector. Each later buyer creates the next sector only after time or collective activity unlocks it.';
+      'Bitflip funds one public starting sector. Each later buyer creates and fully funds the BIT vault for the next sector only after time or collective activity unlocks it.';
 
   @override
   String get flipStep => '02 / FLIP';
@@ -393,7 +405,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get securityNote =>
-      'No reward faucet. No no-op payout. Fixed fees are checked on-chain.';
+      'BIT has zero decimals. Dynamic fees and exact rewards are checked on-chain before any pixel changes.';
 
   @override
   String get status => 'STATUS';
