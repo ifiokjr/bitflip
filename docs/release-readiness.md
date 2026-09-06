@@ -39,9 +39,10 @@ The 2026-09-06 smoke installed SHA-256 `bc3bdf672075ade1e71ca7f58423e5a65870a9da
 - Confirm game initialization creates only sector `0`, its logical owner is the game PDA, and the authority paid rent for no later sector.
 - Exercise activity and scheduled unlocks, claimant-funded sector creation, listing, cancellation, purchase slippage, and ownership transfer on staging.
 - Replace the beta's user-driven mint reconciliation with the durable worker described in the [operations runbook](operations/runbook.md).
+- Backfill and continuously index authenticated colour events independently of client submissions before treating the contested canvas as complete; client submission is only a low-latency hint.
 - Record the final marketplace-authenticity choice from [ADR 0002](decisions/0002-marketplace-authenticity.md).
 - Do not enable BIT rewards or section campaigns until the token, custody, economic, integrity, and product-copy gates in [ADR 0003](decisions/0003-section-economy.md) are implemented and independently reviewed. A release without those features may proceed only if the UI continues to make their absence explicit.
-- Verify ABI version 6 rejects a mint with live authority, nonzero decimals, the wrong supply, or unsupported extensions; reconcile the launch reserve, every funded section vault, emitted BIT, reward-pool ledger, protocol-fee ledger, owner payments, and live policy versions after the canary.
+- Verify ABI version 7 rejects a mint with live authority, nonzero decimals, the wrong supply, or unsupported extensions; reconcile the launch reserve, every funded section vault, emitted BIT, reward-pool ledger, protocol-fee ledger, owner payments, live policy versions, and indexed colour revisions after the canary.
 - Before enabling paid BIT distribution, satisfy the simulation, property-test, real-SBF capacity, wallet-quote, and devnet evidence requirements in [ADR 0004](decisions/0004-section-price-controller.md).
 - Profile one-pixel and 16-pixel paid flips across the intended number of simultaneously active sections on devnet. The shared writable game counter and global-treasury transfer have been removed, and two-section real-SBF correctness is covered, but that is not production throughput evidence.
 

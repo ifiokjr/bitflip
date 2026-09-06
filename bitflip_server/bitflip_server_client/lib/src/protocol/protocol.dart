@@ -12,8 +12,10 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
+import 'colour/colour_canvas_view.dart' as _i7up465y;
 import 'minting/mint_challenge_view.dart' as _i8azp9qk;
 import 'minting/mint_section_result.dart' as _icvzv24k;
+export 'colour/colour_canvas_view.dart';
 export 'minting/mint_challenge_view.dart';
 export 'minting/mint_section_result.dart';
 export 'client.dart';
@@ -52,11 +54,18 @@ class Protocol extends _isc.SerializationManager {
       }
     }
 
+    if (t == _i7up465y.ColourCanvasView) {
+      return _i7up465y.ColourCanvasView.fromJson(data) as T;
+    }
     if (t == _i8azp9qk.MintChallengeView) {
       return _i8azp9qk.MintChallengeView.fromJson(data) as T;
     }
     if (t == _icvzv24k.MintSectionResult) {
       return _icvzv24k.MintSectionResult.fromJson(data) as T;
+    }
+    if (t == _isc.getType<_i7up465y.ColourCanvasView?>()) {
+      return (data != null ? _i7up465y.ColourCanvasView.fromJson(data) : null)
+          as T;
     }
     if (t == _isc.getType<_i8azp9qk.MintChallengeView?>()) {
       return (data != null ? _i8azp9qk.MintChallengeView.fromJson(data) : null)
@@ -71,6 +80,7 @@ class Protocol extends _isc.SerializationManager {
 
   static String? getClassNameForType(Type type) {
     return switch (type) {
+      _i7up465y.ColourCanvasView => 'ColourCanvasView',
       _i8azp9qk.MintChallengeView => 'MintChallengeView',
       _icvzv24k.MintSectionResult => 'MintSectionResult',
       _ => null,
@@ -90,6 +100,8 @@ class Protocol extends _isc.SerializationManager {
     }
 
     switch (data) {
+      case _i7up465y.ColourCanvasView():
+        return 'ColourCanvasView';
       case _i8azp9qk.MintChallengeView():
         return 'MintChallengeView';
       case _icvzv24k.MintSectionResult():
@@ -103,6 +115,9 @@ class Protocol extends _isc.SerializationManager {
     var dataClassName = data['className'];
     if (dataClassName is! String) {
       return super.deserializeByClassName(data);
+    }
+    if (dataClassName == 'ColourCanvasView') {
+      return deserialize<_i7up465y.ColourCanvasView>(data['data']);
     }
     if (dataClassName == 'MintChallengeView') {
       return deserialize<_i8azp9qk.MintChallengeView>(data['data']);

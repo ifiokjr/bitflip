@@ -106,6 +106,7 @@
   "baseCanvasMode": "BASE CANVAS",
   "openCanvasMode": "OPEN CANVAS",
   "colourCanvasMode": "8-COLOUR CANVAS",
+  "chooseColour": "PAINT COLOUR",
   "noCampaign": "No owner campaign is configured.",
   "campaignScheduledFor": "Scheduled for {time}.",
   "@campaignScheduledFor": {"placeholders": {"time": {"type": "String"}}},

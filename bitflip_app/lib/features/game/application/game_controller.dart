@@ -5,6 +5,7 @@ import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/data/bitflip_repository.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
+import 'package:bitflip_app/features/game/domain/pixel_colour_map.dart';
 import 'package:bitflip_app/features/game/domain/section_economy.dart';
 import 'package:bitflip_app/features/game/domain/section_policy.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -62,6 +63,7 @@ final class GameViewState {
     required this.walletBalanceLamports,
     required this.loadStatus,
     required this.walletChain,
+    required this.selectedColour,
     this.cursor,
   });
 
@@ -87,6 +89,7 @@ final class GameViewState {
       walletBalanceLamports: null,
       loadStatus: isDemoMode ? GameLoadStatus.demo : GameLoadStatus.loading,
       walletChain: walletChain,
+      selectedColour: SectionColour.acid,
     );
   }
 
@@ -102,6 +105,17 @@ final class GameViewState {
   final BigInt? walletBalanceLamports;
   final GameLoadStatus loadStatus;
   final String walletChain;
+  final SectionColour selectedColour;
+
+  bool get isColourRoundLive {
+    final policy = snapshot.section.policy;
+    if (policy == null || policy.mode != SectionPolicyMode.colourCanvas) {
+      return false;
+    }
+    return policy.isLiveAt(
+      BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000),
+    );
+  }
 
   PixelBitmap get previewBitmap => snapshot.section.bitmap.toggled(queued);
 
@@ -140,6 +154,7 @@ final class GameViewState {
     bool clearWalletBalance = false,
     GameLoadStatus? loadStatus,
     String? walletChain,
+    SectionColour? selectedColour,
   }) {
     return GameViewState(
       snapshot: snapshot ?? this.snapshot,
@@ -156,6 +171,7 @@ final class GameViewState {
           : walletBalanceLamports ?? this.walletBalanceLamports,
       loadStatus: loadStatus ?? this.loadStatus,
       walletChain: walletChain ?? this.walletChain,
+      selectedColour: selectedColour ?? this.selectedColour,
     );
   }
 }
@@ -339,6 +355,11 @@ class GameController extends _$GameController {
     state = state.copyWith(cursor: coordinate);
   }
 
+  void selectColour(SectionColour colour) {
+    if (!state.isColourRoundLive || state.isBusy) return;
+    state = state.copyWith(selectedColour: colour);
+  }
+
   void clearQueue() {
     state = state.copyWith(
       queued: const {},
@@ -351,7 +372,10 @@ class GameController extends _$GameController {
     if (state.queued.isEmpty || state.isBusy || !state.canTransact) return;
     final coordinates = state.queued.toList()..sort();
     if (state.snapshot.isDemo) {
-      _commitLocally(coordinates);
+      _commitLocally(
+        coordinates,
+        colour: state.isColourRoundLive ? state.selectedColour : null,
+      );
       return;
     }
     state = state.copyWith(isBusy: true);
@@ -359,8 +383,13 @@ class GameController extends _$GameController {
       final transactionSignature = await _repository.flipPixels(
         state.snapshot,
         coordinates,
+        colour: state.isColourRoundLive ? state.selectedColour : null,
       );
-      _commitLocally(coordinates, transactionSignature: transactionSignature);
+      _commitLocally(
+        coordinates,
+        colour: state.isColourRoundLive ? state.selectedColour : null,
+        transactionSignature: transactionSignature,
+      );
       unawaited(refresh());
     } on Object {
       state = state.copyWith(
@@ -732,11 +761,18 @@ class GameController extends _$GameController {
 
   void _commitLocally(
     List<PixelCoordinate> coordinates, {
+    SectionColour? colour,
     String? transactionSignature,
   }) {
     final current = state.snapshot;
     final section = current.section.copyWith(
       bitmap: current.section.bitmap.toggled(coordinates),
+      colourMap: colour == null
+          ? current.section.colourMap
+          : (current.section.colourMap ?? PixelColourMap.empty()).painted(
+              coordinates,
+              colour,
+            ),
       flipCount: current.section.flipCount + BigInt.from(coordinates.length),
       revision: current.section.revision + BigInt.one,
     );

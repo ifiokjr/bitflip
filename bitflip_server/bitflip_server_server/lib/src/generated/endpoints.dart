@@ -11,12 +11,19 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod/serverpod.dart' as _is;
+import '../colour/colour_canvas_endpoint.dart' as _ixrwsudz;
 import '../minting/mint_endpoint.dart' as _iy6fwn2n;
 
 class Endpoints extends _is.EndpointDispatch {
   @override
   void initializeEndpoints(_is.Server server) {
     var endpoints = <String, _is.Endpoint>{
+      'colourCanvas': _ixrwsudz.ColourCanvasEndpoint()
+        ..initialize(
+          server,
+          'colourCanvas',
+          null,
+        ),
       'mint': _iy6fwn2n.MintEndpoint()
         ..initialize(
           server,
@@ -24,6 +31,70 @@ class Endpoints extends _is.EndpointDispatch {
           null,
         ),
     };
+    connectors['colourCanvas'] = _is.EndpointConnector(
+      name: 'colourCanvas',
+      endpoint: endpoints['colourCanvas']!,
+      methodConnectors: {
+        'load': _is.MethodConnector(
+          name: 'load',
+          params: {
+            'gameIndex': _is.ParameterDescription(
+              name: 'gameIndex',
+              type: _is.getType<int>(),
+              nullable: false,
+            ),
+            'sectionIndex': _is.ParameterDescription(
+              name: 'sectionIndex',
+              type: _is.getType<int>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['colourCanvas'] as _ixrwsudz.ColourCanvasEndpoint)
+                      .load(
+                        session,
+                        gameIndex: params['gameIndex'],
+                        sectionIndex: params['sectionIndex'],
+                      ),
+        ),
+        'recordSignature': _is.MethodConnector(
+          name: 'recordSignature',
+          params: {
+            'transactionSignature': _is.ParameterDescription(
+              name: 'transactionSignature',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'gameIndex': _is.ParameterDescription(
+              name: 'gameIndex',
+              type: _is.getType<int>(),
+              nullable: false,
+            ),
+            'sectionIndex': _is.ParameterDescription(
+              name: 'sectionIndex',
+              type: _is.getType<int>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['colourCanvas'] as _ixrwsudz.ColourCanvasEndpoint)
+                      .recordSignature(
+                        session,
+                        transactionSignature: params['transactionSignature'],
+                        gameIndex: params['gameIndex'],
+                        sectionIndex: params['sectionIndex'],
+                      ),
+        ),
+      },
+    );
     connectors['mint'] = _is.EndpointConnector(
       name: 'mint',
       endpoint: endpoints['mint']!,

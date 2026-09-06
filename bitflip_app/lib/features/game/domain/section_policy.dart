@@ -30,6 +30,33 @@ enum SectionRewardPolicy {
   final int code;
 }
 
+enum SectionColour {
+  acid(0),
+  coral(1),
+  cyan(2),
+  paper(3),
+  violet(4),
+  amber(5),
+  blue(6),
+  pink(7);
+
+  const SectionColour(this.code);
+
+  factory SectionColour.fromCode(int code) => switch (code) {
+    0 => SectionColour.acid,
+    1 => SectionColour.coral,
+    2 => SectionColour.cyan,
+    3 => SectionColour.paper,
+    4 => SectionColour.violet,
+    5 => SectionColour.amber,
+    6 => SectionColour.blue,
+    7 => SectionColour.pink,
+    _ => throw StateError('The pixel has an unknown palette colour.'),
+  };
+
+  final int code;
+}
+
 final class SectionPolicySnapshot {
   SectionPolicySnapshot({
     required this.version,

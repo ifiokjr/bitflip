@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:bitflip_app/app/theme/bitflip_theme.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
+import 'package:bitflip_app/features/game/domain/pixel_colour_map.dart';
+import 'package:bitflip_app/features/game/domain/section_policy.dart';
 import 'package:bitflip_app/l10n/l10n.dart';
 import 'package:bitflip_app/testing/bitflip_test_keys.dart';
 import 'package:flutter/material.dart';
@@ -16,15 +18,19 @@ class PixelCanvas extends HookWidget {
     required this.enabled,
     required this.onPixelPressed,
     required this.onCursorMoved,
+    this.activeColour,
+    this.colourMap,
     super.key,
   });
 
   final PixelBitmap bitmap;
+  final PixelColourMap? colourMap;
   final Set<PixelCoordinate> queued;
   final PixelCoordinate? cursor;
   final bool enabled;
   final ValueChanged<PixelCoordinate> onPixelPressed;
   final ValueChanged<PixelCoordinate> onCursorMoved;
+  final SectionColour? activeColour;
 
   @override
   Widget build(BuildContext context) {
@@ -165,8 +171,10 @@ class PixelCanvas extends HookWidget {
                                 child: CustomPaint(
                                   painter: PixelCanvasPainter(
                                     bitmap: bitmap,
+                                    colourMap: colourMap,
                                     queued: queued,
                                     cursor: cursor,
+                                    activeColour: activeColour,
                                   ),
                                 ),
                               ),
@@ -191,13 +199,17 @@ enum _ZoomAction { out, reset, increase }
 class PixelCanvasPainter extends CustomPainter {
   PixelCanvasPainter({
     required this.bitmap,
+    required this.colourMap,
     required this.queued,
     required this.cursor,
+    required this.activeColour,
   });
 
   final PixelBitmap bitmap;
+  final PixelColourMap? colourMap;
   final Set<PixelCoordinate> queued;
   final PixelCoordinate? cursor;
+  final SectionColour? activeColour;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -207,12 +219,33 @@ class PixelCanvasPainter extends CustomPainter {
 
     final pixelPaint = Paint()..color = BitflipColors.acid;
     final queuedOnPaint = Paint()..color = BitflipColors.coral;
+    final colourPaint = Paint()
+      ..color = activeColour == null
+          ? BitflipColors.coral
+          : BitflipColors.sectionPalette[activeColour!.code];
+    final committedColourPaints = BitflipColors.sectionPalette
+        .map((colour) => Paint()..color = colour)
+        .toList(growable: false);
     final queuedOffPaint = Paint()
       ..color = BitflipColors.cyan.withValues(alpha: 0.32);
     for (var y = 0; y < sectionSide; y++) {
       for (var x = 0; x < sectionSide; x++) {
         final coordinate = PixelCoordinate(x, y);
         final queuedHere = queued.contains(coordinate);
+        if (queuedHere && activeColour != null) {
+          final rect = Rect.fromLTWH(x * cell, y * cell, cell, cell);
+          canvas.drawRect(rect.deflate(cell > 5 ? 0.55 : 0.18), colourPaint);
+          continue;
+        }
+        final committedColour = colourMap?.colourAt(x, y);
+        if (committedColour != null) {
+          final rect = Rect.fromLTWH(x * cell, y * cell, cell, cell);
+          canvas.drawRect(
+            rect.deflate(cell > 5 ? 0.55 : 0.18),
+            committedColourPaints[committedColour.code],
+          );
+          continue;
+        }
         final wasOn = bitmap.isOn(x, y);
         final isOn = queuedHere ? !wasOn : wasOn;
         if (!isOn && !queuedHere) continue;
@@ -273,7 +306,9 @@ class PixelCanvasPainter extends CustomPainter {
   @override
   bool shouldRepaint(PixelCanvasPainter oldDelegate) {
     return oldDelegate.bitmap != bitmap ||
+        oldDelegate.colourMap != colourMap ||
         oldDelegate.queued != queued ||
-        oldDelegate.cursor != cursor;
+        oldDelegate.cursor != cursor ||
+        oldDelegate.activeColour != activeColour;
   }
 }

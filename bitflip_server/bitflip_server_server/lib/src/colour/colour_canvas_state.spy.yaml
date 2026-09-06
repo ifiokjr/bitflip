@@ -1,0 +1,16 @@
+class: ColourCanvasState
+serverOnly: true
+table: bitflip_colour_canvas_state
+fields:
+  id: UuidValue?, defaultPersist=random_v7
+  gameIndex: int
+  sectionIndex: int
+  policyVersion: int
+  highestRevision: int
+  colours: ByteData
+  pixelRevisions: ByteData
+  updatedAt: DateTime, defaultModel=now
+indexes:
+  bitflip_colour_canvas_section_idx:
+    fields: gameIndex, sectionIndex
+    unique: true

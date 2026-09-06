@@ -104,6 +104,41 @@ void main() {
       );
     });
 
+    test('binds the selected palette colour to a live colour batch', () async {
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      repository.snapshot = _liveSnapshot(
+        SectionLifecycle.active,
+        policy: SectionPolicySnapshot(
+          version: BigInt.one,
+          startsAtUnixSeconds: BigInt.from(now - 10),
+          endsAtUnixSeconds: BigInt.from(now + 600),
+          entryPriceTokens: BigInt.zero,
+          rewardPerActionTokens: BigInt.zero,
+          rulesDigest: List.filled(32, 1),
+          mode: SectionPolicyMode.colourCanvas,
+          paletteId: 0,
+          rewardPolicy: SectionRewardPolicy.none,
+        ),
+      );
+      final controller = container.read(gameControllerProvider.notifier);
+      await controller.refresh();
+      controller.selectColour(SectionColour.pink);
+      controller.togglePixel(const PixelCoordinate(2, 3));
+
+      await controller.commitMoves();
+
+      expect(repository.lastColour, SectionColour.pink);
+      expect(
+        container
+            .read(gameControllerProvider)
+            .snapshot
+            .section
+            .colourMap
+            ?.colourAt(2, 3),
+        SectionColour.pink,
+      );
+    });
+
     test(
       'mints only a sealed section and records the returned asset',
       () async {

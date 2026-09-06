@@ -10,6 +10,16 @@ abstract final class BitflipColors {
   static const paper = Color(0xFFF4F0DF);
   static const muted = Color(0xFF8EA39D);
   static const line = Color(0xFF24433A);
+  static const sectionPalette = [
+    acid,
+    coral,
+    cyan,
+    paper,
+    Color(0xFFAD7CFF),
+    Color(0xFFFFC857),
+    Color(0xFF5386FF),
+    Color(0xFFFF70C6),
+  ];
 }
 
 ThemeData buildBitflipTheme() {

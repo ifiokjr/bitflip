@@ -621,13 +621,23 @@ class _CanvasPanel extends HookWidget {
           _GameLoadBanner(status: state.loadStatus),
           const SizedBox(height: 14),
         ],
+        if (state.isColourRoundLive) ...[
+          _ColourPalette(
+            selected: state.selectedColour,
+            enabled: canEdit,
+            onSelected: controller.selectColour,
+          ),
+          const SizedBox(height: 14),
+        ],
         PixelCanvas(
           bitmap: section.bitmap,
+          colourMap: section.colourMap,
           queued: state.queued,
           cursor: state.cursor,
           enabled: canEdit,
           onPixelPressed: controller.togglePixel,
           onCursorMoved: controller.selectPixel,
+          activeColour: state.isColourRoundLive ? state.selectedColour : null,
         ),
         const SizedBox(height: 15),
         _CoordinatePicker(
@@ -725,6 +735,78 @@ class _CanvasPanel extends HookWidget {
           },
         ),
       ],
+    );
+  }
+}
+
+class _ColourPalette extends StatelessWidget {
+  const _ColourPalette({
+    required this.selected,
+    required this.enabled,
+    required this.onSelected,
+  });
+
+  final SectionColour selected;
+  final bool enabled;
+  final ValueChanged<SectionColour> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      label: context.l10n.chooseColour,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.chooseColour,
+            style: Theme.of(context).textTheme.labelLarge
+                ?.copyWith(color: BitflipColors.muted),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final colour in SectionColour.values)
+                Tooltip(
+                  message: colour.name.toUpperCase(),
+                  child: InkWell(
+                    onTap: enabled ? () => onSelected(colour) : null,
+                    borderRadius: BorderRadius.circular(24),
+                    child: Semantics(
+                      button: true,
+                      selected: colour == selected,
+                      label: colour.name,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: BitflipColors.sectionPalette[colour.code],
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: colour == selected
+                                ? BitflipColors.paper
+                                : BitflipColors.line,
+                            width: colour == selected ? 3 : 1,
+                          ),
+                        ),
+                        child: colour == selected
+                            ? const Icon(
+                                Icons.check_rounded,
+                                color: BitflipColors.voidColor,
+                                size: 20,
+                              )
+                            : null,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

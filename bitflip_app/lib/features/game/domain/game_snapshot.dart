@@ -1,4 +1,5 @@
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
+import 'package:bitflip_app/features/game/domain/pixel_colour_map.dart';
 import 'package:bitflip_app/features/game/domain/section_economy.dart';
 import 'package:bitflip_app/features/game/domain/section_policy.dart';
 
@@ -18,6 +19,7 @@ final class SectionSnapshot {
     this.bitVault,
     this.economy,
     this.policy,
+    this.colourMap,
   });
 
   final int index;
@@ -32,6 +34,7 @@ final class SectionSnapshot {
   final String? bitVault;
   final SectionEconomySnapshot? economy;
   final SectionPolicySnapshot? policy;
+  final PixelColourMap? colourMap;
 
   bool get isEditable => lifecycle == SectionLifecycle.active;
   bool get isClaimed => lifecycle != SectionLifecycle.unclaimed;
@@ -49,6 +52,7 @@ final class SectionSnapshot {
     String? bitVault,
     SectionEconomySnapshot? economy,
     SectionPolicySnapshot? policy,
+    PixelColourMap? colourMap,
   }) {
     return SectionSnapshot(
       index: index,
@@ -63,6 +67,7 @@ final class SectionSnapshot {
       bitVault: bitVault ?? this.bitVault,
       economy: economy ?? this.economy,
       policy: policy ?? this.policy,
+      colourMap: colourMap ?? this.colourMap,
     );
   }
 }

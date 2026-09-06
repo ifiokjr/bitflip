@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:bitflip_server_server/src/colour/colour_flip_event_source.dart';
 import 'package:bitflip_server_server/src/generated/serverpod.dart';
 import 'package:bitflip_server_server/src/minting/bitflip_mint_service.dart';
 import 'package:bitflip_server_server/src/minting/section_routes.dart';
@@ -27,6 +28,9 @@ void run(List<String> args) async {
     ),
   );
   MintServiceRegistry.configure(mintService);
+  ColourFlipEventSourceRegistry.configure(
+    SolanaColourFlipEventSource(mintService.rpc),
+  );
   pod.webServer.addMiddleware(const SecurityHeadersMiddleware().call, '/');
 
   pod.webServer

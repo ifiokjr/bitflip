@@ -1,0 +1,108 @@
+{
+	"__className__": "serverpod.DatabaseMigration",
+	"actions": [
+		{
+			"__className__": "serverpod.DatabaseMigrationAction",
+			"type": "createTable",
+			"createTable": {
+				"__className__": "serverpod.TableDefinition",
+				"name": "bitflip_colour_canvas_state",
+				"dartName": "ColourCanvasState",
+				"module": "bitflip_server",
+				"schema": "public",
+				"columns": [
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "id",
+						"fieldName": "id",
+						"columnType": 7,
+						"isNullable": false,
+						"columnDefault": "random_v7",
+						"dartType": "UuidValue?"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "gameIndex",
+						"fieldName": "gameIndex",
+						"columnType": 6,
+						"isNullable": false,
+						"dartType": "int"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "sectionIndex",
+						"fieldName": "sectionIndex",
+						"columnType": 6,
+						"isNullable": false,
+						"dartType": "int"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "policyVersion",
+						"fieldName": "policyVersion",
+						"columnType": 6,
+						"isNullable": false,
+						"dartType": "int"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "highestRevision",
+						"fieldName": "highestRevision",
+						"columnType": 6,
+						"isNullable": false,
+						"dartType": "int"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "colours",
+						"fieldName": "colours",
+						"columnType": 5,
+						"isNullable": false,
+						"dartType": "dart:typed_data:ByteData"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "pixelRevisions",
+						"fieldName": "pixelRevisions",
+						"columnType": 5,
+						"isNullable": false,
+						"dartType": "dart:typed_data:ByteData"
+					},
+					{
+						"__className__": "serverpod.ColumnDefinition",
+						"name": "updatedAt",
+						"fieldName": "updatedAt",
+						"columnType": 4,
+						"isNullable": false,
+						"dartType": "DateTime"
+					}
+				],
+				"foreignKeys": [],
+				"indexes": [
+					{
+						"__className__": "serverpod.IndexDefinition",
+						"indexName": "bitflip_colour_canvas_section_idx",
+						"elements": [
+							{
+								"__className__": "serverpod.IndexElementDefinition",
+								"type": 0,
+								"definition": "gameIndex"
+							},
+							{
+								"__className__": "serverpod.IndexElementDefinition",
+								"type": 0,
+								"definition": "sectionIndex"
+							}
+						],
+						"type": "btree",
+						"isUnique": true,
+						"isPrimary": false
+					}
+				],
+				"managed": true
+			}
+		}
+	],
+	"warnings": [],
+	"migrationApiVersion": 1
+}
