@@ -90,23 +90,25 @@ final class SolanaBitflipMintService implements BitflipMintService {
   factory SolanaBitflipMintService.fromEnvironment(
     Map<String, String> environment, {
     required bool production,
+    bool requireExplicitConfiguration = false,
   }) {
+    final strictConfiguration = production || requireExplicitConfiguration;
     final rpcUrl = _environmentValue(
       environment,
       'SOLANA_RPC_URL',
-      production: production,
+      requiredForRelease: strictConfiguration,
       developmentDefault: 'http://127.0.0.1:8899',
     );
     final metadataBaseUrl = _environmentValue(
       environment,
       'BITFLIP_METADATA_BASE_URL',
-      production: production,
+      requiredForRelease: strictConfiguration,
       developmentDefault: 'http://localhost:8082',
     );
     final gameIndexValue = _environmentValue(
       environment,
       'BITFLIP_GAME_INDEX',
-      production: production,
+      requiredForRelease: strictConfiguration,
       developmentDefault: '0',
     );
     final gameIndex = int.tryParse(gameIndexValue);
@@ -118,7 +120,7 @@ final class SolanaBitflipMintService implements BitflipMintService {
     final priorityFeeMicroLamports = _environmentInteger(
       environment,
       'BITFLIP_PRIORITY_FEE_MICROLAMPORTS',
-      production: production,
+      requiredForRelease: strictConfiguration,
       developmentDefault: 0,
       minimum: 0,
       maximum: 10000000,
@@ -137,15 +139,19 @@ final class SolanaBitflipMintService implements BitflipMintService {
       minimum: 1,
       maximum: 5,
     );
-    if (production) {
+    if (strictConfiguration) {
       final cluster = _requiredEnvironmentValue(environment, 'BITFLIP_CLUSTER');
-      if (cluster != 'mainnet') {
+      if (production && cluster != 'mainnet') {
         throw StateError('Production BITFLIP_CLUSTER must be mainnet.');
+      }
+      if (!production && cluster != 'devnet') {
+        throw StateError('Staging BITFLIP_CLUSTER must be devnet.');
       }
       _requirePublicHttps('SOLANA_RPC_URL', rpcUrl);
       _requirePublicHttps('BITFLIP_METADATA_BASE_URL', metadataBaseUrl);
-      if (rpcUrl.toLowerCase().contains('devnet') ||
-          rpcUrl.toLowerCase().contains('testnet')) {
+      if (production &&
+          (rpcUrl.toLowerCase().contains('devnet') ||
+              rpcUrl.toLowerCase().contains('testnet'))) {
         throw StateError('Production SOLANA_RPC_URL must target mainnet.');
       }
       _requiredConfiguration(tree, 'BITFLIP_MERKLE_TREE');
@@ -161,7 +167,7 @@ final class SolanaBitflipMintService implements BitflipMintService {
       rpcTimeout: Duration(seconds: rpcTimeoutSeconds),
       maximumSubmitAttempts: maximumSubmitAttempts,
     );
-    if (production) service.validateSigningConfiguration();
+    if (strictConfiguration) service.validateSigningConfiguration();
     return service;
   }
 
@@ -527,19 +533,19 @@ String _requiredConfiguration(String? value, String name) {
 String _environmentValue(
   Map<String, String> environment,
   String name, {
-  required bool production,
+  required bool requiredForRelease,
   required String developmentDefault,
 }) {
   final value = environment[name]?.trim();
   if (value != null && value.isNotEmpty) return value;
-  if (production) return _requiredEnvironmentValue(environment, name);
+  if (requiredForRelease) return _requiredEnvironmentValue(environment, name);
   return developmentDefault;
 }
 
 String _requiredEnvironmentValue(Map<String, String> environment, String name) {
   final value = environment[name]?.trim();
   if (value == null || value.isEmpty) {
-    throw StateError('$name is required in production.');
+    throw StateError('$name is required for release deployments.');
   }
   return value;
 }
@@ -547,14 +553,14 @@ String _requiredEnvironmentValue(Map<String, String> environment, String name) {
 int _environmentInteger(
   Map<String, String> environment,
   String name, {
-  required bool production,
+  required bool requiredForRelease,
   required int developmentDefault,
   required int minimum,
   required int maximum,
 }) {
   final value = environment[name]?.trim();
-  if ((value == null || value.isEmpty) && production) {
-    throw StateError('$name is required in production.');
+  if ((value == null || value.isEmpty) && requiredForRelease) {
+    throw StateError('$name is required for release deployments.');
   }
   return _validatedInteger(
     name,
@@ -606,7 +612,7 @@ void _requirePublicHttps(String name, String value) {
       host == 'localhost' ||
       host == '127.0.0.1' ||
       host == '::1') {
-    throw StateError('$name must use a public HTTPS endpoint in production.');
+    throw StateError('$name must use a public HTTPS endpoint in releases.');
   }
 }
 

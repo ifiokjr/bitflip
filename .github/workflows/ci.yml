@@ -26,6 +26,7 @@ jobs:
           - test:rust
           - test:server
           - test:wallet
+          - test:operations
           - test:flutter
           - test:surfpool
           - test:surfpool:cnft

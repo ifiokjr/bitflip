@@ -321,4 +321,120 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dismiss => 'DISMISS';
+
+  @override
+  String get privacyLink => 'PRIVACY';
+
+  @override
+  String get termsLink => 'TERMS';
+
+  @override
+  String get supportLink => 'SUPPORT';
+
+  @override
+  String get backToBitflip => 'BACK TO BITFLIP';
+
+  @override
+  String get legalEffectiveDate => 'EFFECTIVE 6 SEPTEMBER 2026';
+
+  @override
+  String get privacyTitle => 'Privacy';
+
+  @override
+  String get privacyIntroduction =>
+      'Bitflip is built around a public blockchain. This notice explains what becomes public, what the service processes, and what never belongs in a support request.';
+
+  @override
+  String get privacyPublicTitle => 'Public blockchain data';
+
+  @override
+  String get privacyPublicBody =>
+      'Your wallet address, claims, flips, fees, sealed artwork, mint records, and transaction signatures can be permanently visible on Solana. Bitflip cannot erase or make public chain history private.';
+
+  @override
+  String get privacyServiceTitle => 'Service data';
+
+  @override
+  String get privacyServiceBody =>
+      'The service processes wallet-signed mint challenges and limited technical data such as request timing, error class, and network address for security, reliability, and abuse prevention. Operational data is retained only as needed for those purposes and protected with access controls.';
+
+  @override
+  String get privacyControlTitle => 'Your keys and choices';
+
+  @override
+  String get privacyControlBody =>
+      'Bitflip does not request or store your seed phrase or private key. Your wallet shows the transaction or message before you approve it. You can browse without connecting a wallet, and iOS and macOS are view-only in this release.';
+
+  @override
+  String get privacyContactTitle => 'Providers and questions';
+
+  @override
+  String get privacyContactBody =>
+      'Wallets, Solana RPC providers, app stores, and hosting providers process data under their own notices. Use the Support page to ask a privacy question without posting seed phrases, private keys, or other secrets.';
+
+  @override
+  String get termsTitle => 'Terms';
+
+  @override
+  String get termsIntroduction =>
+      'By using Bitflip, you choose to interact with experimental software and a public blockchain. Read the wallet prompt and verify the network, wallet, sector, pixels, and fee before approving anything.';
+
+  @override
+  String get termsActionsTitle => 'Fees and irreversible actions';
+
+  @override
+  String get termsActionsBody =>
+      'Claims and flips can require program and network fees shown before signing. Confirmed blockchain transactions are not refundable or reversible. Sealing permanently freezes a sector and enables compressed-NFT minting.';
+
+  @override
+  String get termsWalletTitle => 'Wallet responsibility';
+
+  @override
+  String get termsWalletBody =>
+      'You control your wallet and are responsible for its security, available funds, and every approval. Bitflip support will never ask for a seed phrase or private key. Do not approve a prompt you do not understand.';
+
+  @override
+  String get termsArtworkTitle => 'Public artwork and metadata';
+
+  @override
+  String get termsArtworkBody =>
+      'Only submit artwork you are entitled to publish. Pixels and mint records are public. The pixels are stored on chain, while the metadata and rendered image use an operated HTTPS service and should not be described as fully immutable.';
+
+  @override
+  String get termsRiskTitle => 'Experimental service';
+
+  @override
+  String get termsRiskBody =>
+      'Bitflip is provided without a promise of uninterrupted availability, future value, or financial return. Wallets, RPC services, Solana, and marketplaces can fail or change independently. Use only funds you can afford to spend on the game.';
+
+  @override
+  String get supportTitle => 'Support';
+
+  @override
+  String get supportIntroduction =>
+      'Start with the transaction signature and the status shown in Bitflip. Public chain evidence usually tells us whether a request was cancelled, failed, expired, or confirmed.';
+
+  @override
+  String get supportSafetyTitle => 'Keep secrets out of support';
+
+  @override
+  String get supportSafetyBody =>
+      'Never send a seed phrase, private key, keystore, password, or wallet backup. Bitflip support does not need them. Anyone asking for one is not helping you safely.';
+
+  @override
+  String get supportTransactionTitle => 'Before retrying';
+
+  @override
+  String get supportTransactionBody =>
+      'Check the signature in a Solana explorer on the same network. If its status is unknown, wait and refresh before signing again. Minting is safe to re-enter once chain state is known; do not submit duplicates while a transaction is indeterminate.';
+
+  @override
+  String get supportIncludeTitle => 'What to include';
+
+  @override
+  String get supportIncludeBody =>
+      'Include the platform and version, wallet name, selected network, game and sector numbers, approximate UTC time, public transaction signature if one exists, and the exact error message. Remove personal information and all secrets.';
+
+  @override
+  String get openSupportRequest => 'OPEN SUPPORT REQUEST';
 }

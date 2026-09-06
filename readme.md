@@ -40,6 +40,8 @@ flutter:app run
 
 Build the Flutter WASM website directly into Serverpod's web root. Release commands require explicit configuration; see [release readiness](docs/release-readiness.md) for the complete contract.
 
+The [audit remediation ledger](docs/audit-remediation.md) distinguishes repository controls from deployment, store, and mainnet evidence that still has to be produced outside CI.
+
 ```bash
 build:web
 server:start
@@ -76,6 +78,7 @@ test:surfpool
 test:surfpool:cnft
 test:server
 test:wallet
+test:operations
 test:flutter
 test:flutter:integration
 build:server
@@ -96,7 +99,7 @@ Configure these as deployment secrets; never commit them:
 - `SERVERPOD_DATABASE_PASSWORD` — the managed PostgreSQL password.
 - `SERVERPOD_SERVICE_SECRET` — a unique, high-entropy Serverpod service secret.
 
-The owner requests a five-minute challenge, signs its exact text with their wallet, and submits the signature to Serverpod. The backend re-reads the Pina accounts, verifies ownership and sealed state, rate-limits and consumes the challenge, locks tree allocation across replicas, then sends Bubblegum mint and Bitflip receipt instructions in one transaction. A private tree is required so outside mints cannot race the predicted leaf index.
+The owner requests a five-minute challenge, signs its exact text with their wallet, and submits the signature to Serverpod. The backend re-reads the Pina accounts, verifies ownership and sealed state, rate-limits and consumes the challenge, then sends Bubblegum mint and Bitflip receipt instructions in one transaction. A private tree prevents outside mints from racing the predicted leaf index. The beta must run one mint-capable server process because its operator gate is process-local; durable single-consumer work is a mainnet gate.
 
 ## Security properties
 

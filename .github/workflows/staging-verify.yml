@@ -1,0 +1,48 @@
+name: staging verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: HTTPS origin of the deployed Serverpod API
+        required: true
+        type: string
+      web_base_url:
+        description: HTTPS origin of the deployed web app
+        required: true
+        type: string
+      game_index:
+        description: Optional sealed canary game index
+        required: false
+        type: string
+      section_index:
+        description: Optional sealed canary section index
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-verification
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: external smoke
+    environment: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+
+      - name: Verify deployed service
+        env:
+          BITFLIP_API_BASE_URL: ${{ inputs.api_base_url }}
+          BITFLIP_SMOKE_GAME_INDEX: ${{ inputs.game_index }}
+          BITFLIP_SMOKE_SECTION_INDEX: ${{ inputs.section_index }}
+          BITFLIP_WEB_BASE_URL: ${{ inputs.web_base_url }}
+        run: bash setup/scripts/release_smoke.sh

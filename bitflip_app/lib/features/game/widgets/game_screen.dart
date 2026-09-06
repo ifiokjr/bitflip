@@ -53,62 +53,64 @@ class GameScreen extends HookConsumerWidget {
         children: [
           const Positioned.fill(child: _Atmosphere()),
           Positioned.fill(
-            child: SelectionArea(
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: _PageWidth(
-                      child: _Header(
-                        state: state,
-                        onConnect: () =>
-                            unawaited(_connectWallet(context, controller)),
+            child: SafeArea(
+              child: SelectionArea(
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: _PageWidth(
+                        child: _Header(
+                          state: state,
+                          onConnect: () =>
+                              unawaited(_connectWallet(context, controller)),
+                        ),
                       ),
                     ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: _PageWidth(
-                      child: _Hero(
-                        onOpenCanvas: () {
-                          final target = workspaceKey.currentContext;
-                          if (target != null) {
-                            unawaited(
-                              Scrollable.ensureVisible(
-                                target,
-                                duration: const Duration(milliseconds: 520),
-                                curve: Curves.easeOutCubic,
-                              ),
-                            );
-                          }
-                        },
+                    SliverToBoxAdapter(
+                      child: _PageWidth(
+                        child: _Hero(
+                          onOpenCanvas: () {
+                            final target = workspaceKey.currentContext;
+                            if (target != null) {
+                              unawaited(
+                                Scrollable.ensureVisible(
+                                  target,
+                                  duration: const Duration(milliseconds: 520),
+                                  curve: Curves.easeOutCubic,
+                                ),
+                              );
+                            }
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: _SignalTicker(snapshot: state.snapshot),
-                  ),
-                  SliverToBoxAdapter(
-                    key: workspaceKey,
-                    child: _PageWidth(
-                      padding: const EdgeInsets.only(top: 72),
-                      child: _GameWorkspace(
-                        state: state,
-                        controller: controller,
+                    SliverToBoxAdapter(
+                      child: _SignalTicker(snapshot: state.snapshot),
+                    ),
+                    SliverToBoxAdapter(
+                      key: workspaceKey,
+                      child: _PageWidth(
+                        padding: const EdgeInsets.only(top: 72),
+                        child: _GameWorkspace(
+                          state: state,
+                          controller: controller,
+                        ),
                       ),
                     ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: _PageWidth(
-                      padding: const EdgeInsets.only(top: 96),
-                      child: _HowItWorks(),
+                    SliverToBoxAdapter(
+                      child: _PageWidth(
+                        padding: const EdgeInsets.only(top: 96),
+                        child: _HowItWorks(),
+                      ),
                     ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: _PageWidth(
-                      padding: const EdgeInsets.only(top: 84, bottom: 44),
-                      child: _Footer(),
+                    SliverToBoxAdapter(
+                      child: _PageWidth(
+                        padding: const EdgeInsets.only(top: 84, bottom: 44),
+                        child: _Footer(),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -897,6 +899,23 @@ class _Footer extends HookWidget {
             Text(
               context.l10n.securityNote,
               style: Theme.of(context).textTheme.bodySmall,
+            ),
+            Wrap(
+              spacing: 4,
+              children: [
+                TextButton(
+                  onPressed: () => context.go('/privacy'),
+                  child: Text(context.l10n.privacyLink),
+                ),
+                TextButton(
+                  onPressed: () => context.go('/terms'),
+                  child: Text(context.l10n.termsLink),
+                ),
+                TextButton(
+                  onPressed: () => context.go('/support'),
+                  child: Text(context.l10n.supportLink),
+                ),
+              ],
             ),
           ],
         ),

@@ -4,6 +4,7 @@
 	"type": "module",
 	"packageManager": "pnpm@11.25.0",
 	"scripts": {
+		"ops:test": "node --experimental-strip-types --test setup/release_scripts.test.ts",
 		"wallet:build": "node --experimental-strip-types setup/build_wallet_bridge.ts",
 		"wallet:check": "tsc --noEmit",
 		"wallet:test": "node --experimental-strip-types --test setup/wallet_bridge.test.ts"
