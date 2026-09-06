@@ -15,10 +15,12 @@ enum GameNotice {
   committed,
   sectionChanged,
   connected,
+  funded,
   claimed,
   sealed,
   minted,
   batchFull,
+  walletIssue,
   connectionIssue,
 }
 
@@ -47,7 +49,10 @@ final class GameViewState {
     required this.activity,
     required this.isBusy,
     required this.isWalletSupported,
+    required this.walletKind,
+    required this.canFundWithMobileWallet,
     required this.walletAddress,
+    required this.walletBalanceLamports,
     required this.loadStatus,
     required this.walletChain,
     this.cursor,
@@ -55,6 +60,8 @@ final class GameViewState {
 
   factory GameViewState.initial({
     required bool isWalletSupported,
+    required BitflipWalletKind walletKind,
+    required bool canFundWithMobileWallet,
     required bool isDemoMode,
     required String walletChain,
   }) {
@@ -67,7 +74,10 @@ final class GameViewState {
       activity: const GameActivity(GameNotice.ready),
       isBusy: false,
       isWalletSupported: isWalletSupported,
+      walletKind: walletKind,
+      canFundWithMobileWallet: canFundWithMobileWallet,
       walletAddress: null,
+      walletBalanceLamports: null,
       loadStatus: isDemoMode ? GameLoadStatus.demo : GameLoadStatus.loading,
       walletChain: walletChain,
     );
@@ -79,7 +89,10 @@ final class GameViewState {
   final GameActivity activity;
   final bool isBusy;
   final bool isWalletSupported;
+  final BitflipWalletKind walletKind;
+  final bool canFundWithMobileWallet;
   final String? walletAddress;
+  final BigInt? walletBalanceLamports;
   final GameLoadStatus loadStatus;
   final String walletChain;
 
@@ -100,6 +113,8 @@ final class GameViewState {
     GameActivity? activity,
     bool? isBusy,
     String? walletAddress,
+    BigInt? walletBalanceLamports,
+    bool clearWalletBalance = false,
     GameLoadStatus? loadStatus,
     String? walletChain,
   }) {
@@ -110,7 +125,12 @@ final class GameViewState {
       activity: activity ?? this.activity,
       isBusy: isBusy ?? this.isBusy,
       isWalletSupported: isWalletSupported,
+      walletKind: walletKind,
+      canFundWithMobileWallet: canFundWithMobileWallet,
       walletAddress: walletAddress ?? this.walletAddress,
+      walletBalanceLamports: clearWalletBalance
+          ? null
+          : walletBalanceLamports ?? this.walletBalanceLamports,
       loadStatus: loadStatus ?? this.loadStatus,
       walletChain: walletChain ?? this.walletChain,
     );
@@ -132,6 +152,8 @@ class GameController extends _$GameController {
   GameViewState build() {
     return GameViewState.initial(
       isWalletSupported: _repository.isWalletSupported,
+      walletKind: _repository.walletKind,
+      canFundWithMobileWallet: _repository.canFundWithMobileWallet,
       isDemoMode: _repository.isDemoMode,
       walletChain: _repository.walletChain,
     );
@@ -141,10 +163,24 @@ class GameController extends _$GameController {
     if (state.isBusy) return;
     if (_repository.isDemoMode) return;
     state = state.copyWith(isBusy: true);
+    final sectionIndex = state.snapshot.section.index;
+    var walletInitializationFailed = false;
     try {
-      final loaded = await _repository.loadSection(
-        state.snapshot.section.index,
-      );
+      try {
+        await _repository.initializeWallet();
+      } on Object {
+        walletInitializationFailed = true;
+      }
+      if (!ref.mounted) return;
+      final loaded = await _repository.loadSection(sectionIndex);
+      if (!ref.mounted) return;
+      BigInt? walletBalance;
+      try {
+        walletBalance = await _repository.loadWalletBalance();
+      } on Object {
+        walletInitializationFailed = true;
+      }
+      if (!ref.mounted) return;
       final snapshot = loaded == null
           ? GameSnapshot.empty(
               gameIndex: state.snapshot.gameIndex,
@@ -160,11 +196,17 @@ class GameController extends _$GameController {
         clearCursor: !retainQueue,
         isBusy: false,
         walletAddress: _repository.walletAddress,
+        walletBalanceLamports: walletBalance,
+        clearWalletBalance: walletBalance == null,
+        activity: walletInitializationFailed
+            ? const GameActivity(GameNotice.walletIssue)
+            : state.activity,
         loadStatus: loaded == null
             ? GameLoadStatus.unavailable
             : GameLoadStatus.ready,
       );
     } on Object {
+      if (!ref.mounted) return;
       state = state.copyWith(
         isBusy: false,
         activity: const GameActivity(GameNotice.connectionIssue),
@@ -187,15 +229,55 @@ class GameController extends _$GameController {
     state = state.copyWith(isBusy: true);
     try {
       final address = await _repository.connectWallet(walletId);
+      if (!ref.mounted) return;
       state = state.copyWith(
         isBusy: false,
         walletAddress: address,
         activity: const GameActivity(GameNotice.connected),
       );
     } on Object {
+      if (!ref.mounted) return;
       state = state.copyWith(
         isBusy: false,
         activity: const GameActivity(GameNotice.connectionIssue),
+      );
+    }
+  }
+
+  Future<void> fundWithMobileWallet(BigInt lamports) async {
+    if (state.isBusy ||
+        state.walletKind != BitflipWalletKind.embedded ||
+        !state.canFundWithMobileWallet ||
+        lamports <= BigInt.zero) {
+      return;
+    }
+    state = state.copyWith(isBusy: true);
+    try {
+      final transactionSignature = await _repository.fundWithMobileWallet(
+        lamports,
+      );
+      if (!ref.mounted) return;
+      var walletBalance = state.walletBalanceLamports;
+      try {
+        walletBalance = await _repository.loadWalletBalance();
+      } on Object {
+        // The transfer is already confirmed; a balance refresh failure must
+        // not be reported as though the funding transaction failed.
+      }
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        isBusy: false,
+        walletBalanceLamports: walletBalance,
+        activity: GameActivity(
+          GameNotice.funded,
+          transactionSignature: transactionSignature,
+        ),
+      );
+    } on Object {
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        isBusy: false,
+        activity: const GameActivity(GameNotice.walletIssue),
       );
     }
   }

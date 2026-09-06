@@ -7,16 +7,23 @@ final class FakeBitflipRepository implements BitflipRepository {
   FakeBitflipRepository({
     GameSnapshot? snapshot,
     this.isWalletSupported = true,
+    this.walletKind = BitflipWalletKind.external,
+    this.canFundWithMobileWallet = false,
     this.availableWallets,
     this.walletAddress = 'DemoWallet111111111111111111111111111111111',
+    BigInt? walletBalanceLamports,
     this.returnNullOnLoad = false,
+    this.initializeError,
+    this.balanceError,
     this.loadError,
     this.connectError,
+    this.fundError,
     this.claimError,
     this.flipError,
     this.sealError,
     this.mintError,
-  }) : snapshot = snapshot ?? GameSnapshot.demo(sectionIndex: 12);
+  }) : walletBalanceLamports = walletBalanceLamports ?? BigInt.zero,
+       snapshot = snapshot ?? GameSnapshot.demo(sectionIndex: 12);
 
   GameSnapshot snapshot;
   @override
@@ -24,14 +31,22 @@ final class FakeBitflipRepository implements BitflipRepository {
   @override
   final bool isWalletSupported;
   @override
+  final BitflipWalletKind walletKind;
+  @override
+  final bool canFundWithMobileWallet;
+  @override
   String get walletChain => 'solana:devnet';
   @override
   final List<BitflipWalletOption>? availableWallets;
   @override
   String? walletAddress;
+  BigInt? walletBalanceLamports;
+  Object? balanceError;
   final bool returnNullOnLoad;
+  final Object? initializeError;
   final Object? loadError;
   final Object? connectError;
+  final Object? fundError;
   final Object? claimError;
   final Object? flipError;
   final Object? sealError;
@@ -39,12 +54,32 @@ final class FakeBitflipRepository implements BitflipRepository {
 
   int claimCalls = 0;
   int connectCalls = 0;
+  int fundCalls = 0;
+  int initializeCalls = 0;
   int flipCalls = 0;
   int mintCalls = 0;
   int sealCalls = 0;
   int loadCalls = 0;
   List<PixelCoordinate> lastFlips = const [];
   String? lastWalletId;
+  BigInt? lastFundingLamports;
+
+  @override
+  Future<void> initializeWallet() async {
+    initializeCalls++;
+    final error = initializeError;
+    if (error != null) throw error;
+    if (walletKind == BitflipWalletKind.embedded) {
+      walletAddress ??= 'Embedded111111111111111111111111111111111111';
+    }
+  }
+
+  @override
+  Future<BigInt?> loadWalletBalance() async {
+    final error = balanceError;
+    if (error != null) throw error;
+    return walletBalanceLamports;
+  }
 
   @override
   Future<String> claimSection(GameSnapshot snapshot) async {
@@ -70,6 +105,16 @@ final class FakeBitflipRepository implements BitflipRepository {
     if (error != null) throw error;
     walletAddress ??= 'DemoWallet111111111111111111111111111111111';
     return walletAddress!;
+  }
+
+  @override
+  Future<String> fundWithMobileWallet(BigInt lamports) async {
+    fundCalls++;
+    lastFundingLamports = lamports;
+    final error = fundError;
+    if (error != null) throw error;
+    walletBalanceLamports = (walletBalanceLamports ?? BigInt.zero) + lamports;
+    return 'fund-signature';
   }
 
   @override

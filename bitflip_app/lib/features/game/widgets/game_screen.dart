@@ -9,6 +9,7 @@ import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
 import 'package:bitflip_app/features/game/widgets/game_console.dart';
 import 'package:bitflip_app/features/game/widgets/pixel_canvas.dart';
 import 'package:bitflip_app/features/game/widgets/section_navigator.dart';
+import 'package:bitflip_app/features/wallet/widgets/wallet_sheet.dart';
 import 'package:bitflip_app/l10n/l10n.dart';
 import 'package:bitflip_app/testing/bitflip_test_keys.dart';
 import 'package:flutter/material.dart';
@@ -63,6 +64,13 @@ class GameScreen extends HookConsumerWidget {
                           state: state,
                           onConnect: () =>
                               unawaited(_connectWallet(context, controller)),
+                          onWallet: () => unawaited(
+                            showBitflipWalletSheet(
+                              context,
+                              state: state,
+                              controller: controller,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -146,10 +154,15 @@ class _PageWidth extends HookWidget {
 }
 
 class _Header extends HookWidget {
-  const _Header({required this.state, required this.onConnect});
+  const _Header({
+    required this.state,
+    required this.onConnect,
+    required this.onWallet,
+  });
 
   final GameViewState state;
   final VoidCallback onConnect;
+  final VoidCallback onWallet;
 
   @override
   Widget build(BuildContext context) {
@@ -173,8 +186,10 @@ class _Header extends HookWidget {
               const Spacer(),
               if (wallet != null)
                 _StatusPill(
+                  key: BitflipTestKeys.walletDetails,
                   label: _shortAddress(wallet),
                   color: BitflipColors.cyan,
+                  onTap: onWallet,
                 )
               else if (state.isWalletSupported)
                 compact
@@ -925,33 +940,46 @@ class _Footer extends HookWidget {
 }
 
 class _StatusPill extends HookWidget {
-  const _StatusPill({required this.label, required this.color});
+  const _StatusPill({
+    required this.label,
+    required this.color,
+    this.onTap,
+    super.key,
+  });
 
   final String label;
   final Color color;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        border: Border.all(color: color.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 7,
-            height: 7,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    return Semantics(
+      button: onTap != null,
+      label: onTap == null ? null : context.l10n.openWalletDetails,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            border: Border.all(color: color.withValues(alpha: 0.5)),
           ),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall
-                ?.copyWith(color: color, fontWeight: FontWeight.w800),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelSmall
+                    ?.copyWith(color: color, fontWeight: FontWeight.w800),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

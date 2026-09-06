@@ -30,7 +30,51 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletUnavailable =>
-      'View only on this device. Signing is currently supported on Android and the web.';
+      'View only on this device. Mobile signing is available on Android and iOS; the web uses compatible browser wallets.';
+
+  @override
+  String get openWalletDetails => 'Open wallet details';
+
+  @override
+  String get embeddedWalletTitle => 'YOUR BITFLIP WALLET';
+
+  @override
+  String get externalWalletTitle => 'CONNECTED WALLET';
+
+  @override
+  String get walletBalance => 'AVAILABLE TO PLAY';
+
+  @override
+  String get walletAddress => 'WALLET ADDRESS';
+
+  @override
+  String get walletAddressCopied => 'Wallet address copied.';
+
+  @override
+  String get copyWalletAddress => 'COPY ADDRESS';
+
+  @override
+  String embeddedWalletBody(String network) {
+    return 'This device-bound wallet signs Bitflip actions without opening another app. To add funds, send SOL on $network from any compatible wallet to the address above.';
+  }
+
+  @override
+  String get externalWalletBody =>
+      'Bitflip signs through this third-party Wallet Standard wallet. Bitflip never receives its private key.';
+
+  @override
+  String get embeddedWalletWarning =>
+      'This is a small spending wallet, not a vault. Its key is encrypted by this device, but backup and export are not available yet. Reinstalling or losing the device can permanently lose access, so keep only enough SOL here to play.';
+
+  @override
+  String get fundingAmount => 'AMOUNT TO ADD';
+
+  @override
+  String get fundingAmountHelp =>
+      'Your external wallet will show the transfer before approval.';
+
+  @override
+  String get fundWithMobileWallet => 'FUND WITH MOBILE WALLET';
 
   @override
   String get chooseWallet => 'Choose a wallet';
@@ -235,6 +279,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Wallet connected. You control the signing boundary.';
 
   @override
+  String get activityFunded => 'Funds transferred to your Bitflip wallet.';
+
+  @override
   String get activityClaimed => 'Sector claim confirmed on-chain.';
 
   @override
@@ -257,6 +304,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get batchFull => 'A transaction can contain at most 16 unique moves.';
+
+  @override
+  String get walletIssue =>
+      'The wallet could not complete that request. No transaction was reported as confirmed.';
 
   @override
   String get howItWorks => 'THREE MOVES. THAT’S THE GAME.';
@@ -363,7 +414,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacyControlBody =>
-      'Bitflip does not request or store your seed phrase or private key. Your wallet shows the transaction or message before you approve it. You can browse without connecting a wallet, and iOS and macOS are view-only in this release.';
+      'On mobile, Bitflip creates a device-bound private key and stores it using Android Keystore-backed encryption or iOS Keychain; it is not sent to the Bitflip service. On the web, signing stays in your selected third-party wallet. macOS remains view-only in this release.';
 
   @override
   String get privacyContactTitle => 'Providers and questions';
@@ -377,7 +428,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get termsIntroduction =>
-      'By using Bitflip, you choose to interact with experimental software and a public blockchain. Read the wallet prompt and verify the network, wallet, sector, pixels, and fee before approving anything.';
+      'By using Bitflip, you choose to interact with experimental software and a public blockchain. Verify the network, wallet, sector, pixels, and fee before approving an in-app action or external-wallet funding prompt.';
 
   @override
   String get termsActionsTitle => 'Fees and irreversible actions';
@@ -391,7 +442,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get termsWalletBody =>
-      'You control your wallet and are responsible for its security, available funds, and every approval. Bitflip support will never ask for a seed phrase or private key. Do not approve a prompt you do not understand.';
+      'The mobile Bitflip wallet is device-bound and has no backup or export yet, so keep only a small playing balance. Web wallet keys remain with the selected provider. You are responsible for device security, available funds, and every approval; Bitflip support will never ask for private key material.';
 
   @override
   String get termsArtworkTitle => 'Public artwork and metadata';

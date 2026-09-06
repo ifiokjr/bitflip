@@ -133,8 +133,86 @@ abstract class AppLocalizations {
   /// No description provided for @walletUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'View only on this device. Signing is currently supported on Android and the web.'**
+  /// **'View only on this device. Mobile signing is available on Android and iOS; the web uses compatible browser wallets.'**
   String get walletUnavailable;
+
+  /// No description provided for @openWalletDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Open wallet details'**
+  String get openWalletDetails;
+
+  /// No description provided for @embeddedWalletTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'YOUR BITFLIP WALLET'**
+  String get embeddedWalletTitle;
+
+  /// No description provided for @externalWalletTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'CONNECTED WALLET'**
+  String get externalWalletTitle;
+
+  /// No description provided for @walletBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'AVAILABLE TO PLAY'**
+  String get walletBalance;
+
+  /// No description provided for @walletAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'WALLET ADDRESS'**
+  String get walletAddress;
+
+  /// No description provided for @walletAddressCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet address copied.'**
+  String get walletAddressCopied;
+
+  /// No description provided for @copyWalletAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'COPY ADDRESS'**
+  String get copyWalletAddress;
+
+  /// No description provided for @embeddedWalletBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This device-bound wallet signs Bitflip actions without opening another app. To add funds, send SOL on {network} from any compatible wallet to the address above.'**
+  String embeddedWalletBody(String network);
+
+  /// No description provided for @externalWalletBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitflip signs through this third-party Wallet Standard wallet. Bitflip never receives its private key.'**
+  String get externalWalletBody;
+
+  /// No description provided for @embeddedWalletWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This is a small spending wallet, not a vault. Its key is encrypted by this device, but backup and export are not available yet. Reinstalling or losing the device can permanently lose access, so keep only enough SOL here to play.'**
+  String get embeddedWalletWarning;
+
+  /// No description provided for @fundingAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'AMOUNT TO ADD'**
+  String get fundingAmount;
+
+  /// No description provided for @fundingAmountHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Your external wallet will show the transfer before approval.'**
+  String get fundingAmountHelp;
+
+  /// No description provided for @fundWithMobileWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'FUND WITH MOBILE WALLET'**
+  String get fundWithMobileWallet;
 
   /// No description provided for @chooseWallet.
   ///
@@ -484,6 +562,12 @@ abstract class AppLocalizations {
   /// **'Wallet connected. You control the signing boundary.'**
   String get activityConnected;
 
+  /// No description provided for @activityFunded.
+  ///
+  /// In en, this message translates to:
+  /// **'Funds transferred to your Bitflip wallet.'**
+  String get activityFunded;
+
   /// No description provided for @activityClaimed.
   ///
   /// In en, this message translates to:
@@ -525,6 +609,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A transaction can contain at most 16 unique moves.'**
   String get batchFull;
+
+  /// No description provided for @walletIssue.
+  ///
+  /// In en, this message translates to:
+  /// **'The wallet could not complete that request. No transaction was reported as confirmed.'**
+  String get walletIssue;
 
   /// No description provided for @howItWorks.
   ///
@@ -709,7 +799,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacyControlBody.
   ///
   /// In en, this message translates to:
-  /// **'Bitflip does not request or store your seed phrase or private key. Your wallet shows the transaction or message before you approve it. You can browse without connecting a wallet, and iOS and macOS are view-only in this release.'**
+  /// **'On mobile, Bitflip creates a device-bound private key and stores it using Android Keystore-backed encryption or iOS Keychain; it is not sent to the Bitflip service. On the web, signing stays in your selected third-party wallet. macOS remains view-only in this release.'**
   String get privacyControlBody;
 
   /// No description provided for @privacyContactTitle.
@@ -733,7 +823,7 @@ abstract class AppLocalizations {
   /// No description provided for @termsIntroduction.
   ///
   /// In en, this message translates to:
-  /// **'By using Bitflip, you choose to interact with experimental software and a public blockchain. Read the wallet prompt and verify the network, wallet, sector, pixels, and fee before approving anything.'**
+  /// **'By using Bitflip, you choose to interact with experimental software and a public blockchain. Verify the network, wallet, sector, pixels, and fee before approving an in-app action or external-wallet funding prompt.'**
   String get termsIntroduction;
 
   /// No description provided for @termsActionsTitle.
@@ -757,7 +847,7 @@ abstract class AppLocalizations {
   /// No description provided for @termsWalletBody.
   ///
   /// In en, this message translates to:
-  /// **'You control your wallet and are responsible for its security, available funds, and every approval. Bitflip support will never ask for a seed phrase or private key. Do not approve a prompt you do not understand.'**
+  /// **'The mobile Bitflip wallet is device-bound and has no backup or export yet, so keep only a small playing balance. Web wallet keys remain with the selected provider. You are responsible for device security, available funds, and every approval; Bitflip support will never ask for private key material.'**
   String get termsWalletBody;
 
   /// No description provided for @termsArtworkTitle.

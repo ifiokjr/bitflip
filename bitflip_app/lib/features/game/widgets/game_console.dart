@@ -357,10 +357,12 @@ class _ActivityPulse extends HookWidget {
         formatSectionIndex(activity.sectionIndex ?? 0),
       ),
       GameNotice.connected => context.l10n.activityConnected,
+      GameNotice.funded => context.l10n.activityFunded,
       GameNotice.claimed => context.l10n.activityClaimed,
       GameNotice.sealed => context.l10n.activitySealed,
       GameNotice.minted => context.l10n.activityMinted,
       GameNotice.batchFull => context.l10n.batchFull,
+      GameNotice.walletIssue => context.l10n.walletIssue,
       GameNotice.connectionIssue => context.l10n.connectionIssue,
     };
     return Row(

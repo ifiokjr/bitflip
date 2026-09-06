@@ -12,12 +12,17 @@ import 'package:solana_kit_rpc_spec/solana_kit_rpc_spec.dart';
 abstract interface class BitflipRepository {
   bool get isDemoMode;
   bool get isWalletSupported;
+  BitflipWalletKind get walletKind;
+  bool get canFundWithMobileWallet;
   String get walletChain;
   List<BitflipWalletOption>? get availableWallets;
   String? get walletAddress;
 
+  Future<void> initializeWallet();
+  Future<BigInt?> loadWalletBalance();
   Future<GameSnapshot?> loadSection(int sectionIndex);
   Future<String> connectWallet([String? walletId]);
+  Future<String> fundWithMobileWallet(BigInt lamports);
   Future<String> claimSection(GameSnapshot snapshot);
   Future<String> flipPixels(
     GameSnapshot snapshot,
@@ -50,7 +55,12 @@ final class SolanaBitflipRepository implements BitflipRepository {
          allowInsecureHttp: _isLoopback(config.rpcUrl),
        ),
        _serverpod = serverpod.Client(config.serverpodUrl),
-       _wallet = wallet ?? BitflipWallet(walletChain: config.walletChain);
+       _wallet =
+           wallet ??
+           BitflipWallet(
+             walletChain: config.walletChain,
+             rpcUrl: config.rpcUrl,
+           );
 
   final BitflipConfig _config;
   final int _gameIndex;
@@ -65,6 +75,12 @@ final class SolanaBitflipRepository implements BitflipRepository {
   bool get isWalletSupported => _wallet.isSupported;
 
   @override
+  BitflipWalletKind get walletKind => _wallet.kind;
+
+  @override
+  bool get canFundWithMobileWallet => _wallet.canFundWithMobileWallet;
+
+  @override
   String get walletChain => _config.walletChain;
 
   @override
@@ -72,6 +88,17 @@ final class SolanaBitflipRepository implements BitflipRepository {
 
   @override
   String? get walletAddress => _wallet.address;
+
+  @override
+  Future<void> initializeWallet() => _wallet.initialize();
+
+  @override
+  Future<BigInt?> loadWalletBalance() async {
+    final value = walletAddress;
+    if (value == null) return null;
+    final balance = await _rpc.getBalanceValue(Address(value)).send();
+    return balance.value.value;
+  }
 
   @override
   Future<GameSnapshot?> loadSection(int sectionIndex) async {
@@ -130,6 +157,10 @@ final class SolanaBitflipRepository implements BitflipRepository {
 
   @override
   Future<String> connectWallet([String? walletId]) => _wallet.connect(walletId);
+
+  @override
+  Future<String> fundWithMobileWallet(BigInt lamports) =>
+      _wallet.fundWithMobileWallet(lamports);
 
   @override
   Future<String> claimSection(GameSnapshot snapshot) async {

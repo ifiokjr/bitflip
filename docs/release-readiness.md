@@ -13,21 +13,22 @@ Bitflip releases in three deliberately separate milestones. Passing one does not
 
 ## 2. Native beta
 
-- Android Mobile Wallet Adapter discovery, connect, cancellation, claim, flip, seal, and message signing are exercised on physical devices with at least two wallets and Android 11, 13, and the current Android release.
+- Embedded-wallet creation, restoration, balance display, claim, flip, seal, message signing, and device-loss disclosure are exercised on Android and iOS physical devices.
+- Android Mobile Wallet Adapter discovery, funding transfer, cancellation, and confirmation are exercised with at least two wallets on Android 11, 13, and the current Android release.
 - The Android app bundle is signed with the release key and installed from an internal-testing track.
-- iOS and macOS remain explicitly view-only until a supported wallet handoff is implemented and tested. Their disabled transaction controls are a product contract, not a temporary error path.
-- iOS and macOS builds are signed/notarized using store credentials. CI only proves that unsigned release compilation succeeds until those credentials are provisioned.
+- iOS signs through its embedded Keychain-backed wallet and accepts third-party funding through the displayed address. macOS remains explicitly view-only.
+- iOS and macOS builds are signed/notarized using store credentials. CI only proves unsigned release compilation until those credentials are provisioned.
 - Privacy policy, support URL, store disclosures, screenshots, and irreversible fee/sealing terms have been approved.
 - The complete [native store release packet](store-release.md) has evidence attached to the release record.
 - The [native validation plan](native-validation.md), including release-mode performance budgets and deliberate dark appearance, passes on the target matrix.
 
 ### Physical-device evidence
 
-| Device        | OS                  | Artifact                                                    | MWA discovery | Cancellation                                                                | Authorization | Unavailable-state guard                                                          |
-| ------------- | ------------------- | ----------------------------------------------------------- | ------------- | --------------------------------------------------------------------------- | ------------- | -------------------------------------------------------------------------------- |
-| Solana Seeker | Android 16 / API 36 | Release APK, staging configuration, explicitly debug-signed | Pass          | Returns safely to Bitflip; the wallet may restore an existing authorization | Pass          | Pass: claim remains disabled after authorization when chain state is unavailable |
+| Device        | OS                  | Artifact                                                    | Embedded creation/restoration | MWA discovery | MWA authorization/funding | Unavailable-state guard                                         |
+| ------------- | ------------------- | ----------------------------------------------------------- | ----------------------------- | ------------- | ------------------------- | --------------------------------------------------------------- |
+| Solana Seeker | Android 16 / API 36 | Release APK, staging configuration, explicitly debug-signed | Pass                          | Pass          | Not submitted             | Pass: gameplay remains disabled when chain state is unavailable |
 
-This smoke test does not replace the native-beta matrix above. In particular, no transaction was submitted, the installed artifact was not signed with the production key, and first-time rejection remains covered by automated tests until it can be exercised without deleting wallet-owned key material.
+The 2026-09-06 smoke installed SHA-256 `bc3bdf672075ade1e71ca7f58423e5a65870a9dafd6f7ecb278d94f60f24419a`, verified that the same embedded address returned after a forced process stop and cold relaunch, and reached the Seeker Mobile Wallet Adapter authorization sheet before cancelling. It does not replace the native-beta matrix above: no funding or gameplay transaction was submitted, the installed artifact was not signed with the production key, and first-time MWA rejection remains covered by automated tests until it can be exercised without deleting wallet-owned key material.
 
 ## 3. Mainnet
 
