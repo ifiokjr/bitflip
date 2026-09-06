@@ -69,7 +69,7 @@ Each section may distribute at most `2^18` BIT through ordinary paid flips. The 
 
 The player's transaction includes both a maximum SOL charge and a minimum BIT payout. It fails if either side has changed. If the section's paid allocation is exhausted, flipping can continue, but the UI must say that no base BIT remains before signing.
 
-The paid allocation is a finite primary distribution, not risk-free yield. A fixed SOL price cannot track a transferable token's market price without an oracle, and a stale cheap issuance price will be arbitraged. The first beta must therefore remain on devnet, avoid seeding exchange liquidity, and collect data before choosing either a simple deterministic issuance curve or a reviewed oracle design for mainnet. The historical square-root/time curve should not be restored without simulation and property tests.
+The paid allocation is a finite primary distribution, not risk-free yield. A fixed SOL price cannot track a transferable token's market price without an oracle, and a stale cheap issuance price will be arbitraged. [ADR 0004](0004-section-price-controller.md) proposes an independently paced, time-based price for every section, bounded burst issuance, and a small inventory floor. The first beta must remain on devnet, avoid seeding exchange liquidity, and collect data before those proposed parameters can become a mainnet decision.
 
 ## Owner-funded campaign budget
 
@@ -146,7 +146,7 @@ The vault PDA can sign only transfers from the vault. With mint/freeze authority
 
 ## Required implementation order
 
-1. Simulate the issuance curve, owner share, claim break-even, and likely bot strategies using staging activity assumptions.
+1. Simulate the [time-based section price controller](0004-section-price-controller.md), owner share, claim break-even, and likely bot strategies using staging activity assumptions.
 2. Implement and independently review the fixed mint plus global-vault invariants on a fresh devnet program ID.
 3. Add base paid-flip distribution with SOL/BIT slippage protection and real-SBF tests for exhaustion, batching, custody, and arithmetic boundaries.
 4. Add owner fee sharing and versioned section policies. Policies cannot change during a live campaign and must survive a section sale.

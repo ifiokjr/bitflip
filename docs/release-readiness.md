@@ -41,6 +41,7 @@ The 2026-09-06 smoke installed SHA-256 `bc3bdf672075ade1e71ca7f58423e5a65870a9da
 - Replace the beta's user-driven mint reconciliation with the durable worker described in the [operations runbook](operations/runbook.md).
 - Record the final marketplace-authenticity choice from [ADR 0002](decisions/0002-marketplace-authenticity.md).
 - Do not enable BIT rewards or section campaigns until the token, custody, economic, integrity, and product-copy gates in [ADR 0003](decisions/0003-section-economy.md) are implemented and independently reviewed. A release without those features may proceed only if the UI continues to make their absence explicit.
+- Before enabling paid BIT distribution, satisfy the simulation, property-test, real-SBF capacity, wallet-quote, and devnet evidence requirements in [ADR 0004](decisions/0004-section-price-controller.md).
 
 ## Required application configuration
 
