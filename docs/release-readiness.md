@@ -54,10 +54,10 @@ Use `build:web`, `build:android:release`, `build:ios:release`, or `build:macos:r
 
 Android production releases additionally require `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`. Non-production `build:android:release` runs opt in to debug signing so the exact release artifact can be installed on physical devices; production can never take that fallback.
 
-The production server must set:
+Staging and production servers must set:
 
 ```text
-BITFLIP_CLUSTER=mainnet
+BITFLIP_CLUSTER=devnet|mainnet
 BITFLIP_GAME_INDEX=0..255
 SOLANA_RPC_URL=https://...
 BITFLIP_METADATA_BASE_URL=https://...
@@ -67,6 +67,8 @@ BITFLIP_PRIORITY_FEE_MICROLAMPORTS=<explicit non-negative integer>
 ```
 
 Optional bounded reliability settings are `BITFLIP_RPC_TIMEOUT_SECONDS` (2–60, default 12) and `BITFLIP_MINT_MAX_ATTEMPTS` (1–5, default 3). Serverpod database passwords and service secrets remain required by Serverpod. The server validates the tree address, signer encoding, and operator fee policy before it starts.
+
+Staging requires `BITFLIP_CLUSTER=devnet`; production requires `BITFLIP_CLUSTER=mainnet`. Both require public HTTPS RPC and metadata origins plus explicit tree, operator, game, and priority-fee values. Local development retains loopback defaults.
 
 The public challenge endpoint is rate limited per source and globally within each process before any Solana RPC work begins. Production ingress must enforce the same policy across replicas; abandoned challenges never consume a wallet-specific quota. Mint work is rejected when operator capacity is full, runs outside database transactions, uses explicit RPC deadlines and priority fees, and retries from fresh on-chain state. Until a durable single-consumer worker exists, a beta deployment must run exactly one mint-capable server process so two replicas cannot race private-tree leaf allocation.
 

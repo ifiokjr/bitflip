@@ -90,6 +90,39 @@ void main() {
       expect(service.priorityFeeMicroLamports, 1000);
     });
 
+    test('staging requires explicit devnet signing configuration', () {
+      expect(
+        () => SolanaBitflipMintService.fromEnvironment(
+          const {},
+          production: false,
+          requireExplicitConfiguration: true,
+        ),
+        throwsA(isA<StateError>()),
+      );
+
+      final service = SolanaBitflipMintService.fromEnvironment(
+        _validEnvironment()
+          ..['BITFLIP_CLUSTER'] = 'devnet'
+          ..['SOLANA_RPC_URL'] = 'https://api.devnet.solana.com',
+        production: false,
+        requireExplicitConfiguration: true,
+      );
+
+      expect(service.gameIndex, 7);
+      expect(service.priorityFeeMicroLamports, 1000);
+    });
+
+    test('staging rejects an explicit mainnet cluster', () {
+      expect(
+        () => SolanaBitflipMintService.fromEnvironment(
+          _validEnvironment(),
+          production: false,
+          requireExplicitConfiguration: true,
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+
     test('development retains explicit local defaults', () {
       final service = SolanaBitflipMintService.fromEnvironment(
         const {},

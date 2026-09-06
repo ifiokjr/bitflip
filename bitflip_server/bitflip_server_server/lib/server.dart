@@ -15,6 +15,7 @@ void run(List<String> args) async {
   final mintService = SolanaBitflipMintService.fromEnvironment(
     Platform.environment,
     production: runMode == ServerpodRunMode.production,
+    requireExplicitConfiguration: runMode == ServerpodRunMode.staging,
   );
   final pod = Serverpod(
     args,
