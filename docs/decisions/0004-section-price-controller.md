@@ -51,7 +51,7 @@ A five-minute allocation-clearing window would therefore target approximately 1,
 
 At full 16-pixel batches, one section needs 64 transactions per five minutes at target, or 0.213 transactions per second, and 128 transactions per window at the burst cap, or 0.427 per second. If all 256 sections are simultaneously active, that is about 54.6 transactions per second at target and 109.2 at the cap. One-pixel transactions are the adverse case: about 873.8 and 1,747.6 transactions per second across all sections respectively.
 
-The target is fixed for the lifetime of the section and must ultimately be validated against measured real-SBF capacity with headroom. The 1,024/2,048 staging values are emission parameters, not a claim of measured Solana throughput. Choosing 2,048 as the target now would double the full-game pressure before the Token-2022 transfer and account-creation paths have been benchmarked. The 1,024 target is feasible for the initially active section; full-game feasibility remains conditional on removing shared writable-account locks and measuring the real instruction.
+The target is fixed for the lifetime of the section and must ultimately be validated against measured devnet capacity with headroom. The 1,024/2,048 staging values are emission parameters, not a claim of measured Solana throughput. The actual Token-2022 transfer path now survives an exact 2,048-BIT real-SBF window and concurrent 1,024-BIT streams across two isolated section shards. That is strong correctness evidence for the initially active section, but it is not a validator or RPC throughput benchmark. Choosing 2,048 as the target would still double full-game pressure without demonstrating a product benefit, so 1,024 remains the safer beta target.
 
 The target is not increased to force the allocation to empty by a deadline. After each window, target shortfall moves irreversibly to the section reward pool, and expiry moves all remaining base inventory. This avoids a final-window attack in which a bot waits for the price floor and then drains an inflated catch-up target.
 
@@ -147,7 +147,7 @@ A linear floor is preferred over the historical square root because it is easy t
 
 A posted price that updates only every five minutes must not sell the entire reserve during one cheap window. Base BIT rewards in a window are therefore capped at the configured elasticity multiplied by that window's target. With an elasticity of two, exactly 2,048 whole BIT can be distributed before the next price update.
 
-Players may continue flipping after the reward capacity is used, but the quote must show zero base BIT and their signed `minimum_reward_tokens` must protect them from an unexpected zero payout. The next window restores capacity at its new price. Owner-funded campaign rewards are a separate budget and do not bypass the base-emission cap.
+ABI version 4 stops flips when reward capacity is used, even if a custom client signs a zero minimum. This keeps every base-game pixel equal to one whole BIT and prevents free flips from advancing activity-based section unlocks. The next window restores capacity at its new price. A future unrewarded mode would need a separate instruction whose activity semantics are explicit. Owner-funded campaign rewards are a separate budget and do not bypass the base-emission cap.
 
 This cap prevents a bot from draining a stale-price reserve and keeps maximum reward throughput related to the modelled capacity. Transactions immediately before and after a boundary can access two caps—4,096 staging BIT—within seconds, but the second cap is posted at the higher price and the exposure remains 0.015625% of one section allocation. A continuous leaky-bucket controller could remove that edge later, but it introduces more state and has less precedent. Start with the auditable windowed mechanism and monitor boundary concentration on devnet.
 
@@ -181,12 +181,12 @@ If a rollover, sale, or competing transaction changes the quote, the transaction
 
 ## Required tests and evidence
 
-The deterministic controller, game snapshot, section state, and permissionless settlement are implemented in economy ABI version 2. The reward-bearing release remains blocked on all of the following:
+The deterministic controller, game snapshot, section state, permissionless settlement, fixed custody, and atomic paid-flip path are implemented in economy ABI version 4. A mainnet reward-bearing release remains blocked on all of the following:
 
 1. The deterministic [economics simulator](../economics-simulation.md) continues to cover idle, target, burst, oscillating, deadline catch-up, and owner wash-trading cost scenarios as the on-chain ABI is implemented.
 2. Property and unit tests continue to prove price bounds, maximum step size, no arithmetic overflow, no reward beyond inventory or window capacity, final partial-window exhaustion, monotonic inventory floor, ordering independence, and atomic quote failure.
-3. On-chain lifecycle tests cover late launch, ownership sale, sealing, exhaustion, and timestamp jumps without resetting the controller. The controller is embedded in the section account and real-SBF tests cover independent launch and immediate settlement; the remaining lifecycle and time-jump cases must be completed when paid issuance is connected.
-4. Real-SBF tests measure compute for one and 16 pixels, first-time associated token-account creation, and existing token-account transfers.
-5. The application displays the current price, next update, remaining window reward capacity, and signed SOL/BIT bounds.
+3. On-chain lifecycle tests cover late launch, ownership sale, sealing, exhaustion, and timestamp jumps without resetting the controller. The controller is embedded in the section account; real-SBF tests cover independent launch, sale, sealing, exact window exhaustion, settlement, and sharded paid issuance. Broader timestamp-jump coverage remains required.
+4. Real-SBF tests record compute for one and 16 pixels, first-time associated token-account creation, and existing token-account transfers. Existing-account correctness is covered; durable compute measurements still need to be captured from the staged artifact.
+5. The application displays the current signed total SOL price and whole-BIT reward before submission. Next-window time and remaining capacity still need first-class presentation before mainnet.
 6. Devnet telemetry records per-section transaction rate, rewarded-pixel rate, batch size, quote failures, price, reward exhaustion, and compute units.
 7. Mainnet parameters are selected from that evidence and receive an independent program and economic review.

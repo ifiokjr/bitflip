@@ -40,6 +40,7 @@ class SectionState {
     required this.rewardPoolTokens,
     required this.controllerPriceLamports,
     required this.postedPriceLamports,
+    required this.protocolFeeLamports,
     required this.pixels,
   }) :
       discriminator = 3;
@@ -69,6 +70,7 @@ class SectionState {
   final BigInt rewardPoolTokens;
   final BigInt controllerPriceLamports;
   final BigInt postedPriceLamports;
+  final BigInt protocolFeeLamports;
   final Uint8List pixels;
 
   @override
@@ -101,13 +103,14 @@ class SectionState {
           rewardPoolTokens == other.rewardPoolTokens &&
           controllerPriceLamports == other.controllerPriceLamports &&
           postedPriceLamports == other.postedPriceLamports &&
+          protocolFeeLamports == other.protocolFeeLamports &&
           pixels == other.pixels;
 
   @override
-  int get hashCode => Object.hashAll([discriminator, owner, assetId, merkleTree, bitVault, gameIndex, sectionIndex, status, bump, onPixels, leafIndex, flipCount, revision, lastFlipAt, salePriceLamports, economyLaunchedAt, economyWindowStartedAt, economyLastUpdatedAt, economyWindowId, economyWindowTargetTokens, economyWindowRewardedTokens, emittedTokens, rewardPoolTokens, controllerPriceLamports, postedPriceLamports, pixels]);
+  int get hashCode => Object.hashAll([discriminator, owner, assetId, merkleTree, bitVault, gameIndex, sectionIndex, status, bump, onPixels, leafIndex, flipCount, revision, lastFlipAt, salePriceLamports, economyLaunchedAt, economyWindowStartedAt, economyLastUpdatedAt, economyWindowId, economyWindowTargetTokens, economyWindowRewardedTokens, emittedTokens, rewardPoolTokens, controllerPriceLamports, postedPriceLamports, protocolFeeLamports, pixels]);
 
   @override
-  String toString() => 'SectionState(discriminator: $discriminator, owner: $owner, assetId: $assetId, merkleTree: $merkleTree, bitVault: $bitVault, gameIndex: $gameIndex, sectionIndex: $sectionIndex, status: $status, bump: $bump, onPixels: $onPixels, leafIndex: $leafIndex, flipCount: $flipCount, revision: $revision, lastFlipAt: $lastFlipAt, salePriceLamports: $salePriceLamports, economyLaunchedAt: $economyLaunchedAt, economyWindowStartedAt: $economyWindowStartedAt, economyLastUpdatedAt: $economyLastUpdatedAt, economyWindowId: $economyWindowId, economyWindowTargetTokens: $economyWindowTargetTokens, economyWindowRewardedTokens: $economyWindowRewardedTokens, emittedTokens: $emittedTokens, rewardPoolTokens: $rewardPoolTokens, controllerPriceLamports: $controllerPriceLamports, postedPriceLamports: $postedPriceLamports, pixels: $pixels)';
+  String toString() => 'SectionState(discriminator: $discriminator, owner: $owner, assetId: $assetId, merkleTree: $merkleTree, bitVault: $bitVault, gameIndex: $gameIndex, sectionIndex: $sectionIndex, status: $status, bump: $bump, onPixels: $onPixels, leafIndex: $leafIndex, flipCount: $flipCount, revision: $revision, lastFlipAt: $lastFlipAt, salePriceLamports: $salePriceLamports, economyLaunchedAt: $economyLaunchedAt, economyWindowStartedAt: $economyWindowStartedAt, economyLastUpdatedAt: $economyLastUpdatedAt, economyWindowId: $economyWindowId, economyWindowTargetTokens: $economyWindowTargetTokens, economyWindowRewardedTokens: $economyWindowRewardedTokens, emittedTokens: $emittedTokens, rewardPoolTokens: $rewardPoolTokens, controllerPriceLamports: $controllerPriceLamports, postedPriceLamports: $postedPriceLamports, protocolFeeLamports: $protocolFeeLamports, pixels: $pixels)';
 }
 
 
@@ -138,6 +141,7 @@ Encoder<SectionState> getSectionStateEncoder() {
     ('rewardPoolTokens', getU64Encoder()),
     ('controllerPriceLamports', getU64Encoder()),
     ('postedPriceLamports', getU64Encoder()),
+    ('protocolFeeLamports', getU64Encoder()),
     ('pixels', fixEncoderSize(getBytesEncoder(), 512, allowTruncation: false)),
   ]);
 
@@ -169,6 +173,7 @@ Encoder<SectionState> getSectionStateEncoder() {
       'rewardPoolTokens': value.rewardPoolTokens,
       'controllerPriceLamports': value.controllerPriceLamports,
       'postedPriceLamports': value.postedPriceLamports,
+      'protocolFeeLamports': value.protocolFeeLamports,
       'pixels': value.pixels,
     },
   );
@@ -201,6 +206,7 @@ Decoder<SectionState> getSectionStateDecoder() {
     ('rewardPoolTokens', getU64Decoder()),
     ('controllerPriceLamports', getU64Decoder()),
     ('postedPriceLamports', getU64Decoder()),
+    ('protocolFeeLamports', getU64Decoder()),
     ('pixels', fixDecoderSize(getBytesDecoder(), 512)),
   ]);
 
@@ -247,6 +253,7 @@ Decoder<SectionState> getSectionStateDecoder() {
       rewardPoolTokens: map['rewardPoolTokens']! as BigInt,
       controllerPriceLamports: map['controllerPriceLamports']! as BigInt,
       postedPriceLamports: map['postedPriceLamports']! as BigInt,
+      protocolFeeLamports: map['protocolFeeLamports']! as BigInt,
       pixels: map['pixels']! as Uint8List,
       ),
       newOffset,

@@ -4,10 +4,12 @@ import 'package:bitflip_app/core/bitflip_config.dart';
 import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
+import 'package:bitflip_app/features/game/domain/section_economy.dart';
 import 'package:bitflip_program/bitflip_program.dart';
 import 'package:bitflip_server_client/bitflip_server_client.dart' as serverpod;
 import 'package:solana_kit/solana_kit.dart';
 import 'package:solana_kit_rpc_spec/solana_kit_rpc_spec.dart';
+import 'package:solana_kit_token/solana_kit_token.dart';
 
 abstract interface class BitflipRepository {
   bool get isDemoMode;
@@ -179,6 +181,21 @@ final class SolanaBitflipRepository implements BitflipRepository {
           : decodeSectionState(encodedPreviousSection.account).data.flipCount,
       treasury: config.treasury.value,
       section: section,
+      bitMint: _optionalAddress(config.bitMint),
+      bitReserve: _optionalAddress(config.bitReserve),
+      priceConfig: SectionPriceConfig(
+        allocationTokens: game.sectionAllocationTokens,
+        emissionDurationSeconds: game.emissionDurationSeconds,
+        windowSeconds: game.windowSeconds,
+        targetTokensPerWindow: game.targetTokensPerWindow,
+        startPriceLamports: game.startPriceLamports,
+        minimumPriceLamports: game.minimumPriceLamports,
+        maximumPriceLamports: game.maximumPriceLamports,
+        startFloorPriceLamports: game.startFloorPriceLamports,
+        endFloorPriceLamports: game.endFloorPriceLamports,
+        changeDenominator: game.changeDenominator,
+        burstElasticity: game.burstElasticity,
+      ),
     );
   }
 
@@ -193,6 +210,13 @@ final class SolanaBitflipRepository implements BitflipRepository {
   Future<String> claimSection(GameSnapshot snapshot) async {
     final owner = _requireWalletAddress();
     final treasury = _requireTreasury(snapshot);
+    final bitMintValue = snapshot.bitMint;
+    final bitReserveValue = snapshot.bitReserve;
+    if (bitMintValue == null || bitReserveValue == null) {
+      throw StateError('BIT custody must be configured before claiming.');
+    }
+    final bitMint = Address(bitMintValue);
+    final bitReserve = Address(bitReserveValue);
     final sectionIndex = snapshot.section.index;
     final (config, _) = await findConfigPda(
       programAddress: bitflipProgramProgramAddress,
@@ -217,7 +241,7 @@ final class SolanaBitflipRepository implements BitflipRepository {
               sectionIndex: sectionIndex - 1,
             ),
           )).$1;
-    final instruction = getClaimSectionInstruction(
+    final claim = getClaimSectionInstruction(
       programAddress: bitflipProgramProgramAddress,
       owner: owner,
       config: config,
@@ -231,7 +255,29 @@ final class SolanaBitflipRepository implements BitflipRepository {
       bump: bump,
       maximumPriceLamports: snapshot.claimPriceLamports,
     );
-    return _send(instruction, owner);
+    final (sectionVault, _) = await findAssociatedTokenPda(
+      seeds: AssociatedTokenSeeds(
+        owner: section,
+        tokenProgram: token2022ProgramAddress,
+        mint: bitMint,
+      ),
+      programAddress: associatedTokenProgramAddress,
+    );
+    final fundVault = getFundSectionVaultInstruction(
+      programAddress: bitflipProgramProgramAddress,
+      funder: owner,
+      config: config,
+      section: section,
+      bitMint: bitMint,
+      bitReserve: bitReserve,
+      sectionVault: sectionVault,
+      associatedTokenProgram: associatedTokenProgramAddress,
+      tokenProgram: token2022ProgramAddress,
+      systemProgram: systemProgramAddress,
+      gameIndex: snapshot.gameIndex,
+      sectionIndex: sectionIndex,
+    );
+    return _sendAll([claim, fundVault], owner);
   }
 
   @override
@@ -309,7 +355,35 @@ final class SolanaBitflipRepository implements BitflipRepository {
       throw ArgumentError('Pixel coordinates must be unique.');
     }
     final player = _requireWalletAddress();
-    final treasury = _requireTreasury(snapshot);
+    final bitMintValue = snapshot.bitMint;
+    final sectionVaultValue = snapshot.section.bitVault;
+    final economy = snapshot.section.economy;
+    final priceConfig = snapshot.priceConfig;
+    if (bitMintValue == null ||
+        sectionVaultValue == null ||
+        economy == null ||
+        priceConfig == null) {
+      throw StateError('BIT rewards are not configured for this section.');
+    }
+    final requestedRewards = BigInt.from(coordinates.length);
+    final quote = economy.quote(
+      config: priceConfig,
+      now: BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000),
+      requestedRewardTokens: requestedRewards,
+    );
+    if (quote.rewardTokens != requestedRewards) {
+      throw StateError('This reward window has no capacity for the full batch.');
+    }
+    final bitMint = Address(bitMintValue);
+    final sectionVault = Address(sectionVaultValue);
+    final (playerBitAccount, _) = await findAssociatedTokenPda(
+      seeds: AssociatedTokenSeeds(
+        owner: player,
+        tokenProgram: token2022ProgramAddress,
+        mint: bitMint,
+      ),
+      programAddress: associatedTokenProgramAddress,
+    );
     final (config, _) = await findConfigPda(
       programAddress: bitflipProgramProgramAddress,
     );
@@ -329,23 +403,37 @@ final class SolanaBitflipRepository implements BitflipRepository {
       packedCoordinates[index * 2] = coordinates[index].x;
       packedCoordinates[index * 2 + 1] = coordinates[index].y;
     }
-    final maximumTotalFee =
-        snapshot.flipFeeLamports * BigInt.from(coordinates.length);
-    final instruction = getFlipPixelsInstruction(
+    final createPlayerBitAccount =
+        getCreateAssociatedTokenIdempotentInstruction(
+          programAddress: associatedTokenProgramAddress,
+          payer: player,
+          ata: playerBitAccount,
+          owner: player,
+          mint: bitMint,
+          systemProgram: systemProgramAddress,
+          tokenProgram: token2022ProgramAddress,
+        );
+    final flip = getFlipPixelsInstruction(
       programAddress: bitflipProgramProgramAddress,
       player: player,
       config: config,
       game: game,
       section: section,
-      treasury: treasury,
+      bitMint: bitMint,
+      sectionVault: sectionVault,
+      playerBitAccount: playerBitAccount,
+      tokenProgram: token2022ProgramAddress,
       systemProgram: systemProgramAddress,
       gameIndex: snapshot.gameIndex,
       sectionIndex: snapshot.section.index,
       count: coordinates.length,
       coordinates: packedCoordinates,
-      maximumTotalFeeLamports: maximumTotalFee,
+      expectedWindowId: quote.windowId,
+      maximumUnitPriceLamports: quote.unitPriceLamports,
+      maximumTotalPriceLamports: quote.totalPriceLamports,
+      minimumRewardTokens: quote.rewardTokens,
     );
-    return _send(instruction, player);
+    return _sendAll([createPlayerBitAccount, flip], player);
   }
 
   @override
@@ -414,6 +502,13 @@ final class SolanaBitflipRepository implements BitflipRepository {
   }
 
   Future<String> _send(Instruction instruction, Address feePayer) async {
+    return _sendAll([instruction], feePayer);
+  }
+
+  Future<String> _sendAll(
+    List<Instruction> instructions,
+    Address feePayer,
+  ) async {
     final latest = await _rpc.getLatestBlockhashValue().send();
     final transaction = compileTransaction(
       createTransactionMessage(version: TransactionVersion.v0)
@@ -424,7 +519,7 @@ final class SolanaBitflipRepository implements BitflipRepository {
               lastValidBlockHeight: latest.value.lastValidBlockHeight,
             ),
           )
-          .appendInstructions([instruction]),
+          .appendInstructions(instructions),
     );
     final transactionSignature = signature(
       await _wallet.signAndSend(getBase64EncodedWireTransaction(transaction)),
@@ -494,9 +589,26 @@ final class SolanaBitflipRepository implements BitflipRepository {
       salePriceLamports: data.salePriceLamports,
       isProtocolOwned: data.owner == gameAddress,
       assetId: lifecycle == SectionLifecycle.minted ? data.assetId.value : null,
+      bitVault: _optionalAddress(data.bitVault),
+      economy: SectionEconomySnapshot(
+        launchedAt: data.economyLaunchedAt,
+        windowStartedAt: data.economyWindowStartedAt,
+        lastUpdatedAt: data.economyLastUpdatedAt,
+        windowId: data.economyWindowId,
+        windowTargetTokens: data.economyWindowTargetTokens,
+        windowRewardedTokens: data.economyWindowRewardedTokens,
+        emittedTokens: data.emittedTokens,
+        rewardPoolTokens: data.rewardPoolTokens,
+        controllerPriceLamports: data.controllerPriceLamports,
+        postedPriceLamports: data.postedPriceLamports,
+        protocolFeeLamports: data.protocolFeeLamports,
+      ),
     );
   }
 }
+
+String? _optionalAddress(Address address) =>
+    address == systemProgramAddress ? null : address.value;
 
 bool _isLoopback(String value) {
   final host = Uri.tryParse(value)?.host.toLowerCase();

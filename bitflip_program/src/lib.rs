@@ -2,7 +2,8 @@
 //!
 //! A game is a 16×16 grid of lazily created sections. The program bootstraps
 //! one public 64×64 bitmap, then claimants fund each later account as play
-//! unlocks it. Players pay a bounded per-flip fee to toggle pixels. Section
+//! unlocks it. Players pay a bounded section-local price to toggle pixels and
+//! receive whole BIT from that section's vault. Section
 //! owners can trade or freeze their art, and the configured collection
 //! authority can attest the compressed NFT created for a frozen section.
 
@@ -62,7 +63,7 @@ pub const DEFAULT_MAX_FLIP_FEE_LAMPORTS: u64 = 1_000_000;
 pub const DEFAULT_UNLOCK_INTERVAL_SECONDS: u32 = 3_600;
 pub const DEFAULT_EARLY_UNLOCK_FLIPS: u32 = 1_024;
 
-pub const CONFIG_VERSION: u8 = 3;
+pub const CONFIG_VERSION: u8 = 4;
 pub const GAME_STATUS_LIVE: u8 = 1;
 pub const GAME_STATUS_CLAIMS_COMPLETE: u8 = 2;
 pub const SECTION_STATUS_ACTIVE: u8 = 1;
@@ -105,6 +106,8 @@ pub enum BitflipError {
 	InvalidBitMint = 25,
 	InvalidBitTokenAccount = 26,
 	SectionVaultAlreadyFunded = 27,
+	StalePriceWindow = 28,
+	InsufficientReward = 29,
 }
 
 #[discriminator]
@@ -209,6 +212,7 @@ pub struct SectionState {
 	pub reward_pool_tokens: u64,
 	pub controller_price_lamports: u64,
 	pub posted_price_lamports: u64,
+	pub protocol_fee_lamports: u64,
 	pub pixels: [u8; 512],
 }
 
@@ -259,7 +263,10 @@ pub struct FlipPixelsInstruction {
 	pub section_index: u8,
 	pub count: u8,
 	pub coordinates: [u8; 32],
-	pub maximum_total_fee_lamports: u64,
+	pub expected_window_id: u64,
+	pub maximum_unit_price_lamports: u64,
+	pub maximum_total_price_lamports: u64,
+	pub minimum_reward_tokens: u64,
 }
 
 #[instruction(discriminator = BitflipInstruction::SealSection)]
@@ -362,9 +369,12 @@ pub struct ClaimSectionAccounts<'a> {
 pub struct FlipPixelsAccounts<'a> {
 	pub player: &'a mut AccountView,
 	pub config: &'a AccountView,
-	pub game: &'a mut AccountView,
+	pub game: &'a AccountView,
 	pub section: &'a mut AccountView,
-	pub treasury: &'a mut AccountView,
+	pub bit_mint: &'a AccountView,
+	pub section_vault: &'a mut AccountView,
+	pub player_bit_account: &'a mut AccountView,
+	pub token_program: &'a AccountView,
 	pub system_program: &'a AccountView,
 }
 
@@ -577,10 +587,12 @@ fn controller_error(error: pricing::PriceControllerError) -> ProgramError {
 			BitflipError::InvalidControllerTimestamp.into()
 		}
 		pricing::PriceControllerError::ArithmeticOverflow => ProgramError::ArithmeticOverflow,
-		pricing::PriceControllerError::InvalidRequest
-		| pricing::PriceControllerError::StaleWindow
-		| pricing::PriceControllerError::PriceSlippage
-		| pricing::PriceControllerError::InsufficientReward => {
+		pricing::PriceControllerError::StaleWindow => BitflipError::StalePriceWindow.into(),
+		pricing::PriceControllerError::PriceSlippage => BitflipError::PriceSlippage.into(),
+		pricing::PriceControllerError::InsufficientReward => {
+			BitflipError::InsufficientReward.into()
+		}
+		pricing::PriceControllerError::InvalidRequest => {
 			BitflipError::InvalidControllerState.into()
 		}
 	}
@@ -611,6 +623,17 @@ fn game_price_config(game: &GameStateZc) -> Result<pricing::PriceControllerConfi
 	config.validate().map_err(controller_error)?;
 
 	Ok(config)
+}
+
+fn live_game_price_config(
+	game_account: &AccountView,
+) -> Result<(i64, pricing::PriceControllerConfig), ProgramError> {
+	let game = game_account.as_account::<GameState>(&ID)?;
+	if game.status != GAME_STATUS_LIVE && game.status != GAME_STATUS_CLAIMS_COMPLETE {
+		return Err(BitflipError::GameNotLive.into());
+	}
+
+	Ok((game.starts_at.get(), game_price_config(&game)?))
 }
 
 fn section_controller_state(section: &SectionStateZc) -> pricing::PriceControllerState {
@@ -652,6 +675,60 @@ fn store_section_controller_state(
 	section
 		.posted_price_lamports
 		.set(state.posted_price_lamports);
+}
+
+fn store_paid_flip(
+	section: &mut SectionStateZc,
+	count: u8,
+	coordinates: &[u8; FLIP_COORDINATE_BYTES],
+	clock_timestamp: i64,
+	total_price_lamports: u64,
+	controller: pricing::PriceControllerState,
+) -> ProgramResult {
+	let mut on_pixels = section.on_pixels.get();
+	for index in 0..usize::from(count) {
+		let offset = index * 2;
+		let turned_on = toggle_pixel(
+			&mut section.pixels,
+			coordinates[offset],
+			coordinates[offset + 1],
+		)?;
+		on_pixels = if turned_on {
+			on_pixels
+				.checked_add(1)
+				.ok_or(ProgramError::ArithmeticOverflow)?
+		} else {
+			on_pixels
+				.checked_sub(1)
+				.ok_or(ProgramError::ArithmeticOverflow)?
+		};
+	}
+	section.on_pixels.set(on_pixels);
+	section.flip_count.set(
+		section
+			.flip_count
+			.get()
+			.checked_add(u64::from(count))
+			.ok_or(ProgramError::ArithmeticOverflow)?,
+	);
+	section.revision.set(
+		section
+			.revision
+			.get()
+			.checked_add(1)
+			.ok_or(ProgramError::ArithmeticOverflow)?,
+	);
+	section.last_flip_at.set(clock_timestamp);
+	section.protocol_fee_lamports.set(
+		section
+			.protocol_fee_lamports
+			.get()
+			.checked_add(total_price_lamports)
+			.ok_or(ProgramError::ArithmeticOverflow)?,
+	);
+	store_section_controller_state(section, controller);
+
+	Ok(())
 }
 
 fn initialize_game_state(
@@ -716,6 +793,7 @@ fn initialize_section_state(
 	section.revision.set(0);
 	section.last_flip_at.set(0);
 	section.sale_price_lamports.set(0);
+	section.protocol_fee_lamports.set(0);
 	store_section_controller_state(section, controller);
 	section.pixels.fill(0);
 }
@@ -780,6 +858,127 @@ fn bit_token_account_balance(
 	}
 
 	Ok(token_account.amount())
+}
+
+fn bit_recipient_account_balance(
+	account: &AccountView,
+	owner: &Address,
+	bit_mint: &Address,
+	token_program: &Address,
+) -> Result<u64, ProgramError> {
+	let token_account = account
+		.as_associated_token_account_checked(owner, bit_mint, token_program)
+		.map_err(|_| ProgramError::from(BitflipError::InvalidBitTokenAccount))?;
+
+	if !token_account.is_initialized()
+		|| token_account.is_frozen()
+		|| token_account.is_native()
+		|| token_account.mint() != bit_mint
+		|| token_account.owner() != owner
+	{
+		return Err(BitflipError::InvalidBitTokenAccount.into());
+	}
+
+	Ok(token_account.amount())
+}
+
+fn assert_flip_custody(
+	[
+		section,
+		bit_mint,
+		section_vault,
+		player,
+		player_bit_account,
+		token_program_account,
+	]: [&AccountView; 6],
+	expected_bit_mint: &Address,
+	expected_section_vault: &Address,
+	emitted_tokens: u64,
+	allocation_tokens: u64,
+) -> ProgramResult {
+	let token_program = *token_program_account
+		.assert_address(&token_2022::ID)?
+		.address();
+	bit_mint.assert_address(expected_bit_mint)?;
+	assert_bit_mint(bit_mint, &token_program)?;
+	section_vault.assert_address(expected_section_vault)?;
+	let vault_balance = bit_token_account_balance(
+		section_vault,
+		section.address(),
+		bit_mint.address(),
+		&token_program,
+	)?;
+	let _ = bit_recipient_account_balance(
+		player_bit_account,
+		player.address(),
+		bit_mint.address(),
+		&token_program,
+	)?;
+	if vault_balance
+		.checked_add(emitted_tokens)
+		.ok_or(ProgramError::ArithmeticOverflow)?
+		< allocation_tokens
+	{
+		return Err(BitflipError::InvalidBitTokenAccount.into());
+	}
+
+	Ok(())
+}
+
+fn transfer_bit_reward(
+	[
+		section,
+		bit_mint,
+		section_vault,
+		player_bit_account,
+		token_program_account,
+	]: [&AccountView; 5],
+	reward_tokens: u64,
+	game_index: u8,
+	section_index: u8,
+	section_bump: u8,
+) -> ProgramResult {
+	if reward_tokens == 0 {
+		return Ok(());
+	}
+	token_program_account.assert_address(&token_2022::ID)?;
+	let token_program = *token_program_account.address();
+	let vault_amount_before = section_vault
+		.as_token_account_for_program(&token_program)?
+		.amount();
+	let recipient_amount_before = player_bit_account
+		.as_token_account_for_program(&token_program)?
+		.amount();
+	let section_seeds = SectionState::seeds(game_index, section_index).with_bump(section_bump);
+	let section_signer = section_seeds.to_signer();
+	let signers = [section_signer.as_signer()];
+	token_2022::instructions::TransferChecked::new(
+		section_vault,
+		bit_mint,
+		player_bit_account,
+		section,
+		reward_tokens,
+		BIT_MINT_DECIMALS,
+	)
+	.invoke_signed_with_program(&signers, &token_program)?;
+
+	let vault_amount_after = section_vault
+		.as_token_account_for_program(&token_program)?
+		.amount();
+	let recipient_amount_after = player_bit_account
+		.as_token_account_for_program(&token_program)?
+		.amount();
+	let vault_debit = vault_amount_before
+		.checked_sub(vault_amount_after)
+		.ok_or(BitflipError::InvalidBitTokenAccount)?;
+	let recipient_credit = recipient_amount_after
+		.checked_sub(recipient_amount_before)
+		.ok_or(BitflipError::InvalidBitTokenAccount)?;
+	if vault_debit != reward_tokens || recipient_credit != reward_tokens {
+		return Err(BitflipError::InvalidBitTokenAccount.into());
+	}
+
+	Ok(())
 }
 
 fn transfer_section_allocation(
@@ -1202,80 +1401,97 @@ impl<'a> ProcessAccountInfos<'a> for FlipPixelsAccounts<'a> {
 			.assert_owner(&system::ID)?;
 		self.system_program.assert_address(&system::ID)?;
 
-		let treasury = self.config.as_account::<ConfigState>(&ID)?.treasury;
-		self.treasury.assert_address(&treasury)?;
-
-		let (game_status, starts_at, fee_per_flip) = {
-			let game = self.game.as_account::<GameState>(&ID)?;
-			(
-				game.status,
-				game.starts_at.get(),
-				game.flip_fee_lamports.get(),
-			)
+		let bit_mint = {
+			let config = self.config.as_account::<ConfigState>(&ID)?;
+			if config.bit_mint == ZERO_ADDRESS {
+				return Err(BitflipError::CustodyNotConfigured.into());
+			}
+			config.bit_mint
 		};
-		if game_status != GAME_STATUS_LIVE && game_status != GAME_STATUS_CLAIMS_COMPLETE {
-			return Err(BitflipError::GameNotLive.into());
-		}
+
+		let (starts_at, price_config) = live_game_price_config(self.game)?;
 		let clock = Clock::get()?;
 		if clock.unix_timestamp < starts_at {
 			return Err(BitflipError::GameNotStarted.into());
 		}
-		if self.section.as_account::<SectionState>(&ID)?.status != SECTION_STATUS_ACTIVE {
-			return Err(BitflipError::SectionNotActive.into());
-		}
+
+		let (section_bump, section_vault, mut controller) = {
+			let section = self.section.as_account::<SectionState>(&ID)?;
+			if section.status != SECTION_STATUS_ACTIVE {
+				return Err(BitflipError::SectionNotActive.into());
+			}
+			if section.bit_vault == ZERO_ADDRESS {
+				return Err(BitflipError::CustodyNotConfigured.into());
+			}
+			(
+				section.bump,
+				section.bit_vault,
+				section_controller_state(&section),
+			)
+		};
+		assert_flip_custody(
+			[
+				self.section,
+				self.bit_mint,
+				self.section_vault,
+				self.player,
+				self.player_bit_account,
+				self.token_program,
+			],
+			&bit_mint,
+			&section_vault,
+			controller.emitted_tokens,
+			price_config.allocation_tokens,
+		)?;
 
 		let flip_count = u64::from(args.count);
-		let total_fee = fee_per_flip
-			.checked_mul(flip_count)
-			.ok_or(ProgramError::ArithmeticOverflow)?;
-		if total_fee > args.maximum_total_fee_lamports.get() {
-			return Err(BitflipError::PriceSlippage.into());
+		let quote = controller
+			.execute(
+				&price_config,
+				controller_timestamp(clock.unix_timestamp)?,
+				flip_count,
+				pricing::QuoteLimits {
+					expected_window_id: args.expected_window_id.get(),
+					maximum_unit_price_lamports: args.maximum_unit_price_lamports.get(),
+					maximum_total_price_lamports: args.maximum_total_price_lamports.get(),
+					minimum_reward_tokens: args.minimum_reward_tokens.get(),
+				},
+			)
+			.map_err(controller_error)?;
+		if quote.reward_tokens != flip_count {
+			return Err(BitflipError::InsufficientReward.into());
 		}
-		transfer_lamports(self.player, self.treasury, total_fee, self.system_program)?;
+		transfer_lamports(
+			self.player,
+			self.section,
+			quote.total_price_lamports,
+			self.system_program,
+		)?;
+		transfer_bit_reward(
+			[
+				self.section,
+				self.bit_mint,
+				self.section_vault,
+				self.player_bit_account,
+				self.token_program,
+			],
+			quote.reward_tokens,
+			args.game_index,
+			args.section_index,
+			section_bump,
+		)?;
 
 		let mut section = self.section.as_account_mut::<SectionState>(&ID)?;
-		let mut on_pixels = section.on_pixels.get();
-		for index in 0..usize::from(args.count) {
-			let offset = index * 2;
-			let turned_on = toggle_pixel(
-				&mut section.pixels,
-				args.coordinates[offset],
-				args.coordinates[offset + 1],
-			)?;
-			on_pixels = if turned_on {
-				on_pixels
-					.checked_add(1)
-					.ok_or(ProgramError::ArithmeticOverflow)?
-			} else {
-				on_pixels
-					.checked_sub(1)
-					.ok_or(ProgramError::ArithmeticOverflow)?
-			};
-		}
-		section.on_pixels.set(on_pixels);
-		let next_flip_count = section
-			.flip_count
-			.get()
-			.checked_add(flip_count)
-			.ok_or(ProgramError::ArithmeticOverflow)?;
-		let next_revision = section
-			.revision
-			.get()
-			.checked_add(1)
-			.ok_or(ProgramError::ArithmeticOverflow)?;
-		section.flip_count.set(next_flip_count);
-		section.revision.set(next_revision);
-		section.last_flip_at.set(clock.unix_timestamp);
+		store_paid_flip(
+			&mut section,
+			args.count,
+			&args.coordinates,
+			clock.unix_timestamp,
+			quote.total_price_lamports,
+			controller,
+		)?;
 
-		let mut game = self.game.as_account_mut::<GameState>(&ID)?;
-		let next_total_flips = game
-			.total_flips
-			.get()
-			.checked_add(flip_count)
-			.ok_or(ProgramError::ArithmeticOverflow)?;
-		game.total_flips.set(next_total_flips);
-
-		log!("Bitflip pixels toggled");
+		log!("Bitflip pixels toggled and BIT distributed");
 		Ok(())
 	}
 }
@@ -1685,14 +1901,14 @@ mod tests {
 	fn account_layouts_are_stable() {
 		assert_eq!(ConfigState::SIZE, 237);
 		assert_eq!(GameState::SIZE, 123);
-		assert_eq!(SectionState::SIZE, 763);
+		assert_eq!(SectionState::SIZE, 771);
 	}
 
 	#[test]
 	fn instruction_layouts_are_stable() {
 		assert_eq!(InitializeConfigInstruction::SIZE, 2);
 		assert_eq!(InitializeGameInstruction::SIZE, 5);
-		assert_eq!(FlipPixelsInstruction::SIZE, 44);
+		assert_eq!(FlipPixelsInstruction::SIZE, 68);
 		assert_eq!(RecordSectionMintInstruction::SIZE, 103);
 		assert_eq!(ListSectionInstruction::SIZE, 11);
 		assert_eq!(CancelSectionListingInstruction::SIZE, 3);

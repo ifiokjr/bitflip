@@ -48,6 +48,8 @@ class GameConsole extends HookWidget {
     final canMint =
         section.lifecycle == SectionLifecycle.sealed &&
         (state.snapshot.isDemo || state.walletAddress == section.owner);
+    final hasFullQueuedReward =
+        state.queuedReward == BigInt.from(state.queued.length);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -188,6 +190,34 @@ class GameConsole extends HookWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    context.l10n.moveReward,
+                    style: Theme.of(context).textTheme.labelLarge
+                        ?.copyWith(color: BitflipColors.muted),
+                  ),
+                ),
+                Text(
+                  context.l10n.rewardValue(state.queuedReward.toString()),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: BitflipColors.coral,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            if (state.queued.isNotEmpty && !hasFullQueuedReward) ...[
+              const SizedBox(height: 8),
+              Text(
+                context.l10n.rewardWindowUnavailable,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: BitflipColors.coral,
+                ),
+              ),
+            ],
             const SizedBox(height: 18),
             if (state.walletAddress == null && state.isWalletSupported)
               FilledButton.icon(
@@ -225,7 +255,11 @@ class GameConsole extends HookWidget {
             else
               FilledButton.icon(
                 key: BitflipTestKeys.commitFlips,
-                onPressed: state.queued.isEmpty || state.isBusy || !canSign
+                onPressed:
+                    state.queued.isEmpty ||
+                        state.isBusy ||
+                        !canSign ||
+                        !hasFullQueuedReward
                     ? null
                     : onCommit,
                 icon: const Icon(Icons.bolt_rounded),

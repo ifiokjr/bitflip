@@ -41,9 +41,9 @@ The 2026-09-06 smoke installed SHA-256 `bc3bdf672075ade1e71ca7f58423e5a65870a9da
 - Replace the beta's user-driven mint reconciliation with the durable worker described in the [operations runbook](operations/runbook.md).
 - Record the final marketplace-authenticity choice from [ADR 0002](decisions/0002-marketplace-authenticity.md).
 - Do not enable BIT rewards or section campaigns until the token, custody, economic, integrity, and product-copy gates in [ADR 0003](decisions/0003-section-economy.md) are implemented and independently reviewed. A release without those features may proceed only if the UI continues to make their absence explicit.
-- Verify ABI version 3 rejects a mint with live authority, nonzero decimals, the wrong supply, or unsupported extensions; reconcile the launch reserve and every funded section vault after the canary.
+- Verify ABI version 4 rejects a mint with live authority, nonzero decimals, the wrong supply, or unsupported extensions; reconcile the launch reserve, every funded section vault, emitted BIT, reward-pool ledger, and fee ledger after the canary.
 - Before enabling paid BIT distribution, satisfy the simulation, property-test, real-SBF capacity, wallet-quote, and devnet evidence requirements in [ADR 0004](decisions/0004-section-price-controller.md).
-- Remove the shared writable game counter and direct global-treasury transfer from `FlipPixels` before making any sharded-throughput claim; the [economics simulation report](economics-simulation.md) records the real-SBF contention finding.
+- Profile one-pixel and 16-pixel paid flips across the intended number of simultaneously active sections on devnet. The shared writable game counter and global-treasury transfer have been removed, and two-section real-SBF correctness is covered, but that is not production throughput evidence.
 
 ## Required application configuration
 

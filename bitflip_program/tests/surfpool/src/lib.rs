@@ -133,6 +133,68 @@ async fn start_game(early_unlock_flips: u32) -> (ProgramTest, Keypair, Pubkey, P
 	(program, authority, config, game)
 }
 
+struct CustodyGame {
+	program: ProgramTest,
+	authority: Keypair,
+	config: Pubkey,
+	game: Pubkey,
+	bit_mint: Keypair,
+	bit_reserve: Pubkey,
+	initial_section_vault: Pubkey,
+}
+
+async fn start_game_with_custody(early_unlock_flips: u32) -> CustodyGame {
+	let (program, authority, config, game) = start_game(early_unlock_flips).await;
+	let (initial_section, _) = section_address(&program.program_id(), 0, 0);
+	let (bit_mint, bit_reserve) = create_bit_mint_and_reserve(
+		&program,
+		&authority,
+		&config,
+		BIT_MINT_DECIMALS,
+		BIT_TOTAL_SUPPLY_TOKENS,
+		true,
+	);
+	program
+		.send_with_signers(
+			configure_bit_custody_instruction(
+				&program,
+				&authority.pubkey(),
+				&config,
+				&bit_mint.pubkey(),
+				&bit_reserve,
+			),
+			&[&authority],
+		)
+		.expect("configure test BIT custody");
+	let initial_section_vault = get_associated_token_address_with_program_id(
+		&initial_section,
+		&bit_mint.pubkey(),
+		&spl_token_2022_interface::id(),
+	);
+	program
+		.send_instruction(fund_section_vault_instruction(
+			&program,
+			&program.payer(),
+			&config,
+			&initial_section,
+			&bit_mint.pubkey(),
+			&bit_reserve,
+			&initial_section_vault,
+			0,
+		))
+		.expect("fund initial test section vault");
+
+	CustodyGame {
+		program,
+		authority,
+		config,
+		game,
+		bit_mint,
+		bit_reserve,
+		initial_section_vault,
+	}
+}
+
 fn initialize_config_instruction(
 	program: &ProgramTest,
 	payer: &Pubkey,
@@ -372,6 +434,21 @@ fn token_amount(program: &ProgramTest, token_account: &Pubkey) -> u64 {
 		.amount
 }
 
+fn create_player_bit_account(program: &ProgramTest, owner: &Pubkey, bit_mint: &Pubkey) -> Pubkey {
+	let token_program = spl_token_2022_interface::id();
+	let token_account =
+		get_associated_token_address_with_program_id(owner, bit_mint, &token_program);
+	program
+		.send_instruction(create_associated_token_account(
+			&program.payer(),
+			owner,
+			bit_mint,
+			&token_program,
+		))
+		.expect("create player BIT account");
+	token_account
+}
+
 #[allow(clippy::too_many_arguments)]
 fn claim_section_instruction(
 	program: &ProgramTest,
@@ -407,39 +484,69 @@ fn claim_section_instruction(
 	)
 }
 
-#[allow(clippy::too_many_arguments)]
+#[derive(Clone, Copy)]
+struct TestFlipLimits {
+	game_index: u8,
+	section_index: u8,
+	expected_window_id: u64,
+	maximum_unit_price_lamports: u64,
+	maximum_total_price_lamports: u64,
+	minimum_reward_tokens: u64,
+}
+
+impl TestFlipLimits {
+	fn full_reward(coordinate_count: usize) -> Self {
+		let reward_tokens = u64::try_from(coordinate_count).expect("coordinate count fits u64");
+		Self {
+			game_index: 0,
+			section_index: 0,
+			expected_window_id: 0,
+			maximum_unit_price_lamports: DEFAULT_START_PRICE_LAMPORTS,
+			maximum_total_price_lamports: DEFAULT_START_PRICE_LAMPORTS * reward_tokens,
+			minimum_reward_tokens: reward_tokens,
+		}
+	}
+}
+
 fn flip_pixels_instruction(
 	program: &ProgramTest,
-	player: &Pubkey,
-	config: &Pubkey,
-	game: &Pubkey,
-	section: &Pubkey,
-	treasury: &Pubkey,
+	[player, config, game, section, bit_mint]: [&Pubkey; 5],
 	coordinates: &[(u8, u8)],
-	maximum_total_fee_lamports: u64,
+	limits: TestFlipLimits,
 ) -> pina_test::Instruction {
 	let mut packed_coordinates = [0; 32];
 	for (index, (x, y)) in coordinates.iter().enumerate() {
 		packed_coordinates[index * 2] = *x;
 		packed_coordinates[index * 2 + 1] = *y;
 	}
-	let mut data = Vec::with_capacity(44);
+	let mut data = Vec::with_capacity(68);
 	data.extend_from_slice(&[
 		BitflipInstruction::FlipPixels as u8,
-		0,
-		0,
+		limits.game_index,
+		limits.section_index,
 		coordinates.len() as u8,
 	]);
 	data.extend_from_slice(&packed_coordinates);
-	data.extend_from_slice(&maximum_total_fee_lamports.to_le_bytes());
+	data.extend_from_slice(&limits.expected_window_id.to_le_bytes());
+	data.extend_from_slice(&limits.maximum_unit_price_lamports.to_le_bytes());
+	data.extend_from_slice(&limits.maximum_total_price_lamports.to_le_bytes());
+	data.extend_from_slice(&limits.minimum_reward_tokens.to_le_bytes());
+	let token_program = spl_token_2022_interface::id();
+	let section_vault =
+		get_associated_token_address_with_program_id(section, bit_mint, &token_program);
+	let player_bit_account =
+		get_associated_token_address_with_program_id(player, bit_mint, &token_program);
 	program.instruction(
 		&data,
 		vec![
 			AccountMeta::new(*player, true),
 			AccountMeta::new_readonly(*config, false),
-			AccountMeta::new(*game, false),
+			AccountMeta::new_readonly(*game, false),
 			AccountMeta::new(*section, false),
-			AccountMeta::new(*treasury, false),
+			AccountMeta::new_readonly(*bit_mint, false),
+			AccountMeta::new(section_vault, false),
+			AccountMeta::new(player_bit_account, false),
+			AccountMeta::new_readonly(token_program, false),
 			AccountMeta::new_readonly(Pubkey::default(), false),
 		],
 	)
@@ -470,19 +577,18 @@ async fn claim_first_user_section(
 	config: &Pubkey,
 	game: &Pubkey,
 	owner: &Keypair,
+	bit_mint: &Pubkey,
+	bit_reserve: &Pubkey,
 ) -> Pubkey {
 	let (initial_section, _) = section_address(&program.program_id(), 0, 0);
+	let _ = create_player_bit_account(program, &owner.pubkey(), bit_mint);
 	program
 		.send_with_signers(
 			flip_pixels_instruction(
 				program,
-				&owner.pubkey(),
-				config,
-				game,
-				&initial_section,
-				&authority.pubkey(),
+				[&owner.pubkey(), config, game, &initial_section, bit_mint],
 				&[(0, 0)],
-				DEFAULT_FLIP_FEE_LAMPORTS,
+				TestFlipLimits::full_reward(1),
 			),
 			&[owner],
 		)
@@ -505,6 +611,23 @@ async fn claim_first_user_section(
 			&[owner],
 		)
 		.expect("claim first purchasable section");
+	let section_vault = get_associated_token_address_with_program_id(
+		&section,
+		bit_mint,
+		&spl_token_2022_interface::id(),
+	);
+	program
+		.send_instruction(fund_section_vault_instruction(
+			program,
+			&program.payer(),
+			config,
+			&section,
+			bit_mint,
+			bit_reserve,
+			&section_vault,
+			1,
+		))
+		.expect("fund claimed section vault");
 	section
 }
 
@@ -1083,7 +1206,14 @@ fn fixed_supply_prevents_a_fifth_game() {
 #[ignore = "run with test:surfpool"]
 fn claims_enforce_order_and_activity_unlocks() {
 	pina_test::run(async {
-		let (mut program, authority, config, game) = start_game(1).await;
+		let CustodyGame {
+			mut program,
+			authority,
+			config,
+			game,
+			bit_mint,
+			..
+		} = start_game_with_custody(1).await;
 		let program_id = program.program_id();
 		let player = Keypair::new();
 		let owner_one = Keypair::new();
@@ -1096,6 +1226,7 @@ fn claims_enforce_order_and_activity_unlocks() {
 		let (section_zero, _) = section_address(&program_id, 0, 0);
 		let (section_one, section_one_bump) = section_address(&program_id, 0, 1);
 		let (section_two, section_two_bump) = section_address(&program_id, 0, 2);
+		let _ = create_player_bit_account(&program, &player.pubkey(), &bit_mint.pubkey());
 
 		let out_of_order = program
 			.send_with_signers(
@@ -1139,13 +1270,15 @@ fn claims_enforce_order_and_activity_unlocks() {
 			.send_with_signers(
 				flip_pixels_instruction(
 					&program,
-					&player.pubkey(),
-					&config,
-					&game,
-					&section_zero,
-					&authority.pubkey(),
+					[
+						&player.pubkey(),
+						&config,
+						&game,
+						&section_zero,
+						&bit_mint.pubkey(),
+					],
 					&[(4, 9)],
-					DEFAULT_FLIP_FEE_LAMPORTS,
+					TestFlipLimits::full_reward(1),
 				),
 				&[&player],
 			)
@@ -1195,24 +1328,34 @@ fn claims_enforce_order_and_activity_unlocks() {
 #[ignore = "run with test:surfpool"]
 fn claim_price_slippage_is_atomic() {
 	pina_test::run(async {
-		let (mut program, authority, config, game) = start_game(1).await;
+		let CustodyGame {
+			mut program,
+			authority,
+			config,
+			game,
+			bit_mint,
+			..
+		} = start_game_with_custody(1).await;
 		let owner = Keypair::new();
 		program
 			.fund(&owner.pubkey(), 100_000_000)
 			.expect("fund section owner");
 		let (previous_section, _) = section_address(&program.program_id(), 0, 0);
 		let (section, bump) = section_address(&program.program_id(), 0, 1);
+		let _ = create_player_bit_account(&program, &owner.pubkey(), &bit_mint.pubkey());
 		program
 			.send_with_signers(
 				flip_pixels_instruction(
 					&program,
-					&owner.pubkey(),
-					&config,
-					&game,
-					&previous_section,
-					&authority.pubkey(),
+					[
+						&owner.pubkey(),
+						&config,
+						&game,
+						&previous_section,
+						&bit_mint.pubkey(),
+					],
 					&[(0, 0)],
-					DEFAULT_FLIP_FEE_LAMPORTS,
+					TestFlipLimits::full_reward(1),
 				),
 				&[&owner],
 			)
@@ -1288,28 +1431,38 @@ fn claim_price_slippage_is_atomic() {
 #[ignore = "run with test:surfpool"]
 fn duplicate_and_underpriced_flips_are_atomic() {
 	pina_test::run(async {
-		let (mut program, authority, config, game) = start_game(DEFAULT_EARLY_UNLOCK_FLIPS).await;
+		let CustodyGame {
+			mut program,
+			config,
+			game,
+			bit_mint,
+			initial_section_vault,
+			..
+		} = start_game_with_custody(DEFAULT_EARLY_UNLOCK_FLIPS).await;
 		let owner = Keypair::new();
 		program
 			.fund(&owner.pubkey(), 100_000_000)
 			.expect("fund section player");
 		let (section, _) = section_address(&program.program_id(), 0, 0);
+		let player_bit_account =
+			create_player_bit_account(&program, &owner.pubkey(), &bit_mint.pubkey());
 		let before = program.account(&section).expect("fetch section");
-		let before_treasury = program
-			.balance(&authority.pubkey())
-			.expect("treasury balance");
+		let before_vault = token_amount(&program, &initial_section_vault);
+		let before_player_bit = token_amount(&program, &player_bit_account);
 
 		let duplicate = program
 			.send_with_signers(
 				flip_pixels_instruction(
 					&program,
-					&owner.pubkey(),
-					&config,
-					&game,
-					&section,
-					&authority.pubkey(),
+					[
+						&owner.pubkey(),
+						&config,
+						&game,
+						&section,
+						&bit_mint.pubkey(),
+					],
 					&[(4, 9), (4, 9)],
-					DEFAULT_FLIP_FEE_LAMPORTS * 2,
+					TestFlipLimits::full_reward(2),
 				),
 				&[&owner],
 			)
@@ -1320,28 +1473,76 @@ fn duplicate_and_underpriced_flips_are_atomic() {
 			.send_with_signers(
 				flip_pixels_instruction(
 					&program,
-					&owner.pubkey(),
-					&config,
-					&game,
-					&section,
-					&authority.pubkey(),
+					[
+						&owner.pubkey(),
+						&config,
+						&game,
+						&section,
+						&bit_mint.pubkey(),
+					],
 					&[(4, 9)],
-					DEFAULT_FLIP_FEE_LAMPORTS - 1,
+					TestFlipLimits {
+						maximum_total_price_lamports: DEFAULT_START_PRICE_LAMPORTS - 1,
+						..TestFlipLimits::full_reward(1)
+					},
 				),
 				&[&owner],
 			)
 			.expect_err("flip must reject a fee above the signed maximum");
 		assert_custom_error(&slippage, BitflipError::PriceSlippage);
 
+		let stale_window = program
+			.send_with_signers(
+				flip_pixels_instruction(
+					&program,
+					[
+						&owner.pubkey(),
+						&config,
+						&game,
+						&section,
+						&bit_mint.pubkey(),
+					],
+					&[(4, 9)],
+					TestFlipLimits {
+						expected_window_id: 1,
+						..TestFlipLimits::full_reward(1)
+					},
+				),
+				&[&owner],
+			)
+			.expect_err("flip must reject a stale signed reward window");
+		assert_custom_error(&stale_window, BitflipError::StalePriceWindow);
+
+		let insufficient_reward = program
+			.send_with_signers(
+				flip_pixels_instruction(
+					&program,
+					[
+						&owner.pubkey(),
+						&config,
+						&game,
+						&section,
+						&bit_mint.pubkey(),
+					],
+					&[(4, 9)],
+					TestFlipLimits {
+						minimum_reward_tokens: 2,
+						..TestFlipLimits::full_reward(1)
+					},
+				),
+				&[&owner],
+			)
+			.expect_err("flip must reject fewer rewards than the signed minimum");
+		assert_custom_error(&insufficient_reward, BitflipError::InsufficientReward);
+
 		assert_eq!(
 			program.account(&section).expect("fetch section").data,
 			before.data
 		);
+		assert_eq!(token_amount(&program, &initial_section_vault), before_vault);
 		assert_eq!(
-			program
-				.balance(&authority.pubkey())
-				.expect("treasury balance"),
-			before_treasury
+			token_amount(&program, &player_bit_account),
+			before_player_bit
 		);
 		program.stop().expect("stop isolated program test");
 	});
@@ -1352,7 +1553,15 @@ fn duplicate_and_underpriced_flips_are_atomic() {
 fn owner_can_list_cancel_and_sell_a_section_atomically() {
 	pina_test::run(async {
 		const SALE_PRICE: u64 = 25_000_000;
-		let (mut program, authority, config, game) = start_game(1).await;
+		let CustodyGame {
+			mut program,
+			authority,
+			config,
+			game,
+			bit_mint,
+			bit_reserve,
+			..
+		} = start_game_with_custody(1).await;
 		let seller = Keypair::new();
 		let buyer = Keypair::new();
 		program
@@ -1361,8 +1570,16 @@ fn owner_can_list_cancel_and_sell_a_section_atomically() {
 		program
 			.fund(&buyer.pubkey(), 100_000_000)
 			.expect("fund buyer");
-		let section =
-			claim_first_user_section(&mut program, &authority, &config, &game, &seller).await;
+		let section = claim_first_user_section(
+			&mut program,
+			&authority,
+			&config,
+			&game,
+			&seller,
+			&bit_mint.pubkey(),
+			&bit_reserve,
+		)
+		.await;
 
 		let list =
 			|| list_section_instruction(&program, &seller.pubkey(), &game, &section, 1, SALE_PRICE);
@@ -1572,7 +1789,15 @@ fn authority_rotation_requires_both_signers_and_revokes_the_old_authority() {
 #[ignore = "run with test:surfpool"]
 fn only_the_owner_can_seal_an_active_section() {
 	pina_test::run(async {
-		let (mut program, authority, config, game) = start_game(1).await;
+		let CustodyGame {
+			mut program,
+			authority,
+			config,
+			game,
+			bit_mint,
+			bit_reserve,
+			..
+		} = start_game_with_custody(1).await;
 		let owner = Keypair::new();
 		let outsider = Keypair::new();
 		program
@@ -1581,8 +1806,16 @@ fn only_the_owner_can_seal_an_active_section() {
 		program
 			.fund(&outsider.pubkey(), 1_000_000)
 			.expect("fund outsider");
-		let section =
-			claim_first_user_section(&mut program, &authority, &config, &game, &owner).await;
+		let section = claim_first_user_section(
+			&mut program,
+			&authority,
+			&config,
+			&game,
+			&owner,
+			&bit_mint.pubkey(),
+			&bit_reserve,
+		)
+		.await;
 
 		let unauthorized = program
 			.send_with_signers(
@@ -1614,7 +1847,15 @@ fn only_the_owner_can_seal_an_active_section() {
 #[ignore = "run with test:surfpool"]
 fn mint_recording_requires_sealed_state_and_collection_authority() {
 	pina_test::run(async {
-		let (mut program, authority, config, game) = start_game(1).await;
+		let CustodyGame {
+			mut program,
+			authority,
+			config,
+			game,
+			bit_mint,
+			bit_reserve,
+			..
+		} = start_game_with_custody(1).await;
 		let owner = Keypair::new();
 		let outsider = Keypair::new();
 		program
@@ -1623,8 +1864,16 @@ fn mint_recording_requires_sealed_state_and_collection_authority() {
 		program
 			.fund(&outsider.pubkey(), 1_000_000)
 			.expect("fund outsider");
-		let section =
-			claim_first_user_section(&mut program, &authority, &config, &game, &owner).await;
+		let section = claim_first_user_section(
+			&mut program,
+			&authority,
+			&config,
+			&game,
+			&owner,
+			&bit_mint.pubkey(),
+			&bit_reserve,
+		)
+		.await;
 		let asset_id = Keypair::new().pubkey();
 		let merkle_tree = Keypair::new().pubkey();
 		let record = |collection_authority: &Pubkey| {
@@ -1693,13 +1942,20 @@ fn burst_traffic_preserves_real_sbf_accounting() {
 	const PIXELS_PER_TRANSACTION: u64 = 16;
 
 	pina_test::run(async {
-		let (mut program, authority, config, game) = start_game(DEFAULT_EARLY_UNLOCK_FLIPS).await;
+		let CustodyGame {
+			mut program,
+			config,
+			game,
+			bit_mint,
+			initial_section_vault,
+			..
+		} = start_game_with_custody(DEFAULT_EARLY_UNLOCK_FLIPS).await;
 		let (section, _) = section_address(&program.program_id(), 0, 0);
 		let player = program.payer();
-
-		let treasury_before = program
-			.balance(&authority.pubkey())
-			.expect("treasury balance before burst");
+		let player_bit_account = create_player_bit_account(&program, &player, &bit_mint.pubkey());
+		let section_lamports_before = program
+			.balance(&section)
+			.expect("section balance before burst");
 		let ambiguous_batches = std::thread::scope(|scope| {
 			let program_ref = &program;
 			let handles: Vec<_> = (0..TRANSACTION_COUNT)
@@ -1707,13 +1963,9 @@ fn burst_traffic_preserves_real_sbf_accounting() {
 					let coordinates = coordinates_for_batch(batch_index);
 					let instruction = flip_pixels_instruction(
 						program_ref,
-						&player,
-						&config,
-						&game,
-						&section,
-						&authority.pubkey(),
+						[&player, &config, &game, &section, &bit_mint.pubkey()],
 						&coordinates,
-						DEFAULT_FLIP_FEE_LAMPORTS * PIXELS_PER_TRANSACTION,
+						TestFlipLimits::full_reward(PIXELS_PER_TRANSACTION as usize),
 					);
 
 					(
@@ -1750,13 +2002,9 @@ fn burst_traffic_preserves_real_sbf_accounting() {
 				program
 					.send_instruction(flip_pixels_instruction(
 						&program,
-						&player,
-						&config,
-						&game,
-						&section,
-						&authority.pubkey(),
+						[&player, &config, &game, &section, &bit_mint.pubkey()],
 						&coordinates,
-						DEFAULT_FLIP_FEE_LAMPORTS * PIXELS_PER_TRANSACTION,
+						TestFlipLimits::full_reward(PIXELS_PER_TRANSACTION as usize),
 					))
 					.expect("resubmit a confirmed-missing contended batch");
 			}
@@ -1771,34 +2019,73 @@ fn burst_traffic_preserves_real_sbf_accounting() {
 			u64_at(&section_account.data, 147),
 			u64::try_from(TRANSACTION_COUNT).expect("transaction count")
 		);
-		assert_eq!(u64_at(&game_account.data, 25), expected_flips);
+		assert_eq!(u64_at(&game_account.data, 25), 0);
+		assert_eq!(u64_at(&section_account.data, 211), expected_flips);
+		assert_eq!(u64_at(&section_account.data, 219), expected_flips);
+		assert_eq!(
+			u64_at(&section_account.data, 251),
+			expected_flips * DEFAULT_START_PRICE_LAMPORTS
+		);
+		assert_eq!(token_amount(&program, &player_bit_account), expected_flips);
+		assert_eq!(
+			token_amount(&program, &initial_section_vault),
+			BIT_SECTION_ALLOCATION_TOKENS - expected_flips
+		);
 		assert_eq!(
 			program
-				.balance(&authority.pubkey())
-				.expect("treasury balance after burst"),
-			treasury_before + expected_flips * DEFAULT_FLIP_FEE_LAMPORTS
+				.balance(&section)
+				.expect("section balance after burst"),
+			section_lamports_before + expected_flips * DEFAULT_START_PRICE_LAMPORTS
+		);
+
+		let exhausted_section = section_account.data.clone();
+		let exhausted = program
+			.send_instruction(flip_pixels_instruction(
+				&program,
+				[&player, &config, &game, &section, &bit_mint.pubkey()],
+				&[(0, 0)],
+				TestFlipLimits {
+					minimum_reward_tokens: 0,
+					..TestFlipLimits::full_reward(1)
+				},
+			))
+			.expect_err("a zero-minimum custom client cannot bypass the reward cap");
+		assert_custom_error(&exhausted, BitflipError::InsufficientReward);
+		assert_eq!(
+			program
+				.account(&section)
+				.expect("section after rejected overflow")
+				.data,
+			exhausted_section,
+		);
+		assert_eq!(token_amount(&program, &player_bit_account), expected_flips);
+		assert_eq!(
+			token_amount(&program, &initial_section_vault),
+			BIT_SECTION_ALLOCATION_TOKENS - expected_flips
 		);
 
 		let other_section = Pubkey::new_unique();
+		let other_player = Pubkey::new_unique();
 		let first = flip_pixels_instruction(
 			&program,
-			&player,
-			&config,
-			&game,
-			&section,
-			&authority.pubkey(),
+			[&player, &config, &game, &section, &bit_mint.pubkey()],
 			&[(0, 0)],
-			DEFAULT_FLIP_FEE_LAMPORTS,
+			TestFlipLimits::full_reward(1),
 		);
 		let second = flip_pixels_instruction(
 			&program,
-			&player,
-			&config,
-			&game,
-			&other_section,
-			&authority.pubkey(),
+			[
+				&other_player,
+				&config,
+				&game,
+				&other_section,
+				&bit_mint.pubkey(),
+			],
 			&[(0, 0)],
-			DEFAULT_FLIP_FEE_LAMPORTS,
+			TestFlipLimits {
+				section_index: 1,
+				..TestFlipLimits::full_reward(1)
+			},
 		);
 		let shared_writable: Vec<Pubkey> = first
 			.accounts
@@ -1813,12 +2100,180 @@ fn burst_traffic_preserves_real_sbf_accounting() {
 			.map(|account| account.pubkey)
 			.collect();
 		assert!(
-			shared_writable.contains(&game),
-			"the current global flip counter serializes section shards"
+			shared_writable.is_empty(),
+			"independent players and sections share no writable accounts"
 		);
-		assert!(
-			shared_writable.contains(&authority.pubkey()),
-			"the current treasury transfer also serializes section shards"
+
+		program.stop().expect("stop isolated program test");
+	});
+}
+
+#[test]
+#[ignore = "run with test:surfpool"]
+fn independent_sections_process_concurrent_reward_traffic() {
+	const TRANSACTIONS_PER_SECTION: usize = 64;
+
+	pina_test::run(async {
+		let CustodyGame {
+			mut program,
+			authority,
+			config,
+			game,
+			bit_mint,
+			bit_reserve,
+			initial_section_vault,
+		} = start_game_with_custody(1).await;
+		let section_one_player = Keypair::new();
+		program
+			.fund(&section_one_player.pubkey(), 200_000_000)
+			.expect("fund second section player");
+		let section_one = claim_first_user_section(
+			&mut program,
+			&authority,
+			&config,
+			&game,
+			&section_one_player,
+			&bit_mint.pubkey(),
+			&bit_reserve,
+		)
+		.await;
+		let (section_zero, _) = section_address(&program.program_id(), 0, 0);
+		let section_zero_player = program.payer();
+		let section_zero_player_bits =
+			create_player_bit_account(&program, &section_zero_player, &bit_mint.pubkey());
+		let section_one_player_bits = get_associated_token_address_with_program_id(
+			&section_one_player.pubkey(),
+			&bit_mint.pubkey(),
+			&spl_token_2022_interface::id(),
+		);
+		let section_one_vault = get_associated_token_address_with_program_id(
+			&section_one,
+			&bit_mint.pubkey(),
+			&spl_token_2022_interface::id(),
+		);
+
+		let ambiguous = std::thread::scope(|scope| {
+			let program_ref = &program;
+			let owner_ref = &section_one_player;
+			let handles: Vec<_> = (0..TRANSACTIONS_PER_SECTION * 2)
+				.map(|transaction_index| {
+					let section_index = u8::try_from(transaction_index % 2).expect("section index");
+					let batch_index = transaction_index / 2;
+					let (player, section, coordinates) = if section_index == 0 {
+						(
+							section_zero_player,
+							section_zero,
+							coordinates_for_batch(batch_index + 1),
+						)
+					} else {
+						(
+							owner_ref.pubkey(),
+							section_one,
+							coordinates_for_batch(batch_index),
+						)
+					};
+					let instruction = flip_pixels_instruction(
+						program_ref,
+						[&player, &config, &game, &section, &bit_mint.pubkey()],
+						&coordinates,
+						TestFlipLimits {
+							section_index,
+							..TestFlipLimits::full_reward(16)
+						},
+					);
+					(
+						(section_index, batch_index),
+						scope.spawn(move || {
+							if section_index == 0 {
+								program_ref.send_instruction(instruction)
+							} else {
+								program_ref.send_with_signers(instruction, &[owner_ref])
+							}
+						}),
+					)
+				})
+				.collect();
+
+			handles
+				.into_iter()
+				.filter_map(|(batch, handle)| {
+					handle
+						.join()
+						.expect("multi-section worker does not panic")
+						.err()
+						.map(|_| batch)
+				})
+				.collect::<Vec<_>>()
+		});
+
+		let section_zero_snapshot = program
+			.account(&section_zero)
+			.expect("section zero after burst");
+		let section_one_snapshot = program
+			.account(&section_one)
+			.expect("section one after burst");
+		for (section_index, batch_index) in ambiguous {
+			let (player, section, coordinates, snapshot) = if section_index == 0 {
+				(
+					section_zero_player,
+					section_zero,
+					coordinates_for_batch(batch_index + 1),
+					&section_zero_snapshot,
+				)
+			} else {
+				(
+					section_one_player.pubkey(),
+					section_one,
+					coordinates_for_batch(batch_index),
+					&section_one_snapshot,
+				)
+			};
+			if !section_pixel_is_on(&snapshot.data, coordinates[0].0, coordinates[0].1) {
+				let instruction = flip_pixels_instruction(
+					&program,
+					[&player, &config, &game, &section, &bit_mint.pubkey()],
+					&coordinates,
+					TestFlipLimits {
+						section_index,
+						..TestFlipLimits::full_reward(16)
+					},
+				);
+				if section_index == 0 {
+					program.send_instruction(instruction)
+				} else {
+					program.send_with_signers(instruction, &[&section_one_player])
+				}
+				.expect("resubmit a confirmed-missing sharded batch");
+			}
+		}
+
+		let section_reward_tokens =
+			u64::try_from(TRANSACTIONS_PER_SECTION * 16).expect("section reward token count");
+		let section_zero_account = program.account(&section_zero).expect("final section zero");
+		let section_one_account = program.account(&section_one).expect("final section one");
+		assert_eq!(
+			u64_at(&section_zero_account.data, 211),
+			section_reward_tokens + 1
+		);
+		assert_eq!(
+			u64_at(&section_one_account.data, 211),
+			section_reward_tokens
+		);
+		assert_eq!(
+			token_amount(&program, &section_zero_player_bits),
+			section_reward_tokens
+		);
+		assert_eq!(
+			token_amount(&program, &section_one_player_bits),
+			section_reward_tokens + 1,
+		);
+		assert_eq!(
+			token_amount(&program, &initial_section_vault),
+			BIT_SECTION_ALLOCATION_TOKENS - section_reward_tokens - 1,
+		);
+		assert_eq!(
+			token_amount(&program, &section_one_vault),
+			BIT_SECTION_ALLOCATION_TOKENS - section_reward_tokens,
 		);
 
 		program.stop().expect("stop isolated program test");

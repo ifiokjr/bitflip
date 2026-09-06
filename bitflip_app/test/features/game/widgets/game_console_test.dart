@@ -3,6 +3,7 @@ import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/application/game_controller.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
+import 'package:bitflip_app/features/game/domain/section_economy.dart';
 import 'package:bitflip_app/features/game/widgets/game_console.dart';
 import 'package:bitflip_app/l10n/generated/app_localizations.dart';
 import 'package:bitflip_app/testing/bitflip_test_keys.dart';
@@ -69,6 +70,72 @@ void main() {
     expect(find.text('COMMIT 1 MOVES'), findsOneWidget);
     expect(find.text('SEAL ARTWORK'), findsOneWidget);
     expect(find.text('1 / 16'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a depleted reward window disables every custom-client flip', (
+    tester,
+  ) async {
+    final now = BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000);
+    final priceConfig = SectionPriceConfig(
+      allocationTokens: BigInt.from(26_214_400),
+      emissionDurationSeconds: BigInt.from(5_184_000),
+      windowSeconds: BigInt.from(300),
+      targetTokensPerWindow: BigInt.from(1024),
+      startPriceLamports: BigInt.from(10_000),
+      minimumPriceLamports: BigInt.from(5000),
+      maximumPriceLamports: BigInt.from(1_000_000),
+      startFloorPriceLamports: BigInt.from(5000),
+      endFloorPriceLamports: BigInt.from(100_000),
+      changeDenominator: BigInt.from(8),
+      burstElasticity: BigInt.from(2),
+    );
+    final economy = SectionEconomySnapshot(
+      launchedAt: now,
+      windowStartedAt: now,
+      lastUpdatedAt: now,
+      windowId: BigInt.zero,
+      windowTargetTokens: BigInt.from(1024),
+      windowRewardedTokens: BigInt.from(2048),
+      emittedTokens: BigInt.from(2048),
+      rewardPoolTokens: BigInt.zero,
+      controllerPriceLamports: BigInt.from(10_000),
+      postedPriceLamports: BigInt.from(10_000),
+      protocolFeeLamports: BigInt.from(20_480_000),
+    );
+    await tester.binding.setSurfaceSize(const Size(500, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _TestApp(
+        child: GameConsole(
+          state: _state(
+            SectionLifecycle.active,
+            queued: {const PixelCoordinate(2, 3)},
+            economy: economy,
+            priceConfig: priceConfig,
+          ),
+          onConnect: () {},
+          onClaim: () {},
+          onList: (_) {},
+          onCancelListing: () {},
+          onPurchase: () {},
+          onCommit: () {},
+          onClear: () {},
+          onSeal: () {},
+          onMint: () {},
+          onRefresh: () {},
+        ),
+      ),
+    );
+
+    expect(find.text('0 BIT'), findsOneWidget);
+    expect(find.textContaining('cannot cover the full batch'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(BitflipTestKeys.commitFlips))
+          .onPressed,
+      isNull,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -269,6 +336,8 @@ GameViewState _state(
   BigInt? salePriceLamports,
   bool isProtocolOwned = false,
   GameLoadStatus? loadStatus,
+  SectionEconomySnapshot? economy,
+  SectionPriceConfig? priceConfig,
 }) {
   return GameViewState(
     snapshot: GameSnapshot(
@@ -293,7 +362,9 @@ GameViewState _state(
         revision: BigInt.zero,
         salePriceLamports: salePriceLamports ?? BigInt.zero,
         isProtocolOwned: isProtocolOwned,
+        economy: economy,
       ),
+      priceConfig: priceConfig,
     ),
     queued: queued,
     activity: const GameActivity(GameNotice.ready),

@@ -59,6 +59,10 @@ const int bitflipProgramErrorInvalidBitTokenAccount = 0x1a; // 26
 
 const int bitflipProgramErrorSectionVaultAlreadyFunded = 0x1b; // 27
 
+const int bitflipProgramErrorStalePriceWindow = 0x1c; // 28
+
+const int bitflipProgramErrorInsufficientReward = 0x1d; // 29
+
 /// Map of error codes to human-readable messages.
 const Map<int, String> _bitflipProgramErrorMessages = {
     bitflipProgramErrorUnauthorized: '',
@@ -89,6 +93,8 @@ const Map<int, String> _bitflipProgramErrorMessages = {
     bitflipProgramErrorInvalidBitMint: '',
     bitflipProgramErrorInvalidBitTokenAccount: '',
     bitflipProgramErrorSectionVaultAlreadyFunded: '',
+    bitflipProgramErrorStalePriceWindow: '',
+    bitflipProgramErrorInsufficientReward: '',
 };
 
 /// Get the error message for a BitflipProgram program error code.

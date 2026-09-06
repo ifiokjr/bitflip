@@ -5,6 +5,7 @@ import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/data/bitflip_repository.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
+import 'package:bitflip_app/features/game/domain/section_economy.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'game_controller.g.dart';
@@ -101,7 +102,23 @@ final class GameViewState {
 
   PixelBitmap get previewBitmap => snapshot.section.bitmap.toggled(queued);
 
-  BigInt get queuedFee => snapshot.flipFeeLamports * BigInt.from(queued.length);
+  SectionFlipQuote? get queuedQuote {
+    final economy = snapshot.section.economy;
+    final priceConfig = snapshot.priceConfig;
+    if (economy == null || priceConfig == null || queued.isEmpty) return null;
+    return economy.quote(
+      config: priceConfig,
+      now: BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000),
+      requestedRewardTokens: BigInt.from(queued.length),
+    );
+  }
+
+  BigInt get queuedFee =>
+      queuedQuote?.totalPriceLamports ??
+      snapshot.flipFeeLamports * BigInt.from(queued.length);
+
+  BigInt get queuedReward =>
+      queuedQuote?.rewardTokens ?? BigInt.from(queued.length);
 
   bool get canTransact =>
       (loadStatus == GameLoadStatus.ready ||
