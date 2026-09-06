@@ -10,11 +10,14 @@ class BitflipApp extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+    final theme = buildBitflipTheme();
 
     return MaterialApp.router(
       title: 'Bitflip',
       debugShowCheckedModeBanner: false,
-      theme: buildBitflipTheme(),
+      theme: theme,
+      darkTheme: theme,
+      themeMode: ThemeMode.dark,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,

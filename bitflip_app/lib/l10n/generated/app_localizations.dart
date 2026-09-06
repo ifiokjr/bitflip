@@ -633,6 +633,210 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'DISMISS'**
   String get dismiss;
+
+  /// No description provided for @privacyLink.
+  ///
+  /// In en, this message translates to:
+  /// **'PRIVACY'**
+  String get privacyLink;
+
+  /// No description provided for @termsLink.
+  ///
+  /// In en, this message translates to:
+  /// **'TERMS'**
+  String get termsLink;
+
+  /// No description provided for @supportLink.
+  ///
+  /// In en, this message translates to:
+  /// **'SUPPORT'**
+  String get supportLink;
+
+  /// No description provided for @backToBitflip.
+  ///
+  /// In en, this message translates to:
+  /// **'BACK TO BITFLIP'**
+  String get backToBitflip;
+
+  /// No description provided for @legalEffectiveDate.
+  ///
+  /// In en, this message translates to:
+  /// **'EFFECTIVE 6 SEPTEMBER 2026'**
+  String get legalEffectiveDate;
+
+  /// No description provided for @privacyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy'**
+  String get privacyTitle;
+
+  /// No description provided for @privacyIntroduction.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitflip is built around a public blockchain. This notice explains what becomes public, what the service processes, and what never belongs in a support request.'**
+  String get privacyIntroduction;
+
+  /// No description provided for @privacyPublicTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Public blockchain data'**
+  String get privacyPublicTitle;
+
+  /// No description provided for @privacyPublicBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your wallet address, claims, flips, fees, sealed artwork, mint records, and transaction signatures can be permanently visible on Solana. Bitflip cannot erase or make public chain history private.'**
+  String get privacyPublicBody;
+
+  /// No description provided for @privacyServiceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Service data'**
+  String get privacyServiceTitle;
+
+  /// No description provided for @privacyServiceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The service processes wallet-signed mint challenges and limited technical data such as request timing, error class, and network address for security, reliability, and abuse prevention. Operational data is retained only as needed for those purposes and protected with access controls.'**
+  String get privacyServiceBody;
+
+  /// No description provided for @privacyControlTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your keys and choices'**
+  String get privacyControlTitle;
+
+  /// No description provided for @privacyControlBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitflip does not request or store your seed phrase or private key. Your wallet shows the transaction or message before you approve it. You can browse without connecting a wallet, and iOS and macOS are view-only in this release.'**
+  String get privacyControlBody;
+
+  /// No description provided for @privacyContactTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Providers and questions'**
+  String get privacyContactTitle;
+
+  /// No description provided for @privacyContactBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallets, Solana RPC providers, app stores, and hosting providers process data under their own notices. Use the Support page to ask a privacy question without posting seed phrases, private keys, or other secrets.'**
+  String get privacyContactBody;
+
+  /// No description provided for @termsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms'**
+  String get termsTitle;
+
+  /// No description provided for @termsIntroduction.
+  ///
+  /// In en, this message translates to:
+  /// **'By using Bitflip, you choose to interact with experimental software and a public blockchain. Read the wallet prompt and verify the network, wallet, sector, pixels, and fee before approving anything.'**
+  String get termsIntroduction;
+
+  /// No description provided for @termsActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Fees and irreversible actions'**
+  String get termsActionsTitle;
+
+  /// No description provided for @termsActionsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Claims and flips can require program and network fees shown before signing. Confirmed blockchain transactions are not refundable or reversible. Sealing permanently freezes a sector and enables compressed-NFT minting.'**
+  String get termsActionsBody;
+
+  /// No description provided for @termsWalletTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet responsibility'**
+  String get termsWalletTitle;
+
+  /// No description provided for @termsWalletBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You control your wallet and are responsible for its security, available funds, and every approval. Bitflip support will never ask for a seed phrase or private key. Do not approve a prompt you do not understand.'**
+  String get termsWalletBody;
+
+  /// No description provided for @termsArtworkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Public artwork and metadata'**
+  String get termsArtworkTitle;
+
+  /// No description provided for @termsArtworkBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Only submit artwork you are entitled to publish. Pixels and mint records are public. The pixels are stored on chain, while the metadata and rendered image use an operated HTTPS service and should not be described as fully immutable.'**
+  String get termsArtworkBody;
+
+  /// No description provided for @termsRiskTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Experimental service'**
+  String get termsRiskTitle;
+
+  /// No description provided for @termsRiskBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitflip is provided without a promise of uninterrupted availability, future value, or financial return. Wallets, RPC services, Solana, and marketplaces can fail or change independently. Use only funds you can afford to spend on the game.'**
+  String get termsRiskBody;
+
+  /// No description provided for @supportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Support'**
+  String get supportTitle;
+
+  /// No description provided for @supportIntroduction.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with the transaction signature and the status shown in Bitflip. Public chain evidence usually tells us whether a request was cancelled, failed, expired, or confirmed.'**
+  String get supportIntroduction;
+
+  /// No description provided for @supportSafetyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep secrets out of support'**
+  String get supportSafetyTitle;
+
+  /// No description provided for @supportSafetyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Never send a seed phrase, private key, keystore, password, or wallet backup. Bitflip support does not need them. Anyone asking for one is not helping you safely.'**
+  String get supportSafetyBody;
+
+  /// No description provided for @supportTransactionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Before retrying'**
+  String get supportTransactionTitle;
+
+  /// No description provided for @supportTransactionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the signature in a Solana explorer on the same network. If its status is unknown, wait and refresh before signing again. Minting is safe to re-enter once chain state is known; do not submit duplicates while a transaction is indeterminate.'**
+  String get supportTransactionBody;
+
+  /// No description provided for @supportIncludeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What to include'**
+  String get supportIncludeTitle;
+
+  /// No description provided for @supportIncludeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Include the platform and version, wallet name, selected network, game and sector numbers, approximate UTC time, public transaction signature if one exists, and the exact error message. Remove personal information and all secrets.'**
+  String get supportIncludeBody;
+
+  /// No description provided for @openSupportRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'OPEN SUPPORT REQUEST'**
+  String get openSupportRequest;
 }
 
 class _AppLocalizationsDelegate
