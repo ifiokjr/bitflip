@@ -1,6 +1,6 @@
 # Economics simulation and adversarial findings
 
-This is reproducible engineering evidence for [ADR 0004](decisions/0004-section-price-controller.md), not a mainnet parameter recommendation. The controller configuration is now snapshotted in each game, and every section stores an independently launched controller and custody ledger. `SettleSectionEconomy` permissionlessly moves completed-window shortfalls into the pool. `FlipPixels` and Token-2022 custody are not connected yet, so this ABI must not be deployed as a reward-bearing release on its own.
+This is reproducible engineering evidence for [ADR 0004](decisions/0004-section-price-controller.md), not a mainnet parameter recommendation. The controller configuration is now snapshotted in each game, and every section stores an independently launched controller and custody ledger. `SettleSectionEconomy` permissionlessly moves completed-window shortfalls into the pool. ABI version 3 validates the immutable Token-2022 mint and funds one sharded vault per active section, but `FlipPixels` does not transfer BIT yet, so this ABI must not be deployed as a reward-bearing release on its own.
 
 ## Run it
 
@@ -73,4 +73,4 @@ This is a correctness stress test, not a throughput benchmark. It exposed two sh
 
 Those accounts serialize otherwise independent sections. Before measuring sharded capacity, remove the global counter from the hot path, emit/index aggregate activity off-chain, and accrue the protocol fee in each section PDA for later sweeping. Then repeat the real-SBF stress test across multiple sections with transaction profiling enabled.
 
-Token-2022 transfer and first-time associated-token-account compute are intentionally not claimed here because the program does not implement BIT custody or payouts yet. Those paths require a later real-SBF suite after the vault invariant is implemented. The current real-SBF suite does verify the enlarged account ABI, the four-game cap, independent controller initialization for protocol-owned and claimed sections, and permissionless settlement against the deployed SBF artifact.
+The real-SBF suite now creates a zero-decimal Token-2022 mint and config-owned reserve, rejects custody while mint authority remains live, revokes it, registers the exact fixed supply, creates a section ATA through CPI, transfers exactly one section allocation, and proves duplicate funding rolls back without moving BIT. Paid-flip transfer and first-time player-ATA compute remain unmeasured until atomic issuance is implemented. The suite also verifies the enlarged account ABI, four-game cap, independent controller initialization, permissionless settlement, and contention against the deployed SBF artifact.

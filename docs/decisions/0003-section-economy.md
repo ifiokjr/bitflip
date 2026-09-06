@@ -12,7 +12,7 @@ Every section has one 26,214,400 BIT allocation. It begins entirely as base-issu
 
 The pool is an on-chain programme liability, not an owner's wallet. Distribution remains disabled until an independently reviewed, protocol-defined policy can select recipients without relying on the owner or one reward distributor.
 
-The deterministic controller, immutable per-game configuration snapshot, per-section base/pool ledger, and permissionless settlement are implemented in economy ABI version 2. Token custody, paid-flip issuance, reward payouts, and campaign governance remain gated below. ABI version 2 requires a fresh deployment and must not be used as a reward-bearing release until custody and atomic payout are connected.
+The deterministic controller, immutable per-game configuration snapshot, per-section base/pool ledger, permissionless settlement, fixed-mint registry, global launch reserve, and lazy section-vault funding are implemented in economy ABI version 3. Paid-flip issuance, reward payouts, and campaign governance remain gated below. ABI version 3 requires a fresh deployment and must not be used as a reward-bearing release until atomic paid-flip distribution is connected.
 
 ## Recovered intent
 
@@ -60,7 +60,7 @@ If every claimed section must start with a discretionary budget, the claimant ha
 The recommended BIT mint has these properties:
 
 - one Token-2022 mint with zero decimals;
-- a fixed maximum supply of `25 × 2^30` BIT (26,843,545,600 whole BIT), minted once into a program-controlled distribution vault;
+- a fixed maximum supply of `25 × 2^30` BIT (26,843,545,600 whole BIT), minted once into a program-controlled launch reserve;
 - mint and freeze authority revoked after the supply and metadata are verified;
 - no permanent delegate, transfer fee, interest, rebasing, or additional denomination mints; and
 - KiB, MiB, and GiB are display units calculated by clients, not separate assets.
@@ -167,18 +167,27 @@ An emitted colour is objectively attributable to a paid on-chain action. The win
 
 Section owners select an approved game and its parameters; they do not become a mint authority or gain access to protocol custody. Protocol-funded rewards must never depend solely on an owner's signature.
 
-## Low-rent custody design
+## Low-rent, sharded custody design
 
-Creating a Token-2022 account for all 256 sections up front would undermine the lazy allocation model. Use one program-controlled BIT distribution vault and store each created section's unallocated base balance, reward-pool balance, and campaign balance as on-chain ledger fields. For every section, emitted plus pool plus unallocated base must never exceed 26,214,400 BIT. Across the game, the sum of every section liability must never exceed the vault balance.
+Creating Token-2022 accounts for every possible section up front would undermine the lazy allocation model. ABI version 3 instead registers one config-PDA-owned launch reserve containing the exact fixed supply. A permissionless `FundSectionVault` instruction creates the active section's canonical Token-2022 associated account, charges its rent to the instruction's funder, and transfers exactly 26,214,400 BIT from the reserve once. The reserve is touched only when a section launches; it is not in the flip hot path.
 
-This adds a small amount of rent only when the bitmap section itself is created. It does not create 256 token accounts. A player needs one associated BIT token account the first time they receive BIT; the transaction must disclose who pays that rent. For scale, mainnet reported 0.001855569 SOL for a 165-byte base token account on 2026-09-06; the exact Token-2022 account size and current rent must be calculated from the selected extensions during deployment.
+Each funded vault is owned by its section PDA, not the human section owner. This preserves section-level parallelism: flips in unrelated sections write different bitmap, controller, and token accounts. It also makes custody physically match the ledger. Before pool payouts exist:
 
-The vault PDA can sign only transfers from the vault. With mint/freeze authority revoked and no permanent delegate, the program cannot seize BIT that has reached a player's wallet.
+```text
+section vault balance + emitted BIT
+  >= 26,214,400 BIT
+```
+
+The inequality permits third parties to send extra BIT to the vault without corrupting base/pool accounting; unsolicited deposits are not automatically treated as campaign rewards. `emitted + reward pool + unallocated base` remains exactly 26,214,400 BIT. Funding is one-time and atomic, so a racing or repeated call cannot duplicate the allocation.
+
+This adds one Token-2022 account only when its section becomes active. The protocol funds the starting section's vault; each later claimant funds both the bitmap/ledger account and its vault. A player also needs one associated BIT token account the first time they receive BIT; the transaction and UI must disclose who pays that rent. Deployment tooling must query current rent for the exact Token-2022 account layout rather than hard-code an observation.
+
+The config PDA can sign transfers from the launch reserve only. A section PDA can sign transfers from its own vault only. Human owners cannot withdraw either balance. With mint/freeze authority revoked and no permanent delegate, the program cannot mint more BIT, freeze holders, or seize BIT that has reached a player's wallet.
 
 ## Required implementation order
 
 1. Simulate the [time-based section price controller](0004-section-price-controller.md), owner share, claim break-even, and likely bot strategies using staging activity assumptions. **Implemented and reproducible.**
-2. Implement and independently review the fixed mint, global-vault invariant, per-section base ledger, and deterministic shortfall-to-pool transition on a fresh devnet program ID. **The per-section ledger and transition are implemented; the mint, vault, fresh deployment, and independent review remain.**
+2. Implement and independently review the fixed mint, launch-reserve invariant, lazy per-section vaults, per-section base ledger, and deterministic shortfall-to-pool transition on a fresh devnet program ID. **The program-side registry, vault funding, ledger, transition, and real-SBF custody tests are implemented; the mint ceremony, fresh deployment, and independent review remain.**
 3. Add base paid-flip distribution with SOL/BIT slippage protection and real-SBF tests for exhaustion, batching, custody, rollover, and arithmetic boundaries. Accrue the pool but do not pay it yet.
 4. Remove the global counter and treasury from the flip hot path, then benchmark the actual one-pixel and 16-pixel Token-2022 paths across many sections.
 5. Add owner fee sharing and versioned section policies. Policies cannot change during a live campaign and must survive a section sale.
@@ -191,9 +200,9 @@ The vault PDA can sign only transfers from the vault. With mint/freeze authority
 
 Mainnet remains blocked until all of the following are recorded:
 
-- exact Token-2022 extension set, mint address, `decimals = 0`, supply, vault balance, revoked authorities, and reproducible transaction signatures;
+- exact Token-2022 extension set, mint address, `decimals = 0`, supply, launch-reserve and funded section-vault balances, revoked authorities, and reproducible transaction signatures;
 - an independent program and token-economics review;
-- evidence that section allocations always reconcile to the vault;
+- evidence that section allocations always reconcile across the launch reserve and funded section vaults;
 - an explicit decision on transferability, exchange/liquidity support, legal presentation, and tax/accounting treatment;
 - measured staging data supporting the issuance curve, claim price, and owner fee share;
 - at least one useful BIT sink operating end to end; and

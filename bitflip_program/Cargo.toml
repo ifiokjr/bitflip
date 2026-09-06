@@ -20,7 +20,7 @@ bpf-entrypoint = []
 sbf-test-authority = []
 
 [dependencies]
-pina = { workspace = true, default-features = false, features = ["derive", "logs"] }
+pina = { workspace = true, default-features = false, features = ["derive", "logs", "token"] }
 
 [dev-dependencies]
 proptest = "=1.11.0"

@@ -16,7 +16,9 @@ This ceremony requires two people: an operator and an independent witness. Do no
 2. Back them up using the documented recovery policy. Never copy private bytes into chat, CI logs, shell history, or git.
 3. Create a private Bubblegum V1 tree and delegate it only to the operator.
 4. Initialize Bitflip with the intended treasury, prices, collection authority, game index, and unlock policy. Independently read every account back.
-5. Transfer or revoke the program upgrade authority according to the policy below. Use Bitflip's propose/accept flow to rotate temporary bootstrap authority to the production authority.
+5. Create BIT as a Token-2022 mint with no extensions and zero decimals. Mint exactly 26,843,545,600 BIT into the canonical config-PDA associated account, then revoke mint authority. Use no freeze authority. Independently verify mint supply, decimals, extensions, authorities, reserve owner, reserve mint, and reserve balance before registering custody.
+6. Register the mint and launch reserve once with `ConfigureBitCustody`. Fund only the initial section vault; later section claimants pay their own vault rent. Record every transaction signature and independently reconcile the reserve reduction.
+7. Transfer or revoke the program upgrade authority according to the policy below. Use Bitflip's propose/accept flow to rotate temporary bootstrap authority to the production authority.
 
 ## Upgrade-authority decision
 
@@ -46,7 +48,7 @@ Record at minimum:
 - SBF SHA-256 values and reproducibility result
 - deployed program ID and deployment signature
 - upgrade-authority policy and address, or revocation signature
-- config, treasury, collection authority, game, and tree addresses
+- config, treasury, collection authority, BIT mint, launch reserve, initial section vault, game, and tree addresses
 - Serverpod image digest and database migration version
 - canary wallet, transaction signatures, asset ID, and outcome
 - rollback decision owner and incident contacts

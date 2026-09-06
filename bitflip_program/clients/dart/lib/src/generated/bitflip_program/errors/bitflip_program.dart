@@ -49,6 +49,16 @@ const int bitflipProgramErrorInvalidControllerTimestamp = 0x15; // 21
 
 const int bitflipProgramErrorInvalidControllerState = 0x16; // 22
 
+const int bitflipProgramErrorCustodyAlreadyConfigured = 0x17; // 23
+
+const int bitflipProgramErrorCustodyNotConfigured = 0x18; // 24
+
+const int bitflipProgramErrorInvalidBitMint = 0x19; // 25
+
+const int bitflipProgramErrorInvalidBitTokenAccount = 0x1a; // 26
+
+const int bitflipProgramErrorSectionVaultAlreadyFunded = 0x1b; // 27
+
 /// Map of error codes to human-readable messages.
 const Map<int, String> _bitflipProgramErrorMessages = {
     bitflipProgramErrorUnauthorized: '',
@@ -74,6 +84,11 @@ const Map<int, String> _bitflipProgramErrorMessages = {
     bitflipProgramErrorOwnerChanged: '',
     bitflipProgramErrorInvalidControllerTimestamp: '',
     bitflipProgramErrorInvalidControllerState: '',
+    bitflipProgramErrorCustodyAlreadyConfigured: '',
+    bitflipProgramErrorCustodyNotConfigured: '',
+    bitflipProgramErrorInvalidBitMint: '',
+    bitflipProgramErrorInvalidBitTokenAccount: '',
+    bitflipProgramErrorSectionVaultAlreadyFunded: '',
 };
 
 /// Get the error message for a BitflipProgram program error code.

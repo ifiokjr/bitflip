@@ -4,10 +4,13 @@ use pina_test::AccountMeta;
 use pina_test::Keypair;
 use pina_test::ProgramTest;
 use pina_test::Pubkey;
+use pina_test::Rent;
 use pina_test::Signer;
 use pina_test::TestError;
 use program_under_test::BIT_GAME_COUNT;
+use program_under_test::BIT_MINT_DECIMALS;
 use program_under_test::BIT_SECTION_ALLOCATION_TOKENS;
+use program_under_test::BIT_TOTAL_SUPPLY_TOKENS;
 use program_under_test::BitflipAccountType;
 use program_under_test::BitflipError;
 use program_under_test::BitflipInstruction;
@@ -22,6 +25,7 @@ use program_under_test::DEFAULT_UNLOCK_INTERVAL_SECONDS;
 use program_under_test::ECONOMY_VERSION;
 use program_under_test::GAME_STATUS_LIVE;
 use program_under_test::ID;
+use program_under_test::SECTION_BYTES;
 use program_under_test::SECTION_STATUS_ACTIVE;
 use program_under_test::SECTION_STATUS_MINTED;
 use program_under_test::SECTION_STATUS_SEALED;
@@ -36,6 +40,16 @@ use program_under_test::pricing::DEFAULT_OWNER_SHARE_BASIS_POINTS;
 use program_under_test::pricing::DEFAULT_START_PRICE_LAMPORTS;
 use program_under_test::pricing::DEFAULT_TARGET_TOKENS_PER_WINDOW;
 use program_under_test::pricing::DEFAULT_WINDOW_SECONDS;
+use solana_program_pack::Pack;
+use solana_system_interface::instruction as system_instruction;
+use spl_associated_token_account_interface::address::get_associated_token_address_with_program_id;
+use spl_associated_token_account_interface::instruction::create_associated_token_account;
+use spl_associated_token_account_interface::program as associated_token_program;
+use spl_token_2022_interface::extension::StateWithExtensions;
+use spl_token_2022_interface::instruction as token_instruction;
+use spl_token_2022_interface::instruction::AuthorityType;
+use spl_token_2022_interface::state::Account as TokenAccount;
+use spl_token_2022_interface::state::Mint;
 
 const CONFIG_SEED: &[u8] = b"config";
 const GAME_SEED: &[u8] = b"game";
@@ -108,10 +122,7 @@ async fn start_game(early_unlock_flips: u32) -> (ProgramTest, Keypair, Pubkey, P
 		.send_with_signers(
 			initialize_game_instruction(
 				&program,
-				&authority.pubkey(),
-				&config,
-				&game,
-				&initial_section,
+				[&authority.pubkey(), &config, &game, &initial_section],
 				0,
 				game_bump,
 				section_bump,
@@ -140,10 +151,7 @@ fn initialize_config_instruction(
 
 fn initialize_game_instruction(
 	program: &ProgramTest,
-	payer: &Pubkey,
-	config: &Pubkey,
-	game: &Pubkey,
-	initial_section: &Pubkey,
+	[payer, config, game, initial_section]: [&Pubkey; 4],
 	game_index: u8,
 	game_bump: u8,
 	section_bump: u8,
@@ -223,6 +231,145 @@ fn accept_authority_instruction(
 			AccountMeta::new(*config, false),
 		],
 	)
+}
+
+fn configure_bit_custody_instruction(
+	program: &ProgramTest,
+	authority: &Pubkey,
+	config: &Pubkey,
+	bit_mint: &Pubkey,
+	bit_reserve: &Pubkey,
+) -> pina_test::Instruction {
+	program.instruction(
+		&[BitflipInstruction::ConfigureBitCustody as u8],
+		vec![
+			AccountMeta::new_readonly(*authority, true),
+			AccountMeta::new(*config, false),
+			AccountMeta::new_readonly(*bit_mint, false),
+			AccountMeta::new_readonly(*bit_reserve, false),
+			AccountMeta::new_readonly(spl_token_2022_interface::id(), false),
+		],
+	)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn fund_section_vault_instruction(
+	program: &ProgramTest,
+	funder: &Pubkey,
+	config: &Pubkey,
+	section: &Pubkey,
+	bit_mint: &Pubkey,
+	bit_reserve: &Pubkey,
+	section_vault: &Pubkey,
+	section_index: u8,
+) -> pina_test::Instruction {
+	program.instruction(
+		&[BitflipInstruction::FundSectionVault as u8, 0, section_index],
+		vec![
+			AccountMeta::new(*funder, true),
+			AccountMeta::new_readonly(*config, false),
+			AccountMeta::new(*section, false),
+			AccountMeta::new_readonly(*bit_mint, false),
+			AccountMeta::new(*bit_reserve, false),
+			AccountMeta::new(*section_vault, false),
+			AccountMeta::new_readonly(associated_token_program::id(), false),
+			AccountMeta::new_readonly(spl_token_2022_interface::id(), false),
+			AccountMeta::new_readonly(Pubkey::default(), false),
+		],
+	)
+}
+
+fn create_bit_mint_and_reserve(
+	program: &ProgramTest,
+	authority: &Keypair,
+	config: &Pubkey,
+	decimals: u8,
+	supply: u64,
+	revoke_mint_authority: bool,
+) -> (Keypair, Pubkey) {
+	let token_program = spl_token_2022_interface::id();
+	let bit_mint = Keypair::new();
+	let create_mint = system_instruction::create_account(
+		&program.payer(),
+		&bit_mint.pubkey(),
+		Rent::default().minimum_balance(Mint::LEN),
+		u64::try_from(Mint::LEN).expect("mint length"),
+		&token_program,
+	);
+	program
+		.send_with_signers(create_mint, &[&bit_mint])
+		.expect("create Token-2022 BIT mint account");
+	program
+		.send_instruction(
+			token_instruction::initialize_mint2(
+				&token_program,
+				&bit_mint.pubkey(),
+				&authority.pubkey(),
+				None,
+				decimals,
+			)
+			.expect("build initialize mint instruction"),
+		)
+		.expect("initialize zero-decimal BIT mint");
+
+	let bit_reserve =
+		get_associated_token_address_with_program_id(config, &bit_mint.pubkey(), &token_program);
+	program
+		.send_instruction(create_associated_token_account(
+			&program.payer(),
+			config,
+			&bit_mint.pubkey(),
+			&token_program,
+		))
+		.expect("create config-owned BIT reserve");
+	program
+		.send_with_signers(
+			token_instruction::mint_to_checked(
+				&token_program,
+				&bit_mint.pubkey(),
+				&bit_reserve,
+				&authority.pubkey(),
+				&[],
+				supply,
+				decimals,
+			)
+			.expect("build fixed-supply mint instruction"),
+			&[authority],
+		)
+		.expect("mint the fixed BIT supply once");
+
+	if revoke_mint_authority {
+		revoke_bit_mint_authority(program, authority, &bit_mint.pubkey());
+	}
+
+	(bit_mint, bit_reserve)
+}
+
+fn revoke_bit_mint_authority(program: &ProgramTest, authority: &Keypair, bit_mint: &Pubkey) {
+	program
+		.send_with_signers(
+			token_instruction::set_authority(
+				&spl_token_2022_interface::id(),
+				bit_mint,
+				None,
+				AuthorityType::MintTokens,
+				&authority.pubkey(),
+				&[],
+			)
+			.expect("build mint-authority revocation"),
+			&[authority],
+		)
+		.expect("permanently revoke BIT mint authority");
+}
+
+fn token_amount(program: &ProgramTest, token_account: &Pubkey) -> u64 {
+	let account = program
+		.account(token_account)
+		.expect("fetch Token-2022 account");
+	StateWithExtensions::<TokenAccount>::unpack(&account.data)
+		.expect("decode Token-2022 account")
+		.base
+		.amount
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -507,6 +654,12 @@ fn coordinates_for_batch(batch_index: usize) -> [(u8, u8); 16] {
 	})
 }
 
+fn section_pixel_is_on(data: &[u8], x: u8, y: u8) -> bool {
+	let pixel_index = usize::from(y) * 64 + usize::from(x);
+	let pixels_offset = SectionState::SIZE - SECTION_BYTES;
+	data[pixels_offset + pixel_index / 8] & (1 << (pixel_index % 8)) != 0
+}
+
 #[test]
 #[ignore = "run with pina test"]
 fn permissionless_sponsor_initializes_safe_fixed_configuration() {
@@ -529,13 +682,14 @@ fn permissionless_sponsor_initializes_safe_fixed_configuration() {
 		assert_eq!(account.data.len(), ConfigState::SIZE);
 		assert_eq!(account.data[0], BitflipAccountType::ConfigState as u8);
 		assert_eq!(account.data[1], CONFIG_VERSION, "config ABI version");
-		assert_eq!(u64_at(&account.data, 130), DEFAULT_CLAIM_PRICE_LAMPORTS);
-		assert_eq!(u64_at(&account.data, 138), DEFAULT_FLIP_FEE_LAMPORTS);
-		assert_eq!(u64_at(&account.data, 146), DEFAULT_MIN_FLIP_FEE_LAMPORTS);
-		assert_eq!(u64_at(&account.data, 154), DEFAULT_MAX_FLIP_FEE_LAMPORTS);
-		assert_eq!(u32_at(&account.data, 162), DEFAULT_UNLOCK_INTERVAL_SECONDS);
-		assert_eq!(u32_at(&account.data, 166), DEFAULT_EARLY_UNLOCK_FLIPS);
-		assert_eq!(account.data[172], bump);
+		assert_eq!(&account.data[130..194], &[0; 64], "custody unset");
+		assert_eq!(u64_at(&account.data, 194), DEFAULT_CLAIM_PRICE_LAMPORTS);
+		assert_eq!(u64_at(&account.data, 202), DEFAULT_FLIP_FEE_LAMPORTS);
+		assert_eq!(u64_at(&account.data, 210), DEFAULT_MIN_FLIP_FEE_LAMPORTS);
+		assert_eq!(u64_at(&account.data, 218), DEFAULT_MAX_FLIP_FEE_LAMPORTS);
+		assert_eq!(u32_at(&account.data, 226), DEFAULT_UNLOCK_INTERVAL_SECONDS);
+		assert_eq!(u32_at(&account.data, 230), DEFAULT_EARLY_UNLOCK_FLIPS);
+		assert_eq!(account.data[236], bump);
 
 		program.stop().expect("stop isolated program test");
 	});
@@ -566,6 +720,174 @@ fn config_cannot_be_initialized_twice() {
 
 		assert_eq!(before.data, after.data, "failed transaction is atomic");
 		assert!(!error.message().is_empty());
+		program.stop().expect("stop isolated program test");
+	});
+}
+
+#[test]
+#[ignore = "run with test:surfpool"]
+fn fixed_token_2022_custody_funds_each_section_vault_once() {
+	pina_test::run(async {
+		let (mut program, authority, config, _) = start_game(DEFAULT_EARLY_UNLOCK_FLIPS).await;
+		let (section, _) = section_address(&program.program_id(), 0, 0);
+		let (decimal_mint, decimal_reserve) = create_bit_mint_and_reserve(
+			&program,
+			&authority,
+			&config,
+			1,
+			BIT_TOTAL_SUPPLY_TOKENS,
+			true,
+		);
+		let wrong_decimals = program
+			.send_with_signers(
+				configure_bit_custody_instruction(
+					&program,
+					&authority.pubkey(),
+					&config,
+					&decimal_mint.pubkey(),
+					&decimal_reserve,
+				),
+				&[&authority],
+			)
+			.expect_err("custody rejects fractional BIT");
+		assert_custom_error(&wrong_decimals, BitflipError::InvalidBitMint);
+
+		let (supply_mint, supply_reserve) = create_bit_mint_and_reserve(
+			&program,
+			&authority,
+			&config,
+			BIT_MINT_DECIMALS,
+			BIT_TOTAL_SUPPLY_TOKENS - 1,
+			true,
+		);
+		let wrong_supply = program
+			.send_with_signers(
+				configure_bit_custody_instruction(
+					&program,
+					&authority.pubkey(),
+					&config,
+					&supply_mint.pubkey(),
+					&supply_reserve,
+				),
+				&[&authority],
+			)
+			.expect_err("custody rejects a supply below the fixed cap");
+		assert_custom_error(&wrong_supply, BitflipError::InvalidBitMint);
+
+		let (bit_mint, bit_reserve) = create_bit_mint_and_reserve(
+			&program,
+			&authority,
+			&config,
+			BIT_MINT_DECIMALS,
+			BIT_TOTAL_SUPPLY_TOKENS,
+			false,
+		);
+
+		let active_authority = program
+			.send_with_signers(
+				configure_bit_custody_instruction(
+					&program,
+					&authority.pubkey(),
+					&config,
+					&bit_mint.pubkey(),
+					&bit_reserve,
+				),
+				&[&authority],
+			)
+			.expect_err("custody rejects a mint with live issuance authority");
+		assert_custom_error(&active_authority, BitflipError::InvalidBitMint);
+		assert_eq!(
+			&program.account(&config).expect("fetch config").data[130..194],
+			&[0; 64],
+			"failed configuration is atomic"
+		);
+
+		revoke_bit_mint_authority(&program, &authority, &bit_mint.pubkey());
+		program
+			.send_with_signers(
+				configure_bit_custody_instruction(
+					&program,
+					&authority.pubkey(),
+					&config,
+					&bit_mint.pubkey(),
+					&bit_reserve,
+				),
+				&[&authority],
+			)
+			.expect("register immutable fixed BIT custody");
+
+		let mint_account = program.account(&bit_mint.pubkey()).expect("fetch BIT mint");
+		let mint = StateWithExtensions::<Mint>::unpack(&mint_account.data)
+			.expect("decode BIT mint")
+			.base;
+		assert_eq!(mint.decimals, 0);
+		assert_eq!(mint.supply, BIT_TOTAL_SUPPLY_TOKENS);
+		let config_account = program.account(&config).expect("fetch configured config");
+		assert_eq!(
+			&config_account.data[130..162],
+			bit_mint.pubkey().to_bytes().as_slice()
+		);
+		assert_eq!(
+			&config_account.data[162..194],
+			bit_reserve.to_bytes().as_slice()
+		);
+
+		let section_vault = get_associated_token_address_with_program_id(
+			&section,
+			&bit_mint.pubkey(),
+			&spl_token_2022_interface::id(),
+		);
+		program
+			.send_instruction(fund_section_vault_instruction(
+				&program,
+				&program.payer(),
+				&config,
+				&section,
+				&bit_mint.pubkey(),
+				&bit_reserve,
+				&section_vault,
+				0,
+			))
+			.expect("funder pays rent and moves one section allocation");
+
+		assert_eq!(
+			token_amount(&program, &section_vault),
+			BIT_SECTION_ALLOCATION_TOKENS
+		);
+		assert_eq!(
+			token_amount(&program, &bit_reserve),
+			BIT_TOTAL_SUPPLY_TOKENS - BIT_SECTION_ALLOCATION_TOKENS
+		);
+		let section_account = program.account(&section).expect("fetch funded section");
+		assert_eq!(
+			&section_account.data[97..129],
+			section_vault.to_bytes().as_slice()
+		);
+
+		let reserve_before_duplicate = token_amount(&program, &bit_reserve);
+		let vault_before_duplicate = token_amount(&program, &section_vault);
+		let duplicate = program
+			.send_instruction(fund_section_vault_instruction(
+				&program,
+				&program.payer(),
+				&config,
+				&section,
+				&bit_mint.pubkey(),
+				&bit_reserve,
+				&section_vault,
+				0,
+			))
+			.expect_err("a section allocation cannot be transferred twice");
+		assert_custom_error(&duplicate, BitflipError::SectionVaultAlreadyFunded);
+		assert_eq!(
+			token_amount(&program, &bit_reserve),
+			reserve_before_duplicate
+		);
+		assert_eq!(
+			token_amount(&program, &section_vault),
+			vault_before_duplicate
+		);
+
 		program.stop().expect("stop isolated program test");
 	});
 }
@@ -619,10 +941,7 @@ fn untrusted_sponsor_cannot_start_the_unlock_clock() {
 		let error = program
 			.send_instruction(initialize_game_instruction(
 				&program,
-				&payer,
-				&config,
-				&game,
-				&initial_section,
+				[&payer, &config, &game, &initial_section],
 				0,
 				game_bump,
 				section_bump,
@@ -690,26 +1009,27 @@ fn game_bootstraps_one_program_owned_section() {
 		assert_eq!(section_account.owner, program.program_id());
 		assert_eq!(section_account.data.len(), SectionState::SIZE);
 		assert_eq!(&section_account.data[1..33], game.to_bytes().as_slice());
-		assert_eq!(section_account.data[98], 0, "initial section index");
-		assert_eq!(section_account.data[99], SECTION_STATUS_ACTIVE);
-		let launched_at = u64_at(&section_account.data, 139);
+		assert_eq!(&section_account.data[97..129], &[0; 32], "vault unset");
+		assert_eq!(section_account.data[130], 0, "initial section index");
+		assert_eq!(section_account.data[131], SECTION_STATUS_ACTIVE);
+		let launched_at = u64_at(&section_account.data, 171);
 		assert!(launched_at > 0);
-		assert_eq!(u64_at(&section_account.data, 147), launched_at);
-		assert_eq!(u64_at(&section_account.data, 155), launched_at);
-		assert_eq!(u64_at(&section_account.data, 163), 0);
-		assert_eq!(
-			u64_at(&section_account.data, 171),
-			DEFAULT_TARGET_TOKENS_PER_WINDOW
-		);
-		assert_eq!(u64_at(&section_account.data, 179), 0);
-		assert_eq!(u64_at(&section_account.data, 187), 0);
+		assert_eq!(u64_at(&section_account.data, 179), launched_at);
+		assert_eq!(u64_at(&section_account.data, 187), launched_at);
 		assert_eq!(u64_at(&section_account.data, 195), 0);
 		assert_eq!(
 			u64_at(&section_account.data, 203),
+			DEFAULT_TARGET_TOKENS_PER_WINDOW
+		);
+		assert_eq!(u64_at(&section_account.data, 211), 0);
+		assert_eq!(u64_at(&section_account.data, 219), 0);
+		assert_eq!(u64_at(&section_account.data, 227), 0);
+		assert_eq!(
+			u64_at(&section_account.data, 235),
 			DEFAULT_START_PRICE_LAMPORTS
 		);
 		assert_eq!(
-			u64_at(&section_account.data, 211),
+			u64_at(&section_account.data, 243),
 			DEFAULT_START_PRICE_LAMPORTS
 		);
 
@@ -724,8 +1044,8 @@ fn game_bootstraps_one_program_owned_section() {
 		let settled = program
 			.account(&initial_section)
 			.expect("fetch settled section");
-		assert_eq!(u64_at(&settled.data, 187), 0);
-		assert_eq!(u64_at(&settled.data, 195), 0);
+		assert_eq!(u64_at(&settled.data, 219), 0);
+		assert_eq!(u64_at(&settled.data, 227), 0);
 
 		program.stop().expect("stop isolated program test");
 	});
@@ -743,10 +1063,7 @@ fn fixed_supply_prevents_a_fifth_game() {
 			.send_with_signers(
 				initialize_game_instruction(
 					&program,
-					&authority.pubkey(),
-					&config,
-					&game,
-					&initial_section,
+					[&authority.pubkey(), &config, &game, &initial_section],
 					game_index,
 					game_bump,
 					section_bump,
@@ -860,16 +1177,16 @@ fn claims_enforce_order_and_activity_unlocks() {
 		let claimed_section = program
 			.account(&section_one)
 			.expect("fetch newly claimed section");
-		let launched_at = u64_at(&claimed_section.data, 139);
+		let launched_at = u64_at(&claimed_section.data, 171);
 		assert!(launched_at > 0);
-		assert_eq!(u64_at(&claimed_section.data, 147), launched_at);
-		assert_eq!(u64_at(&claimed_section.data, 155), launched_at);
+		assert_eq!(u64_at(&claimed_section.data, 179), launched_at);
+		assert_eq!(u64_at(&claimed_section.data, 187), launched_at);
 		assert_eq!(
-			u64_at(&claimed_section.data, 171),
+			u64_at(&claimed_section.data, 203),
 			DEFAULT_TARGET_TOKENS_PER_WINDOW
 		);
-		assert_eq!(u64_at(&claimed_section.data, 187), 0);
-		assert_eq!(u64_at(&claimed_section.data, 195), 0);
+		assert_eq!(u64_at(&claimed_section.data, 219), 0);
+		assert_eq!(u64_at(&claimed_section.data, 227), 0);
 		program.stop().expect("stop isolated program test");
 	});
 }
@@ -1053,7 +1370,7 @@ fn owner_can_list_cancel_and_sell_a_section_atomically() {
 			.send_with_signers(list(), &[&seller])
 			.expect("owner lists the section");
 		assert_eq!(
-			u64_at(&program.account(&section).expect("fetch listing").data, 131,),
+			u64_at(&program.account(&section).expect("fetch listing").data, 163,),
 			SALE_PRICE
 		);
 
@@ -1127,7 +1444,7 @@ fn owner_can_list_cancel_and_sell_a_section_atomically() {
 			&section_account.data[1..33],
 			buyer.pubkey().to_bytes().as_slice()
 		);
-		assert_eq!(u64_at(&section_account.data, 131), 0);
+		assert_eq!(u64_at(&section_account.data, 163), 0);
 		assert_eq!(
 			program.balance(&seller.pubkey()).expect("seller balance"),
 			before_seller + SALE_PRICE
@@ -1275,7 +1592,7 @@ fn only_the_owner_can_seal_an_active_section() {
 			.expect_err("non-owner cannot seal a section");
 		assert!(!unauthorized.message().is_empty());
 		assert_eq!(
-			program.account(&section).expect("fetch section").data[99],
+			program.account(&section).expect("fetch section").data[131],
 			SECTION_STATUS_ACTIVE
 		);
 
@@ -1286,7 +1603,7 @@ fn only_the_owner_can_seal_an_active_section() {
 			)
 			.expect("owner seals the section");
 		assert_eq!(
-			program.account(&section).expect("fetch section").data[99],
+			program.account(&section).expect("fetch section").data[131],
 			SECTION_STATUS_SEALED
 		);
 		program.stop().expect("stop isolated program test");
@@ -1345,7 +1662,7 @@ fn mint_recording_requires_sealed_state_and_collection_authority() {
 			.expect("collection authority records the mint");
 
 		let section_account = program.account(&section).expect("fetch section");
-		assert_eq!(section_account.data[99], SECTION_STATUS_MINTED);
+		assert_eq!(section_account.data[131], SECTION_STATUS_MINTED);
 		assert_eq!(
 			&section_account.data[33..65],
 			asset_id.to_bytes().as_slice()
@@ -1354,7 +1671,7 @@ fn mint_recording_requires_sealed_state_and_collection_authority() {
 			&section_account.data[65..97],
 			merkle_tree.to_bytes().as_slice()
 		);
-		assert_eq!(u32_at(&section_account.data, 103), 42);
+		assert_eq!(u32_at(&section_account.data, 135), 42);
 		let game_account = program.account(&game).expect("fetch game");
 		assert_eq!(
 			u16::from_le_bytes([game_account.data[15], game_account.data[16]]),
@@ -1383,7 +1700,7 @@ fn burst_traffic_preserves_real_sbf_accounting() {
 		let treasury_before = program
 			.balance(&authority.pubkey())
 			.expect("treasury balance before burst");
-		std::thread::scope(|scope| {
+		let ambiguous_batches = std::thread::scope(|scope| {
 			let program_ref = &program;
 			let handles: Vec<_> = (0..TRANSACTION_COUNT)
 				.map(|batch_index| {
@@ -1399,25 +1716,59 @@ fn burst_traffic_preserves_real_sbf_accounting() {
 						DEFAULT_FLIP_FEE_LAMPORTS * PIXELS_PER_TRANSACTION,
 					);
 
-					scope.spawn(move || program_ref.send_instruction(instruction))
+					(
+						batch_index,
+						scope.spawn(move || program_ref.send_instruction(instruction)),
+					)
 				})
 				.collect();
 
-			for handle in handles {
-				handle
-					.join()
-					.expect("burst worker does not panic")
-					.expect("contended flip transaction succeeds");
-			}
+			handles
+				.into_iter()
+				.filter_map(|(batch_index, handle)| {
+					handle
+						.join()
+						.expect("burst worker does not panic")
+						.err()
+						.map(|_| batch_index)
+				})
+				.collect::<Vec<_>>()
 		});
+
+		let burst_snapshot = program.account(&section).expect("section after burst");
+		for batch_index in ambiguous_batches {
+			let coordinates = coordinates_for_batch(batch_index);
+			let first_landed =
+				section_pixel_is_on(&burst_snapshot.data, coordinates[0].0, coordinates[0].1);
+			assert!(
+				coordinates
+					.iter()
+					.all(|(x, y)| section_pixel_is_on(&burst_snapshot.data, *x, *y) == first_landed),
+				"an atomic batch can never leave partially toggled pixels"
+			);
+			if !first_landed {
+				program
+					.send_instruction(flip_pixels_instruction(
+						&program,
+						&player,
+						&config,
+						&game,
+						&section,
+						&authority.pubkey(),
+						&coordinates,
+						DEFAULT_FLIP_FEE_LAMPORTS * PIXELS_PER_TRANSACTION,
+					))
+					.expect("resubmit a confirmed-missing contended batch");
+			}
+		}
 
 		let expected_flips =
 			u64::try_from(TRANSACTION_COUNT).expect("transaction count") * PIXELS_PER_TRANSACTION;
 		let section_account = program.account(&section).expect("section after burst");
 		let game_account = program.account(&game).expect("game after burst");
-		assert_eq!(u64_at(&section_account.data, 107), expected_flips);
+		assert_eq!(u64_at(&section_account.data, 139), expected_flips);
 		assert_eq!(
-			u64_at(&section_account.data, 115),
+			u64_at(&section_account.data, 147),
 			u64::try_from(TRANSACTION_COUNT).expect("transaction count")
 		);
 		assert_eq!(u64_at(&game_account.data, 25), expected_flips);

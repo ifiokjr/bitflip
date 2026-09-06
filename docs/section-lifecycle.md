@@ -21,12 +21,13 @@ Only `next_section` can be claimed. A later sector unlocks when either:
 
 The defaults are 1,024 paid flips or one hour per sector. Both values are configuration, so the launch ceremony must record the intended policy.
 
-The claimant is the payer for the new sector PDA. Their transaction therefore pays:
+The claimant is the payer for the new sector PDA and, when BIT rewards are enabled, its lazily created Token-2022 vault. Their launch flow therefore pays:
 
-- Solana rent for the 731-byte bitmap and section-economy account; and
+- Solana rent for the 763-byte bitmap and section-economy account;
+- current rent for one section-PDA-owned Token-2022 associated account; and
 - `claim_price_lamports`, transferred to the configured treasury.
 
-Creation, payment, ownership assignment, and advancing `next_section` are one atomic instruction. A failed claim creates no account and transfers no funds. At most one new bitmap account is created for each successful claim, so an unused game never allocates the other 255 sectors.
+Creation, payment, ownership assignment, and advancing `next_section` are one atomic claim instruction. Vault funding is a permissionless, one-time follow-up instruction in ABI version 3; the product must submit and confirm it before enabling reward-bearing flips for that section. A failed claim creates no bitmap account and transfers no claim payment; a failed vault funding call transfers no BIT or records no vault. At most one bitmap and one token account are created per active section, so an unused game never allocates the other 255 pairs.
 
 ## Play and ownership
 
@@ -44,4 +45,4 @@ Minted sectors cannot use this listing mechanism. After minting, the compressed 
 
 ## Deployment compatibility
 
-Economy ABI version 2 changes the game account from 32 to 123 bytes and the sector account from 651 to 731 bytes. It also rejects initialization beyond the four configured games. Do not point the updated app at a game containing old-layout sectors. For staging and launch, deploy the reviewed program under a fresh program ID and initialize fresh games so every sector uses the current layout and controller configuration.
+Economy ABI version 3 uses a 237-byte config, 123-byte game, and 763-byte section. It adds an immutable BIT mint/reserve registry and a canonical vault address to every funded section, and rejects initialization beyond the four configured games. Do not point the updated app at accounts from an older layout. For staging and launch, deploy the reviewed program under a fresh program ID and initialize fresh games so every section uses the current layout, controller configuration, and custody rules.

@@ -314,7 +314,10 @@ dependencies = [
  "pastey",
  "pina_macros",
  "pinocchio",
+ "pinocchio-associated-token-account",
  "pinocchio-system",
+ "pinocchio-token",
+ "pinocchio-token-2022",
  "solana-address",
  "solana-program-log",
  "zeropod",
@@ -347,6 +350,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "pinocchio-associated-token-account"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c552da2a965b33511ac54494e434e69be0ae12da1619a72594b76703c3dca211"
+dependencies = [
+ "solana-account-view",
+ "solana-address",
+ "solana-instruction-view",
+ "solana-program-error",
+]
+
+[[package]]
 name = "pinocchio-system"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -354,6 +369,33 @@ checksum = "f3ae2ee67b42e2ac797dd88312da473c895660e270d8093e0ba2749b885b5778"
 dependencies = [
  "pinocchio",
  "solana-address",
+]
+
+[[package]]
+name = "pinocchio-token"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "217e3259f93a1520e4692b18653dad4d29af54ffc8b3a09819808be85dada074"
+dependencies = [
+ "solana-account-view",
+ "solana-address",
+ "solana-instruction-view",
+ "solana-program-error",
+]
+
+[[package]]
+name = "pinocchio-token-2022"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3a3c164973916f044bebff3c8cb4467088bafb13cbdb818522b9ca8782940d06"
+dependencies = [
+ "pinocchio-token",
+ "solana-account-view",
+ "solana-address",
+ "solana-instruction-view",
+ "solana-nullable",
+ "solana-program-error",
+ "solana-zero-copy",
 ]
 
 [[package]]
@@ -573,6 +615,7 @@ dependencies = [
  "five8_const",
  "sha2-const-stable",
  "solana-define-syscall 5.2.0",
+ "solana-nullable",
  "solana-program-error",
  "solana-sha256-hasher",
 ]
@@ -606,6 +649,12 @@ dependencies = [
  "solana-define-syscall 5.2.0",
  "solana-program-error",
 ]
+
+[[package]]
+name = "solana-nullable"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "889194d8c5faec648f2f6fadddb60566249921ebb074e2707e7095458d5864e2"
 
 [[package]]
 name = "solana-program-error"
@@ -644,6 +693,12 @@ dependencies = [
  "solana-define-syscall 4.0.1",
  "solana-hash",
 ]
+
+[[package]]
+name = "solana-zero-copy"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd3183a7934dd7e6490ae86732616cd70361f5ab9401b9a375ab62f7fa17b112"
 
 [[package]]
 name = "strsim"
