@@ -2,6 +2,7 @@ import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/application/game_controller.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
+import 'package:bitflip_app/features/game/domain/section_economy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -205,6 +206,27 @@ void main() {
       },
     );
 
+    test('current owner can withdraw a positive section fee balance', () async {
+      repository.snapshot = _liveSnapshot(
+        SectionLifecycle.active,
+        ownerFeeLamports: BigInt.from(2000),
+      );
+      final controller = container.read(gameControllerProvider.notifier);
+      await controller.refresh();
+
+      await controller.withdrawSectionOwnerFees();
+
+      expect(repository.withdrawOwnerFeesCalls, 1);
+      expect(
+        container.read(gameControllerProvider).activity.notice,
+        GameNotice.ownerFeesWithdrawn,
+      );
+      expect(
+        container.read(gameControllerProvider).activity.transactionSignature,
+        'withdraw-owner-fees-signature',
+      );
+    });
+
     test('live mode starts blank instead of displaying demo art', () {
       repository = FakeBitflipRepository(
         snapshot: _liveSnapshot(SectionLifecycle.active),
@@ -367,6 +389,7 @@ GameSnapshot _liveSnapshot(
   String owner = 'DemoWallet111111111111111111111111111111111',
   BigInt? salePriceLamports,
   bool isProtocolOwned = false,
+  BigInt? ownerFeeLamports,
 }) {
   return GameSnapshot(
     gameIndex: 0,
@@ -390,6 +413,22 @@ GameSnapshot _liveSnapshot(
       revision: BigInt.zero,
       salePriceLamports: salePriceLamports ?? BigInt.zero,
       isProtocolOwned: isProtocolOwned,
+      economy: ownerFeeLamports == null
+          ? null
+          : SectionEconomySnapshot(
+              launchedAt: BigInt.zero,
+              windowStartedAt: BigInt.zero,
+              lastUpdatedAt: BigInt.zero,
+              windowId: BigInt.zero,
+              windowTargetTokens: BigInt.from(1024),
+              windowRewardedTokens: BigInt.zero,
+              emittedTokens: BigInt.zero,
+              rewardPoolTokens: BigInt.zero,
+              controllerPriceLamports: BigInt.from(10_000),
+              postedPriceLamports: BigInt.from(10_000),
+              protocolFeeLamports: BigInt.zero,
+              ownerFeeLamports: ownerFeeLamports,
+            ),
     ),
   );
 }

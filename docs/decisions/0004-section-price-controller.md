@@ -147,7 +147,7 @@ A linear floor is preferred over the historical square root because it is easy t
 
 A posted price that updates only every five minutes must not sell the entire reserve during one cheap window. Base BIT rewards in a window are therefore capped at the configured elasticity multiplied by that window's target. With an elasticity of two, exactly 2,048 whole BIT can be distributed before the next price update.
 
-ABI version 4 stops flips when reward capacity is used, even if a custom client signs a zero minimum. This keeps every base-game pixel equal to one whole BIT and prevents free flips from advancing activity-based section unlocks. The next window restores capacity at its new price. A future unrewarded mode would need a separate instruction whose activity semantics are explicit. Owner-funded campaign rewards are a separate budget and do not bypass the base-emission cap.
+ABI version 5 stops flips when reward capacity is used, even if a custom client signs a zero minimum. This keeps every base-game pixel equal to one whole BIT and prevents free flips from advancing activity-based section unlocks. The next window restores capacity at its new price. A future unrewarded mode would need a separate instruction whose activity semantics are explicit. Owner-funded campaign rewards are a separate budget and do not bypass the base-emission cap.
 
 This cap prevents a bot from draining a stale-price reserve and keeps maximum reward throughput related to the modelled capacity. Transactions immediately before and after a boundary can access two caps—4,096 staging BIT—within seconds, but the second cap is posted at the higher price and the exposure remains 0.015625% of one section allocation. A continuous leaky-bucket controller could remove that edge later, but it introduces more state and has less precedent. Start with the auditable windowed mechanism and monitor boundary concentration on devnet.
 
@@ -181,7 +181,7 @@ If a rollover, sale, or competing transaction changes the quote, the transaction
 
 ## Required tests and evidence
 
-The deterministic controller, game snapshot, section state, permissionless settlement, fixed custody, and atomic paid-flip path are implemented in economy ABI version 4. A mainnet reward-bearing release remains blocked on all of the following:
+The deterministic controller, game snapshot, section state, permissionless settlement, fixed custody, atomic paid-flip path, and fixed owner fee share are implemented in economy ABI version 5. A mainnet reward-bearing release remains blocked on all of the following:
 
 1. The deterministic [economics simulator](../economics-simulation.md) continues to cover idle, target, burst, oscillating, deadline catch-up, and owner wash-trading cost scenarios as the on-chain ABI is implemented.
 2. Property and unit tests continue to prove price bounds, maximum step size, no arithmetic overflow, no reward beyond inventory or window capacity, final partial-window exhaustion, monotonic inventory floor, ordering independence, and atomic quote failure.

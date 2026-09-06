@@ -309,6 +309,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sectionOwner => 'OWNER';
 
   @override
+  String ownerFeeShare(String percent) {
+    return 'EARNS $percent% OF FLIP FEES';
+  }
+
+  @override
+  String withdrawOwnerFees(String amount) {
+    return 'WITHDRAW $amount SOL IN OWNER FEES';
+  }
+
+  @override
   String get anonymousOwner => 'NOT CLAIMED';
 
   @override
@@ -350,6 +360,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get activityPurchased =>
       'Sector purchased. Ownership transferred atomically.';
+
+  @override
+  String get activityOwnerFeesWithdrawn =>
+      'Accrued owner fees withdrawn from this sector.';
 
   @override
   String get activitySealed =>

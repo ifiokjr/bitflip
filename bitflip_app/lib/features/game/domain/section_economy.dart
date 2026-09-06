@@ -39,6 +39,7 @@ final class SectionEconomySnapshot {
     required this.controllerPriceLamports,
     required this.postedPriceLamports,
     required this.protocolFeeLamports,
+    required this.ownerFeeLamports,
   });
 
   final BigInt launchedAt;
@@ -52,6 +53,7 @@ final class SectionEconomySnapshot {
   final BigInt controllerPriceLamports;
   final BigInt postedPriceLamports;
   final BigInt protocolFeeLamports;
+  final BigInt ownerFeeLamports;
 
   SectionFlipQuote quote({
     required SectionPriceConfig config,
@@ -60,10 +62,7 @@ final class SectionEconomySnapshot {
   }) {
     if (requestedRewardTokens <= BigInt.zero ||
         requestedRewardTokens > BigInt.from(16)) {
-      throw ArgumentError.value(
-        requestedRewardTokens,
-        'requestedRewardTokens',
-      );
+      throw ArgumentError.value(requestedRewardTokens, 'requestedRewardTokens');
     }
     if (now < launchedAt || now < lastUpdatedAt) {
       throw StateError('The local clock predates the section economy.');
@@ -82,8 +81,7 @@ final class SectionEconomySnapshot {
     final completedWindows =
         (effectiveNow - nextWindowStartedAt) ~/ config.windowSeconds;
 
-    BigInt remainingBase() =>
-        config.allocationTokens - nextEmitted - nextPool;
+    BigInt remainingBase() => config.allocationTokens - nextEmitted - nextPool;
 
     void accruePool(BigInt requested) {
       nextPool += _min(requested, remainingBase());
@@ -118,8 +116,8 @@ final class SectionEconomySnapshot {
       }
 
       final remaining = remainingBase();
-      nextWindowTarget = nextWindowStartedAt < emissionEndsAt &&
-              remaining > BigInt.zero
+      nextWindowTarget =
+          nextWindowStartedAt < emissionEndsAt && remaining > BigInt.zero
           ? _min(config.targetTokensPerWindow, remaining)
           : BigInt.zero;
       nextPostedPrice = _max(
@@ -186,8 +184,7 @@ BigInt _adjustedControllerPrice({
 }
 
 BigInt _inventoryFloor(SectionPriceConfig config, BigInt emittedTokens) {
-  final range =
-      config.endFloorPriceLamports - config.startFloorPriceLamports;
+  final range = config.endFloorPriceLamports - config.startFloorPriceLamports;
   return config.startFloorPriceLamports +
       (range * emittedTokens ~/ config.allocationTokens);
 }

@@ -29,6 +29,7 @@ abstract interface class BitflipRepository {
   Future<String> listSection(GameSnapshot snapshot, BigInt priceLamports);
   Future<String> cancelSectionListing(GameSnapshot snapshot);
   Future<String> purchaseSection(GameSnapshot snapshot);
+  Future<String> withdrawSectionOwnerFees(GameSnapshot snapshot);
   Future<String> flipPixels(
     GameSnapshot snapshot,
     List<PixelCoordinate> coordinates,
@@ -181,6 +182,7 @@ final class SolanaBitflipRepository implements BitflipRepository {
           : decodeSectionState(encodedPreviousSection.account).data.flipCount,
       treasury: config.treasury.value,
       section: section,
+      ownerShareBasisPoints: game.ownerShareBasisPoints,
       bitMint: _optionalAddress(config.bitMint),
       bitReserve: _optionalAddress(config.bitReserve),
       priceConfig: SectionPriceConfig(
@@ -344,6 +346,20 @@ final class SolanaBitflipRepository implements BitflipRepository {
   }
 
   @override
+  Future<String> withdrawSectionOwnerFees(GameSnapshot snapshot) async {
+    final owner = _requireWalletAddress();
+    final (_, section) = await _gameAndSectionAddresses(snapshot);
+    final instruction = getWithdrawSectionOwnerFeesInstruction(
+      programAddress: bitflipProgramProgramAddress,
+      owner: owner,
+      section: section,
+      gameIndex: snapshot.gameIndex,
+      sectionIndex: snapshot.section.index,
+    );
+    return _send(instruction, owner);
+  }
+
+  @override
   Future<String> flipPixels(
     GameSnapshot snapshot,
     List<PixelCoordinate> coordinates,
@@ -372,7 +388,9 @@ final class SolanaBitflipRepository implements BitflipRepository {
       requestedRewardTokens: requestedRewards,
     );
     if (quote.rewardTokens != requestedRewards) {
-      throw StateError('This reward window has no capacity for the full batch.');
+      throw StateError(
+        'This reward window has no capacity for the full batch.',
+      );
     }
     final bitMint = Address(bitMintValue);
     final sectionVault = Address(sectionVaultValue);
@@ -602,6 +620,7 @@ final class SolanaBitflipRepository implements BitflipRepository {
         controllerPriceLamports: data.controllerPriceLamports,
         postedPriceLamports: data.postedPriceLamports,
         protocolFeeLamports: data.protocolFeeLamports,
+        ownerFeeLamports: data.ownerFeeLamports,
       ),
     );
   }

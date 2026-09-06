@@ -22,6 +22,7 @@ final class FakeBitflipRepository implements BitflipRepository {
     this.listError,
     this.cancelListingError,
     this.purchaseError,
+    this.withdrawOwnerFeesError,
     this.flipError,
     this.sealError,
     this.mintError,
@@ -54,6 +55,7 @@ final class FakeBitflipRepository implements BitflipRepository {
   final Object? listError;
   final Object? cancelListingError;
   final Object? purchaseError;
+  final Object? withdrawOwnerFeesError;
   final Object? flipError;
   final Object? sealError;
   final Object? mintError;
@@ -62,6 +64,7 @@ final class FakeBitflipRepository implements BitflipRepository {
   int listCalls = 0;
   int cancelListingCalls = 0;
   int purchaseCalls = 0;
+  int withdrawOwnerFeesCalls = 0;
   int connectCalls = 0;
   int fundCalls = 0;
   int initializeCalls = 0;
@@ -145,6 +148,14 @@ final class FakeBitflipRepository implements BitflipRepository {
       ),
     );
     return 'purchase-signature';
+  }
+
+  @override
+  Future<String> withdrawSectionOwnerFees(GameSnapshot snapshot) async {
+    withdrawOwnerFeesCalls++;
+    final error = withdrawOwnerFeesError;
+    if (error != null) throw error;
+    return 'withdraw-owner-fees-signature';
   }
 
   @override

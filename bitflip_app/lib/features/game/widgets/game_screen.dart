@@ -359,6 +359,8 @@ class _GameWorkspace extends HookWidget {
           onList: (price) => unawaited(controller.listSection(price)),
           onCancelListing: () => unawaited(controller.cancelSectionListing()),
           onPurchase: () => unawaited(controller.purchaseSection()),
+          onWithdrawOwnerFees: () =>
+              unawaited(controller.withdrawSectionOwnerFees()),
           onCommit: () => unawaited(controller.commitMoves()),
           onClear: controller.clearQueue,
           onSeal: () => unawaited(_confirmSeal(context, controller)),

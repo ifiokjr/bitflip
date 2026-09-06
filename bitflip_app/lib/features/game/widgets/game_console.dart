@@ -19,6 +19,7 @@ class GameConsole extends HookWidget {
     required this.onSeal,
     required this.onMint,
     required this.onRefresh,
+    this.onWithdrawOwnerFees,
     this.onViewResult,
     super.key,
   });
@@ -29,6 +30,7 @@ class GameConsole extends HookWidget {
   final ValueChanged<BigInt> onList;
   final VoidCallback onCancelListing;
   final VoidCallback onPurchase;
+  final VoidCallback? onWithdrawOwnerFees;
   final VoidCallback onCommit;
   final VoidCallback onClear;
   final VoidCallback onSeal;
@@ -213,9 +215,8 @@ class GameConsole extends HookWidget {
               const SizedBox(height: 8),
               Text(
                 context.l10n.rewardWindowUnavailable,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: BitflipColors.coral,
-                ),
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: BitflipColors.coral),
               ),
             ],
             const SizedBox(height: 18),
@@ -290,7 +291,23 @@ class GameConsole extends HookWidget {
             const SizedBox(height: 22),
             const Divider(height: 1),
             const SizedBox(height: 20),
-            _OwnerRow(section: section),
+            _OwnerRow(snapshot: state.snapshot),
+            if (!section.isProtocolOwned &&
+                state.walletAddress == section.owner &&
+                (section.economy?.ownerFeeLamports ?? BigInt.zero) >
+                    BigInt.zero) ...[
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                key: BitflipTestKeys.withdrawOwnerFees,
+                onPressed: state.isBusy ? null : onWithdrawOwnerFees,
+                icon: const Icon(Icons.account_balance_wallet_outlined),
+                label: Text(
+                  context.l10n.withdrawOwnerFees(
+                    lamportsToSol(section.economy!.ownerFeeLamports),
+                  ),
+                ),
+              ),
+            ],
             if (section.isClaimed) ...[
               const SizedBox(height: 16),
               _MarketplacePanel(
@@ -391,12 +408,13 @@ class _SignalMeter extends HookWidget {
 }
 
 class _OwnerRow extends HookWidget {
-  const _OwnerRow({required this.section});
+  const _OwnerRow({required this.snapshot});
 
-  final SectionSnapshot section;
+  final GameSnapshot snapshot;
 
   @override
   Widget build(BuildContext context) {
+    final section = snapshot.section;
     late final String ownerLabel;
     if (section.isProtocolOwned) {
       ownerLabel = context.l10n.bitflipProgram;
@@ -405,21 +423,39 @@ class _OwnerRow extends HookWidget {
     } else {
       ownerLabel = _shortAddress(section.owner!);
     }
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Icon(Icons.person_outline_rounded, size: 19),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            context.l10n.sectionOwner,
-            style: Theme.of(context).textTheme.labelLarge,
+        Row(
+          children: [
+            const Icon(Icons.person_outline_rounded, size: 19),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                context.l10n.sectionOwner,
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+            ),
+            Text(
+              ownerLabel,
+              style: Theme.of(context).textTheme.labelLarge
+                  ?.copyWith(color: BitflipColors.cyan),
+            ),
+          ],
+        ),
+        if (!section.isProtocolOwned && snapshot.ownerShareBasisPoints > 0) ...[
+          const SizedBox(height: 6),
+          Text(
+            context.l10n.ownerFeeShare(
+              (snapshot.ownerShareBasisPoints / 100).toStringAsFixed(
+                snapshot.ownerShareBasisPoints % 100 == 0 ? 0 : 2,
+              ),
+            ),
+            textAlign: TextAlign.end,
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: BitflipColors.acid),
           ),
-        ),
-        Text(
-          ownerLabel,
-          style: Theme.of(context).textTheme.labelLarge
-              ?.copyWith(color: BitflipColors.cyan),
-        ),
+        ],
       ],
     );
   }
@@ -548,6 +584,7 @@ class _ActivityPulse extends HookWidget {
       GameNotice.listed => context.l10n.activityListed,
       GameNotice.listingCancelled => context.l10n.activityListingCancelled,
       GameNotice.purchased => context.l10n.activityPurchased,
+      GameNotice.ownerFeesWithdrawn => context.l10n.activityOwnerFeesWithdrawn,
       GameNotice.sealed => context.l10n.activitySealed,
       GameNotice.minted => context.l10n.activityMinted,
       GameNotice.batchFull => context.l10n.batchFull,

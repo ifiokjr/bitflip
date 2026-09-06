@@ -21,6 +21,7 @@ enum GameNotice {
   listed,
   listingCancelled,
   purchased,
+  ownerFeesWithdrawn,
   sealed,
   minted,
   batchFull,
@@ -519,6 +520,45 @@ class GameController extends _$GameController {
         isBusy: false,
         activity: GameActivity(
           GameNotice.purchased,
+          transactionSignature: transactionSignature,
+        ),
+      );
+      await refresh();
+    } on Object {
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        isBusy: false,
+        activity: const GameActivity(GameNotice.connectionIssue),
+      );
+    }
+  }
+
+  Future<void> withdrawSectionOwnerFees() async {
+    final section = state.snapshot.section;
+    final ownerFees = section.economy?.ownerFeeLamports ?? BigInt.zero;
+    if (state.isBusy ||
+        !state.canTransact ||
+        ownerFees <= BigInt.zero ||
+        section.isProtocolOwned ||
+        state.walletAddress != section.owner) {
+      return;
+    }
+    if (state.snapshot.isDemo) {
+      state = state.copyWith(
+        activity: const GameActivity(GameNotice.ownerFeesWithdrawn),
+      );
+      return;
+    }
+    state = state.copyWith(isBusy: true);
+    try {
+      final transactionSignature = await _repository.withdrawSectionOwnerFees(
+        state.snapshot,
+      );
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        isBusy: false,
+        activity: GameActivity(
+          GameNotice.ownerFeesWithdrawn,
           transactionSignature: transactionSignature,
         ),
       );

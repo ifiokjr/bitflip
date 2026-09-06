@@ -31,6 +31,7 @@ void main() {
     controllerPriceLamports: BigInt.from(10_000),
     postedPriceLamports: BigInt.from(10_000),
     protocolFeeLamports: BigInt.zero,
+    ownerFeeLamports: BigInt.zero,
   );
 
   test('quotes whole BIT at the fixed price within a window', () {
@@ -59,14 +60,15 @@ void main() {
   });
 
   test('caps a quote at remaining reward-window capacity', () {
-    final quote = economy(
-      windowRewardedTokens: BigInt.from(2040),
-      emittedTokens: BigInt.from(2040),
-    ).quote(
-      config: config,
-      now: BigInt.from(1200),
-      requestedRewardTokens: BigInt.from(16),
-    );
+    final quote =
+        economy(
+          windowRewardedTokens: BigInt.from(2040),
+          emittedTokens: BigInt.from(2040),
+        ).quote(
+          config: config,
+          now: BigInt.from(1200),
+          requestedRewardTokens: BigInt.from(16),
+        );
 
     expect(quote.rewardTokens, BigInt.from(8));
     expect(quote.totalPriceLamports, BigInt.from(80_000));

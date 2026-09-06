@@ -63,7 +63,7 @@ pub const DEFAULT_MAX_FLIP_FEE_LAMPORTS: u64 = 1_000_000;
 pub const DEFAULT_UNLOCK_INTERVAL_SECONDS: u32 = 3_600;
 pub const DEFAULT_EARLY_UNLOCK_FLIPS: u32 = 1_024;
 
-pub const CONFIG_VERSION: u8 = 4;
+pub const CONFIG_VERSION: u8 = 5;
 pub const GAME_STATUS_LIVE: u8 = 1;
 pub const GAME_STATUS_CLAIMS_COMPLETE: u8 = 2;
 pub const SECTION_STATUS_ACTIVE: u8 = 1;
@@ -108,6 +108,7 @@ pub enum BitflipError {
 	SectionVaultAlreadyFunded = 27,
 	StalePriceWindow = 28,
 	InsufficientReward = 29,
+	NoOwnerFees = 30,
 }
 
 #[discriminator]
@@ -127,6 +128,7 @@ pub enum BitflipInstruction {
 	SettleSectionEconomy = 12,
 	ConfigureBitCustody = 13,
 	FundSectionVault = 14,
+	WithdrawSectionOwnerFees = 15,
 }
 
 #[discriminator]
@@ -213,6 +215,7 @@ pub struct SectionState {
 	pub controller_price_lamports: u64,
 	pub posted_price_lamports: u64,
 	pub protocol_fee_lamports: u64,
+	pub owner_fee_lamports: u64,
 	pub pixels: [u8; 512],
 }
 
@@ -320,6 +323,12 @@ pub struct FundSectionVaultInstruction {
 	pub section_index: u8,
 }
 
+#[instruction(discriminator = BitflipInstruction::WithdrawSectionOwnerFees)]
+pub struct WithdrawSectionOwnerFeesInstruction {
+	pub game_index: u8,
+	pub section_index: u8,
+}
+
 #[derive(Accounts, Debug)]
 pub struct InitializeConfigAccounts<'a> {
 	pub payer: &'a mut AccountView,
@@ -380,7 +389,7 @@ pub struct FlipPixelsAccounts<'a> {
 
 #[derive(Accounts, Debug)]
 pub struct SealSectionAccounts<'a> {
-	pub owner: &'a AccountView,
+	pub owner: &'a mut AccountView,
 	pub game: &'a AccountView,
 	pub section: &'a mut AccountView,
 }
@@ -442,6 +451,12 @@ pub struct FundSectionVaultAccounts<'a> {
 	pub associated_token_program: &'a AccountView,
 	pub token_program: &'a AccountView,
 	pub system_program: &'a AccountView,
+}
+
+#[derive(Accounts, Debug)]
+pub struct WithdrawSectionOwnerFeesAccounts<'a> {
+	pub owner: &'a mut AccountView,
+	pub section: &'a mut AccountView,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -627,13 +642,26 @@ fn game_price_config(game: &GameStateZc) -> Result<pricing::PriceControllerConfi
 
 fn live_game_price_config(
 	game_account: &AccountView,
-) -> Result<(i64, pricing::PriceControllerConfig), ProgramError> {
+) -> Result<(i64, u16, pricing::PriceControllerConfig), ProgramError> {
 	let game = game_account.as_account::<GameState>(&ID)?;
 	if game.status != GAME_STATUS_LIVE && game.status != GAME_STATUS_CLAIMS_COMPLETE {
 		return Err(BitflipError::GameNotLive.into());
 	}
 
-	Ok((game.starts_at.get(), game_price_config(&game)?))
+	Ok((
+		game.starts_at.get(),
+		game.owner_share_basis_points.get(),
+		game_price_config(&game)?,
+	))
+}
+
+fn configured_bit_mint(config_account: &AccountView) -> Result<Address, ProgramError> {
+	let bit_mint = config_account.as_account::<ConfigState>(&ID)?.bit_mint;
+	if bit_mint == ZERO_ADDRESS {
+		return Err(BitflipError::CustodyNotConfigured.into());
+	}
+
+	Ok(bit_mint)
 }
 
 fn section_controller_state(section: &SectionStateZc) -> pricing::PriceControllerState {
@@ -682,7 +710,7 @@ fn store_paid_flip(
 	count: u8,
 	coordinates: &[u8; FLIP_COORDINATE_BYTES],
 	clock_timestamp: i64,
-	total_price_lamports: u64,
+	fee_split: pricing::FeeSplit,
 	controller: pricing::PriceControllerState,
 ) -> ProgramResult {
 	let mut on_pixels = section.on_pixels.get();
@@ -723,7 +751,14 @@ fn store_paid_flip(
 		section
 			.protocol_fee_lamports
 			.get()
-			.checked_add(total_price_lamports)
+			.checked_add(fee_split.protocol_lamports)
+			.ok_or(ProgramError::ArithmeticOverflow)?,
+	);
+	section.owner_fee_lamports.set(
+		section
+			.owner_fee_lamports
+			.get()
+			.checked_add(fee_split.owner_lamports)
 			.ok_or(ProgramError::ArithmeticOverflow)?,
 	);
 	store_section_controller_state(section, controller);
@@ -794,6 +829,7 @@ fn initialize_section_state(
 	section.last_flip_at.set(0);
 	section.sale_price_lamports.set(0);
 	section.protocol_fee_lamports.set(0);
+	section.owner_fee_lamports.set(0);
 	store_section_controller_state(section, controller);
 	section.pixels.fill(0);
 }
@@ -812,6 +848,55 @@ fn transfer_lamports(
 	}
 	system_program.assert_address(&system::ID)?;
 	system::instructions::Transfer { from, to, lamports }.invoke()
+}
+
+fn pay_accrued_owner_fees(
+	section: &mut AccountView,
+	recipient: &mut AccountView,
+	require_nonzero: bool,
+) -> Result<u64, ProgramError> {
+	let (owner, amount) = {
+		let state = section.as_account::<SectionState>(&ID)?;
+		(state.owner, state.owner_fee_lamports.get())
+	};
+	recipient
+		.assert_address(&owner)?
+		.assert_writable()?
+		.assert_owner(&system::ID)?;
+	if amount == 0 {
+		return if require_nonzero {
+			Err(BitflipError::NoOwnerFees.into())
+		} else {
+			Ok(0)
+		};
+	}
+
+	section.assert_writable()?.assert_owner(&ID)?;
+	section
+		.as_account_mut::<SectionState>(&ID)?
+		.owner_fee_lamports
+		.set(0);
+	section.send(amount, recipient)?;
+
+	Ok(amount)
+}
+
+fn split_flip_fee(
+	section_owner: &Address,
+	game: &Address,
+	total_price_lamports: u64,
+	owner_share_basis_points: u16,
+) -> Result<pricing::FeeSplit, ProgramError> {
+	let protocol_owned = section_owner == game;
+	pricing::split_fee(
+		total_price_lamports,
+		if protocol_owned {
+			0
+		} else {
+			owner_share_basis_points
+		},
+	)
+	.map_err(controller_error)
 }
 
 fn assert_bit_mint(bit_mint: &AccountView, token_program: &Address) -> ProgramResult {
@@ -1401,21 +1486,16 @@ impl<'a> ProcessAccountInfos<'a> for FlipPixelsAccounts<'a> {
 			.assert_owner(&system::ID)?;
 		self.system_program.assert_address(&system::ID)?;
 
-		let bit_mint = {
-			let config = self.config.as_account::<ConfigState>(&ID)?;
-			if config.bit_mint == ZERO_ADDRESS {
-				return Err(BitflipError::CustodyNotConfigured.into());
-			}
-			config.bit_mint
-		};
+		let bit_mint = configured_bit_mint(self.config)?;
 
-		let (starts_at, price_config) = live_game_price_config(self.game)?;
+		let (starts_at, owner_share_basis_points, price_config) =
+			live_game_price_config(self.game)?;
 		let clock = Clock::get()?;
 		if clock.unix_timestamp < starts_at {
 			return Err(BitflipError::GameNotStarted.into());
 		}
 
-		let (section_bump, section_vault, mut controller) = {
+		let (section_bump, section_owner, section_vault, mut controller) = {
 			let section = self.section.as_account::<SectionState>(&ID)?;
 			if section.status != SECTION_STATUS_ACTIVE {
 				return Err(BitflipError::SectionNotActive.into());
@@ -1425,6 +1505,7 @@ impl<'a> ProcessAccountInfos<'a> for FlipPixelsAccounts<'a> {
 			}
 			(
 				section.bump,
+				section.owner,
 				section.bit_vault,
 				section_controller_state(&section),
 			)
@@ -1461,6 +1542,12 @@ impl<'a> ProcessAccountInfos<'a> for FlipPixelsAccounts<'a> {
 		if quote.reward_tokens != flip_count {
 			return Err(BitflipError::InsufficientReward.into());
 		}
+		let fee_split = split_flip_fee(
+			&section_owner,
+			self.game.address(),
+			quote.total_price_lamports,
+			owner_share_basis_points,
+		)?;
 		transfer_lamports(
 			self.player,
 			self.section,
@@ -1487,7 +1574,7 @@ impl<'a> ProcessAccountInfos<'a> for FlipPixelsAccounts<'a> {
 			args.count,
 			&args.coordinates,
 			clock.unix_timestamp,
-			quote.total_price_lamports,
+			fee_split,
 			controller,
 		)?;
 
@@ -1511,6 +1598,7 @@ impl<'a> ProcessAccountInfos<'a> for SealSectionAccounts<'a> {
 			}
 		}
 
+		pay_accrued_owner_fees(self.section, self.owner, false)?;
 		self.section.as_account_mut::<SectionState>(&ID)?.status = SECTION_STATUS_SEALED;
 
 		log!("Bitflip section sealed");
@@ -1653,6 +1741,7 @@ impl<'a> ProcessAccountInfos<'a> for PurchaseSectionAccounts<'a> {
 		};
 
 		transfer_lamports(self.buyer, self.seller, price, self.system_program)?;
+		pay_accrued_owner_fees(self.section, self.seller, false)?;
 
 		let mut section = self.section.as_account_mut::<SectionState>(&ID)?;
 		section.owner = *self.buyer.address();
@@ -1804,6 +1893,18 @@ impl<'a> ProcessAccountInfos<'a> for FundSectionVaultAccounts<'a> {
 	}
 }
 
+impl<'a> ProcessAccountInfos<'a> for WithdrawSectionOwnerFeesAccounts<'a> {
+	fn process(self, data: &[u8]) -> ProgramResult {
+		let args = WithdrawSectionOwnerFeesInstruction::try_from_bytes(data)?;
+		assert_section_account(self.section, args.game_index, args.section_index)?;
+		self.owner.assert_signer()?;
+		pay_accrued_owner_fees(self.section, self.owner, true)?;
+
+		log!("Bitflip section owner fees withdrawn");
+		Ok(())
+	}
+}
+
 #[cfg(feature = "bpf-entrypoint")]
 pub mod entrypoint {
 	use super::*;
@@ -1864,6 +1965,9 @@ pub mod entrypoint {
 			BitflipInstruction::FundSectionVault => {
 				FundSectionVaultAccounts::try_from((program_id, accounts))?.process(data)
 			}
+			BitflipInstruction::WithdrawSectionOwnerFees => {
+				WithdrawSectionOwnerFeesAccounts::try_from((program_id, accounts))?.process(data)
+			}
 		}
 	}
 }
@@ -1901,7 +2005,7 @@ mod tests {
 	fn account_layouts_are_stable() {
 		assert_eq!(ConfigState::SIZE, 237);
 		assert_eq!(GameState::SIZE, 123);
-		assert_eq!(SectionState::SIZE, 771);
+		assert_eq!(SectionState::SIZE, 779);
 	}
 
 	#[test]
@@ -1916,6 +2020,7 @@ mod tests {
 		assert_eq!(SettleSectionEconomyInstruction::SIZE, 3);
 		assert_eq!(ConfigureBitCustodyInstruction::SIZE, 1);
 		assert_eq!(FundSectionVaultInstruction::SIZE, 3);
+		assert_eq!(WithdrawSectionOwnerFeesInstruction::SIZE, 3);
 	}
 
 	#[test]
