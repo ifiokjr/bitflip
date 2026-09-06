@@ -32,6 +32,8 @@ Creation, payment, ownership assignment, and advancing `next_section` are one at
 
 Flipping is public while a sector is active. A player can toggle up to 16 unique pixels per transaction and pays the game fee for every flip. Ownership controls the scarce lifecycle actions: listing, cancelling a listing, and sealing.
 
+The intended next stage gives owners bounded governance over section campaigns, including an approved game mode, entry price, rules digest, and an owner/sponsor-funded reward budget. It deliberately does not give owners mint authority or a free reward allocation that they could route back to themselves. The economics, custody model, fee-share hypothesis, and implementation gates are specified in [ADR 0003](decisions/0003-section-economy.md). That ADR is proposed; the rebuilt program does not distribute BIT or expose campaign governance yet.
+
 ## Resale
 
 An owner can place a fixed SOL price directly in an active or sealed sector account. This creates no listing account and requires no extra rent. They can replace the price or cancel it at any time.

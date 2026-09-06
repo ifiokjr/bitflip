@@ -15,7 +15,7 @@ The product is one responsive Flutter codebase for Android, iOS, macOS, and the 
 
 The canvas is 1024 × 1024 pixels split into 256 sectors. Each sector coordinate is two `u8` values (`x`, `y`), avoiding ambiguous packed integers. A raw bitmap uses 512 bytes per sector and is easy to validate, render, and hash.
 
-The canvas is allocated lazily: game initialization creates one protocol-owned public sector, and each later claimant funds the rent for exactly one newly unlocked sector. Owners can list active or sealed sectors at a fixed on-chain SOL price without creating a separate listing account. See the [sector lifecycle and cost model](docs/section-lifecycle.md).
+The canvas is allocated lazily: game initialization creates one protocol-owned public sector, and each later claimant funds the rent for exactly one newly unlocked sector. Owners can list active or sealed sectors at a fixed on-chain SOL price without creating a separate listing account. Bounded campaign governance and finite owner-funded rewards are designed, but not yet implemented. See the [sector lifecycle and cost model](docs/section-lifecycle.md) and [proposed section economy](docs/decisions/0003-section-economy.md).
 
 ## Development
 
