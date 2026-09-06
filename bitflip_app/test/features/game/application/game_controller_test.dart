@@ -44,6 +44,16 @@ void main() {
       expect(state.activity.notice, GameNotice.batchFull);
     });
 
+    test('moves the accessible cursor without changing queued pixels', () {
+      final controller = container.read(gameControllerProvider.notifier);
+
+      controller.selectPixel(const PixelCoordinate(18, 27));
+
+      final state = container.read(gameControllerProvider);
+      expect(state.cursor, const PixelCoordinate(18, 27));
+      expect(state.queued, isEmpty);
+    });
+
     test('commits a demo batch locally and clears the preview queue', () async {
       final controller = container.read(gameControllerProvider.notifier);
       final before = container.read(gameControllerProvider).snapshot;

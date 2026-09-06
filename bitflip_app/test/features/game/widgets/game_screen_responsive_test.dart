@@ -33,6 +33,22 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('OPEN CANVAS'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.byKey(BitflipTestKeys.sectionPicker),
+        500,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.byKey(BitflipTestKeys.sectionPicker), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(BitflipTestKeys.sectionNavigator),
+          matching: find.byType(InkWell),
+        ),
+        findsNothing,
+        reason:
+            'the compact overview is visual; the labelled picker is the '
+            'accessible section control',
+      );
       expect(tester.takeException(), isNull);
     });
   }

@@ -9,14 +9,12 @@ class SectionNavigator extends HookWidget {
     required this.selectedIndex,
     required this.nextSection,
     required this.mintedSections,
-    required this.onSelected,
     super.key,
   });
 
   final int selectedIndex;
   final int nextSection;
   final int mintedSections;
-  final ValueChanged<int> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -40,21 +38,13 @@ class SectionNavigator extends HookWidget {
               : isClaimed
               ? BitflipColors.acid.withValues(alpha: 0.55)
               : BitflipColors.raised;
-          return Semantics(
-            button: true,
-            selected: isSelected,
-            label: '${index + 1}',
-            child: InkWell(
-              onTap: () => onSelected(index),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: background,
-                  border: Border.all(
-                    color: isSelected
-                        ? BitflipColors.coral
-                        : Colors.transparent,
-                    width: isSelected ? 2.5 : 0,
-                  ),
+          return ExcludeSemantics(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: background,
+                border: Border.all(
+                  color: isSelected ? BitflipColors.coral : Colors.transparent,
+                  width: isSelected ? 2.5 : 0,
                 ),
               ),
             ),
