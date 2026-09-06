@@ -319,6 +319,56 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get sectionMode => 'SECTION MODE';
+
+  @override
+  String get baseCanvasMode => 'BASE CANVAS';
+
+  @override
+  String get openCanvasMode => 'OPEN CANVAS';
+
+  @override
+  String get colourCanvasMode => '8-COLOUR CANVAS';
+
+  @override
+  String get noCampaign => 'No owner campaign is configured.';
+
+  @override
+  String campaignScheduledFor(String time) {
+    return 'Scheduled for $time.';
+  }
+
+  @override
+  String campaignLiveUntil(String time) {
+    return 'Terms locked until $time.';
+  }
+
+  @override
+  String get campaignEnded => 'This campaign has ended.';
+
+  @override
+  String get policyRewardsDisabled =>
+      'Protocol-pool rewards remain disabled; this round changes mode only.';
+
+  @override
+  String get startOpenRound => 'START 24H OPEN';
+
+  @override
+  String get startColourRound => 'START 24H COLOUR';
+
+  @override
+  String confirmPolicyTitle(String mode) {
+    return 'Start a 24-hour $mode round?';
+  }
+
+  @override
+  String get confirmPolicyBody =>
+      'The mode and rules digest are written on-chain. They cannot be changed while the round is live and remain attached if the section is sold.';
+
+  @override
+  String get confirmPolicyAction => 'START ROUND';
+
+  @override
   String get anonymousOwner => 'NOT CLAIMED';
 
   @override
@@ -364,6 +414,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get activityOwnerFeesWithdrawn =>
       'Accrued owner fees withdrawn from this sector.';
+
+  @override
+  String get activityPolicyConfigured =>
+      'Section policy published. Live terms are now locked on-chain.';
 
   @override
   String get activitySealed =>

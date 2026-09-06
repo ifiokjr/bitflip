@@ -26,6 +26,9 @@ use program_under_test::ECONOMY_VERSION;
 use program_under_test::GAME_STATUS_LIVE;
 use program_under_test::ID;
 use program_under_test::SECTION_BYTES;
+use program_under_test::SECTION_MODE_COLOUR_CANVAS;
+use program_under_test::SECTION_PALETTE_DEFAULT;
+use program_under_test::SECTION_REWARD_POLICY_NONE;
 use program_under_test::SECTION_STATUS_ACTIVE;
 use program_under_test::SECTION_STATUS_MINTED;
 use program_under_test::SECTION_STATUS_SEALED;
@@ -514,12 +517,28 @@ fn flip_pixels_instruction(
 	coordinates: &[(u8, u8)],
 	limits: TestFlipLimits,
 ) -> pina_test::Instruction {
+	flip_pixels_instruction_with_policy(
+		program,
+		[player, config, game, section, bit_mint],
+		coordinates,
+		limits,
+		0,
+	)
+}
+
+fn flip_pixels_instruction_with_policy(
+	program: &ProgramTest,
+	[player, config, game, section, bit_mint]: [&Pubkey; 5],
+	coordinates: &[(u8, u8)],
+	limits: TestFlipLimits,
+	expected_policy_version: u64,
+) -> pina_test::Instruction {
 	let mut packed_coordinates = [0; 32];
 	for (index, (x, y)) in coordinates.iter().enumerate() {
 		packed_coordinates[index * 2] = *x;
 		packed_coordinates[index * 2 + 1] = *y;
 	}
-	let mut data = Vec::with_capacity(68);
+	let mut data = Vec::with_capacity(76);
 	data.extend_from_slice(&[
 		BitflipInstruction::FlipPixels as u8,
 		limits.game_index,
@@ -527,6 +546,7 @@ fn flip_pixels_instruction(
 		coordinates.len() as u8,
 	]);
 	data.extend_from_slice(&packed_coordinates);
+	data.extend_from_slice(&expected_policy_version.to_le_bytes());
 	data.extend_from_slice(&limits.expected_window_id.to_le_bytes());
 	data.extend_from_slice(&limits.maximum_unit_price_lamports.to_le_bytes());
 	data.extend_from_slice(&limits.maximum_total_price_lamports.to_le_bytes());
@@ -585,6 +605,45 @@ fn withdraw_section_owner_fees_instruction(
 		],
 		vec![
 			AccountMeta::new(*owner, true),
+			AccountMeta::new(*section, false),
+		],
+	)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn configure_section_policy_instruction(
+	program: &ProgramTest,
+	owner: &Pubkey,
+	section: &Pubkey,
+	section_index: u8,
+	expected_policy_version: u64,
+	starts_at: i64,
+	ends_at: i64,
+	entry_price_tokens: u64,
+	reward_per_action_tokens: u64,
+	rules_digest: [u8; 32],
+) -> pina_test::Instruction {
+	let mut data = Vec::with_capacity(78);
+	data.extend_from_slice(&[
+		BitflipInstruction::ConfigureSectionPolicy as u8,
+		0,
+		section_index,
+	]);
+	data.extend_from_slice(&expected_policy_version.to_le_bytes());
+	data.extend_from_slice(&[
+		SECTION_MODE_COLOUR_CANVAS,
+		SECTION_PALETTE_DEFAULT,
+		SECTION_REWARD_POLICY_NONE,
+	]);
+	data.extend_from_slice(&starts_at.to_le_bytes());
+	data.extend_from_slice(&ends_at.to_le_bytes());
+	data.extend_from_slice(&entry_price_tokens.to_le_bytes());
+	data.extend_from_slice(&reward_per_action_tokens.to_le_bytes());
+	data.extend_from_slice(&rules_digest);
+	program.instruction(
+		&data,
+		vec![
+			AccountMeta::new_readonly(*owner, true),
 			AccountMeta::new(*section, false),
 		],
 	)
@@ -780,6 +839,18 @@ fn assert_custom_error(error: &TestError, expected: BitflipError) {
 
 fn u64_at(data: &[u8], offset: usize) -> u64 {
 	u64::from_le_bytes(data[offset..offset + 8].try_into().expect("u64 field"))
+}
+
+fn i64_at(data: &[u8], offset: usize) -> i64 {
+	i64::from_le_bytes(data[offset..offset + 8].try_into().expect("i64 field"))
+}
+
+fn current_unix_timestamp(program: &ProgramTest) -> i64 {
+	let clock = "SysvarC1ock11111111111111111111111111111111"
+		.parse()
+		.expect("clock sysvar address");
+	let account = program.account(&clock).expect("fetch clock sysvar");
+	i64_at(&account.data, 32)
 }
 
 fn u32_at(data: &[u8], offset: usize) -> u32 {
@@ -1944,6 +2015,256 @@ fn owner_can_list_cancel_and_sell_a_section_atomically() {
 			)
 			.expect_err("a stale mint cannot target the seller after purchase");
 		assert_custom_error(&stale_mint, BitflipError::OwnerChanged);
+
+		program.stop().expect("stop isolated program test");
+	});
+}
+
+#[test]
+#[ignore = "run with test:surfpool"]
+fn section_policy_is_versioned_locked_while_live_and_survives_sale() {
+	pina_test::run(async {
+		const SALE_PRICE: u64 = 5_000_000;
+		let CustodyGame {
+			mut program,
+			authority,
+			config,
+			game,
+			bit_mint,
+			bit_reserve,
+			..
+		} = start_game_with_custody(1).await;
+		let seller = Keypair::new();
+		let buyer = Keypair::new();
+		let attacker = Keypair::new();
+		for account in [&seller, &buyer, &attacker] {
+			program
+				.fund(&account.pubkey(), 100_000_000)
+				.expect("fund policy test signer");
+		}
+		let section = claim_first_user_section(
+			&mut program,
+			&authority,
+			&config,
+			&game,
+			&seller,
+			&bit_mint.pubkey(),
+			&bit_reserve,
+		)
+		.await;
+		let starts_at = current_unix_timestamp(&program);
+		let ends_at = starts_at + 600;
+		let rules_digest = [7; 32];
+
+		let before = program.account(&section).expect("section before policy");
+		let unauthorized = program
+			.send_with_signers(
+				configure_section_policy_instruction(
+					&program,
+					&attacker.pubkey(),
+					&section,
+					1,
+					0,
+					starts_at,
+					ends_at,
+					0,
+					0,
+					rules_digest,
+				),
+				&[&attacker],
+			)
+			.expect_err("a non-owner cannot publish section policy");
+		assert!(!unauthorized.message().is_empty());
+		assert_eq!(
+			program
+				.account(&section)
+				.expect("section after attack")
+				.data,
+			before.data,
+		);
+
+		let unbacked_rewards = program
+			.send_with_signers(
+				configure_section_policy_instruction(
+					&program,
+					&seller.pubkey(),
+					&section,
+					1,
+					0,
+					starts_at,
+					ends_at,
+					1,
+					1,
+					rules_digest,
+				),
+				&[&seller],
+			)
+			.expect_err("unfunded reward and entry terms stay disabled");
+		assert_custom_error(&unbacked_rewards, BitflipError::InvalidSectionPolicy);
+
+		program
+			.send_with_signers(
+				configure_section_policy_instruction(
+					&program,
+					&seller.pubkey(),
+					&section,
+					1,
+					0,
+					starts_at,
+					ends_at,
+					0,
+					0,
+					rules_digest,
+				),
+				&[&seller],
+			)
+			.expect("owner publishes a colour-canvas policy");
+		let configured = program.account(&section).expect("configured policy");
+		assert_eq!(u64_at(&configured.data, 267), 1);
+		assert_eq!(i64_at(&configured.data, 275), starts_at);
+		assert_eq!(i64_at(&configured.data, 283), ends_at);
+		assert_eq!(&configured.data[307..339], &rules_digest);
+		assert_eq!(configured.data[339], SECTION_MODE_COLOUR_CANVAS);
+		assert_eq!(configured.data[340], SECTION_PALETTE_DEFAULT);
+		assert_eq!(configured.data[341], SECTION_REWARD_POLICY_NONE);
+
+		let stale_update = program
+			.send_with_signers(
+				configure_section_policy_instruction(
+					&program,
+					&seller.pubkey(),
+					&section,
+					1,
+					0,
+					starts_at,
+					ends_at,
+					0,
+					0,
+					rules_digest,
+				),
+				&[&seller],
+			)
+			.expect_err("a stale policy version cannot overwrite current terms");
+		assert_custom_error(&stale_update, BitflipError::SectionPolicyChanged);
+		let live_update = program
+			.send_with_signers(
+				configure_section_policy_instruction(
+					&program,
+					&seller.pubkey(),
+					&section,
+					1,
+					1,
+					starts_at,
+					ends_at,
+					0,
+					0,
+					[8; 32],
+				),
+				&[&seller],
+			)
+			.expect_err("live policy terms cannot be changed by the owner");
+		assert_custom_error(&live_update, BitflipError::SectionPolicyLocked);
+		let early_seal = program
+			.send_with_signers(
+				seal_section_instruction(&program, &seller.pubkey(), &game, &section, 1),
+				&[&seller],
+			)
+			.expect_err("an owner cannot terminate a live round by sealing its section");
+		assert_custom_error(&early_seal, BitflipError::SectionPolicyLocked);
+
+		let stale_flip = program
+			.send_with_signers(
+				flip_pixels_instruction(
+					&program,
+					[
+						&seller.pubkey(),
+						&config,
+						&game,
+						&section,
+						&bit_mint.pubkey(),
+					],
+					&[(5, 5)],
+					TestFlipLimits {
+						section_index: 1,
+						..TestFlipLimits::full_reward(1)
+					},
+				),
+				&[&seller],
+			)
+			.expect_err("a flip must bind the policy version shown to the player");
+		assert_custom_error(&stale_flip, BitflipError::SectionPolicyChanged);
+		program
+			.send_with_signers(
+				flip_pixels_instruction_with_policy(
+					&program,
+					[
+						&seller.pubkey(),
+						&config,
+						&game,
+						&section,
+						&bit_mint.pubkey(),
+					],
+					&[(5, 5)],
+					TestFlipLimits {
+						section_index: 1,
+						..TestFlipLimits::full_reward(1)
+					},
+					1,
+				),
+				&[&seller],
+			)
+			.expect("the current policy version permits the paid flip");
+
+		program
+			.send_with_signers(
+				list_section_instruction(
+					&program,
+					&seller.pubkey(),
+					&game,
+					&section,
+					1,
+					SALE_PRICE,
+				),
+				&[&seller],
+			)
+			.expect("list a section with a live policy");
+		program
+			.send_with_signers(
+				purchase_section_instruction(
+					&program,
+					&buyer.pubkey(),
+					&seller.pubkey(),
+					&game,
+					&section,
+					1,
+					SALE_PRICE,
+				),
+				&[&buyer],
+			)
+			.expect("sell the section without changing campaign terms");
+		let sold = program.account(&section).expect("sold policy section");
+		assert_eq!(u64_at(&sold.data, 267), 1);
+		assert_eq!(i64_at(&sold.data, 275), starts_at);
+		assert_eq!(i64_at(&sold.data, 283), ends_at);
+		assert_eq!(&sold.data[307..339], &rules_digest);
+		let buyer_update = program
+			.send_with_signers(
+				configure_section_policy_instruction(
+					&program,
+					&buyer.pubkey(),
+					&section,
+					1,
+					1,
+					starts_at,
+					ends_at,
+					0,
+					0,
+					[9; 32],
+				),
+				&[&buyer],
+			)
+			.expect_err("a buyer inherits rather than rewrites a live policy");
+		assert_custom_error(&buyer_update, BitflipError::SectionPolicyLocked);
 
 		program.stop().expect("stop isolated program test");
 	});

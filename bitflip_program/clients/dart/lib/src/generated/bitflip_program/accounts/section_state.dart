@@ -42,6 +42,15 @@ class SectionState {
     required this.postedPriceLamports,
     required this.protocolFeeLamports,
     required this.ownerFeeLamports,
+    required this.policyVersion,
+    required this.policyStartsAt,
+    required this.policyEndsAt,
+    required this.policyEntryPriceTokens,
+    required this.policyRewardPerActionTokens,
+    required this.policyRulesDigest,
+    required this.policyMode,
+    required this.policyPaletteId,
+    required this.policyRewardPolicy,
     required this.pixels,
   }) :
       discriminator = 3;
@@ -73,6 +82,15 @@ class SectionState {
   final BigInt postedPriceLamports;
   final BigInt protocolFeeLamports;
   final BigInt ownerFeeLamports;
+  final BigInt policyVersion;
+  final BigInt policyStartsAt;
+  final BigInt policyEndsAt;
+  final BigInt policyEntryPriceTokens;
+  final BigInt policyRewardPerActionTokens;
+  final Uint8List policyRulesDigest;
+  final int policyMode;
+  final int policyPaletteId;
+  final int policyRewardPolicy;
   final Uint8List pixels;
 
   @override
@@ -107,13 +125,22 @@ class SectionState {
           postedPriceLamports == other.postedPriceLamports &&
           protocolFeeLamports == other.protocolFeeLamports &&
           ownerFeeLamports == other.ownerFeeLamports &&
+          policyVersion == other.policyVersion &&
+          policyStartsAt == other.policyStartsAt &&
+          policyEndsAt == other.policyEndsAt &&
+          policyEntryPriceTokens == other.policyEntryPriceTokens &&
+          policyRewardPerActionTokens == other.policyRewardPerActionTokens &&
+          policyRulesDigest == other.policyRulesDigest &&
+          policyMode == other.policyMode &&
+          policyPaletteId == other.policyPaletteId &&
+          policyRewardPolicy == other.policyRewardPolicy &&
           pixels == other.pixels;
 
   @override
-  int get hashCode => Object.hashAll([discriminator, owner, assetId, merkleTree, bitVault, gameIndex, sectionIndex, status, bump, onPixels, leafIndex, flipCount, revision, lastFlipAt, salePriceLamports, economyLaunchedAt, economyWindowStartedAt, economyLastUpdatedAt, economyWindowId, economyWindowTargetTokens, economyWindowRewardedTokens, emittedTokens, rewardPoolTokens, controllerPriceLamports, postedPriceLamports, protocolFeeLamports, ownerFeeLamports, pixels]);
+  int get hashCode => Object.hashAll([discriminator, owner, assetId, merkleTree, bitVault, gameIndex, sectionIndex, status, bump, onPixels, leafIndex, flipCount, revision, lastFlipAt, salePriceLamports, economyLaunchedAt, economyWindowStartedAt, economyLastUpdatedAt, economyWindowId, economyWindowTargetTokens, economyWindowRewardedTokens, emittedTokens, rewardPoolTokens, controllerPriceLamports, postedPriceLamports, protocolFeeLamports, ownerFeeLamports, policyVersion, policyStartsAt, policyEndsAt, policyEntryPriceTokens, policyRewardPerActionTokens, policyRulesDigest, policyMode, policyPaletteId, policyRewardPolicy, pixels]);
 
   @override
-  String toString() => 'SectionState(discriminator: $discriminator, owner: $owner, assetId: $assetId, merkleTree: $merkleTree, bitVault: $bitVault, gameIndex: $gameIndex, sectionIndex: $sectionIndex, status: $status, bump: $bump, onPixels: $onPixels, leafIndex: $leafIndex, flipCount: $flipCount, revision: $revision, lastFlipAt: $lastFlipAt, salePriceLamports: $salePriceLamports, economyLaunchedAt: $economyLaunchedAt, economyWindowStartedAt: $economyWindowStartedAt, economyLastUpdatedAt: $economyLastUpdatedAt, economyWindowId: $economyWindowId, economyWindowTargetTokens: $economyWindowTargetTokens, economyWindowRewardedTokens: $economyWindowRewardedTokens, emittedTokens: $emittedTokens, rewardPoolTokens: $rewardPoolTokens, controllerPriceLamports: $controllerPriceLamports, postedPriceLamports: $postedPriceLamports, protocolFeeLamports: $protocolFeeLamports, ownerFeeLamports: $ownerFeeLamports, pixels: $pixels)';
+  String toString() => 'SectionState(discriminator: $discriminator, owner: $owner, assetId: $assetId, merkleTree: $merkleTree, bitVault: $bitVault, gameIndex: $gameIndex, sectionIndex: $sectionIndex, status: $status, bump: $bump, onPixels: $onPixels, leafIndex: $leafIndex, flipCount: $flipCount, revision: $revision, lastFlipAt: $lastFlipAt, salePriceLamports: $salePriceLamports, economyLaunchedAt: $economyLaunchedAt, economyWindowStartedAt: $economyWindowStartedAt, economyLastUpdatedAt: $economyLastUpdatedAt, economyWindowId: $economyWindowId, economyWindowTargetTokens: $economyWindowTargetTokens, economyWindowRewardedTokens: $economyWindowRewardedTokens, emittedTokens: $emittedTokens, rewardPoolTokens: $rewardPoolTokens, controllerPriceLamports: $controllerPriceLamports, postedPriceLamports: $postedPriceLamports, protocolFeeLamports: $protocolFeeLamports, ownerFeeLamports: $ownerFeeLamports, policyVersion: $policyVersion, policyStartsAt: $policyStartsAt, policyEndsAt: $policyEndsAt, policyEntryPriceTokens: $policyEntryPriceTokens, policyRewardPerActionTokens: $policyRewardPerActionTokens, policyRulesDigest: $policyRulesDigest, policyMode: $policyMode, policyPaletteId: $policyPaletteId, policyRewardPolicy: $policyRewardPolicy, pixels: $pixels)';
 }
 
 
@@ -146,6 +173,15 @@ Encoder<SectionState> getSectionStateEncoder() {
     ('postedPriceLamports', getU64Encoder()),
     ('protocolFeeLamports', getU64Encoder()),
     ('ownerFeeLamports', getU64Encoder()),
+    ('policyVersion', getU64Encoder()),
+    ('policyStartsAt', getI64Encoder()),
+    ('policyEndsAt', getI64Encoder()),
+    ('policyEntryPriceTokens', getU64Encoder()),
+    ('policyRewardPerActionTokens', getU64Encoder()),
+    ('policyRulesDigest', fixEncoderSize(getBytesEncoder(), 32, allowTruncation: false)),
+    ('policyMode', getU8Encoder()),
+    ('policyPaletteId', getU8Encoder()),
+    ('policyRewardPolicy', getU8Encoder()),
     ('pixels', fixEncoderSize(getBytesEncoder(), 512, allowTruncation: false)),
   ]);
 
@@ -179,6 +215,15 @@ Encoder<SectionState> getSectionStateEncoder() {
       'postedPriceLamports': value.postedPriceLamports,
       'protocolFeeLamports': value.protocolFeeLamports,
       'ownerFeeLamports': value.ownerFeeLamports,
+      'policyVersion': value.policyVersion,
+      'policyStartsAt': value.policyStartsAt,
+      'policyEndsAt': value.policyEndsAt,
+      'policyEntryPriceTokens': value.policyEntryPriceTokens,
+      'policyRewardPerActionTokens': value.policyRewardPerActionTokens,
+      'policyRulesDigest': value.policyRulesDigest,
+      'policyMode': value.policyMode,
+      'policyPaletteId': value.policyPaletteId,
+      'policyRewardPolicy': value.policyRewardPolicy,
       'pixels': value.pixels,
     },
   );
@@ -213,6 +258,15 @@ Decoder<SectionState> getSectionStateDecoder() {
     ('postedPriceLamports', getU64Decoder()),
     ('protocolFeeLamports', getU64Decoder()),
     ('ownerFeeLamports', getU64Decoder()),
+    ('policyVersion', getU64Decoder()),
+    ('policyStartsAt', getI64Decoder()),
+    ('policyEndsAt', getI64Decoder()),
+    ('policyEntryPriceTokens', getU64Decoder()),
+    ('policyRewardPerActionTokens', getU64Decoder()),
+    ('policyRulesDigest', fixDecoderSize(getBytesDecoder(), 32)),
+    ('policyMode', getU8Decoder()),
+    ('policyPaletteId', getU8Decoder()),
+    ('policyRewardPolicy', getU8Decoder()),
     ('pixels', fixDecoderSize(getBytesDecoder(), 512)),
   ]);
 
@@ -261,6 +315,15 @@ Decoder<SectionState> getSectionStateDecoder() {
       postedPriceLamports: map['postedPriceLamports']! as BigInt,
       protocolFeeLamports: map['protocolFeeLamports']! as BigInt,
       ownerFeeLamports: map['ownerFeeLamports']! as BigInt,
+      policyVersion: map['policyVersion']! as BigInt,
+      policyStartsAt: map['policyStartsAt']! as BigInt,
+      policyEndsAt: map['policyEndsAt']! as BigInt,
+      policyEntryPriceTokens: map['policyEntryPriceTokens']! as BigInt,
+      policyRewardPerActionTokens: map['policyRewardPerActionTokens']! as BigInt,
+      policyRulesDigest: map['policyRulesDigest']! as Uint8List,
+      policyMode: map['policyMode']! as int,
+      policyPaletteId: map['policyPaletteId']! as int,
+      policyRewardPolicy: map['policyRewardPolicy']! as int,
       pixels: map['pixels']! as Uint8List,
       ),
       newOffset,

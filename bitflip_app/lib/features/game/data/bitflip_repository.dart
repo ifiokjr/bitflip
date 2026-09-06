@@ -5,6 +5,7 @@ import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
 import 'package:bitflip_app/features/game/domain/section_economy.dart';
+import 'package:bitflip_app/features/game/domain/section_policy.dart';
 import 'package:bitflip_program/bitflip_program.dart';
 import 'package:bitflip_server_client/bitflip_server_client.dart' as serverpod;
 import 'package:solana_kit/solana_kit.dart';
@@ -30,6 +31,10 @@ abstract interface class BitflipRepository {
   Future<String> cancelSectionListing(GameSnapshot snapshot);
   Future<String> purchaseSection(GameSnapshot snapshot);
   Future<String> withdrawSectionOwnerFees(GameSnapshot snapshot);
+  Future<String> configureSectionPolicy(
+    GameSnapshot snapshot,
+    SectionPolicyDraft policy,
+  );
   Future<String> flipPixels(
     GameSnapshot snapshot,
     List<PixelCoordinate> coordinates,
@@ -360,6 +365,32 @@ final class SolanaBitflipRepository implements BitflipRepository {
   }
 
   @override
+  Future<String> configureSectionPolicy(
+    GameSnapshot snapshot,
+    SectionPolicyDraft policy,
+  ) async {
+    final owner = _requireWalletAddress();
+    final (_, section) = await _gameAndSectionAddresses(snapshot);
+    final instruction = getConfigureSectionPolicyInstruction(
+      programAddress: bitflipProgramProgramAddress,
+      owner: owner,
+      section: section,
+      gameIndex: snapshot.gameIndex,
+      sectionIndex: snapshot.section.index,
+      expectedPolicyVersion: snapshot.section.policy?.version ?? BigInt.zero,
+      mode: policy.mode.code,
+      paletteId: 0,
+      rewardPolicy: SectionRewardPolicy.none.code,
+      startsAt: policy.startsAtUnixSeconds,
+      endsAt: policy.endsAtUnixSeconds,
+      entryPriceTokens: BigInt.zero,
+      rewardPerActionTokens: BigInt.zero,
+      rulesDigest: Uint8List.fromList(policy.rulesDigest),
+    );
+    return _send(instruction, owner);
+  }
+
+  @override
   Future<String> flipPixels(
     GameSnapshot snapshot,
     List<PixelCoordinate> coordinates,
@@ -446,6 +477,7 @@ final class SolanaBitflipRepository implements BitflipRepository {
       sectionIndex: snapshot.section.index,
       count: coordinates.length,
       coordinates: packedCoordinates,
+      expectedPolicyVersion: snapshot.section.policy?.version ?? BigInt.zero,
       expectedWindowId: quote.windowId,
       maximumUnitPriceLamports: quote.unitPriceLamports,
       maximumTotalPriceLamports: quote.totalPriceLamports,
@@ -621,6 +653,17 @@ final class SolanaBitflipRepository implements BitflipRepository {
         postedPriceLamports: data.postedPriceLamports,
         protocolFeeLamports: data.protocolFeeLamports,
         ownerFeeLamports: data.ownerFeeLamports,
+      ),
+      policy: SectionPolicySnapshot(
+        version: data.policyVersion,
+        startsAtUnixSeconds: data.policyStartsAt,
+        endsAtUnixSeconds: data.policyEndsAt,
+        entryPriceTokens: data.policyEntryPriceTokens,
+        rewardPerActionTokens: data.policyRewardPerActionTokens,
+        rulesDigest: data.policyRulesDigest,
+        mode: SectionPolicyMode.fromCode(data.policyMode),
+        paletteId: data.policyPaletteId,
+        rewardPolicy: SectionRewardPolicy.fromCode(data.policyRewardPolicy),
       ),
     );
   }

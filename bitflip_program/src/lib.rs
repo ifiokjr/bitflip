@@ -63,12 +63,18 @@ pub const DEFAULT_MAX_FLIP_FEE_LAMPORTS: u64 = 1_000_000;
 pub const DEFAULT_UNLOCK_INTERVAL_SECONDS: u32 = 3_600;
 pub const DEFAULT_EARLY_UNLOCK_FLIPS: u32 = 1_024;
 
-pub const CONFIG_VERSION: u8 = 5;
+pub const CONFIG_VERSION: u8 = 6;
 pub const GAME_STATUS_LIVE: u8 = 1;
 pub const GAME_STATUS_CLAIMS_COMPLETE: u8 = 2;
 pub const SECTION_STATUS_ACTIVE: u8 = 1;
 pub const SECTION_STATUS_SEALED: u8 = 2;
 pub const SECTION_STATUS_MINTED: u8 = 3;
+pub const SECTION_MODE_OPEN_CANVAS: u8 = 0;
+pub const SECTION_MODE_COLOUR_CANVAS: u8 = 1;
+pub const SECTION_PALETTE_DEFAULT: u8 = 0;
+pub const SECTION_REWARD_POLICY_NONE: u8 = 0;
+pub const MAX_SECTION_POLICY_DURATION_SECONDS: u64 = 30 * 24 * 60 * 60;
+pub const SECTION_POLICY_START_GRACE_SECONDS: i64 = 60;
 
 const CONFIG_SEED: &[u8] = b"config";
 const GAME_SEED: &[u8] = b"game";
@@ -109,6 +115,9 @@ pub enum BitflipError {
 	StalePriceWindow = 28,
 	InsufficientReward = 29,
 	NoOwnerFees = 30,
+	InvalidSectionPolicy = 31,
+	SectionPolicyLocked = 32,
+	SectionPolicyChanged = 33,
 }
 
 #[discriminator]
@@ -129,6 +138,7 @@ pub enum BitflipInstruction {
 	ConfigureBitCustody = 13,
 	FundSectionVault = 14,
 	WithdrawSectionOwnerFees = 15,
+	ConfigureSectionPolicy = 16,
 }
 
 #[discriminator]
@@ -216,6 +226,15 @@ pub struct SectionState {
 	pub posted_price_lamports: u64,
 	pub protocol_fee_lamports: u64,
 	pub owner_fee_lamports: u64,
+	pub policy_version: u64,
+	pub policy_starts_at: i64,
+	pub policy_ends_at: i64,
+	pub policy_entry_price_tokens: u64,
+	pub policy_reward_per_action_tokens: u64,
+	pub policy_rules_digest: [u8; 32],
+	pub policy_mode: u8,
+	pub policy_palette_id: u8,
+	pub policy_reward_policy: u8,
 	pub pixels: [u8; 512],
 }
 
@@ -266,6 +285,7 @@ pub struct FlipPixelsInstruction {
 	pub section_index: u8,
 	pub count: u8,
 	pub coordinates: [u8; 32],
+	pub expected_policy_version: u64,
 	pub expected_window_id: u64,
 	pub maximum_unit_price_lamports: u64,
 	pub maximum_total_price_lamports: u64,
@@ -327,6 +347,21 @@ pub struct FundSectionVaultInstruction {
 pub struct WithdrawSectionOwnerFeesInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
+}
+
+#[instruction(discriminator = BitflipInstruction::ConfigureSectionPolicy)]
+pub struct ConfigureSectionPolicyInstruction {
+	pub game_index: u8,
+	pub section_index: u8,
+	pub expected_policy_version: u64,
+	pub mode: u8,
+	pub palette_id: u8,
+	pub reward_policy: u8,
+	pub starts_at: i64,
+	pub ends_at: i64,
+	pub entry_price_tokens: u64,
+	pub reward_per_action_tokens: u64,
+	pub rules_digest: [u8; 32],
 }
 
 #[derive(Accounts, Debug)]
@@ -459,6 +494,12 @@ pub struct WithdrawSectionOwnerFeesAccounts<'a> {
 	pub section: &'a mut AccountView,
 }
 
+#[derive(Accounts, Debug)]
+pub struct ConfigureSectionPolicyAccounts<'a> {
+	pub owner: &'a AccountView,
+	pub section: &'a mut AccountView,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct PixelLocation {
 	byte_index: usize,
@@ -499,6 +540,53 @@ fn validate_flip_coordinates(
 				return Err(BitflipError::DuplicateCoordinate.into());
 			}
 		}
+	}
+
+	Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn validate_section_policy(
+	mode: u8,
+	palette_id: u8,
+	reward_policy: u8,
+	starts_at: i64,
+	ends_at: i64,
+	entry_price_tokens: u64,
+	reward_per_action_tokens: u64,
+	rules_digest: &[u8; 32],
+	now: i64,
+) -> ProgramResult {
+	let duration = ends_at
+		.checked_sub(starts_at)
+		.and_then(|value| u64::try_from(value).ok())
+		.ok_or(BitflipError::InvalidSectionPolicy)?;
+	let mode_is_allowed = mode == SECTION_MODE_OPEN_CANVAS || mode == SECTION_MODE_COLOUR_CANVAS;
+	let inactive_reward_terms = reward_policy == SECTION_REWARD_POLICY_NONE
+		&& entry_price_tokens == 0
+		&& reward_per_action_tokens == 0;
+	if !mode_is_allowed
+		|| palette_id != SECTION_PALETTE_DEFAULT
+		|| starts_at < now.saturating_sub(SECTION_POLICY_START_GRACE_SECONDS)
+		|| duration == 0
+		|| duration > MAX_SECTION_POLICY_DURATION_SECONDS
+		|| !inactive_reward_terms
+		|| rules_digest.iter().all(|byte| *byte == 0)
+	{
+		return Err(BitflipError::InvalidSectionPolicy.into());
+	}
+
+	Ok(())
+}
+
+fn section_policy_is_live(section: &SectionStateZc, now: i64) -> bool {
+	let starts_at = section.policy_starts_at.get();
+	starts_at != 0 && now >= starts_at && now < section.policy_ends_at.get()
+}
+
+fn assert_section_policy_version(section: &SectionStateZc, expected_version: u64) -> ProgramResult {
+	if section.policy_version.get() != expected_version {
+		return Err(BitflipError::SectionPolicyChanged.into());
 	}
 
 	Ok(())
@@ -830,6 +918,15 @@ fn initialize_section_state(
 	section.sale_price_lamports.set(0);
 	section.protocol_fee_lamports.set(0);
 	section.owner_fee_lamports.set(0);
+	section.policy_version.set(0);
+	section.policy_starts_at.set(0);
+	section.policy_ends_at.set(0);
+	section.policy_entry_price_tokens.set(0);
+	section.policy_reward_per_action_tokens.set(0);
+	section.policy_rules_digest.fill(0);
+	section.policy_mode = SECTION_MODE_OPEN_CANVAS;
+	section.policy_palette_id = SECTION_PALETTE_DEFAULT;
+	section.policy_reward_policy = SECTION_REWARD_POLICY_NONE;
 	store_section_controller_state(section, controller);
 	section.pixels.fill(0);
 }
@@ -1503,6 +1600,7 @@ impl<'a> ProcessAccountInfos<'a> for FlipPixelsAccounts<'a> {
 			if section.bit_vault == ZERO_ADDRESS {
 				return Err(BitflipError::CustodyNotConfigured.into());
 			}
+			assert_section_policy_version(&section, args.expected_policy_version.get())?;
 			(
 				section.bump,
 				section.owner,
@@ -1589,12 +1687,16 @@ impl<'a> ProcessAccountInfos<'a> for SealSectionAccounts<'a> {
 		assert_game_account(self.game, args.game_index)?;
 		assert_section_account(self.section, args.game_index, args.section_index)?;
 		self.owner.assert_signer()?;
+		let clock = Clock::get()?;
 
 		{
 			let section = self.section.as_account::<SectionState>(&ID)?;
 			self.owner.assert_address(&section.owner)?;
 			if section.status != SECTION_STATUS_ACTIVE {
 				return Err(BitflipError::SectionNotActive.into());
+			}
+			if section_policy_is_live(&section, clock.unix_timestamp) {
+				return Err(BitflipError::SectionPolicyLocked.into());
 			}
 		}
 
@@ -1905,6 +2007,57 @@ impl<'a> ProcessAccountInfos<'a> for WithdrawSectionOwnerFeesAccounts<'a> {
 	}
 }
 
+impl<'a> ProcessAccountInfos<'a> for ConfigureSectionPolicyAccounts<'a> {
+	fn process(self, data: &[u8]) -> ProgramResult {
+		let args = ConfigureSectionPolicyInstruction::try_from_bytes(data)?;
+		assert_section_account(self.section, args.game_index, args.section_index)?;
+		self.owner.assert_signer()?;
+		let clock = Clock::get()?;
+
+		{
+			let section = self.section.as_account::<SectionState>(&ID)?;
+			self.owner.assert_address(&section.owner)?;
+			if section.status != SECTION_STATUS_ACTIVE {
+				return Err(BitflipError::SectionNotActive.into());
+			}
+			assert_section_policy_version(&section, args.expected_policy_version.get())?;
+			if section_policy_is_live(&section, clock.unix_timestamp) {
+				return Err(BitflipError::SectionPolicyLocked.into());
+			}
+		}
+		validate_section_policy(
+			args.mode,
+			args.palette_id,
+			args.reward_policy,
+			args.starts_at.get(),
+			args.ends_at.get(),
+			args.entry_price_tokens.get(),
+			args.reward_per_action_tokens.get(),
+			&args.rules_digest,
+			clock.unix_timestamp,
+		)?;
+
+		let mut section = self.section.as_account_mut::<SectionState>(&ID)?;
+		let policy_version = section
+			.policy_version
+			.get()
+			.checked_add(1)
+			.ok_or(ProgramError::ArithmeticOverflow)?;
+		section.policy_version.set(policy_version);
+		section.policy_starts_at = args.starts_at;
+		section.policy_ends_at = args.ends_at;
+		section.policy_entry_price_tokens = args.entry_price_tokens;
+		section.policy_reward_per_action_tokens = args.reward_per_action_tokens;
+		section.policy_rules_digest = args.rules_digest;
+		section.policy_mode = args.mode;
+		section.policy_palette_id = args.palette_id;
+		section.policy_reward_policy = args.reward_policy;
+
+		log!("Bitflip section policy configured");
+		Ok(())
+	}
+}
+
 #[cfg(feature = "bpf-entrypoint")]
 pub mod entrypoint {
 	use super::*;
@@ -1968,6 +2121,9 @@ pub mod entrypoint {
 			BitflipInstruction::WithdrawSectionOwnerFees => {
 				WithdrawSectionOwnerFeesAccounts::try_from((program_id, accounts))?.process(data)
 			}
+			BitflipInstruction::ConfigureSectionPolicy => {
+				ConfigureSectionPolicyAccounts::try_from((program_id, accounts))?.process(data)
+			}
 		}
 	}
 }
@@ -2005,14 +2161,14 @@ mod tests {
 	fn account_layouts_are_stable() {
 		assert_eq!(ConfigState::SIZE, 237);
 		assert_eq!(GameState::SIZE, 123);
-		assert_eq!(SectionState::SIZE, 779);
+		assert_eq!(SectionState::SIZE, 854);
 	}
 
 	#[test]
 	fn instruction_layouts_are_stable() {
 		assert_eq!(InitializeConfigInstruction::SIZE, 2);
 		assert_eq!(InitializeGameInstruction::SIZE, 5);
-		assert_eq!(FlipPixelsInstruction::SIZE, 68);
+		assert_eq!(FlipPixelsInstruction::SIZE, 76);
 		assert_eq!(RecordSectionMintInstruction::SIZE, 103);
 		assert_eq!(ListSectionInstruction::SIZE, 11);
 		assert_eq!(CancelSectionListingInstruction::SIZE, 3);
@@ -2021,6 +2177,55 @@ mod tests {
 		assert_eq!(ConfigureBitCustodyInstruction::SIZE, 1);
 		assert_eq!(FundSectionVaultInstruction::SIZE, 3);
 		assert_eq!(WithdrawSectionOwnerFeesInstruction::SIZE, 3);
+		assert_eq!(ConfigureSectionPolicyInstruction::SIZE, 78);
+	}
+
+	#[test]
+	fn section_policies_are_bounded_and_cannot_advertise_unfunded_rewards() {
+		let now = 1_000;
+		let digest = [1; 32];
+		assert_eq!(
+			validate_section_policy(
+				SECTION_MODE_COLOUR_CANVAS,
+				SECTION_PALETTE_DEFAULT,
+				SECTION_REWARD_POLICY_NONE,
+				now,
+				now + 600,
+				0,
+				0,
+				&digest,
+				now,
+			),
+			Ok(())
+		);
+		assert_eq!(
+			validate_section_policy(
+				SECTION_MODE_COLOUR_CANVAS,
+				SECTION_PALETTE_DEFAULT,
+				SECTION_REWARD_POLICY_NONE,
+				now,
+				now + 600,
+				1,
+				1,
+				&digest,
+				now,
+			),
+			Err(BitflipError::InvalidSectionPolicy.into())
+		);
+		assert_eq!(
+			validate_section_policy(
+				SECTION_MODE_COLOUR_CANVAS,
+				SECTION_PALETTE_DEFAULT,
+				SECTION_REWARD_POLICY_NONE,
+				now,
+				now + i64::try_from(MAX_SECTION_POLICY_DURATION_SECONDS).unwrap() + 1,
+				0,
+				0,
+				&digest,
+				now,
+			),
+			Err(BitflipError::InvalidSectionPolicy.into())
+		);
 	}
 
 	#[test]
