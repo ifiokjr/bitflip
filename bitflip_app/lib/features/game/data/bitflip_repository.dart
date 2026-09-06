@@ -4,6 +4,7 @@ import 'package:bitflip_app/core/bitflip_config.dart';
 import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
+import 'package:bitflip_app/features/game/domain/pixel_colour_map.dart';
 import 'package:bitflip_app/features/game/domain/section_economy.dart';
 import 'package:bitflip_app/features/game/domain/section_policy.dart';
 import 'package:bitflip_program/bitflip_program.dart';
@@ -37,8 +38,9 @@ abstract interface class BitflipRepository {
   );
   Future<String> flipPixels(
     GameSnapshot snapshot,
-    List<PixelCoordinate> coordinates,
-  );
+    List<PixelCoordinate> coordinates, {
+    required SectionColour? colour,
+  });
   Future<String> sealSection(GameSnapshot snapshot);
   Future<BitflipMintResult> mintSection(GameSnapshot snapshot);
 }
@@ -159,7 +161,7 @@ final class SolanaBitflipRepository implements BitflipRepository {
     if (encodedPreviousSection != null) {
       _assertProgramOwner(encodedPreviousSection);
     }
-    final section = encodedSection == null
+    var section = encodedSection == null
         ? SectionSnapshot(
             index: sectionIndex,
             lifecycle: SectionLifecycle.unclaimed,
@@ -170,6 +172,27 @@ final class SolanaBitflipRepository implements BitflipRepository {
             salePriceLamports: BigInt.zero,
           )
         : _decodeSection(encodedSection, gameAddress: gameAddress);
+    if (section.policy?.mode == SectionPolicyMode.colourCanvas) {
+      try {
+        final canvas = await _serverpod.colourCanvas.load(
+          gameIndex: game.gameIndex,
+          sectionIndex: section.index,
+        );
+        if (BigInt.from(canvas.policyVersion) == section.policy?.version) {
+          section = section.copyWith(
+            colourMap: PixelColourMap.fromBytes(
+              canvas.colours.buffer.asUint8List(
+                canvas.colours.offsetInBytes,
+                canvas.colours.lengthInBytes,
+              ),
+            ),
+          );
+        }
+      } on Object {
+        // The coloured layer is optional and off-chain. Chain state remains
+        // usable if the rendering backend is temporarily unavailable.
+      }
+    }
 
     return GameSnapshot(
       gameIndex: game.gameIndex,
@@ -393,13 +416,26 @@ final class SolanaBitflipRepository implements BitflipRepository {
   @override
   Future<String> flipPixels(
     GameSnapshot snapshot,
-    List<PixelCoordinate> coordinates,
-  ) async {
+    List<PixelCoordinate> coordinates, {
+    required SectionColour? colour,
+  }) async {
     if (coordinates.isEmpty || coordinates.length > maxFlipBatch) {
       throw ArgumentError.value(coordinates.length, 'coordinates.length');
     }
     if (coordinates.toSet().length != coordinates.length) {
       throw ArgumentError('Pixel coordinates must be unique.');
+    }
+    final policy = snapshot.section.policy;
+    final now = BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000);
+    final colourModeIsLive =
+        policy?.mode == SectionPolicyMode.colourCanvas &&
+        (policy?.isLiveAt(now) ?? false);
+    if (colourModeIsLive != (colour != null)) {
+      throw StateError(
+        colourModeIsLive
+            ? 'Choose a colour before submitting this batch.'
+            : 'Colours are only valid during a live colour round.',
+      );
     }
     final player = _requireWalletAddress();
     final bitMintValue = snapshot.bitMint;
@@ -477,13 +513,30 @@ final class SolanaBitflipRepository implements BitflipRepository {
       sectionIndex: snapshot.section.index,
       count: coordinates.length,
       coordinates: packedCoordinates,
+      colour: colour?.code ?? 255,
       expectedPolicyVersion: snapshot.section.policy?.version ?? BigInt.zero,
       expectedWindowId: quote.windowId,
       maximumUnitPriceLamports: quote.unitPriceLamports,
       maximumTotalPriceLamports: quote.totalPriceLamports,
       minimumRewardTokens: quote.rewardTokens,
     );
-    return _sendAll([createPlayerBitAccount, flip], player);
+    final transactionSignature = await _sendAll([
+      createPlayerBitAccount,
+      flip,
+    ], player);
+    if (colour != null) {
+      try {
+        await _serverpod.colourCanvas.recordSignature(
+          transactionSignature: transactionSignature,
+          gameIndex: snapshot.gameIndex,
+          sectionIndex: snapshot.section.index,
+        );
+      } on Object {
+        // The paid flip is already confirmed. The signature can be indexed
+        // again, so an off-chain rendering failure must not mask its success.
+      }
+    }
+    return transactionSignature;
   }
 
   @override

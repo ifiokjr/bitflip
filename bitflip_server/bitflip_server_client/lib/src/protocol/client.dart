@@ -11,6 +11,8 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _ida;
+import 'package:bitflip_server_client/src/protocol/colour/colour_canvas_view.dart'
+    as _ifgy9s0u;
 import 'package:bitflip_server_client/src/protocol/minting/mint_challenge_view.dart'
     as _il1kyfw6;
 import 'package:bitflip_server_client/src/protocol/minting/mint_section_result.dart'
@@ -18,6 +20,40 @@ import 'package:bitflip_server_client/src/protocol/minting/mint_section_result.d
 import 'package:http/http.dart' as _i85jenna;
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
 import 'protocol.dart' as _il2as5qe;
+
+/// {@category Endpoint}
+class EndpointColourCanvas extends _isc.EndpointRef {
+  EndpointColourCanvas(_isc.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'colourCanvas';
+
+  _ida.Future<_ifgy9s0u.ColourCanvasView> load({
+    required int gameIndex,
+    required int sectionIndex,
+  }) => caller.callServerEndpoint<_ifgy9s0u.ColourCanvasView>(
+    'colourCanvas',
+    'load',
+    {
+      'gameIndex': gameIndex,
+      'sectionIndex': sectionIndex,
+    },
+  );
+
+  _ida.Future<_ifgy9s0u.ColourCanvasView> recordSignature({
+    required String transactionSignature,
+    required int gameIndex,
+    required int sectionIndex,
+  }) => caller.callServerEndpoint<_ifgy9s0u.ColourCanvasView>(
+    'colourCanvas',
+    'recordSignature',
+    {
+      'transactionSignature': transactionSignature,
+      'gameIndex': gameIndex,
+      'sectionIndex': sectionIndex,
+    },
+  );
+}
 
 /// {@category Endpoint}
 class EndpointMint extends _isc.EndpointRef {
@@ -86,13 +122,19 @@ class Client extends _isc.ServerpodClientShared {
              disconnectStreamsOnLostInternetConnection,
          httpClientOverride: httpClientOverride,
        ) {
+    colourCanvas = EndpointColourCanvas(this);
     mint = EndpointMint(this);
   }
+
+  late final EndpointColourCanvas colourCanvas;
 
   late final EndpointMint mint;
 
   @override
-  Map<String, _isc.EndpointRef> get endpointRefLookup => {'mint': mint};
+  Map<String, _isc.EndpointRef> get endpointRefLookup => {
+    'colourCanvas': colourCanvas,
+    'mint': mint,
+  };
 
   @override
   Map<String, _isc.ModuleEndpointCaller> get moduleLookup => {};

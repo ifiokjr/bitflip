@@ -331,6 +331,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get colourCanvasMode => '8-COLOUR CANVAS';
 
   @override
+  String get chooseColour => 'PAINT COLOUR';
+
+  @override
   String get noCampaign => 'No owner campaign is configured.';
 
   @override

@@ -25,8 +25,10 @@ use program_under_test::DEFAULT_UNLOCK_INTERVAL_SECONDS;
 use program_under_test::ECONOMY_VERSION;
 use program_under_test::GAME_STATUS_LIVE;
 use program_under_test::ID;
+use program_under_test::NO_FLIP_COLOUR;
 use program_under_test::SECTION_BYTES;
 use program_under_test::SECTION_MODE_COLOUR_CANVAS;
+use program_under_test::SECTION_PALETTE_COLOUR_COUNT;
 use program_under_test::SECTION_PALETTE_DEFAULT;
 use program_under_test::SECTION_REWARD_POLICY_NONE;
 use program_under_test::SECTION_STATUS_ACTIVE;
@@ -523,6 +525,7 @@ fn flip_pixels_instruction(
 		coordinates,
 		limits,
 		0,
+		NO_FLIP_COLOUR,
 	)
 }
 
@@ -532,13 +535,14 @@ fn flip_pixels_instruction_with_policy(
 	coordinates: &[(u8, u8)],
 	limits: TestFlipLimits,
 	expected_policy_version: u64,
+	colour: u8,
 ) -> pina_test::Instruction {
 	let mut packed_coordinates = [0; 32];
 	for (index, (x, y)) in coordinates.iter().enumerate() {
 		packed_coordinates[index * 2] = *x;
 		packed_coordinates[index * 2 + 1] = *y;
 	}
-	let mut data = Vec::with_capacity(76);
+	let mut data = Vec::with_capacity(77);
 	data.extend_from_slice(&[
 		BitflipInstruction::FlipPixels as u8,
 		limits.game_index,
@@ -546,6 +550,7 @@ fn flip_pixels_instruction_with_policy(
 		coordinates.len() as u8,
 	]);
 	data.extend_from_slice(&packed_coordinates);
+	data.push(colour);
 	data.extend_from_slice(&expected_policy_version.to_le_bytes());
 	data.extend_from_slice(&limits.expected_window_id.to_le_bytes());
 	data.extend_from_slice(&limits.maximum_unit_price_lamports.to_le_bytes());
@@ -2193,6 +2198,52 @@ fn section_policy_is_versioned_locked_while_live_and_survives_sale() {
 			)
 			.expect_err("a flip must bind the policy version shown to the player");
 		assert_custom_error(&stale_flip, BitflipError::SectionPolicyChanged);
+		let missing_colour = program
+			.send_with_signers(
+				flip_pixels_instruction_with_policy(
+					&program,
+					[
+						&seller.pubkey(),
+						&config,
+						&game,
+						&section,
+						&bit_mint.pubkey(),
+					],
+					&[(5, 5)],
+					TestFlipLimits {
+						section_index: 1,
+						..TestFlipLimits::full_reward(1)
+					},
+					1,
+					NO_FLIP_COLOUR,
+				),
+				&[&seller],
+			)
+			.expect_err("a live colour round requires an explicit palette colour");
+		assert_custom_error(&missing_colour, BitflipError::InvalidFlipColour);
+		let invalid_colour = program
+			.send_with_signers(
+				flip_pixels_instruction_with_policy(
+					&program,
+					[
+						&seller.pubkey(),
+						&config,
+						&game,
+						&section,
+						&bit_mint.pubkey(),
+					],
+					&[(5, 5)],
+					TestFlipLimits {
+						section_index: 1,
+						..TestFlipLimits::full_reward(1)
+					},
+					1,
+					SECTION_PALETTE_COLOUR_COUNT,
+				),
+				&[&seller],
+			)
+			.expect_err("a colour outside the committed palette is rejected");
+		assert_custom_error(&invalid_colour, BitflipError::InvalidFlipColour);
 		program
 			.send_with_signers(
 				flip_pixels_instruction_with_policy(
@@ -2210,6 +2261,7 @@ fn section_policy_is_versioned_locked_while_live_and_survives_sale() {
 						..TestFlipLimits::full_reward(1)
 					},
 					1,
+					3,
 				),
 				&[&seller],
 			)

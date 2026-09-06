@@ -13,9 +13,13 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod/protocol.dart' as _isp;
 import 'package:serverpod/serverpod.dart' as _is;
+import 'colour/colour_canvas_state.dart' as _iexdv2yq;
+import 'colour/colour_canvas_view.dart' as _i7up465y;
 import 'minting/mint_challenge.dart' as _ilupy5f9;
 import 'minting/mint_challenge_view.dart' as _i8azp9qk;
 import 'minting/mint_section_result.dart' as _icvzv24k;
+export 'colour/colour_canvas_state.dart';
+export 'colour/colour_canvas_view.dart';
 export 'minting/mint_challenge.dart';
 export 'minting/mint_challenge_view.dart';
 export 'minting/mint_section_result.dart';
@@ -28,6 +32,84 @@ class Protocol extends _is.DatabaseSerializationManager {
   static final Protocol _instance = Protocol._();
 
   static List<_isp.TableDefinition> get targetTableDefinitions => [
+    _isp.TableDefinition(
+      name: 'bitflip_colour_canvas_state',
+      dartName: 'ColourCanvasState',
+      schema: 'public',
+      module: 'bitflip_server',
+      columns: [
+        _isp.ColumnDefinition(
+          name: 'id',
+          columnType: _isp.ColumnType.uuid,
+          isNullable: false,
+          dartType: 'UuidValue?',
+          columnDefault: 'random_v7',
+        ),
+        _isp.ColumnDefinition(
+          name: 'gameIndex',
+          columnType: _isp.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int',
+        ),
+        _isp.ColumnDefinition(
+          name: 'sectionIndex',
+          columnType: _isp.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int',
+        ),
+        _isp.ColumnDefinition(
+          name: 'policyVersion',
+          columnType: _isp.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int',
+        ),
+        _isp.ColumnDefinition(
+          name: 'highestRevision',
+          columnType: _isp.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int',
+        ),
+        _isp.ColumnDefinition(
+          name: 'colours',
+          columnType: _isp.ColumnType.bytea,
+          isNullable: false,
+          dartType: 'dart:typed_data:ByteData',
+        ),
+        _isp.ColumnDefinition(
+          name: 'pixelRevisions',
+          columnType: _isp.ColumnType.bytea,
+          isNullable: false,
+          dartType: 'dart:typed_data:ByteData',
+        ),
+        _isp.ColumnDefinition(
+          name: 'updatedAt',
+          columnType: _isp.ColumnType.timestampWithoutTimeZone,
+          isNullable: false,
+          dartType: 'DateTime',
+        ),
+      ],
+      foreignKeys: [],
+      indexes: [
+        _isp.IndexDefinition(
+          indexName: 'bitflip_colour_canvas_section_idx',
+          tableSpace: null,
+          elements: [
+            _isp.IndexElementDefinition(
+              type: _isp.IndexElementDefinitionType.column,
+              definition: 'gameIndex',
+            ),
+            _isp.IndexElementDefinition(
+              type: _isp.IndexElementDefinitionType.column,
+              definition: 'sectionIndex',
+            ),
+          ],
+          type: 'btree',
+          isUnique: true,
+          isPrimary: false,
+        ),
+      ],
+      managed: true,
+    ),
     _isp.TableDefinition(
       name: 'bitflip_mint_challenge',
       dartName: 'MintChallenge',
@@ -168,6 +250,12 @@ class Protocol extends _is.DatabaseSerializationManager {
       }
     }
 
+    if (t == _iexdv2yq.ColourCanvasState) {
+      return _iexdv2yq.ColourCanvasState.fromJson(data) as T;
+    }
+    if (t == _i7up465y.ColourCanvasView) {
+      return _i7up465y.ColourCanvasView.fromJson(data) as T;
+    }
     if (t == _ilupy5f9.MintChallenge) {
       return _ilupy5f9.MintChallenge.fromJson(data) as T;
     }
@@ -176,6 +264,14 @@ class Protocol extends _is.DatabaseSerializationManager {
     }
     if (t == _icvzv24k.MintSectionResult) {
       return _icvzv24k.MintSectionResult.fromJson(data) as T;
+    }
+    if (t == _is.getType<_iexdv2yq.ColourCanvasState?>()) {
+      return (data != null ? _iexdv2yq.ColourCanvasState.fromJson(data) : null)
+          as T;
+    }
+    if (t == _is.getType<_i7up465y.ColourCanvasView?>()) {
+      return (data != null ? _i7up465y.ColourCanvasView.fromJson(data) : null)
+          as T;
     }
     if (t == _is.getType<_ilupy5f9.MintChallenge?>()) {
       return (data != null ? _ilupy5f9.MintChallenge.fromJson(data) : null)
@@ -197,6 +293,8 @@ class Protocol extends _is.DatabaseSerializationManager {
 
   static String? getClassNameForType(Type type) {
     return switch (type) {
+      _iexdv2yq.ColourCanvasState => 'ColourCanvasState',
+      _i7up465y.ColourCanvasView => 'ColourCanvasView',
       _ilupy5f9.MintChallenge => 'MintChallenge',
       _i8azp9qk.MintChallengeView => 'MintChallengeView',
       _icvzv24k.MintSectionResult => 'MintSectionResult',
@@ -217,6 +315,10 @@ class Protocol extends _is.DatabaseSerializationManager {
     }
 
     switch (data) {
+      case _iexdv2yq.ColourCanvasState():
+        return 'ColourCanvasState';
+      case _i7up465y.ColourCanvasView():
+        return 'ColourCanvasView';
       case _ilupy5f9.MintChallenge():
         return 'MintChallenge';
       case _i8azp9qk.MintChallengeView():
@@ -236,6 +338,12 @@ class Protocol extends _is.DatabaseSerializationManager {
     var dataClassName = data['className'];
     if (dataClassName is! String) {
       return super.deserializeByClassName(data);
+    }
+    if (dataClassName == 'ColourCanvasState') {
+      return deserialize<_iexdv2yq.ColourCanvasState>(data['data']);
+    }
+    if (dataClassName == 'ColourCanvasView') {
+      return deserialize<_i7up465y.ColourCanvasView>(data['data']);
     }
     if (dataClassName == 'MintChallenge') {
       return deserialize<_ilupy5f9.MintChallenge>(data['data']);
@@ -262,6 +370,8 @@ class Protocol extends _is.DatabaseSerializationManager {
       }
     }
     switch (t) {
+      case _iexdv2yq.ColourCanvasState:
+        return _iexdv2yq.ColourCanvasState.t;
       case _ilupy5f9.MintChallenge:
         return _ilupy5f9.MintChallenge.t;
     }

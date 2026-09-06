@@ -1,0 +1,7 @@
+class: ColourCanvasView
+fields:
+  gameIndex: int
+  sectionIndex: int
+  policyVersion: int
+  highestRevision: int
+  colours: ByteData

@@ -1,3 +1,6 @@
+colourCanvas:
+  - load:
+  - recordSignature:
 mint:
   - createChallenge:
   - mintSection:

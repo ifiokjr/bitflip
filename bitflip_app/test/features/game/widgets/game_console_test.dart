@@ -4,6 +4,7 @@ import 'package:bitflip_app/features/game/application/game_controller.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
 import 'package:bitflip_app/features/game/domain/section_economy.dart';
+import 'package:bitflip_app/features/game/domain/section_policy.dart';
 import 'package:bitflip_app/features/game/widgets/game_console.dart';
 import 'package:bitflip_app/l10n/generated/app_localizations.dart';
 import 'package:bitflip_app/testing/bitflip_test_keys.dart';
@@ -432,6 +433,7 @@ GameViewState _state(
     loadStatus:
         loadStatus ?? (isDemo ? GameLoadStatus.demo : GameLoadStatus.ready),
     walletChain: 'solana:devnet',
+    selectedColour: SectionColour.acid,
   );
 }
 

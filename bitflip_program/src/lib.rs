@@ -63,7 +63,7 @@ pub const DEFAULT_MAX_FLIP_FEE_LAMPORTS: u64 = 1_000_000;
 pub const DEFAULT_UNLOCK_INTERVAL_SECONDS: u32 = 3_600;
 pub const DEFAULT_EARLY_UNLOCK_FLIPS: u32 = 1_024;
 
-pub const CONFIG_VERSION: u8 = 6;
+pub const CONFIG_VERSION: u8 = 7;
 pub const GAME_STATUS_LIVE: u8 = 1;
 pub const GAME_STATUS_CLAIMS_COMPLETE: u8 = 2;
 pub const SECTION_STATUS_ACTIVE: u8 = 1;
@@ -72,6 +72,8 @@ pub const SECTION_STATUS_MINTED: u8 = 3;
 pub const SECTION_MODE_OPEN_CANVAS: u8 = 0;
 pub const SECTION_MODE_COLOUR_CANVAS: u8 = 1;
 pub const SECTION_PALETTE_DEFAULT: u8 = 0;
+pub const SECTION_PALETTE_COLOUR_COUNT: u8 = 8;
+pub const NO_FLIP_COLOUR: u8 = u8::MAX;
 pub const SECTION_REWARD_POLICY_NONE: u8 = 0;
 pub const MAX_SECTION_POLICY_DURATION_SECONDS: u64 = 30 * 24 * 60 * 60;
 pub const SECTION_POLICY_START_GRACE_SECONDS: i64 = 60;
@@ -118,6 +120,7 @@ pub enum BitflipError {
 	InvalidSectionPolicy = 31,
 	SectionPolicyLocked = 32,
 	SectionPolicyChanged = 33,
+	InvalidFlipColour = 34,
 }
 
 #[discriminator]
@@ -146,6 +149,11 @@ pub enum BitflipAccountType {
 	ConfigState = 1,
 	GameState = 2,
 	SectionState = 3,
+}
+
+#[discriminator]
+pub enum BitflipEvent {
+	ColourPixelsFlipped = 1,
 }
 
 #[account(discriminator = BitflipAccountType)]
@@ -285,11 +293,24 @@ pub struct FlipPixelsInstruction {
 	pub section_index: u8,
 	pub count: u8,
 	pub coordinates: [u8; 32],
+	pub colour: u8,
 	pub expected_policy_version: u64,
 	pub expected_window_id: u64,
 	pub maximum_unit_price_lamports: u64,
 	pub maximum_total_price_lamports: u64,
 	pub minimum_reward_tokens: u64,
+}
+
+#[event(discriminator = BitflipEvent, variant = ColourPixelsFlipped)]
+pub struct ColourPixelsFlippedEvent {
+	pub player: Address,
+	pub policy_version: u64,
+	pub revision: u64,
+	pub coordinates: [u8; 32],
+	pub game_index: u8,
+	pub section_index: u8,
+	pub count: u8,
+	pub colour: u8,
 }
 
 #[instruction(discriminator = BitflipInstruction::SealSection)]
@@ -592,6 +613,76 @@ fn assert_section_policy_version(section: &SectionStateZc, expected_version: u64
 	Ok(())
 }
 
+fn validate_flip_colour(section: &SectionStateZc, colour: u8, now: i64) -> ProgramResult {
+	let colour_mode_is_live =
+		section_policy_is_live(section, now) && section.policy_mode == SECTION_MODE_COLOUR_CANVAS;
+	let colour_is_valid = if colour_mode_is_live {
+		colour < SECTION_PALETTE_COLOUR_COUNT
+	} else {
+		colour == NO_FLIP_COLOUR
+	};
+	if !colour_is_valid {
+		return Err(BitflipError::InvalidFlipColour.into());
+	}
+
+	Ok(())
+}
+
+struct SectionFlipState {
+	bump: u8,
+	owner: Address,
+	vault: Address,
+	policy_version: u64,
+	controller: pricing::PriceControllerState,
+}
+
+fn section_flip_state(
+	section_account: &AccountView,
+	args: &FlipPixelsInstructionZc,
+	now: i64,
+) -> Result<SectionFlipState, ProgramError> {
+	let section = section_account.as_account::<SectionState>(&ID)?;
+	if section.status != SECTION_STATUS_ACTIVE {
+		return Err(BitflipError::SectionNotActive.into());
+	}
+	if section.bit_vault == ZERO_ADDRESS {
+		return Err(BitflipError::CustodyNotConfigured.into());
+	}
+	assert_section_policy_version(&section, args.expected_policy_version.get())?;
+	validate_flip_colour(&section, args.colour, now)?;
+
+	Ok(SectionFlipState {
+		bump: section.bump,
+		owner: section.owner,
+		vault: section.bit_vault,
+		policy_version: section.policy_version.get(),
+		controller: section_controller_state(&section),
+	})
+}
+
+fn emit_colour_pixels_flipped(
+	player: Address,
+	policy_version: u64,
+	revision: u64,
+	args: &FlipPixelsInstructionZc,
+) -> ProgramResult {
+	let mut data = [0; ColourPixelsFlippedEvent::SIZE];
+	{
+		let event = ColourPixelsFlippedEvent::initialize(&mut data)?;
+		event.player = player;
+		event.policy_version.set(policy_version);
+		event.revision.set(revision);
+		event.coordinates.copy_from_slice(&args.coordinates);
+		event.game_index = args.game_index;
+		event.section_index = args.section_index;
+		event.count = args.count;
+		event.colour = args.colour;
+	}
+	solana_program_log::log_data(&[&data]);
+
+	Ok(())
+}
+
 fn toggle_pixel(pixels: &mut [u8; SECTION_BYTES], x: u8, y: u8) -> Result<bool, ProgramError> {
 	let location = pixel_location(x, y)?;
 	pixels[location.byte_index] ^= location.mask;
@@ -800,7 +891,7 @@ fn store_paid_flip(
 	clock_timestamp: i64,
 	fee_split: pricing::FeeSplit,
 	controller: pricing::PriceControllerState,
-) -> ProgramResult {
+) -> Result<u64, ProgramError> {
 	let mut on_pixels = section.on_pixels.get();
 	for index in 0..usize::from(count) {
 		let offset = index * 2;
@@ -827,13 +918,12 @@ fn store_paid_flip(
 			.checked_add(u64::from(count))
 			.ok_or(ProgramError::ArithmeticOverflow)?,
 	);
-	section.revision.set(
-		section
-			.revision
-			.get()
-			.checked_add(1)
-			.ok_or(ProgramError::ArithmeticOverflow)?,
-	);
+	let revision = section
+		.revision
+		.get()
+		.checked_add(1)
+		.ok_or(ProgramError::ArithmeticOverflow)?;
+	section.revision.set(revision);
 	section.last_flip_at.set(clock_timestamp);
 	section.protocol_fee_lamports.set(
 		section
@@ -851,7 +941,7 @@ fn store_paid_flip(
 	);
 	store_section_controller_state(section, controller);
 
-	Ok(())
+	Ok(revision)
 }
 
 fn initialize_game_state(
@@ -1592,22 +1682,7 @@ impl<'a> ProcessAccountInfos<'a> for FlipPixelsAccounts<'a> {
 			return Err(BitflipError::GameNotStarted.into());
 		}
 
-		let (section_bump, section_owner, section_vault, mut controller) = {
-			let section = self.section.as_account::<SectionState>(&ID)?;
-			if section.status != SECTION_STATUS_ACTIVE {
-				return Err(BitflipError::SectionNotActive.into());
-			}
-			if section.bit_vault == ZERO_ADDRESS {
-				return Err(BitflipError::CustodyNotConfigured.into());
-			}
-			assert_section_policy_version(&section, args.expected_policy_version.get())?;
-			(
-				section.bump,
-				section.owner,
-				section.bit_vault,
-				section_controller_state(&section),
-			)
-		};
+		let mut section_state = section_flip_state(self.section, args, clock.unix_timestamp)?;
 		assert_flip_custody(
 			[
 				self.section,
@@ -1618,13 +1693,14 @@ impl<'a> ProcessAccountInfos<'a> for FlipPixelsAccounts<'a> {
 				self.token_program,
 			],
 			&bit_mint,
-			&section_vault,
-			controller.emitted_tokens,
+			&section_state.vault,
+			section_state.controller.emitted_tokens,
 			price_config.allocation_tokens,
 		)?;
 
 		let flip_count = u64::from(args.count);
-		let quote = controller
+		let quote = section_state
+			.controller
 			.execute(
 				&price_config,
 				controller_timestamp(clock.unix_timestamp)?,
@@ -1641,7 +1717,7 @@ impl<'a> ProcessAccountInfos<'a> for FlipPixelsAccounts<'a> {
 			return Err(BitflipError::InsufficientReward.into());
 		}
 		let fee_split = split_flip_fee(
-			&section_owner,
+			&section_state.owner,
 			self.game.address(),
 			quote.total_price_lamports,
 			owner_share_basis_points,
@@ -1663,18 +1739,27 @@ impl<'a> ProcessAccountInfos<'a> for FlipPixelsAccounts<'a> {
 			quote.reward_tokens,
 			args.game_index,
 			args.section_index,
-			section_bump,
+			section_state.bump,
 		)?;
 
 		let mut section = self.section.as_account_mut::<SectionState>(&ID)?;
-		store_paid_flip(
+		let revision = store_paid_flip(
 			&mut section,
 			args.count,
 			&args.coordinates,
 			clock.unix_timestamp,
 			fee_split,
-			controller,
+			section_state.controller,
 		)?;
+		drop(section);
+		if args.colour != NO_FLIP_COLOUR {
+			emit_colour_pixels_flipped(
+				*self.player.address(),
+				section_state.policy_version,
+				revision,
+				args,
+			)?;
+		}
 
 		log!("Bitflip pixels toggled and BIT distributed");
 		Ok(())
@@ -2168,7 +2253,7 @@ mod tests {
 	fn instruction_layouts_are_stable() {
 		assert_eq!(InitializeConfigInstruction::SIZE, 2);
 		assert_eq!(InitializeGameInstruction::SIZE, 5);
-		assert_eq!(FlipPixelsInstruction::SIZE, 76);
+		assert_eq!(FlipPixelsInstruction::SIZE, 77);
 		assert_eq!(RecordSectionMintInstruction::SIZE, 103);
 		assert_eq!(ListSectionInstruction::SIZE, 11);
 		assert_eq!(CancelSectionListingInstruction::SIZE, 3);
@@ -2178,6 +2263,31 @@ mod tests {
 		assert_eq!(FundSectionVaultInstruction::SIZE, 3);
 		assert_eq!(WithdrawSectionOwnerFeesInstruction::SIZE, 3);
 		assert_eq!(ConfigureSectionPolicyInstruction::SIZE, 78);
+		assert_eq!(ColourPixelsFlippedEvent::SIZE, 85);
+	}
+
+	#[test]
+	fn colour_event_layout_is_cross_language_stable() {
+		let player = Address::new_from_array([9; ADDRESS_BYTES]);
+		let mut data = [0; ColourPixelsFlippedEvent::SIZE];
+		{
+			let event = ColourPixelsFlippedEvent::initialize(&mut data).expect("initialize event");
+			event.player = player;
+			event.policy_version.set(7);
+			event.revision.set(42);
+			event.coordinates[0..4].copy_from_slice(&[1, 2, 63, 0]);
+			event.game_index = 3;
+			event.section_index = 255;
+			event.count = 2;
+			event.colour = 6;
+		}
+
+		assert_eq!(data[0], BitflipEvent::ColourPixelsFlipped as u8);
+		assert_eq!(&data[1..33], player.as_ref());
+		assert_eq!(u64::from_le_bytes(data[33..41].try_into().unwrap()), 7);
+		assert_eq!(u64::from_le_bytes(data[41..49].try_into().unwrap()), 42);
+		assert_eq!(&data[49..53], &[1, 2, 63, 0]);
+		assert_eq!(&data[81..85], &[3, 255, 2, 6]);
 	}
 
 	#[test]

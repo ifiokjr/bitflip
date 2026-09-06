@@ -71,6 +71,8 @@ const int bitflipProgramErrorSectionPolicyLocked = 0x20; // 32
 
 const int bitflipProgramErrorSectionPolicyChanged = 0x21; // 33
 
+const int bitflipProgramErrorInvalidFlipColour = 0x22; // 34
+
 /// Map of error codes to human-readable messages.
 const Map<int, String> _bitflipProgramErrorMessages = {
     bitflipProgramErrorUnauthorized: '',
@@ -107,6 +109,7 @@ const Map<int, String> _bitflipProgramErrorMessages = {
     bitflipProgramErrorInvalidSectionPolicy: '',
     bitflipProgramErrorSectionPolicyLocked: '',
     bitflipProgramErrorSectionPolicyChanged: '',
+    bitflipProgramErrorInvalidFlipColour: '',
 };
 
 /// Get the error message for a BitflipProgram program error code.

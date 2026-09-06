@@ -13,6 +13,8 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _ida;
 import 'dart:io' as _idi;
+import 'package:bitflip_server_server/src/generated/colour/colour_canvas_view.dart'
+    as _ict6a318;
 import 'package:bitflip_server_server/src/generated/minting/mint_challenge_view.dart'
     as _i5q6wjqb;
 import 'package:bitflip_server_server/src/generated/minting/mint_section_result.dart'
@@ -147,6 +149,8 @@ void withServerpod(
 }
 
 class TestEndpoints {
+  late final _ColourCanvasEndpoint colourCanvas;
+
   late final _MintEndpoint mint;
 }
 
@@ -157,10 +161,97 @@ class _InternalTestEndpoints extends TestEndpoints
     _is.SerializationManager serializationManager,
     _is.EndpointDispatch endpoints,
   ) {
+    colourCanvas = _ColourCanvasEndpoint(
+      endpoints,
+      serializationManager,
+    );
     mint = _MintEndpoint(
       endpoints,
       serializationManager,
     );
+  }
+}
+
+class _ColourCanvasEndpoint {
+  _ColourCanvasEndpoint(
+    this._endpointDispatch,
+    this._serializationManager,
+  );
+
+  final _is.EndpointDispatch _endpointDispatch;
+
+  final _is.SerializationManager _serializationManager;
+
+  _ida.Future<_ict6a318.ColourCanvasView> load(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required int gameIndex,
+    required int sectionIndex,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'colourCanvas',
+            method: 'load',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'colourCanvas',
+          methodName: 'load',
+          parameters: _ist.testObjectToJson({
+            'gameIndex': gameIndex,
+            'sectionIndex': sectionIndex,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ict6a318.ColourCanvasView>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_ict6a318.ColourCanvasView> recordSignature(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required String transactionSignature,
+    required int gameIndex,
+    required int sectionIndex,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'colourCanvas',
+            method: 'recordSignature',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'colourCanvas',
+          methodName: 'recordSignature',
+          parameters: _ist.testObjectToJson({
+            'transactionSignature': transactionSignature,
+            'gameIndex': gameIndex,
+            'sectionIndex': sectionIndex,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ict6a318.ColourCanvasView>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
   }
 }
 

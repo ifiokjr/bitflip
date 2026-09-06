@@ -2,6 +2,7 @@ import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/data/bitflip_repository.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
+import 'package:bitflip_app/features/game/domain/pixel_colour_map.dart';
 import 'package:bitflip_app/features/game/domain/section_policy.dart';
 
 final class FakeBitflipRepository implements BitflipRepository {
@@ -77,6 +78,7 @@ final class FakeBitflipRepository implements BitflipRepository {
   int sealCalls = 0;
   int loadCalls = 0;
   List<PixelCoordinate> lastFlips = const [];
+  SectionColour? lastColour;
   String? lastWalletId;
   BigInt? lastFundingLamports;
   BigInt? lastListingPriceLamports;
@@ -214,16 +216,22 @@ final class FakeBitflipRepository implements BitflipRepository {
   @override
   Future<String> flipPixels(
     GameSnapshot snapshot,
-    List<PixelCoordinate> coordinates,
-  ) async {
+    List<PixelCoordinate> coordinates, {
+    required SectionColour? colour,
+  }) async {
     flipCalls++;
     final error = flipError;
     if (error != null) throw error;
     lastFlips = List.unmodifiable(coordinates);
+    lastColour = colour;
     this.snapshot = this.snapshot.copyWith(
       totalFlips: this.snapshot.totalFlips + BigInt.from(coordinates.length),
       section: this.snapshot.section.copyWith(
         bitmap: this.snapshot.section.bitmap.toggled(coordinates),
+        colourMap: colour == null
+            ? this.snapshot.section.colourMap
+            : (this.snapshot.section.colourMap ?? PixelColourMap.empty())
+                  .painted(coordinates, colour),
         flipCount:
             this.snapshot.section.flipCount + BigInt.from(coordinates.length),
         revision: this.snapshot.section.revision + BigInt.one,

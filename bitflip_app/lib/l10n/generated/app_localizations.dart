@@ -652,6 +652,12 @@ abstract class AppLocalizations {
   /// **'8-COLOUR CANVAS'**
   String get colourCanvasMode;
 
+  /// No description provided for @chooseColour.
+  ///
+  /// In en, this message translates to:
+  /// **'PAINT COLOUR'**
+  String get chooseColour;
+
   /// No description provided for @noCampaign.
   ///
   /// In en, this message translates to:
