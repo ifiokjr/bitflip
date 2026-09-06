@@ -19,6 +19,7 @@ class SectionState {
     required this.owner,
     required this.assetId,
     required this.merkleTree,
+    required this.bitVault,
     required this.gameIndex,
     required this.sectionIndex,
     required this.status,
@@ -47,6 +48,7 @@ class SectionState {
   final Address owner;
   final Address assetId;
   final Address merkleTree;
+  final Address bitVault;
   final int gameIndex;
   final int sectionIndex;
   final int status;
@@ -78,6 +80,7 @@ class SectionState {
           owner == other.owner &&
           assetId == other.assetId &&
           merkleTree == other.merkleTree &&
+          bitVault == other.bitVault &&
           gameIndex == other.gameIndex &&
           sectionIndex == other.sectionIndex &&
           status == other.status &&
@@ -101,10 +104,10 @@ class SectionState {
           pixels == other.pixels;
 
   @override
-  int get hashCode => Object.hashAll([discriminator, owner, assetId, merkleTree, gameIndex, sectionIndex, status, bump, onPixels, leafIndex, flipCount, revision, lastFlipAt, salePriceLamports, economyLaunchedAt, economyWindowStartedAt, economyLastUpdatedAt, economyWindowId, economyWindowTargetTokens, economyWindowRewardedTokens, emittedTokens, rewardPoolTokens, controllerPriceLamports, postedPriceLamports, pixels]);
+  int get hashCode => Object.hashAll([discriminator, owner, assetId, merkleTree, bitVault, gameIndex, sectionIndex, status, bump, onPixels, leafIndex, flipCount, revision, lastFlipAt, salePriceLamports, economyLaunchedAt, economyWindowStartedAt, economyLastUpdatedAt, economyWindowId, economyWindowTargetTokens, economyWindowRewardedTokens, emittedTokens, rewardPoolTokens, controllerPriceLamports, postedPriceLamports, pixels]);
 
   @override
-  String toString() => 'SectionState(discriminator: $discriminator, owner: $owner, assetId: $assetId, merkleTree: $merkleTree, gameIndex: $gameIndex, sectionIndex: $sectionIndex, status: $status, bump: $bump, onPixels: $onPixels, leafIndex: $leafIndex, flipCount: $flipCount, revision: $revision, lastFlipAt: $lastFlipAt, salePriceLamports: $salePriceLamports, economyLaunchedAt: $economyLaunchedAt, economyWindowStartedAt: $economyWindowStartedAt, economyLastUpdatedAt: $economyLastUpdatedAt, economyWindowId: $economyWindowId, economyWindowTargetTokens: $economyWindowTargetTokens, economyWindowRewardedTokens: $economyWindowRewardedTokens, emittedTokens: $emittedTokens, rewardPoolTokens: $rewardPoolTokens, controllerPriceLamports: $controllerPriceLamports, postedPriceLamports: $postedPriceLamports, pixels: $pixels)';
+  String toString() => 'SectionState(discriminator: $discriminator, owner: $owner, assetId: $assetId, merkleTree: $merkleTree, bitVault: $bitVault, gameIndex: $gameIndex, sectionIndex: $sectionIndex, status: $status, bump: $bump, onPixels: $onPixels, leafIndex: $leafIndex, flipCount: $flipCount, revision: $revision, lastFlipAt: $lastFlipAt, salePriceLamports: $salePriceLamports, economyLaunchedAt: $economyLaunchedAt, economyWindowStartedAt: $economyWindowStartedAt, economyLastUpdatedAt: $economyLastUpdatedAt, economyWindowId: $economyWindowId, economyWindowTargetTokens: $economyWindowTargetTokens, economyWindowRewardedTokens: $economyWindowRewardedTokens, emittedTokens: $emittedTokens, rewardPoolTokens: $rewardPoolTokens, controllerPriceLamports: $controllerPriceLamports, postedPriceLamports: $postedPriceLamports, pixels: $pixels)';
 }
 
 
@@ -114,6 +117,7 @@ Encoder<SectionState> getSectionStateEncoder() {
     ('owner', getAddressEncoder()),
     ('assetId', getAddressEncoder()),
     ('merkleTree', getAddressEncoder()),
+    ('bitVault', getAddressEncoder()),
     ('gameIndex', getU8Encoder()),
     ('sectionIndex', getU8Encoder()),
     ('status', getU8Encoder()),
@@ -144,6 +148,7 @@ Encoder<SectionState> getSectionStateEncoder() {
       'owner': value.owner,
       'assetId': value.assetId,
       'merkleTree': value.merkleTree,
+      'bitVault': value.bitVault,
       'gameIndex': value.gameIndex,
       'sectionIndex': value.sectionIndex,
       'status': value.status,
@@ -175,6 +180,7 @@ Decoder<SectionState> getSectionStateDecoder() {
     ('owner', getAddressDecoder()),
     ('assetId', getAddressDecoder()),
     ('merkleTree', getAddressDecoder()),
+    ('bitVault', getAddressDecoder()),
     ('gameIndex', getU8Decoder()),
     ('sectionIndex', getU8Decoder()),
     ('status', getU8Decoder()),
@@ -220,6 +226,7 @@ Decoder<SectionState> getSectionStateDecoder() {
       owner: map['owner']! as Address,
       assetId: map['assetId']! as Address,
       merkleTree: map['merkleTree']! as Address,
+      bitVault: map['bitVault']! as Address,
       gameIndex: map['gameIndex']! as int,
       sectionIndex: map['sectionIndex']! as int,
       status: map['status']! as int,

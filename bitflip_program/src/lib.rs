@@ -62,7 +62,7 @@ pub const DEFAULT_MAX_FLIP_FEE_LAMPORTS: u64 = 1_000_000;
 pub const DEFAULT_UNLOCK_INTERVAL_SECONDS: u32 = 3_600;
 pub const DEFAULT_EARLY_UNLOCK_FLIPS: u32 = 1_024;
 
-pub const CONFIG_VERSION: u8 = 2;
+pub const CONFIG_VERSION: u8 = 3;
 pub const GAME_STATUS_LIVE: u8 = 1;
 pub const GAME_STATUS_CLAIMS_COMPLETE: u8 = 2;
 pub const SECTION_STATUS_ACTIVE: u8 = 1;
@@ -100,6 +100,11 @@ pub enum BitflipError {
 	OwnerChanged = 20,
 	InvalidControllerTimestamp = 21,
 	InvalidControllerState = 22,
+	CustodyAlreadyConfigured = 23,
+	CustodyNotConfigured = 24,
+	InvalidBitMint = 25,
+	InvalidBitTokenAccount = 26,
+	SectionVaultAlreadyFunded = 27,
 }
 
 #[discriminator]
@@ -117,6 +122,8 @@ pub enum BitflipInstruction {
 	CancelSectionListing = 10,
 	PurchaseSection = 11,
 	SettleSectionEconomy = 12,
+	ConfigureBitCustody = 13,
+	FundSectionVault = 14,
 }
 
 #[discriminator]
@@ -134,6 +141,8 @@ pub struct ConfigState {
 	pub pending_authority: Address,
 	pub treasury: Address,
 	pub collection_authority: Address,
+	pub bit_mint: Address,
+	pub bit_reserve: Address,
 	pub claim_price_lamports: u64,
 	pub flip_fee_lamports: u64,
 	pub minimum_flip_fee_lamports: u64,
@@ -179,6 +188,7 @@ pub struct SectionState {
 	pub owner: Address,
 	pub asset_id: Address,
 	pub merkle_tree: Address,
+	pub bit_vault: Address,
 	pub game_index: u8,
 	pub section_index: u8,
 	pub status: u8,
@@ -294,6 +304,15 @@ pub struct SettleSectionEconomyInstruction {
 	pub section_index: u8,
 }
 
+#[instruction(discriminator = BitflipInstruction::ConfigureBitCustody)]
+pub struct ConfigureBitCustodyInstruction {}
+
+#[instruction(discriminator = BitflipInstruction::FundSectionVault)]
+pub struct FundSectionVaultInstruction {
+	pub game_index: u8,
+	pub section_index: u8,
+}
+
 #[derive(Accounts, Debug)]
 pub struct InitializeConfigAccounts<'a> {
 	pub payer: &'a mut AccountView,
@@ -393,6 +412,28 @@ pub struct SettleSectionEconomyAccounts<'a> {
 	pub section: &'a mut AccountView,
 }
 
+#[derive(Accounts, Debug)]
+pub struct ConfigureBitCustodyAccounts<'a> {
+	pub authority: &'a AccountView,
+	pub config: &'a mut AccountView,
+	pub bit_mint: &'a AccountView,
+	pub bit_reserve: &'a AccountView,
+	pub token_program: &'a AccountView,
+}
+
+#[derive(Accounts, Debug)]
+pub struct FundSectionVaultAccounts<'a> {
+	pub funder: &'a mut AccountView,
+	pub config: &'a AccountView,
+	pub section: &'a mut AccountView,
+	pub bit_mint: &'a AccountView,
+	pub bit_reserve: &'a mut AccountView,
+	pub section_vault: &'a mut AccountView,
+	pub associated_token_program: &'a AccountView,
+	pub token_program: &'a AccountView,
+	pub system_program: &'a AccountView,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct PixelLocation {
 	byte_index: usize,
@@ -486,6 +527,9 @@ fn validate_configuration(
 
 fn assert_config_account(config: &AccountView) -> ProgramResult {
 	config.assert_not_empty()?.assert_type::<ConfigState>(&ID)?;
+	if config.as_account::<ConfigState>(&ID)?.version != CONFIG_VERSION {
+		return Err(BitflipError::InvalidConfiguration.into());
+	}
 	let seeds = ConfigState::seeds();
 	config.assert_seeds_with_bump(
 		&seeds
@@ -661,6 +705,7 @@ fn initialize_section_state(
 	section.owner = owner;
 	section.asset_id = ZERO_ADDRESS;
 	section.merkle_tree = ZERO_ADDRESS;
+	section.bit_vault = ZERO_ADDRESS;
 	section.game_index = game_index;
 	section.section_index = section_index;
 	section.status = SECTION_STATUS_ACTIVE;
@@ -689,6 +734,106 @@ fn transfer_lamports(
 	}
 	system_program.assert_address(&system::ID)?;
 	system::instructions::Transfer { from, to, lamports }.invoke()
+}
+
+fn assert_bit_mint(bit_mint: &AccountView, token_program: &Address) -> ProgramResult {
+	let mint = bit_mint
+		.as_token_mint_for_program(token_program)
+		.and_then(token::TokenMintRef::assert_no_extensions)
+		.map_err(|_| ProgramError::from(BitflipError::InvalidBitMint))?;
+
+	if !mint.is_initialized()
+		|| mint.decimals() != BIT_MINT_DECIMALS
+		|| mint.supply() != BIT_TOTAL_SUPPLY_TOKENS
+		|| mint.mint_authority().is_some()
+		|| mint.freeze_authority().is_some()
+	{
+		return Err(BitflipError::InvalidBitMint.into());
+	}
+
+	Ok(())
+}
+
+fn bit_token_account_balance(
+	account: &AccountView,
+	owner: &Address,
+	bit_mint: &Address,
+	token_program: &Address,
+) -> Result<u64, ProgramError> {
+	let token_account = account
+		.as_associated_token_account_checked(owner, bit_mint, token_program)
+		.and_then(|account| {
+			account.assert_extensions_allowed(&[token_2022::state::ExtensionType::ImmutableOwner])
+		})
+		.map_err(|_| ProgramError::from(BitflipError::InvalidBitTokenAccount))?;
+
+	if !token_account.is_initialized()
+		|| token_account.is_frozen()
+		|| token_account.is_native()
+		|| token_account.mint() != bit_mint
+		|| token_account.owner() != owner
+		|| token_account.delegate().is_some()
+		|| token_account.delegated_amount() != 0
+		|| token_account.close_authority().is_some()
+	{
+		return Err(BitflipError::InvalidBitTokenAccount.into());
+	}
+
+	Ok(token_account.amount())
+}
+
+fn transfer_section_allocation(
+	config: &AccountView,
+	bit_mint: &AccountView,
+	bit_reserve: &AccountView,
+	section_vault: &AccountView,
+	token_program_account: &AccountView,
+	config_bump: u8,
+) -> ProgramResult {
+	token_program_account.assert_address(&token_2022::ID)?;
+	let token_program = *token_program_account.address();
+	let reserve_amount_before = {
+		let reserve = bit_reserve.as_token_account_for_program(&token_program)?;
+		reserve.amount()
+	};
+	let destination_amount_before = {
+		let destination = section_vault.as_token_account_for_program(&token_program)?;
+		destination.amount()
+	};
+	let config_seeds = ConfigState::seeds().with_bump(config_bump);
+	let config_signer = config_seeds.to_signer();
+	let signers = [config_signer.as_signer()];
+	token_2022::instructions::TransferChecked::new(
+		bit_reserve,
+		bit_mint,
+		section_vault,
+		config,
+		BIT_SECTION_ALLOCATION_TOKENS,
+		BIT_MINT_DECIMALS,
+	)
+	.invoke_signed_with_program(&signers, &token_program)?;
+
+	let reserve_amount_after = {
+		let reserve = bit_reserve.as_token_account_for_program(&token_program)?;
+		reserve.amount()
+	};
+	let destination_amount_after = {
+		let destination = section_vault.as_token_account_for_program(&token_program)?;
+		destination.amount()
+	};
+	let reserve_debit = reserve_amount_before
+		.checked_sub(reserve_amount_after)
+		.ok_or(BitflipError::InvalidBitTokenAccount)?;
+	let destination_credit = destination_amount_after
+		.checked_sub(destination_amount_before)
+		.ok_or(BitflipError::InvalidBitTokenAccount)?;
+	if reserve_debit != BIT_SECTION_ALLOCATION_TOKENS
+		|| destination_credit != BIT_SECTION_ALLOCATION_TOKENS
+	{
+		return Err(BitflipError::InvalidBitTokenAccount.into());
+	}
+
+	Ok(())
 }
 
 impl<'a> ProcessAccountInfos<'a> for InitializeConfigAccounts<'a> {
@@ -726,6 +871,8 @@ impl<'a> ProcessAccountInfos<'a> for InitializeConfigAccounts<'a> {
 		config.pending_authority = ZERO_ADDRESS;
 		config.treasury = BOOTSTRAP_AUTHORITY;
 		config.collection_authority = BOOTSTRAP_AUTHORITY;
+		config.bit_mint = ZERO_ADDRESS;
+		config.bit_reserve = ZERO_ADDRESS;
 		config
 			.claim_price_lamports
 			.set(DEFAULT_CLAIM_PRICE_LAMPORTS);
@@ -1326,6 +1473,121 @@ impl<'a> ProcessAccountInfos<'a> for SettleSectionEconomyAccounts<'a> {
 	}
 }
 
+impl<'a> ProcessAccountInfos<'a> for ConfigureBitCustodyAccounts<'a> {
+	fn process(self, data: &[u8]) -> ProgramResult {
+		let _ = ConfigureBitCustodyInstruction::try_from_bytes(data)?;
+		assert_config_account(self.config)?;
+		self.authority.assert_signer()?;
+		let token_program = *self
+			.token_program
+			.assert_address(&token_2022::ID)?
+			.address();
+
+		{
+			let config = self.config.as_account::<ConfigState>(&ID)?;
+			self.authority.assert_address(&config.authority)?;
+			if config.bit_mint != ZERO_ADDRESS || config.bit_reserve != ZERO_ADDRESS {
+				return Err(BitflipError::CustodyAlreadyConfigured.into());
+			}
+		}
+
+		assert_bit_mint(self.bit_mint, &token_program)?;
+		let reserve_balance = bit_token_account_balance(
+			self.bit_reserve,
+			self.config.address(),
+			self.bit_mint.address(),
+			&token_program,
+		)?;
+		if reserve_balance != BIT_TOTAL_SUPPLY_TOKENS {
+			return Err(BitflipError::InvalidBitTokenAccount.into());
+		}
+
+		let mut config = self.config.as_account_mut::<ConfigState>(&ID)?;
+		config.bit_mint = *self.bit_mint.address();
+		config.bit_reserve = *self.bit_reserve.address();
+
+		log!("BIT custody configured");
+		Ok(())
+	}
+}
+
+impl<'a> ProcessAccountInfos<'a> for FundSectionVaultAccounts<'a> {
+	fn process(self, data: &[u8]) -> ProgramResult {
+		let args = FundSectionVaultInstruction::try_from_bytes(data)?;
+		assert_config_account(self.config)?;
+		assert_section_account(self.section, args.game_index, args.section_index)?;
+		self.funder
+			.assert_signer()?
+			.assert_writable()?
+			.assert_owner(&system::ID)?;
+		self.system_program.assert_address(&system::ID)?;
+		self.associated_token_program
+			.assert_address(&associated_token_account::ID)?;
+		let token_program = *self
+			.token_program
+			.assert_address(&token_2022::ID)?
+			.address();
+
+		let (bit_mint, bit_reserve, config_bump) = {
+			let config = self.config.as_account::<ConfigState>(&ID)?;
+			if config.bit_mint == ZERO_ADDRESS || config.bit_reserve == ZERO_ADDRESS {
+				return Err(BitflipError::CustodyNotConfigured.into());
+			}
+			(config.bit_mint, config.bit_reserve, config.bump)
+		};
+		self.bit_mint.assert_address(&bit_mint)?;
+		self.bit_reserve.assert_address(&bit_reserve)?;
+		if self.section.as_account::<SectionState>(&ID)?.bit_vault != ZERO_ADDRESS {
+			return Err(BitflipError::SectionVaultAlreadyFunded.into());
+		}
+
+		assert_bit_mint(self.bit_mint, &token_program)?;
+		let reserve_balance = bit_token_account_balance(
+			self.bit_reserve,
+			self.config.address(),
+			self.bit_mint.address(),
+			&token_program,
+		)?;
+		if reserve_balance < BIT_SECTION_ALLOCATION_TOKENS {
+			return Err(BitflipError::InsufficientFunds.into());
+		}
+
+		self.section_vault.assert_associated_token_address(
+			self.section.address(),
+			self.bit_mint.address(),
+			&token_program,
+		)?;
+		associated_token_account::instructions::CreateIdempotent {
+			funding_account: self.funder,
+			account: self.section_vault,
+			wallet: self.section,
+			mint: self.bit_mint,
+			system_program: self.system_program,
+			token_program: self.token_program,
+		}
+		.invoke()?;
+		let _ = bit_token_account_balance(
+			self.section_vault,
+			self.section.address(),
+			self.bit_mint.address(),
+			&token_program,
+		)?;
+		transfer_section_allocation(
+			self.config,
+			self.bit_mint,
+			self.bit_reserve,
+			self.section_vault,
+			self.token_program,
+			config_bump,
+		)?;
+
+		self.section.as_account_mut::<SectionState>(&ID)?.bit_vault = *self.section_vault.address();
+
+		log!("BIT section vault funded");
+		Ok(())
+	}
+}
+
 #[cfg(feature = "bpf-entrypoint")]
 pub mod entrypoint {
 	use super::*;
@@ -1380,6 +1642,12 @@ pub mod entrypoint {
 			BitflipInstruction::SettleSectionEconomy => {
 				SettleSectionEconomyAccounts::try_from((program_id, accounts))?.process(data)
 			}
+			BitflipInstruction::ConfigureBitCustody => {
+				ConfigureBitCustodyAccounts::try_from((program_id, accounts))?.process(data)
+			}
+			BitflipInstruction::FundSectionVault => {
+				FundSectionVaultAccounts::try_from((program_id, accounts))?.process(data)
+			}
 		}
 	}
 }
@@ -1415,9 +1683,9 @@ mod tests {
 
 	#[test]
 	fn account_layouts_are_stable() {
-		assert_eq!(ConfigState::SIZE, 173);
+		assert_eq!(ConfigState::SIZE, 237);
 		assert_eq!(GameState::SIZE, 123);
-		assert_eq!(SectionState::SIZE, 731);
+		assert_eq!(SectionState::SIZE, 763);
 	}
 
 	#[test]
@@ -1430,6 +1698,8 @@ mod tests {
 		assert_eq!(CancelSectionListingInstruction::SIZE, 3);
 		assert_eq!(PurchaseSectionInstruction::SIZE, 11);
 		assert_eq!(SettleSectionEconomyInstruction::SIZE, 3);
+		assert_eq!(ConfigureBitCustodyInstruction::SIZE, 1);
+		assert_eq!(FundSectionVaultInstruction::SIZE, 3);
 	}
 
 	#[test]

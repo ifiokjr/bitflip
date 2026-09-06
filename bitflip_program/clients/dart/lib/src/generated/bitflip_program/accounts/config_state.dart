@@ -21,6 +21,8 @@ class ConfigState {
     required this.pendingAuthority,
     required this.treasury,
     required this.collectionAuthority,
+    required this.bitMint,
+    required this.bitReserve,
     required this.claimPriceLamports,
     required this.flipFeeLamports,
     required this.minimumFlipFeeLamports,
@@ -38,6 +40,8 @@ class ConfigState {
   final Address pendingAuthority;
   final Address treasury;
   final Address collectionAuthority;
+  final Address bitMint;
+  final Address bitReserve;
   final BigInt claimPriceLamports;
   final BigInt flipFeeLamports;
   final BigInt minimumFlipFeeLamports;
@@ -58,6 +62,8 @@ class ConfigState {
           pendingAuthority == other.pendingAuthority &&
           treasury == other.treasury &&
           collectionAuthority == other.collectionAuthority &&
+          bitMint == other.bitMint &&
+          bitReserve == other.bitReserve &&
           claimPriceLamports == other.claimPriceLamports &&
           flipFeeLamports == other.flipFeeLamports &&
           minimumFlipFeeLamports == other.minimumFlipFeeLamports &&
@@ -68,10 +74,10 @@ class ConfigState {
           bump == other.bump;
 
   @override
-  int get hashCode => Object.hashAll([discriminator, version, authority, pendingAuthority, treasury, collectionAuthority, claimPriceLamports, flipFeeLamports, minimumFlipFeeLamports, maximumFlipFeeLamports, unlockIntervalSeconds, earlyUnlockFlips, gameCount, bump]);
+  int get hashCode => Object.hashAll([discriminator, version, authority, pendingAuthority, treasury, collectionAuthority, bitMint, bitReserve, claimPriceLamports, flipFeeLamports, minimumFlipFeeLamports, maximumFlipFeeLamports, unlockIntervalSeconds, earlyUnlockFlips, gameCount, bump]);
 
   @override
-  String toString() => 'ConfigState(discriminator: $discriminator, version: $version, authority: $authority, pendingAuthority: $pendingAuthority, treasury: $treasury, collectionAuthority: $collectionAuthority, claimPriceLamports: $claimPriceLamports, flipFeeLamports: $flipFeeLamports, minimumFlipFeeLamports: $minimumFlipFeeLamports, maximumFlipFeeLamports: $maximumFlipFeeLamports, unlockIntervalSeconds: $unlockIntervalSeconds, earlyUnlockFlips: $earlyUnlockFlips, gameCount: $gameCount, bump: $bump)';
+  String toString() => 'ConfigState(discriminator: $discriminator, version: $version, authority: $authority, pendingAuthority: $pendingAuthority, treasury: $treasury, collectionAuthority: $collectionAuthority, bitMint: $bitMint, bitReserve: $bitReserve, claimPriceLamports: $claimPriceLamports, flipFeeLamports: $flipFeeLamports, minimumFlipFeeLamports: $minimumFlipFeeLamports, maximumFlipFeeLamports: $maximumFlipFeeLamports, unlockIntervalSeconds: $unlockIntervalSeconds, earlyUnlockFlips: $earlyUnlockFlips, gameCount: $gameCount, bump: $bump)';
 }
 
 
@@ -83,6 +89,8 @@ Encoder<ConfigState> getConfigStateEncoder() {
     ('pendingAuthority', getAddressEncoder()),
     ('treasury', getAddressEncoder()),
     ('collectionAuthority', getAddressEncoder()),
+    ('bitMint', getAddressEncoder()),
+    ('bitReserve', getAddressEncoder()),
     ('claimPriceLamports', getU64Encoder()),
     ('flipFeeLamports', getU64Encoder()),
     ('minimumFlipFeeLamports', getU64Encoder()),
@@ -102,6 +110,8 @@ Encoder<ConfigState> getConfigStateEncoder() {
       'pendingAuthority': value.pendingAuthority,
       'treasury': value.treasury,
       'collectionAuthority': value.collectionAuthority,
+      'bitMint': value.bitMint,
+      'bitReserve': value.bitReserve,
       'claimPriceLamports': value.claimPriceLamports,
       'flipFeeLamports': value.flipFeeLamports,
       'minimumFlipFeeLamports': value.minimumFlipFeeLamports,
@@ -122,6 +132,8 @@ Decoder<ConfigState> getConfigStateDecoder() {
     ('pendingAuthority', getAddressDecoder()),
     ('treasury', getAddressDecoder()),
     ('collectionAuthority', getAddressDecoder()),
+    ('bitMint', getAddressDecoder()),
+    ('bitReserve', getAddressDecoder()),
     ('claimPriceLamports', getU64Decoder()),
     ('flipFeeLamports', getU64Decoder()),
     ('minimumFlipFeeLamports', getU64Decoder()),
@@ -156,6 +168,8 @@ Decoder<ConfigState> getConfigStateDecoder() {
       pendingAuthority: map['pendingAuthority']! as Address,
       treasury: map['treasury']! as Address,
       collectionAuthority: map['collectionAuthority']! as Address,
+      bitMint: map['bitMint']! as Address,
+      bitReserve: map['bitReserve']! as Address,
       claimPriceLamports: map['claimPriceLamports']! as BigInt,
       flipFeeLamports: map['flipFeeLamports']! as BigInt,
       minimumFlipFeeLamports: map['minimumFlipFeeLamports']! as BigInt,

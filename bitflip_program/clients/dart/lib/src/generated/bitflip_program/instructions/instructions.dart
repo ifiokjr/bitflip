@@ -4,7 +4,9 @@
 export 'accept_authority.dart';
 export 'cancel_section_listing.dart';
 export 'claim_section.dart';
+export 'configure_bit_custody.dart';
 export 'flip_pixels.dart';
+export 'fund_section_vault.dart';
 export 'initialize_config.dart';
 export 'initialize_game.dart';
 export 'list_section.dart';

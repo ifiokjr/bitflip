@@ -38,6 +38,8 @@ enum BitflipProgramInstruction {
   cancelSectionListing,
   purchaseSection,
   settleSectionEconomy,
+  configureBitCustody,
+  fundSectionVault,
 }
 
 /// Identifies the type of a BitflipProgram instruction.
@@ -82,6 +84,12 @@ BitflipProgramInstruction identifyBitflipProgramInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(12), 0)) {
     return BitflipProgramInstruction.settleSectionEconomy;
+  }
+  if (containsBytes(data, getU8Encoder().encode(13), 0)) {
+    return BitflipProgramInstruction.configureBitCustody;
+  }
+  if (containsBytes(data, getU8Encoder().encode(14), 0)) {
+    return BitflipProgramInstruction.fundSectionVault;
   }
 
   throw SolanaError(
@@ -204,6 +212,22 @@ final class ParsedSettleSectionEconomy extends ParsedBitflipProgramInstruction {
   final SettleSectionEconomyInstructionData data;
 }
 
+/// A parsed ConfigureBitCustody instruction.
+final class ParsedConfigureBitCustody extends ParsedBitflipProgramInstruction {
+  const ParsedConfigureBitCustody({required this.data})
+      : super(BitflipProgramInstruction.configureBitCustody);
+
+  final ConfigureBitCustodyInstructionData data;
+}
+
+/// A parsed FundSectionVault instruction.
+final class ParsedFundSectionVault extends ParsedBitflipProgramInstruction {
+  const ParsedFundSectionVault({required this.data})
+      : super(BitflipProgramInstruction.fundSectionVault);
+
+  final FundSectionVaultInstructionData data;
+}
+
 /// Parses a BitflipProgram instruction.
 ParsedBitflipProgramInstruction parseBitflipProgramInstruction(
   Instruction instruction,
@@ -249,6 +273,12 @@ ParsedBitflipProgramInstruction parseBitflipProgramInstruction(
     ),
     BitflipProgramInstruction.settleSectionEconomy => ParsedSettleSectionEconomy(
       data: parseSettleSectionEconomyInstruction(instruction),
+    ),
+    BitflipProgramInstruction.configureBitCustody => ParsedConfigureBitCustody(
+      data: parseConfigureBitCustodyInstruction(instruction),
+    ),
+    BitflipProgramInstruction.fundSectionVault => ParsedFundSectionVault(
+      data: parseFundSectionVaultInstruction(instruction),
     ),
   };
 }
