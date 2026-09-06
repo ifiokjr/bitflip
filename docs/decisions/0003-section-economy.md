@@ -6,14 +6,11 @@
 
 ## Conclusion
 
-Section ownership should confer real, bounded control over a section's game and economy. An owner should be able to choose an approved game mode, publish its rules, set an entry price, fund a reward budget, and decide how quickly that budget is paid out. The budget follows the section while committed to a live campaign, and a higher reward rate exhausts it sooner.
+Section ownership should confer real, bounded control over a section's game and economy. An owner should be able to choose an approved game mode, publish its rules, set an entry price, add a sponsor budget, and choose from protocol-approved reward policies. It must not let the owner choose recipients, withdraw protocol rewards, or install arbitrary payout logic.
 
-It is not economically safe to give every new section owner a large, freely distributable token grant. An owner can always use fresh wallets to pay rewards to themselves. The viable beta model therefore has two separate sources:
+Every section has one 26,214,400 BIT allocation. It begins entirely as base-issuance inventory. After each five-minute window, any shortfall against the immutable target moves irreversibly into that section's reward pool. At the end of the 60-day issuance period, every token still in base inventory moves into the pool. There is no separately locked matching allocation and no free discretionary grant to the section owner.
 
-1. a finite, protocol-priced BIT allocation that players receive for paid pixel flips; and
-2. an owner/sponsor-funded campaign budget that the owner can distribute under bounded rules.
-
-The second half of the scaled supply allocation remains locked unless a later, independently reviewed matching programme defines how it can be earned. It is not silently granted to section purchasers.
+The pool is an on-chain programme liability, not an owner's wallet. Distribution remains disabled until an independently reviewed, protocol-defined policy can select recipients without relying on the owner or one reward distributor.
 
 This ADR is a design gate, not a claim that token rewards or campaign governance exist in the rebuilt program today.
 
@@ -33,19 +30,18 @@ The pre-rebuild program contained a coherent binary-themed allocation:
 
 It also used a zero-decimal Token-2022 BIT mint and attempted to pace paid distribution with a square-root/time price curve. A player paid SOL into the section and received BIT from the section's token account.
 
-The selected staging scale is exactly 100 times larger while retaining those proportions and whole-token semantics:
+The selected staging scale gives every section 100 times the historical paid-flip capacity, but does not retain the historical discretionary half. Four games replace eight. Together those decisions reduce the previous staging supply by exactly four:
 
-| Quantity                           |                         Amount |
-| ---------------------------------- | -----------------------------: |
-| Total BIT supply                   | 107,374,182,400 (`100 × 2^30`) |
-| Games/seasons                      |                              8 |
-| Allocation per game                |                 13,421,772,800 |
-| Sections per game                  |                            256 |
-| Allocation per section             |                     52,428,800 |
-| Paid-flip allocation per section   |                     26,214,400 |
-| Locked matching allocation/section |                     26,214,400 |
+| Quantity                   |                       Amount |
+| -------------------------- | ---------------------------: |
+| Total BIT supply           | 26,843,545,600 (`25 × 2^30`) |
+| Games/seasons              |                            4 |
+| Allocation per game        |                6,710,886,400 |
+| Sections per game          |                          256 |
+| Allocation per section     |                   26,214,400 |
+| Separate locked allocation |                            0 |
 
-This is 100 times more reward-bearing flip capacity, not fractional BIT: the mint still has zero decimals and every rewarded pixel earns one whole BIT.
+This is 100 times more initial reward-bearing flip capacity per section than the historical paid half, not fractional BIT: the mint still has zero decimals and every rewarded pixel earns one whole BIT. A token can be accounted to base issuance or to the reward pool, never both.
 
 The design was incomplete. Production code did not fund newly created section token accounts, the discretionary `reward_tokens` value existed only in the backend database, and there was no enforceable reward policy or anti-self-dealing mechanism. The rebuilt program correctly removed that unfinished faucet.
 
@@ -55,7 +51,7 @@ At the current defaults, a section costs 0.01 SOL to claim and each pixel costs 
 
 Restricting the owner to a maximum reward rate does not solve the problem. At a 16 BIT bonus per flip, a purchaser could route the entire grant through fresh wallets in 1,638,400 flips for 16.384 SOL of application fees. Sybil wallets make "the owner cannot reward themselves" unenforceable.
 
-The system must treat owner-controlled rewards as a marketing or prize budget, not as a free asset bundled with ownership. Owners and sponsors can deposit BIT they already hold. A future protocol match may add funds, but only under a separately approved policy with a hard global and per-section cap.
+The system must treat owner-controlled rewards as a marketing or prize budget, not as a free asset bundled with ownership. Owners and sponsors can deposit BIT they already hold. Protocol pool funds may be paid only under a separately approved policy with a hard global and per-section cap.
 
 If every claimed section must start with a discretionary budget, the claimant has to buy that budget at no less than the active issuance price. At the current 10,000-lamport flip fee, preloading 26,214,400 BIT would add at least 262.144 SOL to the claim before rent and protocol fees. That conflicts with inexpensive lazy expansion. A much smaller prepaid starter budget can use the same invariant, but a free full allocation cannot.
 
@@ -64,7 +60,7 @@ If every claimed section must start with a discretionary budget, the claimant ha
 The recommended BIT mint has these properties:
 
 - one Token-2022 mint with zero decimals;
-- a fixed maximum supply of `100 × 2^30` BIT (107,374,182,400 whole BIT), minted once into a program-controlled distribution vault;
+- a fixed maximum supply of `25 × 2^30` BIT (26,843,545,600 whole BIT), minted once into a program-controlled distribution vault;
 - mint and freeze authority revoked after the supply and metadata are verified;
 - no permanent delegate, transfer fee, interest, rebasing, or additional denomination mints; and
 - KiB, MiB, and GiB are display units calculated by clients, not separate assets.
@@ -75,17 +71,38 @@ Solana supports revoking mint and freeze roles with `SetAuthority`. Avoiding a p
 - <https://solana.com/docs/tokens/extensions>
 - <https://solana.com/docs/tokens/extensions/permanent-delegate>
 
-The historical `2^30` cap inspired the scaled 100-GiB cap, and the eight-game allocation retains the project's binary identity, but neither creates economic value. BIT must have useful, visible sinks and Bitflip must make no promise of a SOL or fiat redemption price.
+The historical binary allocation inspired the scaled four-game cap, but the number itself creates no economic value. BIT must have useful, visible sinks and Bitflip must make no promise of a SOL or fiat redemption price.
 
-## Paid-flip allocation
+## Shared section allocation
 
-Each section may distribute at most `100 × 2^18` BIT (26,214,400 whole BIT) through ordinary paid flips. The starting rule is one BIT per successfully toggled pixel. A 16-pixel transaction therefore earns 16 BIT; batching already reduces the network fee per pixel, so a second hidden batch subsidy is unnecessary.
+Each section starts with `100 × 2^18` BIT (26,214,400 whole BIT). The starting base rule is one BIT per successfully toggled pixel. A 16-pixel transaction therefore earns 16 BIT; batching already reduces the network fee per pixel, so a second hidden batch subsidy is unnecessary.
 
-The player's transaction includes both a maximum SOL charge and a minimum BIT payout. It fails if either side has changed. If the section's paid allocation is exhausted, flipping can continue, but the UI must say that no base BIT remains before signing.
+The five-minute base target is 1,024 BIT and the burst cap is 2,048 BIT. At rollover the programme calculates `max(window_target - rewarded, 0)` and moves that amount from base inventory to the reward pool. It settles arbitrarily many empty windows in constant time and caps the transfer at remaining inventory. Expiry moves the remainder. Consequently:
 
-The paid allocation is a finite primary distribution, not risk-free yield. A fixed SOL price cannot track a transferable token's market price without an oracle, and a stale cheap issuance price will be arbitraged. [ADR 0004](0004-section-price-controller.md) proposes an independently paced, time-based price for every section, bounded burst issuance, and a small inventory floor. The first beta must remain on devnet, avoid seeding exchange liquidity, and collect data before those proposed parameters can become a mainnet decision.
+```text
+base BIT emitted + reward-pool BIT + unallocated base BIT
+  = 26,214,400 BIT per section
+```
 
-## Owner-funded campaign budget
+At exactly the target for every window over 60 days, 17,694,720 BIT is emitted and 8,519,680 BIT, or 32.5%, enters the pool at expiry. Sustained burst traffic can emit more and leave less for games. This is deliberate: unused base issuance funds future play instead of becoming a late cheap giveaway.
+
+The player's transaction includes both a maximum SOL charge and a minimum BIT payout. It fails if either side has changed. If the section's base inventory is exhausted, flipping can continue, but the UI must say that no base BIT remains before signing.
+
+Base issuance is a finite primary distribution, not risk-free yield. A fixed SOL price cannot track a transferable token's market price without an oracle, and a stale cheap issuance price will be arbitraged. [ADR 0004](0004-section-price-controller.md) proposes an independently paced, time-based price for every section, bounded burst issuance, and a small inventory floor. The first beta must remain on devnet, avoid seeding exchange liquidity, and collect data before those proposed parameters can become a mainnet decision.
+
+## Reward-pool distribution and owner-funded budgets
+
+There is no trusted reward-distributor role in the beta design. A section owner cannot sign an arbitrary payment, upload a final payout list, name a recipient account, or withdraw protocol pool BIT. The first implementation should accrue and expose the pool balance while keeping protocol-pool payout disabled.
+
+The smallest defensible later policy is a precommitted, fixed-length reward epoch:
+
+- the protocol allowlists the formula before the epoch starts;
+- qualifying actions and weights are derived from paid, confirmed on-chain actions;
+- the owner cannot edit the formula, entrants, weights, or pool once the epoch begins;
+- claims are pull-based, capped by the epoch allocation, replay-protected, and independently reconstructible; and
+- an owner receives no fee share for self-funded or reward-eligible actions, so ownership does not create a cheaper farming route.
+
+Wallet caps alone are not Sybil resistance. Proportional rewards per paid qualifying action make splitting wallets irrelevant, but remain economically farmable whenever the BIT payout is worth more than the non-refundable SOL cost. A contest whose winner depends on an off-chain judgement still requires either a disclosed trusted attestor or an optimistic result root with a challenge period. Neither should ship with mainnet funds without separate adversarial review.
 
 An owner or sponsor can deposit BIT into the section's campaign budget. Once a campaign begins, the committed budget cannot be withdrawn or redirected. A higher configured payout consumes the same finite budget sooner.
 
@@ -112,10 +129,10 @@ For an active section, its owner can configure the next campaign using bounded, 
 - a content hash for the human-readable rules;
 - start and end times;
 - BIT entry price;
-- reward formula and maximum reward per wallet; and
+- one allowlisted reward policy and its bounded parameters; and
 - the committed reward budget.
 
-Rules are versioned and immutable while a campaign is live. Players sign the expected policy version, maximum entry/flip cost, and minimum reward, so an owner cannot change terms between preview and execution. Arbitrary executable code, arbitrary payout accounts, and arbitrary token minting are not governance options.
+Rules are versioned and immutable while a campaign is live. Players sign the expected policy version, maximum entry/flip cost, and minimum reward, so an owner cannot change terms between preview and execution. Arbitrary executable code, arbitrary payout accounts, owner-authored payout lists, and arbitrary token minting are not governance options.
 
 Section ownership also receives a protocol-defined share of that section's SOL flip fees. The recommended staging value is 20%, fixed for the lifetime of a game; the remaining 80% goes to the protocol treasury. The owner cannot set this percentage. At today's 10,000-lamport fee, 20% yields:
 
@@ -152,7 +169,7 @@ Section owners select an approved game and its parameters; they do not become a 
 
 ## Low-rent custody design
 
-Creating a Token-2022 account for all 256 sections up front would undermine the lazy allocation model. Use one program-controlled BIT distribution vault and store each created section's paid and campaign balances as on-chain ledger fields. The sum of section liabilities must never exceed the vault balance.
+Creating a Token-2022 account for all 256 sections up front would undermine the lazy allocation model. Use one program-controlled BIT distribution vault and store each created section's unallocated base balance, reward-pool balance, and campaign balance as on-chain ledger fields. For every section, emitted plus pool plus unallocated base must never exceed 26,214,400 BIT. Across the game, the sum of every section liability must never exceed the vault balance.
 
 This adds a small amount of rent only when the bitmap section itself is created. It does not create 256 token accounts. A player needs one associated BIT token account the first time they receive BIT; the transaction must disclose who pays that rent. For scale, mainnet reported 0.001855569 SOL for a 165-byte base token account on 2026-09-06; the exact Token-2022 account size and current rent must be calculated from the selected extensions during deployment.
 
@@ -161,13 +178,14 @@ The vault PDA can sign only transfers from the vault. With mint/freeze authority
 ## Required implementation order
 
 1. Simulate the [time-based section price controller](0004-section-price-controller.md), owner share, claim break-even, and likely bot strategies using staging activity assumptions.
-2. Implement and independently review the fixed mint plus global-vault invariants on a fresh devnet program ID.
-3. Add base paid-flip distribution with SOL/BIT slippage protection and real-SBF tests for exhaustion, batching, custody, and arithmetic boundaries.
-4. Add owner fee sharing and versioned section policies. Policies cannot change during a live campaign and must survive a section sale.
-5. Add owner/sponsor deposits, entry payments, budget exhaustion, cancellation, and refund rules.
-6. Add colour events and the indexed eight-colour canvas without attaching token payouts.
-7. Add a single allowlisted off-chain contest and bounded voucher settlement, then test replay, equivocation, expiry, sale, seal, and indexer recovery.
-8. Run the economy on devnet before any token or reward code is eligible for mainnet.
+2. Implement and independently review the fixed mint, global-vault invariant, per-section base ledger, and deterministic shortfall-to-pool transition on a fresh devnet program ID.
+3. Add base paid-flip distribution with SOL/BIT slippage protection and real-SBF tests for exhaustion, batching, custody, rollover, and arithmetic boundaries. Accrue the pool but do not pay it yet.
+4. Remove the global counter and treasury from the flip hot path, then benchmark the actual one-pixel and 16-pixel Token-2022 paths across many sections.
+5. Add owner fee sharing and versioned section policies. Policies cannot change during a live campaign and must survive a section sale.
+6. Add owner/sponsor deposits, entry payments, budget exhaustion, cancellation, and refund rules.
+7. Add colour events and the indexed eight-colour canvas without attaching token payouts.
+8. Independently review and implement one allowlisted pool distribution policy, then test Sybil splitting, owner farming, replay, equivocation, expiry, sale, seal, and indexer recovery.
+9. Run the economy on devnet before any token or reward code is eligible for mainnet.
 
 ## Mainnet gates
 

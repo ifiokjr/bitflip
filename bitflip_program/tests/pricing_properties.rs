@@ -80,6 +80,7 @@ proptest! {
 		let mut now = 0u64;
 
 		for (delay, requested) in transactions {
+			let previous_pool = state.reward_pool_tokens;
 			now = now.saturating_add(delay);
 			let _ = execute_exact(&mut state, &config, now, requested);
 			let capacity = state
@@ -87,7 +88,13 @@ proptest! {
 				.saturating_mul(config.burst_elasticity)
 				.min(config.allocation_tokens);
 
-			prop_assert!(state.emitted_tokens <= config.allocation_tokens);
+			let accounted = state.accounted_tokens().expect("bounded accounting");
+			prop_assert!(accounted <= config.allocation_tokens);
+			prop_assert!(state.reward_pool_tokens >= previous_pool);
+			prop_assert_eq!(
+				state.remaining_base_tokens(&config),
+				Ok(config.allocation_tokens - accounted),
+			);
 			prop_assert!(state.window_rewarded_tokens <= capacity);
 			prop_assert!(state.controller_price_lamports >= config.minimum_price_lamports);
 			prop_assert!(state.controller_price_lamports <= config.maximum_price_lamports);
@@ -144,25 +151,27 @@ fn sybil_splitting_does_not_increase_reward_or_reduce_price() {
 	let mut batched_paid = 0;
 	let mut sybil_paid = 0;
 
-	for _ in 0..200 {
+	for _ in 0..128 {
 		batched_paid += execute_exact(&mut full_batches, &config, 1, 16).total_price_lamports;
 	}
-	for _ in 0..3_200 {
+	for _ in 0..2_048 {
 		sybil_paid += execute_exact(&mut split_wallets, &config, 1, 1).total_price_lamports;
 	}
 
 	assert_eq!(full_batches, split_wallets);
 	assert_eq!(batched_paid, sybil_paid);
-	assert_eq!(full_batches.emitted_tokens, 3_200);
+	assert_eq!(full_batches.emitted_tokens, 2_048);
+	assert_eq!(full_batches.reward_pool_tokens, 0);
 	assert_eq!(
 		full_batches.preview(&config, 1, 1),
 		Ok(PriceQuote {
 			window_id: 0,
-			target_tokens: 1_600,
+			target_tokens: 1_024,
 			reward_tokens: 0,
 			unit_price_lamports: 10_000,
 			total_price_lamports: 0,
 			remaining_window_capacity: 0,
+			reward_pool_tokens: 0,
 		})
 	);
 }
@@ -174,22 +183,22 @@ fn fixed_window_boundary_allows_two_caps_but_charges_the_higher_second_price() {
 	let mut rewards = 0;
 	let mut paid = 0;
 
-	for _ in 0..200 {
+	for _ in 0..128 {
 		let quote = execute_exact(&mut state, &config, 299, 16);
 		rewards += quote.reward_tokens;
 		paid += quote.total_price_lamports;
 	}
-	for _ in 0..200 {
+	for _ in 0..128 {
 		let quote = execute_exact(&mut state, &config, 300, 16);
 		rewards += quote.reward_tokens;
 		paid += quote.total_price_lamports;
 	}
 
 	assert_eq!(
-		rewards, 6_400,
+		rewards, 4_096,
 		"two adjacent windows expose two finite caps"
 	);
-	assert_eq!(paid, 68_000_000, "the second cap costs 12.5% more");
+	assert_eq!(paid, 43_520_000, "the second cap costs 12.5% more");
 	assert_eq!(state.posted_price_lamports, 11_250);
 }
 
@@ -200,7 +209,7 @@ fn alternating_equal_pressure_cannot_ratchet_the_price_down() {
 
 	for cycle in 0..64 {
 		let busy_at = cycle * config.window_seconds * 2;
-		for _ in 0..200 {
+		for _ in 0..128 {
 			let _ = execute_exact(&mut state, &config, busy_at, 16);
 		}
 		let idle_at = busy_at + config.window_seconds;
@@ -294,4 +303,5 @@ fn representable_u64_extremes_do_not_overflow_or_loop_per_window() {
 	assert_eq!(end.window_id, u64::MAX);
 	assert_eq!(end.reward_tokens, 0);
 	assert_eq!(end.total_price_lamports, 0);
+	assert_eq!(end.reward_pool_tokens, u64::MAX - 16);
 }

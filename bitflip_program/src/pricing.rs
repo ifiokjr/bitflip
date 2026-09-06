@@ -9,11 +9,11 @@ use core::cmp::{max, min};
 /// Number of base BIT that one flip transaction can request.
 pub const MAX_REWARD_TOKENS_PER_TRANSACTION: u64 = 16;
 
-/// Staging paid-flip allocation assigned to each section.
-pub const DEFAULT_SECTION_ALLOCATION_TOKENS: u64 = crate::BIT_PAID_FLIP_ALLOCATION_TOKENS;
+/// Staging BIT allocation shared by base issuance and the section reward pool.
+pub const DEFAULT_SECTION_ALLOCATION_TOKENS: u64 = crate::BIT_SECTION_ALLOCATION_TOKENS;
 
 /// Staging rewarded-pixel target for one control window.
-pub const DEFAULT_TARGET_TOKENS_PER_WINDOW: u64 = 1_600;
+pub const DEFAULT_TARGET_TOKENS_PER_WINDOW: u64 = 1_024;
 
 /// Sixty-day staging emission period.
 pub const DEFAULT_EMISSION_DURATION_SECONDS: u64 = 60 * 24 * 60 * 60;
@@ -172,6 +172,8 @@ pub struct PriceQuote {
 	pub total_price_lamports: u64,
 	/// Reward capacity left after this transaction.
 	pub remaining_window_capacity: u64,
+	/// BIT accrued for future protocol-defined section rewards.
+	pub reward_pool_tokens: u64,
 }
 
 /// Protocol and owner portions of one paid issuance charge.
@@ -200,6 +202,8 @@ pub struct PriceControllerState {
 	pub window_rewarded_tokens: u64,
 	/// BIT issued over the section's lifetime.
 	pub emitted_tokens: u64,
+	/// Unclaimed target issuance reserved for future section rewards.
+	pub reward_pool_tokens: u64,
 	/// Congestion component before applying the inventory floor.
 	pub controller_price_lamports: u64,
 	/// Price fixed for the current window.
@@ -231,6 +235,7 @@ impl PriceControllerState {
 			window_target_tokens,
 			window_rewarded_tokens: 0,
 			emitted_tokens: 0,
+			reward_pool_tokens: 0,
 			controller_price_lamports: config.start_price_lamports,
 			posted_price_lamports,
 		})
@@ -248,6 +253,52 @@ impl PriceControllerState {
 		self.launched_at
 			.checked_add(config.emission_duration_seconds)
 			.ok_or(PriceControllerError::ArithmeticOverflow)
+	}
+
+	/// Total BIT already issued or reserved for future section rewards.
+	///
+	/// # Errors
+	///
+	/// Returns an error if corrupted state cannot be represented.
+	pub fn accounted_tokens(&self) -> Result<u64, PriceControllerError> {
+		self.emitted_tokens
+			.checked_add(self.reward_pool_tokens)
+			.ok_or(PriceControllerError::ArithmeticOverflow)
+	}
+
+	/// BIT not yet issued or moved into the section reward pool.
+	///
+	/// # Errors
+	///
+	/// Returns an error for invalid configuration or corrupted over-allocation.
+	pub fn remaining_base_tokens(
+		&self,
+		config: &PriceControllerConfig,
+	) -> Result<u64, PriceControllerError> {
+		config.validate()?;
+		config
+			.allocation_tokens
+			.checked_sub(self.accounted_tokens()?)
+			.ok_or(PriceControllerError::ArithmeticOverflow)
+	}
+
+	/// Settle completed windows without executing a flip.
+	///
+	/// This is the transition campaign administration uses before reading the
+	/// reward pool. It remains atomic when time or arithmetic is invalid.
+	///
+	/// # Errors
+	///
+	/// Returns an error for invalid time, configuration, or arithmetic.
+	pub fn settle(
+		&mut self,
+		config: &PriceControllerConfig,
+		now: u64,
+	) -> Result<(), PriceControllerError> {
+		let mut next = *self;
+		next.advance_to(config, now)?;
+		*self = next;
+		Ok(())
 	}
 
 	/// Preview a transaction without mutating accepted state.
@@ -334,6 +385,11 @@ impl PriceControllerState {
 				self.window_target_tokens,
 			)?;
 
+			let completed_shortfall = self
+				.window_target_tokens
+				.saturating_sub(self.window_rewarded_tokens);
+			self.accrue_reward_pool(config, completed_shortfall)?;
+
 			let missed_empty_windows = completed_windows - 1;
 			if missed_empty_windows > 0 {
 				self.controller_price_lamports = decay_empty_windows(
@@ -341,6 +397,14 @@ impl PriceControllerState {
 					self.controller_price_lamports,
 					missed_empty_windows,
 				)?;
+				let remaining = self.remaining_base_tokens(config)?;
+				let missed_target = u128::from(config.target_tokens_per_window)
+					.checked_mul(u128::from(missed_empty_windows))
+					.ok_or(PriceControllerError::ArithmeticOverflow)?
+					.min(u128::from(remaining));
+				let missed_target = u64::try_from(missed_target)
+					.map_err(|_| PriceControllerError::ArithmeticOverflow)?;
+				self.accrue_reward_pool(config, missed_target)?;
 			}
 
 			let advance_seconds = completed_windows
@@ -355,14 +419,14 @@ impl PriceControllerState {
 				.checked_add(completed_windows)
 				.ok_or(PriceControllerError::ArithmeticOverflow)?;
 			self.window_rewarded_tokens = 0;
+			if self.window_started_at >= emission_ends_at {
+				let remaining = self.remaining_base_tokens(config)?;
+				self.accrue_reward_pool(config, remaining)?;
+			}
 
-			if self.window_started_at < emission_ends_at
-				&& self.emitted_tokens < config.allocation_tokens
-			{
-				self.window_target_tokens = min(
-					config.target_tokens_per_window,
-					config.allocation_tokens - self.emitted_tokens,
-				);
+			let remaining = self.remaining_base_tokens(config)?;
+			if self.window_started_at < emission_ends_at && remaining > 0 {
+				self.window_target_tokens = min(config.target_tokens_per_window, remaining);
 				self.posted_price_lamports = max(
 					self.controller_price_lamports,
 					inventory_floor(config, self.emitted_tokens)?,
@@ -380,6 +444,19 @@ impl PriceControllerState {
 		Ok(())
 	}
 
+	fn accrue_reward_pool(
+		&mut self,
+		config: &PriceControllerConfig,
+		requested_tokens: u64,
+	) -> Result<(), PriceControllerError> {
+		let accrued = min(requested_tokens, self.remaining_base_tokens(config)?);
+		self.reward_pool_tokens = self
+			.reward_pool_tokens
+			.checked_add(accrued)
+			.ok_or(PriceControllerError::ArithmeticOverflow)?;
+		Ok(())
+	}
+
 	fn quote(
 		&self,
 		config: &PriceControllerConfig,
@@ -391,10 +468,7 @@ impl PriceControllerState {
 			return Err(PriceControllerError::InvalidRequest);
 		}
 
-		let remaining_inventory = config
-			.allocation_tokens
-			.checked_sub(self.emitted_tokens)
-			.ok_or(PriceControllerError::ArithmeticOverflow)?;
+		let remaining_inventory = self.remaining_base_tokens(config)?;
 		let window_capacity = window_capacity(config, self.window_target_tokens)?;
 		let remaining_window_capacity = window_capacity.saturating_sub(self.window_rewarded_tokens);
 		let available = min(remaining_inventory, remaining_window_capacity);
@@ -411,6 +485,7 @@ impl PriceControllerState {
 			unit_price_lamports: self.posted_price_lamports,
 			total_price_lamports,
 			remaining_window_capacity: available - reward_tokens,
+			reward_pool_tokens: self.reward_pool_tokens,
 		})
 	}
 }
@@ -554,16 +629,16 @@ mod tests {
 	}
 
 	#[test]
-	fn staging_target_and_capacity_are_one_hundred_times_larger() {
+	fn staging_target_and_capacity_are_binary_and_conservative() {
 		let state = PriceControllerState::new(&PriceControllerConfig::STAGING, 0)
 			.expect("valid staging controller");
 
 		assert_eq!(DEFAULT_SECTION_ALLOCATION_TOKENS, 100 * 262_144);
-		assert_eq!(DEFAULT_TARGET_TOKENS_PER_WINDOW, 100 * 16);
-		assert_eq!(state.window_target_tokens, 1_600);
+		assert!(DEFAULT_TARGET_TOKENS_PER_WINDOW.is_power_of_two());
+		assert_eq!(state.window_target_tokens, 1_024);
 		assert_eq!(
 			window_capacity(&PriceControllerConfig::STAGING, state.window_target_tokens,),
-			Ok(3_200)
+			Ok(2_048)
 		);
 	}
 
@@ -572,27 +647,27 @@ mod tests {
 		let config = PriceControllerConfig::STAGING;
 
 		assert_eq!(
-			adjusted_controller_price(&config, 10_000, 0, 1_600),
+			adjusted_controller_price(&config, 10_000, 0, 1_024),
 			Ok(8_750)
 		);
 		assert_eq!(
-			adjusted_controller_price(&config, 10_000, 800, 1_600),
+			adjusted_controller_price(&config, 10_000, 512, 1_024),
 			Ok(9_375)
 		);
 		assert_eq!(
-			adjusted_controller_price(&config, 10_000, 1_600, 1_600),
+			adjusted_controller_price(&config, 10_000, 1_024, 1_024),
 			Ok(10_000)
 		);
 		assert_eq!(
-			adjusted_controller_price(&config, 10_000, 2_400, 1_600),
+			adjusted_controller_price(&config, 10_000, 1_536, 1_024),
 			Ok(10_625)
 		);
 		assert_eq!(
-			adjusted_controller_price(&config, 10_000, 3_200, 1_600),
+			adjusted_controller_price(&config, 10_000, 2_048, 1_024),
 			Ok(11_250)
 		);
 		assert_eq!(
-			adjusted_controller_price(&config, 10_000, u64::MAX, 1_600),
+			adjusted_controller_price(&config, 10_000, u64::MAX, 1_024),
 			Ok(11_250)
 		);
 	}
@@ -605,7 +680,7 @@ mod tests {
 		state
 			.execute(&config, 1_001, 16, exact_limits(first))
 			.expect("first batch");
-		for _ in 1..200 {
+		for _ in 1..128 {
 			let quote = state.preview(&config, 1_299, 16).expect("next quote");
 			state
 				.execute(&config, 1_299, 16, exact_limits(quote))
@@ -615,7 +690,7 @@ mod tests {
 
 		assert_eq!(first.unit_price_lamports, DEFAULT_START_PRICE_LAMPORTS);
 		assert_eq!(state.posted_price_lamports, first.unit_price_lamports);
-		assert_eq!(state.window_rewarded_tokens, 3_200);
+		assert_eq!(state.window_rewarded_tokens, 2_048);
 		assert_eq!(exhausted.reward_tokens, 0);
 		assert_eq!(exhausted.total_price_lamports, 0);
 	}
@@ -658,10 +733,11 @@ mod tests {
 			config.minimum_price_lamports
 		);
 		assert_eq!(after_one_day.window_id, 288);
+		assert_eq!(after_one_day.reward_pool_tokens, 288 * 1_024);
 	}
 
 	#[test]
-	fn final_partial_window_cannot_issue_beyond_inventory() {
+	fn unclaimed_partial_window_inventory_moves_to_the_reward_pool() {
 		let config = PriceControllerConfig {
 			allocation_tokens: 33,
 			emission_duration_seconds: 900,
@@ -675,17 +751,65 @@ mod tests {
 				.execute(&config, 0, 16, exact_limits(quote))
 				.expect("initial execution");
 		}
-		let final_quote = state.preview(&config, 300, 16).expect("partial quote");
-		assert_eq!(final_quote.target_tokens, 1);
-		assert_eq!(final_quote.reward_tokens, 1);
-		state
-			.execute(&config, 300, 16, exact_limits(final_quote))
-			.expect("final execution");
+		state.settle(&config, 300).expect("settle partial window");
+		let exhausted = state.preview(&config, 300, 16).expect("pooled quote");
 
-		let exhausted = state.preview(&config, 300, 16).expect("exhausted quote");
-		assert_eq!(state.emitted_tokens, config.allocation_tokens);
+		assert_eq!(state.emitted_tokens, 32);
+		assert_eq!(state.reward_pool_tokens, 1);
+		assert_eq!(state.accounted_tokens(), Ok(config.allocation_tokens));
+		assert_eq!(exhausted.target_tokens, 0);
 		assert_eq!(exhausted.reward_tokens, 0);
 		assert_eq!(exhausted.total_price_lamports, 0);
+	}
+
+	#[test]
+	fn below_target_issuance_accrues_the_exact_shortfall() {
+		let config = PriceControllerConfig::STAGING;
+		let mut state = PriceControllerState::new(&config, 0).expect("valid controller");
+
+		for _ in 0..32 {
+			let quote = state.preview(&config, 1, 16).expect("half-target quote");
+			state
+				.execute(&config, 1, 16, exact_limits(quote))
+				.expect("half-target execution");
+		}
+		state.settle(&config, 300).expect("settle first window");
+
+		assert_eq!(state.emitted_tokens, 512);
+		assert_eq!(state.reward_pool_tokens, 512);
+		assert_eq!(state.accounted_tokens(), Ok(1_024));
+		assert_eq!(state.remaining_base_tokens(&config), Ok(26_213_376));
+	}
+
+	#[test]
+	fn settling_a_window_twice_cannot_duplicate_or_reverse_pool_accrual() {
+		let config = PriceControllerConfig::STAGING;
+		let mut state = PriceControllerState::new(&config, 0).expect("valid controller");
+
+		state.settle(&config, 300).expect("settle first window");
+		let settled = state;
+		state
+			.settle(&config, 300)
+			.expect("repeat settlement at the same timestamp");
+
+		assert_eq!(state, settled);
+		assert_eq!(state.reward_pool_tokens, 1_024);
+		assert_eq!(state.emitted_tokens, 0);
+	}
+
+	#[test]
+	fn expiry_moves_every_unallocated_token_to_the_reward_pool() {
+		let config = PriceControllerConfig::STAGING;
+		let mut state = PriceControllerState::new(&config, 0).expect("valid controller");
+
+		state
+			.settle(&config, config.emission_duration_seconds)
+			.expect("settle expiry");
+
+		assert_eq!(state.emitted_tokens, 0);
+		assert_eq!(state.reward_pool_tokens, config.allocation_tokens);
+		assert_eq!(state.remaining_base_tokens(&config), Ok(0));
+		assert_eq!(state.window_target_tokens, 0);
 	}
 
 	#[test]
@@ -697,9 +821,10 @@ mod tests {
 			.preview(&config, final_window, MAX_REWARD_TOKENS_PER_TRANSACTION)
 			.expect("final-window quote");
 
-		assert_eq!(quote.target_tokens, 1_600);
+		assert_eq!(quote.target_tokens, 1_024);
 		assert_eq!(quote.reward_tokens, 16);
-		assert_eq!(quote.remaining_window_capacity, 3_184);
+		assert_eq!(quote.remaining_window_capacity, 2_032);
+		assert_eq!(quote.reward_pool_tokens, 17_693_696);
 		assert_eq!(quote.unit_price_lamports, config.minimum_price_lamports);
 	}
 
