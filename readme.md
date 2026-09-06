@@ -40,6 +40,8 @@ flutter:app run
 
 Build the Flutter WASM website directly into Serverpod's web root. Release commands require explicit configuration; see [release readiness](docs/release-readiness.md) for the complete contract.
 
+The [audit remediation ledger](docs/audit-remediation.md) distinguishes repository controls from deployment, store, and mainnet evidence that still has to be produced outside CI.
+
 ```bash
 build:web
 server:start
