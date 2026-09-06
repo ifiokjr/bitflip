@@ -526,6 +526,14 @@ in
       description = "Run native Rust tests.";
       binary = "bash";
     };
+    "simulate:economics" = {
+      exec = ''
+        set -euo pipefail
+        cargo run --package bitflip_program --example economics_simulation
+      '';
+      description = "Simulate target, burst, idle, and adversarial BIT issuance traffic.";
+      binary = "bash";
+    };
     "test:surfpool" = {
       exec = ''
         set -euo pipefail

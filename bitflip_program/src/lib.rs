@@ -20,6 +20,8 @@ use pina::sysvars::Sysvar;
 use pina::sysvars::clock::Clock;
 use pina::*;
 
+pub mod pricing;
+
 declare_id!("5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM");
 
 /// Fresh external bootstrap authority. One-time config creation is safe to

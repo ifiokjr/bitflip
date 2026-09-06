@@ -114,7 +114,7 @@ Ignoring rent and transaction fees, the current 0.01 SOL claim price is recovere
 
 This is only a staging hypothesis, not an income promise. The final share and claim price require observed retention, bot behaviour, SOL price sensitivity, and programme costs.
 
-Protocol-owned section `0` routes both shares to the protocol treasury. Later owners receive their share atomically on each flip; no withdrawal vault or additional rent-bearing revenue account is necessary.
+Protocol-owned section `0` routes both shares to the protocol. Later owners receive their share atomically on each flip. The protocol share accrues as backed lamports in the already-writable section PDA and is swept separately; sending every flip directly to one global treasury would serialize all section shards. This requires a bounded protocol-fee ledger field but no additional rent-bearing revenue account.
 
 ## Game loop and token sinks
 
