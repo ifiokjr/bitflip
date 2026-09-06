@@ -23,7 +23,7 @@ The defaults are 1,024 paid flips or one hour per sector. Both values are config
 
 The claimant is the payer for the new sector PDA. Their transaction therefore pays:
 
-- Solana rent for the 651-byte bitmap account; and
+- Solana rent for the 731-byte bitmap and section-economy account; and
 - `claim_price_lamports`, transferred to the configured treasury.
 
 Creation, payment, ownership assignment, and advancing `next_section` are one atomic instruction. A failed claim creates no account and transfers no funds. At most one new bitmap account is created for each successful claim, so an unused game never allocates the other 255 sectors.
@@ -32,7 +32,7 @@ Creation, payment, ownership assignment, and advancing `next_section` are one at
 
 Flipping is public while a sector is active. A player can toggle up to 16 unique pixels per transaction and pays the game fee for every flip. Ownership controls the scarce lifecycle actions: listing, cancelling a listing, and sealing.
 
-The intended next stage gives owners bounded governance over section campaigns, including an approved game mode, entry price, rules digest, and an owner/sponsor-funded reward budget. It deliberately does not give owners mint authority or a free reward allocation that they could route back to themselves. The economics, custody model, fee-share hypothesis, and implementation gates are specified in [ADR 0003](decisions/0003-section-economy.md). That ADR is proposed; the rebuilt program does not distribute BIT or expose campaign governance yet.
+The section now stores its immutable issuance-controller state and separately accounts for base BIT emitted and BIT moved into the protocol reward pool. Anyone can settle elapsed windows, but no instruction can yet distribute BIT or withdraw the pool. The intended later campaign layer gives owners bounded governance over an approved game mode, entry price, rules digest, and an owner/sponsor-funded reward budget. It deliberately does not give owners mint authority or a free reward allocation that they could route back to themselves. The economics, custody model, fee-share hypothesis, and implementation gates are specified in [ADR 0003](decisions/0003-section-economy.md).
 
 ## Resale
 
@@ -44,4 +44,4 @@ Minted sectors cannot use this listing mechanism. After minting, the compressed 
 
 ## Deployment compatibility
 
-This model changes the sector account from 643 to 651 bytes and changes the `InitializeGame` instruction accounts and data. Do not point the updated app at a game containing old-layout sectors. For staging and launch, deploy the reviewed program and initialize a fresh game so every sector uses the current layout.
+Economy ABI version 2 changes the game account from 32 to 123 bytes and the sector account from 651 to 731 bytes. It also rejects initialization beyond the four configured games. Do not point the updated app at a game containing old-layout sectors. For staging and launch, deploy the reviewed program under a fresh program ID and initialize fresh games so every sector uses the current layout and controller configuration.

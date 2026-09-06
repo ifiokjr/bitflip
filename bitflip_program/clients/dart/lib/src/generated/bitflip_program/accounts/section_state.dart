@@ -29,6 +29,16 @@ class SectionState {
     required this.revision,
     required this.lastFlipAt,
     required this.salePriceLamports,
+    required this.economyLaunchedAt,
+    required this.economyWindowStartedAt,
+    required this.economyLastUpdatedAt,
+    required this.economyWindowId,
+    required this.economyWindowTargetTokens,
+    required this.economyWindowRewardedTokens,
+    required this.emittedTokens,
+    required this.rewardPoolTokens,
+    required this.controllerPriceLamports,
+    required this.postedPriceLamports,
     required this.pixels,
   }) :
       discriminator = 3;
@@ -47,6 +57,16 @@ class SectionState {
   final BigInt revision;
   final BigInt lastFlipAt;
   final BigInt salePriceLamports;
+  final BigInt economyLaunchedAt;
+  final BigInt economyWindowStartedAt;
+  final BigInt economyLastUpdatedAt;
+  final BigInt economyWindowId;
+  final BigInt economyWindowTargetTokens;
+  final BigInt economyWindowRewardedTokens;
+  final BigInt emittedTokens;
+  final BigInt rewardPoolTokens;
+  final BigInt controllerPriceLamports;
+  final BigInt postedPriceLamports;
   final Uint8List pixels;
 
   @override
@@ -68,13 +88,23 @@ class SectionState {
           revision == other.revision &&
           lastFlipAt == other.lastFlipAt &&
           salePriceLamports == other.salePriceLamports &&
+          economyLaunchedAt == other.economyLaunchedAt &&
+          economyWindowStartedAt == other.economyWindowStartedAt &&
+          economyLastUpdatedAt == other.economyLastUpdatedAt &&
+          economyWindowId == other.economyWindowId &&
+          economyWindowTargetTokens == other.economyWindowTargetTokens &&
+          economyWindowRewardedTokens == other.economyWindowRewardedTokens &&
+          emittedTokens == other.emittedTokens &&
+          rewardPoolTokens == other.rewardPoolTokens &&
+          controllerPriceLamports == other.controllerPriceLamports &&
+          postedPriceLamports == other.postedPriceLamports &&
           pixels == other.pixels;
 
   @override
-  int get hashCode => Object.hash(discriminator, owner, assetId, merkleTree, gameIndex, sectionIndex, status, bump, onPixels, leafIndex, flipCount, revision, lastFlipAt, salePriceLamports, pixels);
+  int get hashCode => Object.hashAll([discriminator, owner, assetId, merkleTree, gameIndex, sectionIndex, status, bump, onPixels, leafIndex, flipCount, revision, lastFlipAt, salePriceLamports, economyLaunchedAt, economyWindowStartedAt, economyLastUpdatedAt, economyWindowId, economyWindowTargetTokens, economyWindowRewardedTokens, emittedTokens, rewardPoolTokens, controllerPriceLamports, postedPriceLamports, pixels]);
 
   @override
-  String toString() => 'SectionState(discriminator: $discriminator, owner: $owner, assetId: $assetId, merkleTree: $merkleTree, gameIndex: $gameIndex, sectionIndex: $sectionIndex, status: $status, bump: $bump, onPixels: $onPixels, leafIndex: $leafIndex, flipCount: $flipCount, revision: $revision, lastFlipAt: $lastFlipAt, salePriceLamports: $salePriceLamports, pixels: $pixels)';
+  String toString() => 'SectionState(discriminator: $discriminator, owner: $owner, assetId: $assetId, merkleTree: $merkleTree, gameIndex: $gameIndex, sectionIndex: $sectionIndex, status: $status, bump: $bump, onPixels: $onPixels, leafIndex: $leafIndex, flipCount: $flipCount, revision: $revision, lastFlipAt: $lastFlipAt, salePriceLamports: $salePriceLamports, economyLaunchedAt: $economyLaunchedAt, economyWindowStartedAt: $economyWindowStartedAt, economyLastUpdatedAt: $economyLastUpdatedAt, economyWindowId: $economyWindowId, economyWindowTargetTokens: $economyWindowTargetTokens, economyWindowRewardedTokens: $economyWindowRewardedTokens, emittedTokens: $emittedTokens, rewardPoolTokens: $rewardPoolTokens, controllerPriceLamports: $controllerPriceLamports, postedPriceLamports: $postedPriceLamports, pixels: $pixels)';
 }
 
 
@@ -94,6 +124,16 @@ Encoder<SectionState> getSectionStateEncoder() {
     ('revision', getU64Encoder()),
     ('lastFlipAt', getI64Encoder()),
     ('salePriceLamports', getU64Encoder()),
+    ('economyLaunchedAt', getU64Encoder()),
+    ('economyWindowStartedAt', getU64Encoder()),
+    ('economyLastUpdatedAt', getU64Encoder()),
+    ('economyWindowId', getU64Encoder()),
+    ('economyWindowTargetTokens', getU64Encoder()),
+    ('economyWindowRewardedTokens', getU64Encoder()),
+    ('emittedTokens', getU64Encoder()),
+    ('rewardPoolTokens', getU64Encoder()),
+    ('controllerPriceLamports', getU64Encoder()),
+    ('postedPriceLamports', getU64Encoder()),
     ('pixels', fixEncoderSize(getBytesEncoder(), 512, allowTruncation: false)),
   ]);
 
@@ -114,6 +154,16 @@ Encoder<SectionState> getSectionStateEncoder() {
       'revision': value.revision,
       'lastFlipAt': value.lastFlipAt,
       'salePriceLamports': value.salePriceLamports,
+      'economyLaunchedAt': value.economyLaunchedAt,
+      'economyWindowStartedAt': value.economyWindowStartedAt,
+      'economyLastUpdatedAt': value.economyLastUpdatedAt,
+      'economyWindowId': value.economyWindowId,
+      'economyWindowTargetTokens': value.economyWindowTargetTokens,
+      'economyWindowRewardedTokens': value.economyWindowRewardedTokens,
+      'emittedTokens': value.emittedTokens,
+      'rewardPoolTokens': value.rewardPoolTokens,
+      'controllerPriceLamports': value.controllerPriceLamports,
+      'postedPriceLamports': value.postedPriceLamports,
       'pixels': value.pixels,
     },
   );
@@ -135,6 +185,16 @@ Decoder<SectionState> getSectionStateDecoder() {
     ('revision', getU64Decoder()),
     ('lastFlipAt', getI64Decoder()),
     ('salePriceLamports', getU64Decoder()),
+    ('economyLaunchedAt', getU64Decoder()),
+    ('economyWindowStartedAt', getU64Decoder()),
+    ('economyLastUpdatedAt', getU64Decoder()),
+    ('economyWindowId', getU64Decoder()),
+    ('economyWindowTargetTokens', getU64Decoder()),
+    ('economyWindowRewardedTokens', getU64Decoder()),
+    ('emittedTokens', getU64Decoder()),
+    ('rewardPoolTokens', getU64Decoder()),
+    ('controllerPriceLamports', getU64Decoder()),
+    ('postedPriceLamports', getU64Decoder()),
     ('pixels', fixDecoderSize(getBytesDecoder(), 512)),
   ]);
 
@@ -170,6 +230,16 @@ Decoder<SectionState> getSectionStateDecoder() {
       revision: map['revision']! as BigInt,
       lastFlipAt: map['lastFlipAt']! as BigInt,
       salePriceLamports: map['salePriceLamports']! as BigInt,
+      economyLaunchedAt: map['economyLaunchedAt']! as BigInt,
+      economyWindowStartedAt: map['economyWindowStartedAt']! as BigInt,
+      economyLastUpdatedAt: map['economyLastUpdatedAt']! as BigInt,
+      economyWindowId: map['economyWindowId']! as BigInt,
+      economyWindowTargetTokens: map['economyWindowTargetTokens']! as BigInt,
+      economyWindowRewardedTokens: map['economyWindowRewardedTokens']! as BigInt,
+      emittedTokens: map['emittedTokens']! as BigInt,
+      rewardPoolTokens: map['rewardPoolTokens']! as BigInt,
+      controllerPriceLamports: map['controllerPriceLamports']! as BigInt,
+      postedPriceLamports: map['postedPriceLamports']! as BigInt,
       pixels: map['pixels']! as Uint8List,
       ),
       newOffset,

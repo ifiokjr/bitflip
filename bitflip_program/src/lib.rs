@@ -52,6 +52,8 @@ pub const BIT_GAME_COUNT: u8 = 4;
 pub const BIT_GAME_ALLOCATION_TOKENS: u64 = 6_710_886_400;
 /// BIT reserved for one of a game's 256 sections.
 pub const BIT_SECTION_ALLOCATION_TOKENS: u64 = 26_214_400;
+/// Version of the immutable section economy snapshotted by each game.
+pub const ECONOMY_VERSION: u8 = 1;
 
 pub const DEFAULT_CLAIM_PRICE_LAMPORTS: u64 = 10_000_000;
 pub const DEFAULT_FLIP_FEE_LAMPORTS: u64 = 10_000;
@@ -60,7 +62,7 @@ pub const DEFAULT_MAX_FLIP_FEE_LAMPORTS: u64 = 1_000_000;
 pub const DEFAULT_UNLOCK_INTERVAL_SECONDS: u32 = 3_600;
 pub const DEFAULT_EARLY_UNLOCK_FLIPS: u32 = 1_024;
 
-pub const CONFIG_VERSION: u8 = 1;
+pub const CONFIG_VERSION: u8 = 2;
 pub const GAME_STATUS_LIVE: u8 = 1;
 pub const GAME_STATUS_CLAIMS_COMPLETE: u8 = 2;
 pub const SECTION_STATUS_ACTIVE: u8 = 1;
@@ -96,6 +98,8 @@ pub enum BitflipError {
 	SectionNotTransferable = 18,
 	CannotPurchaseOwnSection = 19,
 	OwnerChanged = 20,
+	InvalidControllerTimestamp = 21,
+	InvalidControllerState = 22,
 }
 
 #[discriminator]
@@ -112,6 +116,7 @@ pub enum BitflipInstruction {
 	ListSection = 9,
 	CancelSectionListing = 10,
 	PurchaseSection = 11,
+	SettleSectionEconomy = 12,
 }
 
 #[discriminator]
@@ -145,11 +150,24 @@ pub struct GameState {
 	pub game_index: u8,
 	pub status: u8,
 	pub bump: u8,
+	pub economy_version: u8,
 	pub starts_at: i64,
 	pub next_section: u16,
 	pub minted_sections: u16,
 	pub flip_fee_lamports: u64,
 	pub total_flips: u64,
+	pub section_allocation_tokens: u64,
+	pub emission_duration_seconds: u64,
+	pub window_seconds: u64,
+	pub target_tokens_per_window: u64,
+	pub start_price_lamports: u64,
+	pub minimum_price_lamports: u64,
+	pub maximum_price_lamports: u64,
+	pub start_floor_price_lamports: u64,
+	pub end_floor_price_lamports: u64,
+	pub change_denominator: u64,
+	pub burst_elasticity: u64,
+	pub owner_share_basis_points: u16,
 }
 
 #[account(discriminator = BitflipAccountType)]
@@ -171,6 +189,16 @@ pub struct SectionState {
 	pub revision: u64,
 	pub last_flip_at: i64,
 	pub sale_price_lamports: u64,
+	pub economy_launched_at: u64,
+	pub economy_window_started_at: u64,
+	pub economy_last_updated_at: u64,
+	pub economy_window_id: u64,
+	pub economy_window_target_tokens: u64,
+	pub economy_window_rewarded_tokens: u64,
+	pub emitted_tokens: u64,
+	pub reward_pool_tokens: u64,
+	pub controller_price_lamports: u64,
+	pub posted_price_lamports: u64,
 	pub pixels: [u8; 512],
 }
 
@@ -258,6 +286,12 @@ pub struct PurchaseSectionInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
 	pub maximum_price_lamports: u64,
+}
+
+#[instruction(discriminator = BitflipInstruction::SettleSectionEconomy)]
+pub struct SettleSectionEconomyInstruction {
+	pub game_index: u8,
+	pub section_index: u8,
 }
 
 #[derive(Accounts, Debug)]
@@ -351,6 +385,12 @@ pub struct PurchaseSectionAccounts<'a> {
 	pub game: &'a AccountView,
 	pub section: &'a mut AccountView,
 	pub system_program: &'a AccountView,
+}
+
+#[derive(Accounts, Debug)]
+pub struct SettleSectionEconomyAccounts<'a> {
+	pub game: &'a AccountView,
+	pub section: &'a mut AccountView,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -463,6 +503,9 @@ fn assert_game_account(game: &AccountView, game_index: u8) -> ProgramResult {
 	if state.game_index != game_index {
 		return Err(BitflipError::InvalidGameIndex.into());
 	}
+	if state.economy_version != ECONOMY_VERSION {
+		return Err(BitflipError::InvalidConfiguration.into());
+	}
 	GameState::assert_seeds(game, game_index, &ID)
 }
 
@@ -479,6 +522,173 @@ fn assert_section_account(
 		return Err(BitflipError::InvalidSectionIndex.into());
 	}
 	SectionState::assert_seeds(section, game_index, section_index, &ID)
+}
+
+fn controller_error(error: pricing::PriceControllerError) -> ProgramError {
+	match error {
+		pricing::PriceControllerError::InvalidConfiguration => {
+			BitflipError::InvalidConfiguration.into()
+		}
+		pricing::PriceControllerError::InvalidTimestamp => {
+			BitflipError::InvalidControllerTimestamp.into()
+		}
+		pricing::PriceControllerError::ArithmeticOverflow => ProgramError::ArithmeticOverflow,
+		pricing::PriceControllerError::InvalidRequest
+		| pricing::PriceControllerError::StaleWindow
+		| pricing::PriceControllerError::PriceSlippage
+		| pricing::PriceControllerError::InsufficientReward => {
+			BitflipError::InvalidControllerState.into()
+		}
+	}
+}
+
+fn controller_timestamp(timestamp: i64) -> Result<u64, ProgramError> {
+	u64::try_from(timestamp).map_err(|_| BitflipError::InvalidControllerTimestamp.into())
+}
+
+fn game_price_config(game: &GameStateZc) -> Result<pricing::PriceControllerConfig, ProgramError> {
+	if game.economy_version != ECONOMY_VERSION {
+		return Err(BitflipError::InvalidConfiguration.into());
+	}
+
+	let config = pricing::PriceControllerConfig {
+		allocation_tokens: game.section_allocation_tokens.get(),
+		emission_duration_seconds: game.emission_duration_seconds.get(),
+		window_seconds: game.window_seconds.get(),
+		target_tokens_per_window: game.target_tokens_per_window.get(),
+		start_price_lamports: game.start_price_lamports.get(),
+		minimum_price_lamports: game.minimum_price_lamports.get(),
+		maximum_price_lamports: game.maximum_price_lamports.get(),
+		start_floor_price_lamports: game.start_floor_price_lamports.get(),
+		end_floor_price_lamports: game.end_floor_price_lamports.get(),
+		change_denominator: game.change_denominator.get(),
+		burst_elasticity: game.burst_elasticity.get(),
+	};
+	config.validate().map_err(controller_error)?;
+
+	Ok(config)
+}
+
+fn section_controller_state(section: &SectionStateZc) -> pricing::PriceControllerState {
+	pricing::PriceControllerState {
+		launched_at: section.economy_launched_at.get(),
+		window_started_at: section.economy_window_started_at.get(),
+		last_updated_at: section.economy_last_updated_at.get(),
+		window_id: section.economy_window_id.get(),
+		window_target_tokens: section.economy_window_target_tokens.get(),
+		window_rewarded_tokens: section.economy_window_rewarded_tokens.get(),
+		emitted_tokens: section.emitted_tokens.get(),
+		reward_pool_tokens: section.reward_pool_tokens.get(),
+		controller_price_lamports: section.controller_price_lamports.get(),
+		posted_price_lamports: section.posted_price_lamports.get(),
+	}
+}
+
+fn store_section_controller_state(
+	section: &mut SectionStateZc,
+	state: pricing::PriceControllerState,
+) {
+	section.economy_launched_at.set(state.launched_at);
+	section
+		.economy_window_started_at
+		.set(state.window_started_at);
+	section.economy_last_updated_at.set(state.last_updated_at);
+	section.economy_window_id.set(state.window_id);
+	section
+		.economy_window_target_tokens
+		.set(state.window_target_tokens);
+	section
+		.economy_window_rewarded_tokens
+		.set(state.window_rewarded_tokens);
+	section.emitted_tokens.set(state.emitted_tokens);
+	section.reward_pool_tokens.set(state.reward_pool_tokens);
+	section
+		.controller_price_lamports
+		.set(state.controller_price_lamports);
+	section
+		.posted_price_lamports
+		.set(state.posted_price_lamports);
+}
+
+fn initialize_game_state(
+	game: &mut GameStateZc,
+	game_index: u8,
+	bump: u8,
+	starts_at: i64,
+	flip_fee_lamports: u64,
+	price_config: pricing::PriceControllerConfig,
+) {
+	game.game_index = game_index;
+	game.status = GAME_STATUS_LIVE;
+	game.bump = bump;
+	game.economy_version = ECONOMY_VERSION;
+	game.starts_at.set(starts_at);
+	game.next_section.set(1);
+	game.minted_sections.set(0);
+	game.flip_fee_lamports.set(flip_fee_lamports);
+	game.total_flips.set(0);
+	game.section_allocation_tokens
+		.set(price_config.allocation_tokens);
+	game.emission_duration_seconds
+		.set(price_config.emission_duration_seconds);
+	game.window_seconds.set(price_config.window_seconds);
+	game.target_tokens_per_window
+		.set(price_config.target_tokens_per_window);
+	game.start_price_lamports
+		.set(price_config.start_price_lamports);
+	game.minimum_price_lamports
+		.set(price_config.minimum_price_lamports);
+	game.maximum_price_lamports
+		.set(price_config.maximum_price_lamports);
+	game.start_floor_price_lamports
+		.set(price_config.start_floor_price_lamports);
+	game.end_floor_price_lamports
+		.set(price_config.end_floor_price_lamports);
+	game.change_denominator.set(price_config.change_denominator);
+	game.burst_elasticity.set(price_config.burst_elasticity);
+	game.owner_share_basis_points
+		.set(pricing::DEFAULT_OWNER_SHARE_BASIS_POINTS);
+}
+
+fn initialize_section_state(
+	section: &mut SectionStateZc,
+	owner: Address,
+	game_index: u8,
+	section_index: u8,
+	bump: u8,
+	controller: pricing::PriceControllerState,
+) {
+	section.owner = owner;
+	section.asset_id = ZERO_ADDRESS;
+	section.merkle_tree = ZERO_ADDRESS;
+	section.game_index = game_index;
+	section.section_index = section_index;
+	section.status = SECTION_STATUS_ACTIVE;
+	section.bump = bump;
+	section.on_pixels.set(0);
+	section.leaf_index.set(0);
+	section.flip_count.set(0);
+	section.revision.set(0);
+	section.last_flip_at.set(0);
+	section.sale_price_lamports.set(0);
+	store_section_controller_state(section, controller);
+	section.pixels.fill(0);
+}
+
+fn transfer_lamports(
+	from: &AccountView,
+	to: &AccountView,
+	lamports: u64,
+	system_program: &AccountView,
+) -> ProgramResult {
+	if lamports == 0 {
+		return Ok(());
+	}
+	if from.lamports() < lamports {
+		return Err(BitflipError::InsufficientFunds.into());
+	}
+	system_program.assert_address(&system::ID)?;
+	system::instructions::Transfer { from, to, lamports }.invoke()
 }
 
 impl<'a> ProcessAccountInfos<'a> for InitializeConfigAccounts<'a> {
@@ -626,6 +836,9 @@ impl<'a> ProcessAccountInfos<'a> for InitializeGameAccounts<'a> {
 		if args.section_index != 0 {
 			return Err(BitflipError::InvalidSectionIndex.into());
 		}
+		if args.game_index >= BIT_GAME_COUNT {
+			return Err(BitflipError::InvalidGameIndex.into());
+		}
 		assert_config_account(self.config)?;
 		self.payer
 			.assert_signer()?
@@ -685,32 +898,30 @@ impl<'a> ProcessAccountInfos<'a> for InitializeGameAccounts<'a> {
 		.invoke::<SectionState>()?;
 
 		let clock = Clock::get()?;
+		let launched_at = controller_timestamp(clock.unix_timestamp)?;
+		let price_config = pricing::PriceControllerConfig::STAGING;
+		let controller = pricing::PriceControllerState::new(&price_config, launched_at)
+			.map_err(controller_error)?;
 		let game_address = *self.game.address();
 		let mut game = self.game.as_account_mut::<GameState>(&ID)?;
-		game.game_index = args.game_index;
-		game.status = GAME_STATUS_LIVE;
-		game.bump = args.game_bump;
-		game.starts_at.set(clock.unix_timestamp);
-		game.next_section.set(1);
-		game.minted_sections.set(0);
-		game.flip_fee_lamports.set(flip_fee_lamports);
-		game.total_flips.set(0);
+		initialize_game_state(
+			&mut game,
+			args.game_index,
+			args.game_bump,
+			clock.unix_timestamp,
+			flip_fee_lamports,
+			price_config,
+		);
 
 		let mut initial_section = self.section.as_account_mut::<SectionState>(&ID)?;
-		initial_section.owner = game_address;
-		initial_section.asset_id = ZERO_ADDRESS;
-		initial_section.merkle_tree = ZERO_ADDRESS;
-		initial_section.game_index = args.game_index;
-		initial_section.section_index = args.section_index;
-		initial_section.status = SECTION_STATUS_ACTIVE;
-		initial_section.bump = args.section_bump;
-		initial_section.on_pixels.set(0);
-		initial_section.leaf_index.set(0);
-		initial_section.flip_count.set(0);
-		initial_section.revision.set(0);
-		initial_section.last_flip_at.set(0);
-		initial_section.sale_price_lamports.set(0);
-		initial_section.pixels.fill(0);
+		initialize_section_state(
+			&mut initial_section,
+			game_address,
+			args.game_index,
+			args.section_index,
+			args.section_bump,
+			controller,
+		);
 
 		let mut config = self.config.as_account_mut::<ConfigState>(&ID)?;
 		let game_count = config
@@ -750,15 +961,23 @@ impl<'a> ProcessAccountInfos<'a> for ClaimSectionAccounts<'a> {
 			return Err(BitflipError::PriceSlippage.into());
 		}
 
-		let (starts_at, next_section, status) = {
+		let (starts_at, next_section, status, price_config) = {
 			let game = self.game.as_account::<GameState>(&ID)?;
-			(game.starts_at.get(), game.next_section.get(), game.status)
+			(
+				game.starts_at.get(),
+				game.next_section.get(),
+				game.status,
+				game_price_config(&game)?,
+			)
 		};
 		if status != GAME_STATUS_LIVE || next_section != u16::from(args.section_index) {
 			return Err(BitflipError::GameNotLive.into());
 		}
 
 		let clock = Clock::get()?;
+		let launched_at = controller_timestamp(clock.unix_timestamp)?;
+		let controller = pricing::PriceControllerState::new(&price_config, launched_at)
+			.map_err(controller_error)?;
 		let unlocked_by_time = clock.unix_timestamp
 			>= section_unlock_at(starts_at, args.section_index, interval_seconds)?;
 		let unlocked_by_activity = if args.section_index == 0 {
@@ -797,33 +1016,17 @@ impl<'a> ProcessAccountInfos<'a> for ClaimSectionAccounts<'a> {
 		}
 		.invoke::<SectionState>()?;
 
-		if claim_price > 0 {
-			if self.owner.lamports() < claim_price {
-				return Err(BitflipError::InsufficientFunds.into());
-			}
-			system::instructions::Transfer {
-				from: self.owner,
-				to: self.treasury,
-				lamports: claim_price,
-			}
-			.invoke()?;
-		}
+		transfer_lamports(self.owner, self.treasury, claim_price, self.system_program)?;
 
 		let mut section = self.section.as_account_mut::<SectionState>(&ID)?;
-		section.owner = *self.owner.address();
-		section.asset_id = ZERO_ADDRESS;
-		section.merkle_tree = ZERO_ADDRESS;
-		section.game_index = args.game_index;
-		section.section_index = args.section_index;
-		section.status = SECTION_STATUS_ACTIVE;
-		section.bump = args.bump;
-		section.on_pixels.set(0);
-		section.leaf_index.set(0);
-		section.flip_count.set(0);
-		section.revision.set(0);
-		section.last_flip_at.set(0);
-		section.sale_price_lamports.set(0);
-		section.pixels.fill(0);
+		initialize_section_state(
+			&mut section,
+			*self.owner.address(),
+			args.game_index,
+			args.section_index,
+			args.bump,
+			controller,
+		);
 
 		let next_section = next_section
 			.checked_add(1)
@@ -881,16 +1084,7 @@ impl<'a> ProcessAccountInfos<'a> for FlipPixelsAccounts<'a> {
 		if total_fee > args.maximum_total_fee_lamports.get() {
 			return Err(BitflipError::PriceSlippage.into());
 		}
-		if self.player.lamports() < total_fee {
-			return Err(BitflipError::InsufficientFunds.into());
-		}
-
-		system::instructions::Transfer {
-			from: self.player,
-			to: self.treasury,
-			lamports: total_fee,
-		}
-		.invoke()?;
+		transfer_lamports(self.player, self.treasury, total_fee, self.system_program)?;
 
 		let mut section = self.section.as_account_mut::<SectionState>(&ID)?;
 		let mut on_pixels = section.on_pixels.get();
@@ -1095,21 +1289,39 @@ impl<'a> ProcessAccountInfos<'a> for PurchaseSectionAccounts<'a> {
 			price
 		};
 
-		if self.buyer.lamports() < price {
-			return Err(BitflipError::InsufficientFunds.into());
-		}
-		system::instructions::Transfer {
-			from: self.buyer,
-			to: self.seller,
-			lamports: price,
-		}
-		.invoke()?;
+		transfer_lamports(self.buyer, self.seller, price, self.system_program)?;
 
 		let mut section = self.section.as_account_mut::<SectionState>(&ID)?;
 		section.owner = *self.buyer.address();
 		section.sale_price_lamports.set(0);
 
 		log!("Bitflip section purchased");
+		Ok(())
+	}
+}
+
+impl<'a> ProcessAccountInfos<'a> for SettleSectionEconomyAccounts<'a> {
+	fn process(self, data: &[u8]) -> ProgramResult {
+		let args = SettleSectionEconomyInstruction::try_from_bytes(data)?;
+		assert_game_account(self.game, args.game_index)?;
+		assert_section_account(self.section, args.game_index, args.section_index)?;
+
+		let price_config = {
+			let game = self.game.as_account::<GameState>(&ID)?;
+			game_price_config(&game)?
+		};
+		let mut controller = {
+			let section = self.section.as_account::<SectionState>(&ID)?;
+			section_controller_state(&section)
+		};
+		let clock = Clock::get()?;
+		controller
+			.settle(&price_config, controller_timestamp(clock.unix_timestamp)?)
+			.map_err(controller_error)?;
+		let mut section = self.section.as_account_mut::<SectionState>(&ID)?;
+		store_section_controller_state(&mut section, controller);
+
+		log!("Bitflip section economy settled");
 		Ok(())
 	}
 }
@@ -1165,6 +1377,9 @@ pub mod entrypoint {
 			BitflipInstruction::PurchaseSection => {
 				PurchaseSectionAccounts::try_from((program_id, accounts))?.process(data)
 			}
+			BitflipInstruction::SettleSectionEconomy => {
+				SettleSectionEconomyAccounts::try_from((program_id, accounts))?.process(data)
+			}
 		}
 	}
 }
@@ -1201,8 +1416,8 @@ mod tests {
 	#[test]
 	fn account_layouts_are_stable() {
 		assert_eq!(ConfigState::SIZE, 173);
-		assert_eq!(GameState::SIZE, 32);
-		assert_eq!(SectionState::SIZE, 651);
+		assert_eq!(GameState::SIZE, 123);
+		assert_eq!(SectionState::SIZE, 731);
 	}
 
 	#[test]
@@ -1214,6 +1429,7 @@ mod tests {
 		assert_eq!(ListSectionInstruction::SIZE, 11);
 		assert_eq!(CancelSectionListingInstruction::SIZE, 3);
 		assert_eq!(PurchaseSectionInstruction::SIZE, 11);
+		assert_eq!(SettleSectionEconomyInstruction::SIZE, 3);
 	}
 
 	#[test]

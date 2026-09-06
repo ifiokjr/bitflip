@@ -249,8 +249,12 @@ in
     "generate:clients" = {
       exec = ''
         set -euo pipefail
+        ${resolveFlutterSdk}
         CI=true pnpm install --frozen-lockfile
         pina generate --project "$DEVENV_ROOT/bitflip_program" --client dart --npx node
+        "$flutter_sdk/bin/dart" \
+          "$DEVENV_ROOT/setup/fix_pina_dart_hashes.dart" \
+          "$DEVENV_ROOT/bitflip_program/clients/dart/lib/src/generated"
       '';
       description = "Generate the Dart client from the Pina account model.";
       binary = "bash";

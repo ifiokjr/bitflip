@@ -12,7 +12,7 @@ Every section has one 26,214,400 BIT allocation. It begins entirely as base-issu
 
 The pool is an on-chain programme liability, not an owner's wallet. Distribution remains disabled until an independently reviewed, protocol-defined policy can select recipients without relying on the owner or one reward distributor.
 
-This ADR is a design gate, not a claim that token rewards or campaign governance exist in the rebuilt program today.
+The deterministic controller, immutable per-game configuration snapshot, per-section base/pool ledger, and permissionless settlement are implemented in economy ABI version 2. Token custody, paid-flip issuance, reward payouts, and campaign governance remain gated below. ABI version 2 requires a fresh deployment and must not be used as a reward-bearing release until custody and atomic payout are connected.
 
 ## Recovered intent
 
@@ -141,7 +141,7 @@ Section ownership also receives a protocol-defined share of that section's SOL f
 | One full 4,096-pixel board |            0.04096 SOL | 0.008192 SOL |   0.032768 SOL |
 | 26,214,400 paid flips      |            262.144 SOL |  52.4288 SOL |   209.7152 SOL |
 
-Ignoring rent and transaction fees, the current 0.01 SOL claim price is recovered after 5,000 paid flips at a 20% share. On 2026-09-06, mainnet reported 0.004933407 SOL as the rent-exempt minimum for the current 651-byte section; including that capital raises the illustrative break-even to 7,467 flips, or just under two full-board equivalents. Adding 64 bytes of policy and ledger state would raise rent by approximately 0.000405312 SOL at the same schedule. Deployment tooling must recalculate rent rather than hard-code either observation.
+Ignoring rent and transaction fees, the current 0.01 SOL claim price is recovered after 5,000 paid flips at a 20% share. On 2026-09-06, mainnet reported 0.004933407 SOL as the rent-exempt minimum for the former 651-byte section. Economy ABI version 2 expands that account to 731 bytes. Deployment tooling must query the exact current rent for the deployed layout and include it in the break-even model rather than hard-code an earlier observation.
 
 This is only a staging hypothesis, not an income promise. The final share and claim price require observed retention, bot behaviour, SOL price sensitivity, and programme costs.
 
@@ -177,8 +177,8 @@ The vault PDA can sign only transfers from the vault. With mint/freeze authority
 
 ## Required implementation order
 
-1. Simulate the [time-based section price controller](0004-section-price-controller.md), owner share, claim break-even, and likely bot strategies using staging activity assumptions.
-2. Implement and independently review the fixed mint, global-vault invariant, per-section base ledger, and deterministic shortfall-to-pool transition on a fresh devnet program ID.
+1. Simulate the [time-based section price controller](0004-section-price-controller.md), owner share, claim break-even, and likely bot strategies using staging activity assumptions. **Implemented and reproducible.**
+2. Implement and independently review the fixed mint, global-vault invariant, per-section base ledger, and deterministic shortfall-to-pool transition on a fresh devnet program ID. **The per-section ledger and transition are implemented; the mint, vault, fresh deployment, and independent review remain.**
 3. Add base paid-flip distribution with SOL/BIT slippage protection and real-SBF tests for exhaustion, batching, custody, rollover, and arithmetic boundaries. Accrue the pool but do not pay it yet.
 4. Remove the global counter and treasury from the flip hot path, then benchmark the actual one-pixel and 16-pixel Token-2022 paths across many sections.
 5. Add owner fee sharing and versioned section policies. Policies cannot change during a live campaign and must survive a section sale.

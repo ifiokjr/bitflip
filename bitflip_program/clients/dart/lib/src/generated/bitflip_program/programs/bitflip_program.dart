@@ -37,6 +37,7 @@ enum BitflipProgramInstruction {
   listSection,
   cancelSectionListing,
   purchaseSection,
+  settleSectionEconomy,
 }
 
 /// Identifies the type of a BitflipProgram instruction.
@@ -78,6 +79,9 @@ BitflipProgramInstruction identifyBitflipProgramInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(11), 0)) {
     return BitflipProgramInstruction.purchaseSection;
+  }
+  if (containsBytes(data, getU8Encoder().encode(12), 0)) {
+    return BitflipProgramInstruction.settleSectionEconomy;
   }
 
   throw SolanaError(
@@ -192,6 +196,14 @@ final class ParsedPurchaseSection extends ParsedBitflipProgramInstruction {
   final PurchaseSectionInstructionData data;
 }
 
+/// A parsed SettleSectionEconomy instruction.
+final class ParsedSettleSectionEconomy extends ParsedBitflipProgramInstruction {
+  const ParsedSettleSectionEconomy({required this.data})
+      : super(BitflipProgramInstruction.settleSectionEconomy);
+
+  final SettleSectionEconomyInstructionData data;
+}
+
 /// Parses a BitflipProgram instruction.
 ParsedBitflipProgramInstruction parseBitflipProgramInstruction(
   Instruction instruction,
@@ -234,6 +246,9 @@ ParsedBitflipProgramInstruction parseBitflipProgramInstruction(
     ),
     BitflipProgramInstruction.purchaseSection => ParsedPurchaseSection(
       data: parsePurchaseSectionInstruction(instruction),
+    ),
+    BitflipProgramInstruction.settleSectionEconomy => ParsedSettleSectionEconomy(
+      data: parseSettleSectionEconomyInstruction(instruction),
     ),
   };
 }

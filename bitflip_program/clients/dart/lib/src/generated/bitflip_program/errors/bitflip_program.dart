@@ -45,6 +45,10 @@ const int bitflipProgramErrorCannotPurchaseOwnSection = 0x13; // 19
 
 const int bitflipProgramErrorOwnerChanged = 0x14; // 20
 
+const int bitflipProgramErrorInvalidControllerTimestamp = 0x15; // 21
+
+const int bitflipProgramErrorInvalidControllerState = 0x16; // 22
+
 /// Map of error codes to human-readable messages.
 const Map<int, String> _bitflipProgramErrorMessages = {
     bitflipProgramErrorUnauthorized: '',
@@ -68,6 +72,8 @@ const Map<int, String> _bitflipProgramErrorMessages = {
     bitflipProgramErrorSectionNotTransferable: '',
     bitflipProgramErrorCannotPurchaseOwnSection: '',
     bitflipProgramErrorOwnerChanged: '',
+    bitflipProgramErrorInvalidControllerTimestamp: '',
+    bitflipProgramErrorInvalidControllerState: '',
 };
 
 /// Get the error message for a BitflipProgram program error code.
