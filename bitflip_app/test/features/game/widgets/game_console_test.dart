@@ -1,4 +1,5 @@
 import 'package:bitflip_app/app/theme/bitflip_theme.dart';
+import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/application/game_controller.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
@@ -204,7 +205,10 @@ GameViewState _state(
     activity: const GameActivity(GameNotice.ready),
     isBusy: false,
     isWalletSupported: isWalletSupported,
+    walletKind: BitflipWalletKind.external,
+    canFundWithMobileWallet: false,
     walletAddress: walletAddress,
+    walletBalanceLamports: null,
     loadStatus:
         loadStatus ?? (isDemo ? GameLoadStatus.demo : GameLoadStatus.ready),
     walletChain: 'solana:devnet',

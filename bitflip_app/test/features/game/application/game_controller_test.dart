@@ -1,3 +1,4 @@
+import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/application/game_controller.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
@@ -145,6 +146,80 @@ void main() {
       expect(state.loadStatus, GameLoadStatus.loading);
       expect(state.snapshot.isDemo, isFalse);
       expect(state.snapshot.section.bitmap.onCount, 0);
+    });
+
+    test(
+      'initializes and restores the embedded wallet during refresh',
+      () async {
+        repository = FakeBitflipRepository(
+          snapshot: _liveSnapshot(SectionLifecycle.active),
+          walletKind: BitflipWalletKind.embedded,
+          canFundWithMobileWallet: true,
+          walletAddress: null,
+          walletBalanceLamports: BigInt.from(25000000),
+        );
+        final walletContainer = ProviderContainer(
+          overrides: [bitflipRepositoryProvider.overrideWithValue(repository)],
+        );
+        addTearDown(walletContainer.dispose);
+
+        await walletContainer.read(gameControllerProvider.notifier).refresh();
+        final state = walletContainer.read(gameControllerProvider);
+
+        expect(repository.initializeCalls, 1);
+        expect(state.walletAddress, startsWith('Embedded'));
+        expect(state.walletBalanceLamports, BigInt.from(25000000));
+        expect(state.walletKind, BitflipWalletKind.embedded);
+        expect(state.canFundWithMobileWallet, isTrue);
+      },
+    );
+
+    test('funds the embedded wallet and refreshes its balance', () async {
+      repository = FakeBitflipRepository(
+        snapshot: _liveSnapshot(SectionLifecycle.active),
+        walletKind: BitflipWalletKind.embedded,
+        canFundWithMobileWallet: true,
+        walletAddress: null,
+      );
+      final walletContainer = ProviderContainer(
+        overrides: [bitflipRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(walletContainer.dispose);
+      final controller = walletContainer.read(gameControllerProvider.notifier);
+      await controller.refresh();
+
+      await controller.fundWithMobileWallet(BigInt.from(50000000));
+      final state = walletContainer.read(gameControllerProvider);
+
+      expect(repository.fundCalls, 1);
+      expect(repository.lastFundingLamports, BigInt.from(50000000));
+      expect(state.walletBalanceLamports, BigInt.from(50000000));
+      expect(state.activity.notice, GameNotice.funded);
+      expect(state.activity.transactionSignature, 'fund-signature');
+    });
+
+    test('reports confirmed funding when the balance refresh fails', () async {
+      repository = FakeBitflipRepository(
+        snapshot: _liveSnapshot(SectionLifecycle.active),
+        walletKind: BitflipWalletKind.embedded,
+        canFundWithMobileWallet: true,
+        walletAddress: null,
+      );
+      final walletContainer = ProviderContainer(
+        overrides: [bitflipRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(walletContainer.dispose);
+      final controller = walletContainer.read(gameControllerProvider.notifier);
+      await controller.refresh();
+      repository.balanceError = StateError('balance RPC unavailable');
+
+      await controller.fundWithMobileWallet(BigInt.from(50000000));
+      final state = walletContainer.read(gameControllerProvider);
+
+      expect(repository.fundCalls, 1);
+      expect(state.activity.notice, GameNotice.funded);
+      expect(state.activity.transactionSignature, 'fund-signature');
+      expect(state.walletBalanceLamports, BigInt.zero);
     });
 
     test('missing and failed RPC loads have explicit states', () async {

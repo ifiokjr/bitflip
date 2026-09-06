@@ -2,6 +2,10 @@ import 'package:flutter/widgets.dart';
 
 abstract final class BitflipTestKeys {
   static const connectWallet = Key('connect-wallet');
+  static const walletDetails = Key('wallet-details');
+  static const copyWalletAddress = Key('copy-wallet-address');
+  static const walletFundingAmount = Key('wallet-funding-amount');
+  static const fundWithMobileWallet = Key('fund-with-mobile-wallet');
   static const canvas = Key('pixel-canvas');
   static const canvasZoomIn = Key('canvas-zoom-in');
   static const canvasZoomOut = Key('canvas-zoom-out');

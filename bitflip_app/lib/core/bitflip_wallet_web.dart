@@ -19,11 +19,16 @@ extension type _WalletBridge(JSObject _) implements JSObject {
 }
 
 class BitflipWallet {
-  const BitflipWallet({required this.walletChain});
+  const BitflipWallet({required this.walletChain, required String rpcUrl});
 
   final String walletChain;
 
   bool get isSupported => _bitflipWalletBridge != null;
+
+  BitflipWalletKind get kind =>
+      isSupported ? BitflipWalletKind.external : BitflipWalletKind.unavailable;
+
+  bool get canFundWithMobileWallet => false;
 
   List<BitflipWalletOption>? get availableWallets {
     final bridge = _bitflipWalletBridge;
@@ -36,6 +41,8 @@ class BitflipWallet {
   }
 
   String? get address => _bitflipWalletBridge?.address()?.toDart;
+
+  Future<void> initialize() async {}
 
   Future<String> connect([String? walletId]) async {
     final bridge = _requireBridge();
@@ -57,6 +64,10 @@ class BitflipWallet {
 
   Future<String> signMessage(String message) async {
     return (await _requireBridge().signMessage(message.toJS).toDart).toDart;
+  }
+
+  Future<String> fundWithMobileWallet(BigInt lamports) {
+    throw UnsupportedError('Mobile wallet funding is unavailable on the web.');
   }
 }
 

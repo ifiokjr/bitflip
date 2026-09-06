@@ -120,6 +120,46 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('embedded wallet exposes address, balance, and MWA funding', (
+    tester,
+  ) async {
+    final repository = FakeBitflipRepository(
+      snapshot: _liveSnapshot(),
+      walletKind: BitflipWalletKind.embedded,
+      canFundWithMobileWallet: true,
+      walletAddress: null,
+      walletBalanceLamports: BigInt.from(25000000),
+    );
+    await tester.binding.setSurfaceSize(const Size(900, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [bitflipRepositoryProvider.overrideWithValue(repository)],
+        child: const BitflipApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(BitflipTestKeys.walletDetails));
+    await tester.pumpAndSettle();
+
+    expect(find.text('YOUR BITFLIP WALLET'), findsOneWidget);
+    expect(find.text('0.025 SOL'), findsOneWidget);
+    expect(find.textContaining('not a vault'), findsOneWidget);
+    expect(find.byKey(BitflipTestKeys.copyWalletAddress), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(BitflipTestKeys.walletFundingAmount),
+      '0.125',
+    );
+    await tester.tap(find.byKey(BitflipTestKeys.fundWithMobileWallet));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastFundingLamports, BigInt.from(125000000));
+    expect(repository.fundCalls, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('failed live loads never substitute demo artwork', (
     tester,
   ) async {

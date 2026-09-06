@@ -8,7 +8,7 @@ The product is one responsive Flutter codebase for Android, iOS, macOS, and the 
 
 - `bitflip_program` — `no_std` Solana program built on Pina 0.12.2.
 - `bitflip_program/clients/dart` — generated Pina/Codama Dart client.
-- `bitflip_app` — responsive Flutter app and website with Mobile Wallet Adapter and browser Wallet Standard signing.
+- `bitflip_app` — responsive Flutter app and website with an embedded mobile spending wallet, Android Mobile Wallet Adapter funding, and browser Wallet Standard signing.
 - `bitflip_server` — Serverpod 4 backend and generated typed client.
 - `bitflip_program/tests/surfpool` — real-SBF program integration tests running in isolated Surfpool nodes.
 - `bitflip_server/bitflip_server_server/test/surfpool` — full Bubblegum cNFT integration against checksum-pinned program artifacts.
@@ -56,7 +56,7 @@ flutter:app run \
   --dart-define=SERVERPOD_URL=https://api-staging.bitflip.xyz/
 ```
 
-The web build bundles the official Wallet Standard registry and Solana extensions locally. It only offers wallets that support the selected chain, versioned transactions, and exact-message signing; mobile uses Solana Mobile Wallet Adapter.
+The web build bundles the official Wallet Standard registry and Solana extensions locally. It only offers wallets that support the selected chain, versioned transactions, and exact-message signing. Android and iOS generate a device-bound Ed25519 spending wallet, encrypted through Android Keystore or iOS Keychain. Players can copy its address and fund it from any wallet on the configured network; Android also offers an in-app Mobile Wallet Adapter transfer. The embedded key never leaves the device, is not backed up or exportable yet, and should hold only a small playing balance.
 
 ## Generation and migrations
 
