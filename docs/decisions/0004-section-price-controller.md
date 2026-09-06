@@ -181,11 +181,11 @@ If a rollover, sale, or competing transaction changes the quote, the transaction
 
 ## Required tests and evidence
 
-Implementation is blocked on all of the following:
+The deterministic controller, game snapshot, section state, and permissionless settlement are implemented in economy ABI version 2. The reward-bearing release remains blocked on all of the following:
 
 1. The deterministic [economics simulator](../economics-simulation.md) continues to cover idle, target, burst, oscillating, deadline catch-up, and owner wash-trading cost scenarios as the on-chain ABI is implemented.
 2. Property and unit tests continue to prove price bounds, maximum step size, no arithmetic overflow, no reward beyond inventory or window capacity, final partial-window exhaustion, monotonic inventory floor, ordering independence, and atomic quote failure.
-3. On-chain lifecycle tests cover late launch, ownership sale, sealing, exhaustion, and timestamp jumps without resetting the controller. Ownership and lifecycle status deliberately remain outside the pure pricing state, so those invariants cannot be proven until the controller is embedded in the section account.
+3. On-chain lifecycle tests cover late launch, ownership sale, sealing, exhaustion, and timestamp jumps without resetting the controller. The controller is embedded in the section account and real-SBF tests cover independent launch and immediate settlement; the remaining lifecycle and time-jump cases must be completed when paid issuance is connected.
 4. Real-SBF tests measure compute for one and 16 pixels, first-time associated token-account creation, and existing token-account transfers.
 5. The application displays the current price, next update, remaining window reward capacity, and signed SOL/BIT bounds.
 6. Devnet telemetry records per-section transaction rate, rewarded-pixel rate, batch size, quote failures, price, reward exhaustion, and compute units.

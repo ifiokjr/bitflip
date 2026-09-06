@@ -68,7 +68,7 @@ class ConfigState {
           bump == other.bump;
 
   @override
-  int get hashCode => Object.hash(discriminator, version, authority, pendingAuthority, treasury, collectionAuthority, claimPriceLamports, flipFeeLamports, minimumFlipFeeLamports, maximumFlipFeeLamports, unlockIntervalSeconds, earlyUnlockFlips, gameCount, bump);
+  int get hashCode => Object.hashAll([discriminator, version, authority, pendingAuthority, treasury, collectionAuthority, claimPriceLamports, flipFeeLamports, minimumFlipFeeLamports, maximumFlipFeeLamports, unlockIntervalSeconds, earlyUnlockFlips, gameCount, bump]);
 
   @override
   String toString() => 'ConfigState(discriminator: $discriminator, version: $version, authority: $authority, pendingAuthority: $pendingAuthority, treasury: $treasury, collectionAuthority: $collectionAuthority, claimPriceLamports: $claimPriceLamports, flipFeeLamports: $flipFeeLamports, minimumFlipFeeLamports: $minimumFlipFeeLamports, maximumFlipFeeLamports: $maximumFlipFeeLamports, unlockIntervalSeconds: $unlockIntervalSeconds, earlyUnlockFlips: $earlyUnlockFlips, gameCount: $gameCount, bump: $bump)';

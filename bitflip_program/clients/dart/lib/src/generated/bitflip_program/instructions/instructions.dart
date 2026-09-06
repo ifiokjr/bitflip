@@ -12,5 +12,6 @@ export 'propose_authority.dart';
 export 'purchase_section.dart';
 export 'record_section_mint.dart';
 export 'seal_section.dart';
+export 'settle_section_economy.dart';
 export 'update_config.dart';
 

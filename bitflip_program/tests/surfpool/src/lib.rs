@@ -6,9 +6,12 @@ use pina_test::ProgramTest;
 use pina_test::Pubkey;
 use pina_test::Signer;
 use pina_test::TestError;
+use program_under_test::BIT_GAME_COUNT;
+use program_under_test::BIT_SECTION_ALLOCATION_TOKENS;
 use program_under_test::BitflipAccountType;
 use program_under_test::BitflipError;
 use program_under_test::BitflipInstruction;
+use program_under_test::CONFIG_VERSION;
 use program_under_test::ConfigState;
 use program_under_test::DEFAULT_CLAIM_PRICE_LAMPORTS;
 use program_under_test::DEFAULT_EARLY_UNLOCK_FLIPS;
@@ -16,12 +19,23 @@ use program_under_test::DEFAULT_FLIP_FEE_LAMPORTS;
 use program_under_test::DEFAULT_MAX_FLIP_FEE_LAMPORTS;
 use program_under_test::DEFAULT_MIN_FLIP_FEE_LAMPORTS;
 use program_under_test::DEFAULT_UNLOCK_INTERVAL_SECONDS;
+use program_under_test::ECONOMY_VERSION;
 use program_under_test::GAME_STATUS_LIVE;
 use program_under_test::ID;
 use program_under_test::SECTION_STATUS_ACTIVE;
 use program_under_test::SECTION_STATUS_MINTED;
 use program_under_test::SECTION_STATUS_SEALED;
 use program_under_test::SectionState;
+use program_under_test::pricing::DEFAULT_BURST_ELASTICITY;
+use program_under_test::pricing::DEFAULT_CHANGE_DENOMINATOR;
+use program_under_test::pricing::DEFAULT_EMISSION_DURATION_SECONDS;
+use program_under_test::pricing::DEFAULT_END_FLOOR_PRICE_LAMPORTS;
+use program_under_test::pricing::DEFAULT_MAX_PRICE_LAMPORTS;
+use program_under_test::pricing::DEFAULT_MIN_PRICE_LAMPORTS;
+use program_under_test::pricing::DEFAULT_OWNER_SHARE_BASIS_POINTS;
+use program_under_test::pricing::DEFAULT_START_PRICE_LAMPORTS;
+use program_under_test::pricing::DEFAULT_TARGET_TOKENS_PER_WINDOW;
+use program_under_test::pricing::DEFAULT_WINDOW_SECONDS;
 
 const CONFIG_SEED: &[u8] = b"config";
 const GAME_SEED: &[u8] = b"game";
@@ -284,6 +298,25 @@ fn flip_pixels_instruction(
 	)
 }
 
+fn settle_section_economy_instruction(
+	program: &ProgramTest,
+	game: &Pubkey,
+	section: &Pubkey,
+	section_index: u8,
+) -> pina_test::Instruction {
+	program.instruction(
+		&[
+			BitflipInstruction::SettleSectionEconomy as u8,
+			0,
+			section_index,
+		],
+		vec![
+			AccountMeta::new_readonly(*game, false),
+			AccountMeta::new(*section, false),
+		],
+	)
+}
+
 async fn claim_first_user_section(
 	program: &mut ProgramTest,
 	authority: &Keypair,
@@ -495,7 +528,7 @@ fn permissionless_sponsor_initializes_safe_fixed_configuration() {
 		assert_eq!(account.owner, program_id);
 		assert_eq!(account.data.len(), ConfigState::SIZE);
 		assert_eq!(account.data[0], BitflipAccountType::ConfigState as u8);
-		assert_eq!(account.data[1], 1, "config ABI version");
+		assert_eq!(account.data[1], CONFIG_VERSION, "config ABI version");
 		assert_eq!(u64_at(&account.data, 130), DEFAULT_CLAIM_PRICE_LAMPORTS);
 		assert_eq!(u64_at(&account.data, 138), DEFAULT_FLIP_FEE_LAMPORTS);
 		assert_eq!(u64_at(&account.data, 146), DEFAULT_MIN_FLIP_FEE_LAMPORTS);
@@ -617,10 +650,39 @@ fn game_bootstraps_one_program_owned_section() {
 		let (initial_section, _) = section_address(&program.program_id(), 0, 0);
 
 		let game_account = program.account(&game).expect("fetch game account");
+		assert_eq!(game_account.data.len(), program_under_test::GameState::SIZE);
+		assert_eq!(game_account.data[4], ECONOMY_VERSION);
 		assert_eq!(
-			u16::from_le_bytes([game_account.data[12], game_account.data[13]]),
+			u16::from_le_bytes([game_account.data[13], game_account.data[14]]),
 			1,
 			"only the bootstrapped section exists"
+		);
+		assert_eq!(
+			u64_at(&game_account.data, 33),
+			BIT_SECTION_ALLOCATION_TOKENS
+		);
+		assert_eq!(
+			u64_at(&game_account.data, 41),
+			DEFAULT_EMISSION_DURATION_SECONDS
+		);
+		assert_eq!(u64_at(&game_account.data, 49), DEFAULT_WINDOW_SECONDS);
+		assert_eq!(
+			u64_at(&game_account.data, 57),
+			DEFAULT_TARGET_TOKENS_PER_WINDOW
+		);
+		assert_eq!(u64_at(&game_account.data, 65), DEFAULT_START_PRICE_LAMPORTS);
+		assert_eq!(u64_at(&game_account.data, 73), DEFAULT_MIN_PRICE_LAMPORTS);
+		assert_eq!(u64_at(&game_account.data, 81), DEFAULT_MAX_PRICE_LAMPORTS);
+		assert_eq!(u64_at(&game_account.data, 89), DEFAULT_MIN_PRICE_LAMPORTS);
+		assert_eq!(
+			u64_at(&game_account.data, 97),
+			DEFAULT_END_FLOOR_PRICE_LAMPORTS
+		);
+		assert_eq!(u64_at(&game_account.data, 105), DEFAULT_CHANGE_DENOMINATOR);
+		assert_eq!(u64_at(&game_account.data, 113), DEFAULT_BURST_ELASTICITY);
+		assert_eq!(
+			u16::from_le_bytes([game_account.data[121], game_account.data[122]]),
+			DEFAULT_OWNER_SHARE_BASIS_POINTS
 		);
 		let section_account = program
 			.account(&initial_section)
@@ -630,7 +692,72 @@ fn game_bootstraps_one_program_owned_section() {
 		assert_eq!(&section_account.data[1..33], game.to_bytes().as_slice());
 		assert_eq!(section_account.data[98], 0, "initial section index");
 		assert_eq!(section_account.data[99], SECTION_STATUS_ACTIVE);
+		let launched_at = u64_at(&section_account.data, 139);
+		assert!(launched_at > 0);
+		assert_eq!(u64_at(&section_account.data, 147), launched_at);
+		assert_eq!(u64_at(&section_account.data, 155), launched_at);
+		assert_eq!(u64_at(&section_account.data, 163), 0);
+		assert_eq!(
+			u64_at(&section_account.data, 171),
+			DEFAULT_TARGET_TOKENS_PER_WINDOW
+		);
+		assert_eq!(u64_at(&section_account.data, 179), 0);
+		assert_eq!(u64_at(&section_account.data, 187), 0);
+		assert_eq!(u64_at(&section_account.data, 195), 0);
+		assert_eq!(
+			u64_at(&section_account.data, 203),
+			DEFAULT_START_PRICE_LAMPORTS
+		);
+		assert_eq!(
+			u64_at(&section_account.data, 211),
+			DEFAULT_START_PRICE_LAMPORTS
+		);
 
+		program
+			.send_instruction(settle_section_economy_instruction(
+				&program,
+				&game,
+				&initial_section,
+				0,
+			))
+			.expect("permissionless settlement succeeds");
+		let settled = program
+			.account(&initial_section)
+			.expect("fetch settled section");
+		assert_eq!(u64_at(&settled.data, 187), 0);
+		assert_eq!(u64_at(&settled.data, 195), 0);
+
+		program.stop().expect("stop isolated program test");
+	});
+}
+
+#[test]
+#[ignore = "run with test:surfpool"]
+fn fixed_supply_prevents_a_fifth_game() {
+	pina_test::run(async {
+		let (mut program, authority, config, program_id) = start_config().await;
+		let game_index = BIT_GAME_COUNT;
+		let (game, game_bump) = game_address(&program_id, game_index);
+		let (initial_section, section_bump) = section_address(&program_id, game_index, 0);
+		let error = program
+			.send_with_signers(
+				initialize_game_instruction(
+					&program,
+					&authority.pubkey(),
+					&config,
+					&game,
+					&initial_section,
+					game_index,
+					game_bump,
+					section_bump,
+				),
+				&[&authority],
+			)
+			.expect_err("the fixed supply cannot fund a fifth game");
+
+		assert_custom_error(&error, BitflipError::InvalidGameIndex);
+		assert!(program.account(&game).is_err());
+		assert!(program.account(&initial_section).is_err());
 		program.stop().expect("stop isolated program test");
 	});
 }
@@ -727,9 +854,22 @@ fn claims_enforce_order_and_activity_unlocks() {
 		let game_account = program.account(&game).expect("fetch game account");
 		assert_eq!(game_account.data[2], GAME_STATUS_LIVE);
 		assert_eq!(
-			u16::from_le_bytes([game_account.data[12], game_account.data[13]]),
+			u16::from_le_bytes([game_account.data[13], game_account.data[14]]),
 			2
 		);
+		let claimed_section = program
+			.account(&section_one)
+			.expect("fetch newly claimed section");
+		let launched_at = u64_at(&claimed_section.data, 139);
+		assert!(launched_at > 0);
+		assert_eq!(u64_at(&claimed_section.data, 147), launched_at);
+		assert_eq!(u64_at(&claimed_section.data, 155), launched_at);
+		assert_eq!(
+			u64_at(&claimed_section.data, 171),
+			DEFAULT_TARGET_TOKENS_PER_WINDOW
+		);
+		assert_eq!(u64_at(&claimed_section.data, 187), 0);
+		assert_eq!(u64_at(&claimed_section.data, 195), 0);
 		program.stop().expect("stop isolated program test");
 	});
 }
@@ -1217,7 +1357,7 @@ fn mint_recording_requires_sealed_state_and_collection_authority() {
 		assert_eq!(u32_at(&section_account.data, 103), 42);
 		let game_account = program.account(&game).expect("fetch game");
 		assert_eq!(
-			u16::from_le_bytes([game_account.data[14], game_account.data[15]]),
+			u16::from_le_bytes([game_account.data[15], game_account.data[16]]),
 			1
 		);
 
@@ -1280,7 +1420,7 @@ fn burst_traffic_preserves_real_sbf_accounting() {
 			u64_at(&section_account.data, 115),
 			u64::try_from(TRANSACTION_COUNT).expect("transaction count")
 		);
-		assert_eq!(u64_at(&game_account.data, 24), expected_flips);
+		assert_eq!(u64_at(&game_account.data, 25), expected_flips);
 		assert_eq!(
 			program
 				.balance(&authority.pubkey())
