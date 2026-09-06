@@ -87,6 +87,7 @@ in
       openssl
       perl
       pkg-config
+      postgresql_17
       rustup
       shfmt
       zlib
@@ -404,6 +405,30 @@ in
       description = "Build the production Serverpod image with the Flutter site.";
       binary = "bash";
     };
+    "release:smoke" = {
+      exec = ''
+        set -euo pipefail
+        exec bash "$DEVENV_ROOT/setup/scripts/release_smoke.sh"
+      '';
+      description = "Verify external health, web, metadata, and artwork routes.";
+      binary = "bash";
+    };
+    "database:backup" = {
+      exec = ''
+        set -euo pipefail
+        exec bash "$DEVENV_ROOT/setup/scripts/postgres_backup.sh"
+      '';
+      description = "Create and validate a private PostgreSQL backup.";
+      binary = "bash";
+    };
+    "database:restore:verify" = {
+      exec = ''
+        set -euo pipefail
+        exec bash "$DEVENV_ROOT/setup/scripts/postgres_restore_verify.sh"
+      '';
+      description = "Restore a backup into a confirmed disposable database.";
+      binary = "bash";
+    };
     "fix:format" = {
       exec = ''
         set -euo pipefail
@@ -555,6 +580,15 @@ in
       description = "Test Wallet Standard discovery and signing boundaries.";
       binary = "bash";
     };
+    "test:operations" = {
+      exec = ''
+        set -euo pipefail
+        cd "$DEVENV_ROOT"
+        pnpm ops:test
+      '';
+      description = "Test release smoke and database safety boundaries.";
+      binary = "bash";
+    };
     "test:flutter:integration" = {
       exec = ''
         set -euo pipefail
@@ -606,6 +640,7 @@ in
         test:surfpool:cnft
         test:server
         test:wallet
+        test:operations
         if [ -d "$DEVENV_ROOT/${appDir}" ]; then test:flutter; fi
       '';
       description = "Run Rust, Surfpool, and Flutter tests.";

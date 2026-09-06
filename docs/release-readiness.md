@@ -9,6 +9,7 @@ Bitflip releases in three deliberately separate milestones. Passing one does not
 - Health and readiness probes pass from outside the hosting network.
 - RPC failures, wallet cancellation, insufficient funds, and stale state are exercised against staging.
 - Database backup and restore are tested.
+- The [Serverpod release policy](decisions/0001-serverpod-4-release-policy.md) is satisfied for this milestone.
 
 ## 2. Native beta
 
@@ -17,6 +18,8 @@ Bitflip releases in three deliberately separate milestones. Passing one does not
 - iOS and macOS remain explicitly view-only until a supported wallet handoff is implemented and tested. Their disabled transaction controls are a product contract, not a temporary error path.
 - iOS and macOS builds are signed/notarized using store credentials. CI only proves that unsigned release compilation succeeds until those credentials are provisioned.
 - Privacy policy, support URL, store disclosures, screenshots, and irreversible fee/sealing terms have been approved.
+- The complete [native store release packet](store-release.md) has evidence attached to the release record.
+- The [native validation plan](native-validation.md), including release-mode performance budgets and deliberate dark appearance, passes on the target matrix.
 
 ### Physical-device evidence
 
@@ -32,6 +35,8 @@ This smoke test does not replace the native-beta matrix above. In particular, no
 - Obtain an independent review of the Pina program and mint operator. Findings must be fixed or explicitly accepted by the named release owner.
 - Use newly generated production keys. Never reuse repository or development key material.
 - Run a canary claim, flip, seal, and compressed mint with bounded funds before opening the application publicly.
+- Replace the beta's user-driven mint reconciliation with the durable worker described in the [operations runbook](operations/runbook.md).
+- Record the final marketplace-authenticity choice from [ADR 0002](decisions/0002-marketplace-authenticity.md).
 
 ## Required application configuration
 
@@ -63,9 +68,11 @@ BITFLIP_PRIORITY_FEE_MICROLAMPORTS=<explicit non-negative integer>
 
 Optional bounded reliability settings are `BITFLIP_RPC_TIMEOUT_SECONDS` (2–60, default 12) and `BITFLIP_MINT_MAX_ATTEMPTS` (1–5, default 3). Serverpod database passwords and service secrets remain required by Serverpod. The server validates the tree address, signer encoding, and operator fee policy before it starts.
 
-The public challenge endpoint is rate limited per source and globally within each process before any Solana RPC work begins. Production ingress must enforce the same policy across replicas; abandoned challenges never consume a wallet-specific quota. Mint work is rejected when operator capacity is full, runs outside database transactions, uses explicit RPC deadlines and priority fees, and retries from fresh on-chain state.
+The public challenge endpoint is rate limited per source and globally within each process before any Solana RPC work begins. Production ingress must enforce the same policy across replicas; abandoned challenges never consume a wallet-specific quota. Mint work is rejected when operator capacity is full, runs outside database transactions, uses explicit RPC deadlines and priority fees, and retries from fresh on-chain state. Until a durable single-consumer worker exists, a beta deployment must run exactly one mint-capable server process so two replicas cannot race private-tree leaf allocation.
 
 Serverpod exposes `/livez`, `/readyz`, and `/startupz` on the API service. Production deployment probes all three and alerts on readiness failures. The production configuration disables Serverpod Insights; logs and metrics are exported through the private observability pipeline instead.
+
+Deployment, migration rehearsal, staged rollout, rollback, and reconciliation are defined in the [operations runbook](operations/runbook.md). The exact required signals, budgets, and alert thresholds are defined in the [observability contract](operations/observability.md). Provider-specific deployment and telemetry configuration remains an external gate until the production hosting platform is selected.
 
 ## Metadata permanence
 
