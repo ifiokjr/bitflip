@@ -667,8 +667,7 @@ fn emit_colour_pixels_flipped(
 	args: &FlipPixelsInstructionZc,
 ) -> ProgramResult {
 	let mut data = [0; ColourPixelsFlippedEvent::SIZE];
-	{
-		let event = ColourPixelsFlippedEvent::initialize(&mut data)?;
+	ColourPixelsFlippedEvent::initialize(&mut data, |event| {
 		event.player = player;
 		event.policy_version.set(policy_version);
 		event.revision.set(revision);
@@ -677,7 +676,9 @@ fn emit_colour_pixels_flipped(
 		event.section_index = args.section_index;
 		event.count = args.count;
 		event.colour = args.colour;
-	}
+
+		Ok(())
+	})?;
 	solana_program_log::log_data(&[&data]);
 
 	Ok(())
@@ -730,31 +731,27 @@ fn validate_configuration(
 }
 
 fn assert_config_account(config: &AccountView) -> ProgramResult {
-	config.assert_not_empty()?.assert_type::<ConfigState>(&ID)?;
-	if config.as_account::<ConfigState>(&ID)?.version != CONFIG_VERSION {
+	let state = ConfigState::load_pda(config, &ID)?;
+
+	if state.version != CONFIG_VERSION {
 		return Err(BitflipError::InvalidConfiguration.into());
 	}
-	let seeds = ConfigState::seeds();
-	config.assert_seeds_with_bump(
-		&seeds
-			.with_bump(config.as_account::<ConfigState>(&ID)?.bump)
-			.as_slices(),
-		&ID,
-	)?;
 
 	Ok(())
 }
 
 fn assert_game_account(game: &AccountView, game_index: u8) -> ProgramResult {
-	game.assert_not_empty()?.assert_type::<GameState>(&ID)?;
-	let state = game.as_account::<GameState>(&ID)?;
+	let state = GameState::load_pda(game, game_index, &ID)?;
+
 	if state.game_index != game_index {
 		return Err(BitflipError::InvalidGameIndex.into());
 	}
+
 	if state.economy_version != ECONOMY_VERSION {
 		return Err(BitflipError::InvalidConfiguration.into());
 	}
-	GameState::assert_seeds(game, game_index, &ID)
+
+	Ok(())
 }
 
 fn assert_section_account(
@@ -762,14 +759,13 @@ fn assert_section_account(
 	game_index: u8,
 	section_index: u8,
 ) -> ProgramResult {
-	section
-		.assert_not_empty()?
-		.assert_type::<SectionState>(&ID)?;
-	let state = section.as_account::<SectionState>(&ID)?;
+	let state = SectionState::load_pda(section, game_index, section_index, &ID)?;
+
 	if state.game_index != game_index || state.section_index != section_index {
 		return Err(BitflipError::InvalidSectionIndex.into());
 	}
-	SectionState::assert_seeds(section, game_index, section_index, &ID)
+
+	Ok(())
 }
 
 fn controller_error(error: pricing::PriceControllerError) -> ProgramError {
@@ -1334,32 +1330,33 @@ impl<'a> ProcessAccountInfos<'a> for InitializeConfigAccounts<'a> {
 			seeds: &seeds.as_slices(),
 			bump: args.bump,
 		}
-		.invoke::<ConfigState>()?;
+		.invoke_with::<ConfigState>(|config| {
+			config.version = CONFIG_VERSION;
+			config.authority = BOOTSTRAP_AUTHORITY;
+			config.pending_authority = ZERO_ADDRESS;
+			config.treasury = BOOTSTRAP_AUTHORITY;
+			config.collection_authority = BOOTSTRAP_AUTHORITY;
+			config.bit_mint = ZERO_ADDRESS;
+			config.bit_reserve = ZERO_ADDRESS;
+			config
+				.claim_price_lamports
+				.set(DEFAULT_CLAIM_PRICE_LAMPORTS);
+			config.flip_fee_lamports.set(DEFAULT_FLIP_FEE_LAMPORTS);
+			config
+				.minimum_flip_fee_lamports
+				.set(DEFAULT_MIN_FLIP_FEE_LAMPORTS);
+			config
+				.maximum_flip_fee_lamports
+				.set(DEFAULT_MAX_FLIP_FEE_LAMPORTS);
+			config
+				.unlock_interval_seconds
+				.set(DEFAULT_UNLOCK_INTERVAL_SECONDS);
+			config.early_unlock_flips.set(DEFAULT_EARLY_UNLOCK_FLIPS);
+			config.game_count.set(0);
+			config.bump = args.bump;
 
-		let mut config = self.config.as_account_mut::<ConfigState>(&ID)?;
-		config.version = CONFIG_VERSION;
-		config.authority = BOOTSTRAP_AUTHORITY;
-		config.pending_authority = ZERO_ADDRESS;
-		config.treasury = BOOTSTRAP_AUTHORITY;
-		config.collection_authority = BOOTSTRAP_AUTHORITY;
-		config.bit_mint = ZERO_ADDRESS;
-		config.bit_reserve = ZERO_ADDRESS;
-		config
-			.claim_price_lamports
-			.set(DEFAULT_CLAIM_PRICE_LAMPORTS);
-		config.flip_fee_lamports.set(DEFAULT_FLIP_FEE_LAMPORTS);
-		config
-			.minimum_flip_fee_lamports
-			.set(DEFAULT_MIN_FLIP_FEE_LAMPORTS);
-		config
-			.maximum_flip_fee_lamports
-			.set(DEFAULT_MAX_FLIP_FEE_LAMPORTS);
-		config
-			.unlock_interval_seconds
-			.set(DEFAULT_UNLOCK_INTERVAL_SECONDS);
-		config.early_unlock_flips.set(DEFAULT_EARLY_UNLOCK_FLIPS);
-		config.game_count.set(0);
-		config.bump = args.bump;
+			Ok(())
+		})?;
 
 		log!("Bitflip config initialized");
 		Ok(())
@@ -1473,6 +1470,12 @@ impl<'a> ProcessAccountInfos<'a> for InitializeGameAccounts<'a> {
 			config.flip_fee_lamports.get()
 		};
 
+		let clock = Clock::get()?;
+		let launched_at = controller_timestamp(clock.unix_timestamp)?;
+		let price_config = pricing::PriceControllerConfig::STAGING;
+		let controller = pricing::PriceControllerState::new(&price_config, launched_at)
+			.map_err(controller_error)?;
+		let game_address = *self.game.address();
 		let seeds = GameState::seeds(args.game_index);
 		let seeds_with_bump = seeds.with_bump(args.game_bump);
 		let canonical_bump = self.game.assert_canonical_bump(&seeds.as_slices(), &ID)?;
@@ -1491,7 +1494,18 @@ impl<'a> ProcessAccountInfos<'a> for InitializeGameAccounts<'a> {
 			seeds: &seeds.as_slices(),
 			bump: args.game_bump,
 		}
-		.invoke::<GameState>()?;
+		.invoke_with::<GameState>(|game| {
+			initialize_game_state(
+				game,
+				args.game_index,
+				args.game_bump,
+				clock.unix_timestamp,
+				flip_fee_lamports,
+				price_config,
+			);
+
+			Ok(())
+		})?;
 
 		let section_seeds = SectionState::seeds(args.game_index, args.section_index);
 		let section_seeds_with_bump = section_seeds.with_bump(args.section_bump);
@@ -1513,33 +1527,18 @@ impl<'a> ProcessAccountInfos<'a> for InitializeGameAccounts<'a> {
 			seeds: &section_seeds.as_slices(),
 			bump: args.section_bump,
 		}
-		.invoke::<SectionState>()?;
+		.invoke_with::<SectionState>(|section| {
+			initialize_section_state(
+				section,
+				game_address,
+				args.game_index,
+				args.section_index,
+				args.section_bump,
+				controller,
+			);
 
-		let clock = Clock::get()?;
-		let launched_at = controller_timestamp(clock.unix_timestamp)?;
-		let price_config = pricing::PriceControllerConfig::STAGING;
-		let controller = pricing::PriceControllerState::new(&price_config, launched_at)
-			.map_err(controller_error)?;
-		let game_address = *self.game.address();
-		let mut game = self.game.as_account_mut::<GameState>(&ID)?;
-		initialize_game_state(
-			&mut game,
-			args.game_index,
-			args.game_bump,
-			clock.unix_timestamp,
-			flip_fee_lamports,
-			price_config,
-		);
-
-		let mut initial_section = self.section.as_account_mut::<SectionState>(&ID)?;
-		initialize_section_state(
-			&mut initial_section,
-			game_address,
-			args.game_index,
-			args.section_index,
-			args.section_bump,
-			controller,
-		);
+			Ok(())
+		})?;
 
 		let mut config = self.config.as_account_mut::<ConfigState>(&ID)?;
 		let game_count = config
@@ -1632,19 +1631,20 @@ impl<'a> ProcessAccountInfos<'a> for ClaimSectionAccounts<'a> {
 			seeds: &seeds.as_slices(),
 			bump: args.bump,
 		}
-		.invoke::<SectionState>()?;
+		.invoke_with::<SectionState>(|section| {
+			initialize_section_state(
+				section,
+				*self.owner.address(),
+				args.game_index,
+				args.section_index,
+				args.bump,
+				controller,
+			);
+
+			Ok(())
+		})?;
 
 		transfer_lamports(self.owner, self.treasury, claim_price, self.system_program)?;
-
-		let mut section = self.section.as_account_mut::<SectionState>(&ID)?;
-		initialize_section_state(
-			&mut section,
-			*self.owner.address(),
-			args.game_index,
-			args.section_index,
-			args.bump,
-			controller,
-		);
 
 		let next_section = next_section
 			.checked_add(1)
@@ -2270,8 +2270,7 @@ mod tests {
 	fn colour_event_layout_is_cross_language_stable() {
 		let player = Address::new_from_array([9; ADDRESS_BYTES]);
 		let mut data = [0; ColourPixelsFlippedEvent::SIZE];
-		{
-			let event = ColourPixelsFlippedEvent::initialize(&mut data).expect("initialize event");
+		ColourPixelsFlippedEvent::initialize(&mut data, |event| {
 			event.player = player;
 			event.policy_version.set(7);
 			event.revision.set(42);
@@ -2280,7 +2279,10 @@ mod tests {
 			event.section_index = 255;
 			event.count = 2;
 			event.colour = 6;
-		}
+
+			Ok(())
+		})
+		.expect("initialize event");
 
 		assert_eq!(data[0], BitflipEvent::ColourPixelsFlipped as u8);
 		assert_eq!(&data[1..33], player.as_ref());

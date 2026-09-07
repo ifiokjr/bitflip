@@ -71,10 +71,10 @@ in
     [
       cargo-audit
       cargo-deny
-      cargo-run-bin
       curl
       dprint
       extra.agave
+      extra.pina
       extra.sbpf-linker
       extra.solana-verify
       extra.surfpool
@@ -143,20 +143,6 @@ in
         exec corepack pnpm "$@"
       '';
       description = "Run the package.json-pinned pnpm through Corepack.";
-      binary = "bash";
-    };
-    pina = {
-      exec = ''
-        set -euo pipefail
-        if [ -n "''${PINA_BIN:-}" ]; then
-          exec "$PINA_BIN" "$@"
-        fi
-        if [ -x "$DEVENV_ROOT/.tools/pina/bin/pina" ]; then
-          exec "$DEVENV_ROOT/.tools/pina/bin/pina" "$@"
-        fi
-        cargo bin pina_cli "$@"
-      '';
-      description = "Run the workspace-pinned Pina CLI.";
       binary = "bash";
     };
     flutter = {
