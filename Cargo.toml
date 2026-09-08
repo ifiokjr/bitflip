@@ -13,10 +13,7 @@ repository = "https://github.com/ifiokjr/bitflip"
 rust-version = "1.89.0"
 
 [workspace.dependencies]
-pina = { version = "0.12.2", default-features = false }
-
-[workspace.metadata.bin]
-pina_cli = { version = "0.12.2", bins = ["pina"], locked = true }
+pina = { version = "0.15.0", default-features = false }
 
 [workspace.lints.rust]
 rust_2021_compatibility = { level = "warn", priority = -1 }

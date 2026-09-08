@@ -80,11 +80,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1788480885,
-        "narHash": "sha256-sdVBE2Do0vwmSUmknVajOSI2SqU4cTvNQWPEcrGEz7A=",
+        "lastModified": 1788854647,
+        "narHash": "sha256-P3iO9r5zEYC3M/8I7oKxBe7VGdH2Ci/g9cpXuxlF1Tk=",
         "owner": "ifiokjr",
         "repo": "nixpkgs",
-        "rev": "737a24cdb4b53b69322dff2aa9144eed364f0c41",
+        "rev": "d5e6ae2d756b0db9755c9b90a460725c91fcb994",
         "type": "github"
       },
       "original": {
