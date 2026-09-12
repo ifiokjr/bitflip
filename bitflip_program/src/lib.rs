@@ -1059,7 +1059,7 @@ fn pay_accrued_owner_fees(
 		.as_account_mut::<SectionState>(&ID)?
 		.owner_fee_lamports
 		.set(0);
-	section.send(amount, recipient)?;
+	section.send_owned(&ID, amount, recipient)?;
 
 	Ok(amount)
 }
@@ -1107,7 +1107,7 @@ fn bit_token_account_balance(
 	token_program: &Address,
 ) -> Result<u64, ProgramError> {
 	let token_account = account
-		.as_associated_token_account_checked(owner, bit_mint, token_program)
+		.as_associated_token_account(owner, bit_mint, token_program)
 		.and_then(|account| {
 			account.assert_extensions_allowed(&[token_2022::state::ExtensionType::ImmutableOwner])
 		})
@@ -1135,7 +1135,7 @@ fn bit_recipient_account_balance(
 	token_program: &Address,
 ) -> Result<u64, ProgramError> {
 	let token_account = account
-		.as_associated_token_account_checked(owner, bit_mint, token_program)
+		.as_associated_token_account(owner, bit_mint, token_program)
 		.map_err(|_| ProgramError::from(BitflipError::InvalidBitTokenAccount))?;
 
 	if !token_account.is_initialized()
