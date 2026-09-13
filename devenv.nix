@@ -223,13 +223,9 @@ in
     "install:pina-lint" = {
       exec = ''
         set -euo pipefail
-        rustup toolchain install "$PINA_LINT_TOOLCHAIN" \
-          --profile minimal \
-          --component llvm-tools-preview \
-          --component rustc-dev \
-          --component rust-src
+        rustup toolchain install "$PINA_LINT_TOOLCHAIN" --profile minimal
       '';
-      description = "Install Pina's pinned security-lint compiler components.";
+      description = "Install the nightly toolchain pinned by Pina's prebuilt lint driver.";
       binary = "bash";
     };
     "generate:clients" = {
@@ -451,15 +447,9 @@ in
         install:pina-lint
         cargo clippy --workspace --all-targets --all-features -- -D warnings
 
-        lint_sysroot="$(rustup run "$PINA_LINT_TOOLCHAIN" rustc --print sysroot)"
-        export LIBRARY_PATH="$lint_sysroot/lib''${LIBRARY_PATH:+:$LIBRARY_PATH}"
-        export RUSTFLAGS="-Lnative=$lint_sysroot/lib''${RUSTFLAGS:+ $RUSTFLAGS}"
-        if [ "$(uname -s)" = "Darwin" ]; then
-          export DYLD_FALLBACK_LIBRARY_PATH="$lint_sysroot/lib''${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
-        else
-          export LD_LIBRARY_PATH="$lint_sysroot/lib''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-        fi
-
+        # Pina's prebuilt lint driver links the compiler libraries of the
+        # nightly release it was built with, so the lint run must use that
+        # exact toolchain.
         RUSTUP_TOOLCHAIN="$PINA_LINT_TOOLCHAIN" \
           pina lint --project "$DEVENV_ROOT/bitflip_program"
       '';
