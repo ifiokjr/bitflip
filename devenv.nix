@@ -445,6 +445,7 @@ in
       exec = ''
         set -euo pipefail
         install:pina-lint
+        pina migrations check --project "$DEVENV_ROOT/bitflip_program"
         cargo clippy --workspace --all-targets --all-features -- -D warnings
 
         # Pina's prebuilt lint driver links the compiler libraries of the

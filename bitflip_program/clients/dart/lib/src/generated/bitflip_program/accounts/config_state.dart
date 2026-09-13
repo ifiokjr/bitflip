@@ -32,9 +32,11 @@ class ConfigState {
     required this.gameCount,
     required this.bump,
   }) :
-      discriminator = 1;
+      discriminator = 1,
+      migrationVersion = 0;
 
   final int discriminator;
+  final int migrationVersion;
   final int version;
   final Address authority;
   final Address pendingAuthority;
@@ -57,6 +59,7 @@ class ConfigState {
       other is ConfigState &&
           runtimeType == other.runtimeType &&
           discriminator == other.discriminator &&
+          migrationVersion == other.migrationVersion &&
           version == other.version &&
           authority == other.authority &&
           pendingAuthority == other.pendingAuthority &&
@@ -74,16 +77,17 @@ class ConfigState {
           bump == other.bump;
 
   @override
-  int get hashCode => Object.hashAll([discriminator, version, authority, pendingAuthority, treasury, collectionAuthority, bitMint, bitReserve, claimPriceLamports, flipFeeLamports, minimumFlipFeeLamports, maximumFlipFeeLamports, unlockIntervalSeconds, earlyUnlockFlips, gameCount, bump]);
+  int get hashCode => Object.hashAll([discriminator, migrationVersion, version, authority, pendingAuthority, treasury, collectionAuthority, bitMint, bitReserve, claimPriceLamports, flipFeeLamports, minimumFlipFeeLamports, maximumFlipFeeLamports, unlockIntervalSeconds, earlyUnlockFlips, gameCount, bump]);
 
   @override
-  String toString() => 'ConfigState(discriminator: $discriminator, version: $version, authority: $authority, pendingAuthority: $pendingAuthority, treasury: $treasury, collectionAuthority: $collectionAuthority, bitMint: $bitMint, bitReserve: $bitReserve, claimPriceLamports: $claimPriceLamports, flipFeeLamports: $flipFeeLamports, minimumFlipFeeLamports: $minimumFlipFeeLamports, maximumFlipFeeLamports: $maximumFlipFeeLamports, unlockIntervalSeconds: $unlockIntervalSeconds, earlyUnlockFlips: $earlyUnlockFlips, gameCount: $gameCount, bump: $bump)';
+  String toString() => 'ConfigState(discriminator: $discriminator, migrationVersion: $migrationVersion, version: $version, authority: $authority, pendingAuthority: $pendingAuthority, treasury: $treasury, collectionAuthority: $collectionAuthority, bitMint: $bitMint, bitReserve: $bitReserve, claimPriceLamports: $claimPriceLamports, flipFeeLamports: $flipFeeLamports, minimumFlipFeeLamports: $minimumFlipFeeLamports, maximumFlipFeeLamports: $maximumFlipFeeLamports, unlockIntervalSeconds: $unlockIntervalSeconds, earlyUnlockFlips: $earlyUnlockFlips, gameCount: $gameCount, bump: $bump)';
 }
 
 
 Encoder<ConfigState> getConfigStateEncoder() {
   final structEncoder = getStructEncoder(<(String, Encoder<Object?>)>[
     ('discriminator', getU8Encoder()),
+    ('migrationVersion', getU8Encoder()),
     ('version', getU8Encoder()),
     ('authority', getAddressEncoder()),
     ('pendingAuthority', getAddressEncoder()),
@@ -105,6 +109,7 @@ Encoder<ConfigState> getConfigStateEncoder() {
     structEncoder,
     (ConfigState value) => <String, Object?>{
       'discriminator': 1,
+      'migrationVersion': 0,
       'version': value.version,
       'authority': value.authority,
       'pendingAuthority': value.pendingAuthority,
@@ -127,6 +132,7 @@ Encoder<ConfigState> getConfigStateEncoder() {
 Decoder<ConfigState> getConfigStateDecoder() {
   final structDecoder = getStructDecoder(<(String, Decoder<Object?>)>[
     ('discriminator', getU8Decoder()),
+    ('migrationVersion', getU8Decoder()),
     ('version', getU8Decoder()),
     ('authority', getAddressDecoder()),
     ('pendingAuthority', getAddressDecoder()),
@@ -159,6 +165,14 @@ Decoder<ConfigState> getConfigStateDecoder() {
     getConstantDecoder(
       getU8Encoder().encode(1),
     ).read(bytes, offset + 0);
+    final (storedMigrationVersion, _) = getU8Decoder().read(bytes, offset + 1);
+    if (storedMigrationVersion != 0) {
+      throw StateError(
+        storedMigrationVersion < 0
+            ? 'migration version mismatch: expected 0, received $storedMigrationVersion (the data predates this client; migrate it by sending a transaction to the program, or decode it with a client generated from an older IDL)'
+            : 'migration version mismatch: expected 0, received $storedMigrationVersion (the data was written by a newer program; upgrade this client)',
+      );
+    }
     final (map, newOffset) = structDecoder.read(bytes, offset);
 
     return (
@@ -209,4 +223,21 @@ Codec<ConfigState, ConfigState> getConfigStateCodec() {
 
 Account<ConfigState> decodeConfigState(EncodedAccount encodedAccount) {
   return decodeAccount(encodedAccount, getConfigStateDecoder());
+}
+
+/// The account schema version this client was generated from.
+const int configStateMigrationVersion = 0;
+
+/// Cheap envelope check for fetched `ConfigState` bytes: returns true only when
+/// the bytes carry this account's discriminator and a migration version older
+/// than this client's schema — exactly the accounts [getMigrateInstruction]
+/// can bring current. Decoding reports every other mismatch.
+bool configStateNeedsMigration(List<int> data) {
+	if (data.length < 2) {
+		return false;
+	}
+	if (data[0] != 1) {
+		return false;
+	}
+	return data[1] < 0;
 }

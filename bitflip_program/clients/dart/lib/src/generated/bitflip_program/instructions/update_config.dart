@@ -25,9 +25,11 @@ class UpdateConfigInstructionData {
     required this.unlockIntervalSeconds,
     required this.earlyUnlockFlips,
   }) :
-      discriminator = 1;
+      discriminator = 1,
+      migrationVersion = 0;
 
   final int discriminator;
+  final int migrationVersion;
   final Address treasury;
   final Address collectionAuthority;
   final BigInt claimPriceLamports;
@@ -41,6 +43,7 @@ class UpdateConfigInstructionData {
 Encoder<UpdateConfigInstructionData> getUpdateConfigInstructionDataEncoder() {
   final structEncoder = getStructEncoder(<(String, Encoder<Object?>)>[
     ('discriminator', getU8Encoder()),
+    ('migrationVersion', getU8Encoder()),
     ('treasury', getAddressEncoder()),
     ('collectionAuthority', getAddressEncoder()),
     ('claimPriceLamports', getU64Encoder()),
@@ -55,6 +58,7 @@ Encoder<UpdateConfigInstructionData> getUpdateConfigInstructionDataEncoder() {
     structEncoder,
     (UpdateConfigInstructionData value) => <String, Object?>{
       'discriminator': 1,
+      'migrationVersion': 0,
       'treasury': value.treasury,
       'collectionAuthority': value.collectionAuthority,
       'claimPriceLamports': value.claimPriceLamports,
@@ -70,6 +74,7 @@ Encoder<UpdateConfigInstructionData> getUpdateConfigInstructionDataEncoder() {
 Decoder<UpdateConfigInstructionData> getUpdateConfigInstructionDataDecoder() {
   final structDecoder = getStructDecoder(<(String, Decoder<Object?>)>[
     ('discriminator', getU8Decoder()),
+    ('migrationVersion', getU8Decoder()),
     ('treasury', getAddressDecoder()),
     ('collectionAuthority', getAddressDecoder()),
     ('claimPriceLamports', getU64Decoder()),
@@ -95,6 +100,9 @@ Decoder<UpdateConfigInstructionData> getUpdateConfigInstructionDataDecoder() {
     getConstantDecoder(
       getU8Encoder().encode(1),
     ).read(bytes, offset + 0);
+    getConstantDecoder(
+      getU8Encoder().encode(0),
+    ).read(bytes, offset + 1);
     final (map, newOffset) = structDecoder.read(bytes, offset);
     if (newOffset != bytes.length) {
       throwInvalidByteLength(newOffset - offset, bytes.length - offset);

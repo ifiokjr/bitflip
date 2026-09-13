@@ -156,7 +156,7 @@ pub enum BitflipEvent {
 	ColourPixelsFlipped = 1,
 }
 
-#[account(discriminator = BitflipAccountType)]
+#[account(discriminator = BitflipAccountType, migrations)]
 #[pda(seeds = [CONFIG_SEED], bump = bump)]
 pub struct ConfigState {
 	pub version: u8,
@@ -176,7 +176,7 @@ pub struct ConfigState {
 	pub bump: u8,
 }
 
-#[account(discriminator = BitflipAccountType)]
+#[account(discriminator = BitflipAccountType, migrations)]
 #[pda(seeds = [GAME_SEED, game_index: u8], bump = bump)]
 pub struct GameState {
 	pub game_index: u8,
@@ -202,7 +202,7 @@ pub struct GameState {
 	pub owner_share_basis_points: u16,
 }
 
-#[account(discriminator = BitflipAccountType)]
+#[account(discriminator = BitflipAccountType, migrations)]
 #[pda(
 	seeds = [SECTION_SEED, game_index: u8, section_index: u8],
 	bump = bump
@@ -246,12 +246,12 @@ pub struct SectionState {
 	pub pixels: [u8; 512],
 }
 
-#[instruction(discriminator = BitflipInstruction::InitializeConfig)]
+#[instruction(discriminator = BitflipInstruction::InitializeConfig, migrations)]
 pub struct InitializeConfigInstruction {
 	pub bump: u8,
 }
 
-#[instruction(discriminator = BitflipInstruction::UpdateConfig)]
+#[instruction(discriminator = BitflipInstruction::UpdateConfig, migrations)]
 pub struct UpdateConfigInstruction {
 	pub treasury: Address,
 	pub collection_authority: Address,
@@ -263,15 +263,15 @@ pub struct UpdateConfigInstruction {
 	pub early_unlock_flips: u32,
 }
 
-#[instruction(discriminator = BitflipInstruction::ProposeAuthority)]
+#[instruction(discriminator = BitflipInstruction::ProposeAuthority, migrations)]
 pub struct ProposeAuthorityInstruction {
 	pub pending_authority: Address,
 }
 
-#[instruction(discriminator = BitflipInstruction::AcceptAuthority)]
+#[instruction(discriminator = BitflipInstruction::AcceptAuthority, migrations)]
 pub struct AcceptAuthorityInstruction {}
 
-#[instruction(discriminator = BitflipInstruction::InitializeGame)]
+#[instruction(discriminator = BitflipInstruction::InitializeGame, migrations)]
 pub struct InitializeGameInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
@@ -279,7 +279,7 @@ pub struct InitializeGameInstruction {
 	pub section_bump: u8,
 }
 
-#[instruction(discriminator = BitflipInstruction::ClaimSection)]
+#[instruction(discriminator = BitflipInstruction::ClaimSection, migrations)]
 pub struct ClaimSectionInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
@@ -287,10 +287,19 @@ pub struct ClaimSectionInstruction {
 	pub maximum_price_lamports: u64,
 }
 
-#[instruction(discriminator = BitflipInstruction::FlipPixels)]
+#[instruction(
+	discriminator = BitflipInstruction::FlipPixels,
+	migrations,
+	validate(with = validate_flip_pixel_coordinates)
+)]
 pub struct FlipPixelsInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
+	#[pina(validate(
+		min = 1,
+		max = MAX_FLIPS_PER_TRANSACTION as u8,
+		error = BitflipError::InvalidFlipCount
+	))]
 	pub count: u8,
 	pub coordinates: [u8; 32],
 	pub colour: u8,
@@ -301,25 +310,32 @@ pub struct FlipPixelsInstruction {
 	pub minimum_reward_tokens: u64,
 }
 
-#[event(discriminator = BitflipEvent, variant = ColourPixelsFlipped)]
+#[event(discriminator = BitflipEvent, variant = ColourPixelsFlipped, migrations)]
 pub struct ColourPixelsFlippedEvent {
 	pub player: Address,
 	pub policy_version: u64,
 	pub revision: u64,
 	pub coordinates: [u8; 32],
+	#[pina(validate(max = BIT_GAME_COUNT - 1))]
 	pub game_index: u8,
 	pub section_index: u8,
+	#[pina(validate(
+		min = 1,
+		max = MAX_FLIPS_PER_TRANSACTION as u8,
+		error = BitflipError::InvalidFlipCount
+	))]
 	pub count: u8,
+	#[pina(validate(max = SECTION_PALETTE_COLOUR_COUNT - 1))]
 	pub colour: u8,
 }
 
-#[instruction(discriminator = BitflipInstruction::SealSection)]
+#[instruction(discriminator = BitflipInstruction::SealSection, migrations)]
 pub struct SealSectionInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
 }
 
-#[instruction(discriminator = BitflipInstruction::RecordSectionMint)]
+#[instruction(discriminator = BitflipInstruction::RecordSectionMint, migrations)]
 pub struct RecordSectionMintInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
@@ -329,48 +345,49 @@ pub struct RecordSectionMintInstruction {
 	pub leaf_index: u32,
 }
 
-#[instruction(discriminator = BitflipInstruction::ListSection)]
+#[instruction(discriminator = BitflipInstruction::ListSection, migrations)]
 pub struct ListSectionInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
+	#[pina(validate(min = 1, error = BitflipError::InvalidSalePrice))]
 	pub price_lamports: u64,
 }
 
-#[instruction(discriminator = BitflipInstruction::CancelSectionListing)]
+#[instruction(discriminator = BitflipInstruction::CancelSectionListing, migrations)]
 pub struct CancelSectionListingInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
 }
 
-#[instruction(discriminator = BitflipInstruction::PurchaseSection)]
+#[instruction(discriminator = BitflipInstruction::PurchaseSection, migrations)]
 pub struct PurchaseSectionInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
 	pub maximum_price_lamports: u64,
 }
 
-#[instruction(discriminator = BitflipInstruction::SettleSectionEconomy)]
+#[instruction(discriminator = BitflipInstruction::SettleSectionEconomy, migrations)]
 pub struct SettleSectionEconomyInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
 }
 
-#[instruction(discriminator = BitflipInstruction::ConfigureBitCustody)]
+#[instruction(discriminator = BitflipInstruction::ConfigureBitCustody, migrations)]
 pub struct ConfigureBitCustodyInstruction {}
 
-#[instruction(discriminator = BitflipInstruction::FundSectionVault)]
+#[instruction(discriminator = BitflipInstruction::FundSectionVault, migrations)]
 pub struct FundSectionVaultInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
 }
 
-#[instruction(discriminator = BitflipInstruction::WithdrawSectionOwnerFees)]
+#[instruction(discriminator = BitflipInstruction::WithdrawSectionOwnerFees, migrations)]
 pub struct WithdrawSectionOwnerFeesInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
 }
 
-#[instruction(discriminator = BitflipInstruction::ConfigureSectionPolicy)]
+#[instruction(discriminator = BitflipInstruction::ConfigureSectionPolicy, migrations)]
 pub struct ConfigureSectionPolicyInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
@@ -387,51 +404,68 @@ pub struct ConfigureSectionPolicyInstruction {
 
 #[derive(Accounts, Debug)]
 pub struct InitializeConfigAccounts<'a> {
+	#[pina(validate(signer))]
+	#[pina(validate(owner = system::ID))]
 	pub payer: &'a mut AccountView,
+	#[pina(validate(empty))]
 	pub config: &'a mut AccountView,
+	#[pina(validate(address = system::ID))]
 	pub system_program: &'a AccountView,
 }
 
 #[derive(Accounts, Debug)]
 pub struct UpdateConfigAccounts<'a> {
+	#[pina(validate(signer))]
 	pub authority: &'a AccountView,
 	pub config: &'a mut AccountView,
 }
 
 #[derive(Accounts, Debug)]
 pub struct ProposeAuthorityAccounts<'a> {
+	#[pina(validate(signer))]
 	pub authority: &'a AccountView,
 	pub config: &'a mut AccountView,
 }
 
 #[derive(Accounts, Debug)]
 pub struct AcceptAuthorityAccounts<'a> {
+	#[pina(validate(signer))]
 	pub pending_authority: &'a AccountView,
 	pub config: &'a mut AccountView,
 }
 
 #[derive(Accounts, Debug)]
 pub struct InitializeGameAccounts<'a> {
+	#[pina(validate(signer))]
+	#[pina(validate(owner = system::ID))]
 	pub payer: &'a mut AccountView,
 	pub config: &'a mut AccountView,
+	#[pina(validate(empty))]
 	pub game: &'a mut AccountView,
+	#[pina(validate(empty))]
 	pub section: &'a mut AccountView,
+	#[pina(validate(address = system::ID))]
 	pub system_program: &'a AccountView,
 }
 
 #[derive(Accounts, Debug)]
 pub struct ClaimSectionAccounts<'a> {
+	#[pina(validate(signer))]
+	#[pina(validate(owner = system::ID))]
 	pub owner: &'a mut AccountView,
 	pub config: &'a AccountView,
 	pub game: &'a mut AccountView,
 	pub previous_section: &'a AccountView,
 	pub section: &'a mut AccountView,
 	pub treasury: &'a mut AccountView,
+	#[pina(validate(address = system::ID))]
 	pub system_program: &'a AccountView,
 }
 
 #[derive(Accounts, Debug)]
 pub struct FlipPixelsAccounts<'a> {
+	#[pina(validate(signer))]
+	#[pina(validate(owner = system::ID))]
 	pub player: &'a mut AccountView,
 	pub config: &'a AccountView,
 	pub game: &'a AccountView,
@@ -440,11 +474,13 @@ pub struct FlipPixelsAccounts<'a> {
 	pub section_vault: &'a mut AccountView,
 	pub player_bit_account: &'a mut AccountView,
 	pub token_program: &'a AccountView,
+	#[pina(validate(address = system::ID))]
 	pub system_program: &'a AccountView,
 }
 
 #[derive(Accounts, Debug)]
 pub struct SealSectionAccounts<'a> {
+	#[pina(validate(signer))]
 	pub owner: &'a mut AccountView,
 	pub game: &'a AccountView,
 	pub section: &'a mut AccountView,
@@ -452,6 +488,7 @@ pub struct SealSectionAccounts<'a> {
 
 #[derive(Accounts, Debug)]
 pub struct RecordSectionMintAccounts<'a> {
+	#[pina(validate(signer))]
 	pub collection_authority: &'a AccountView,
 	pub config: &'a AccountView,
 	pub game: &'a mut AccountView,
@@ -460,6 +497,7 @@ pub struct RecordSectionMintAccounts<'a> {
 
 #[derive(Accounts, Debug)]
 pub struct ListSectionAccounts<'a> {
+	#[pina(validate(signer))]
 	pub owner: &'a AccountView,
 	pub game: &'a AccountView,
 	pub section: &'a mut AccountView,
@@ -467,6 +505,7 @@ pub struct ListSectionAccounts<'a> {
 
 #[derive(Accounts, Debug)]
 pub struct CancelSectionListingAccounts<'a> {
+	#[pina(validate(signer))]
 	pub owner: &'a AccountView,
 	pub game: &'a AccountView,
 	pub section: &'a mut AccountView,
@@ -474,10 +513,14 @@ pub struct CancelSectionListingAccounts<'a> {
 
 #[derive(Accounts, Debug)]
 pub struct PurchaseSectionAccounts<'a> {
+	#[pina(validate(signer))]
+	#[pina(validate(owner = system::ID))]
 	pub buyer: &'a mut AccountView,
+	#[pina(validate(owner = system::ID))]
 	pub seller: &'a mut AccountView,
 	pub game: &'a AccountView,
 	pub section: &'a mut AccountView,
+	#[pina(validate(address = system::ID))]
 	pub system_program: &'a AccountView,
 }
 
@@ -489,34 +532,43 @@ pub struct SettleSectionEconomyAccounts<'a> {
 
 #[derive(Accounts, Debug)]
 pub struct ConfigureBitCustodyAccounts<'a> {
+	#[pina(validate(signer))]
 	pub authority: &'a AccountView,
 	pub config: &'a mut AccountView,
 	pub bit_mint: &'a AccountView,
 	pub bit_reserve: &'a AccountView,
+	#[pina(validate(address = token_2022::ID))]
 	pub token_program: &'a AccountView,
 }
 
 #[derive(Accounts, Debug)]
 pub struct FundSectionVaultAccounts<'a> {
+	#[pina(validate(signer))]
+	#[pina(validate(owner = system::ID))]
 	pub funder: &'a mut AccountView,
 	pub config: &'a AccountView,
 	pub section: &'a mut AccountView,
 	pub bit_mint: &'a AccountView,
 	pub bit_reserve: &'a mut AccountView,
 	pub section_vault: &'a mut AccountView,
+	#[pina(validate(address = associated_token_account::ID))]
 	pub associated_token_program: &'a AccountView,
+	#[pina(validate(address = token_2022::ID))]
 	pub token_program: &'a AccountView,
+	#[pina(validate(address = system::ID))]
 	pub system_program: &'a AccountView,
 }
 
 #[derive(Accounts, Debug)]
 pub struct WithdrawSectionOwnerFeesAccounts<'a> {
+	#[pina(validate(signer))]
 	pub owner: &'a mut AccountView,
 	pub section: &'a mut AccountView,
 }
 
 #[derive(Accounts, Debug)]
 pub struct ConfigureSectionPolicyAccounts<'a> {
+	#[pina(validate(signer))]
 	pub owner: &'a AccountView,
 	pub section: &'a mut AccountView,
 }
@@ -538,6 +590,12 @@ fn pixel_location(x: u8, y: u8) -> Result<PixelLocation, ProgramError> {
 		byte_index: linear_index / u8::BITS as usize,
 		mask: 1 << (linear_index % u8::BITS as usize),
 	})
+}
+
+/// Every declared pixel must sit inside the section canvas, and no pixel
+/// may repeat within one flip batch.
+fn validate_flip_pixel_coordinates(value: &FlipPixelsInstructionZc) -> ProgramResult {
+	validate_flip_coordinates(value.count(), value.coordinates())
 }
 
 fn validate_flip_coordinates(
@@ -1309,18 +1367,11 @@ impl<'a> ProcessAccountInfos<'a> for InitializeConfigAccounts<'a> {
 		let seeds = ConfigState::seeds();
 		let seeds_with_bump = seeds.with_bump(args.bump);
 
-		self.payer
-			.assert_signer()?
-			.assert_writable()?
-			.assert_owner(&system::ID)?;
-		self.system_program.assert_address(&system::ID)?;
 		let canonical_bump = self.config.assert_canonical_bump(&seeds.as_slices(), &ID)?;
 		if canonical_bump != args.bump {
 			return Err(ProgramError::InvalidSeeds);
 		}
 		self.config
-			.assert_empty()?
-			.assert_writable()?
 			.assert_seeds_with_bump(&seeds_with_bump.as_slices(), &ID)?;
 
 		CreateProgramAccountWithBump {
@@ -1367,7 +1418,6 @@ impl<'a> ProcessAccountInfos<'a> for UpdateConfigAccounts<'a> {
 	fn process(self, data: &[u8]) -> ProgramResult {
 		let args = UpdateConfigInstruction::try_from_bytes(data)?;
 		assert_config_account(self.config)?;
-		self.authority.assert_signer()?;
 
 		{
 			let config = self.config.as_account::<ConfigState>(&ID)?;
@@ -1402,7 +1452,6 @@ impl<'a> ProcessAccountInfos<'a> for ProposeAuthorityAccounts<'a> {
 	fn process(self, data: &[u8]) -> ProgramResult {
 		let args = ProposeAuthorityInstruction::try_from_bytes(data)?;
 		assert_config_account(self.config)?;
-		self.authority.assert_signer()?;
 
 		{
 			let config = self.config.as_account::<ConfigState>(&ID)?;
@@ -1426,7 +1475,6 @@ impl<'a> ProcessAccountInfos<'a> for AcceptAuthorityAccounts<'a> {
 	fn process(self, data: &[u8]) -> ProgramResult {
 		let _ = AcceptAuthorityInstruction::try_from_bytes(data)?;
 		assert_config_account(self.config)?;
-		self.pending_authority.assert_signer()?;
 
 		{
 			let config = self.config.as_account::<ConfigState>(&ID)?;
@@ -1455,11 +1503,6 @@ impl<'a> ProcessAccountInfos<'a> for InitializeGameAccounts<'a> {
 			return Err(BitflipError::InvalidGameIndex.into());
 		}
 		assert_config_account(self.config)?;
-		self.payer
-			.assert_signer()?
-			.assert_writable()?
-			.assert_owner(&system::ID)?;
-		self.system_program.assert_address(&system::ID)?;
 
 		let flip_fee_lamports = {
 			let config = self.config.as_account::<ConfigState>(&ID)?;
@@ -1483,8 +1526,6 @@ impl<'a> ProcessAccountInfos<'a> for InitializeGameAccounts<'a> {
 			return Err(ProgramError::InvalidSeeds);
 		}
 		self.game
-			.assert_empty()?
-			.assert_writable()?
 			.assert_seeds_with_bump(&seeds_with_bump.as_slices(), &ID)?;
 
 		CreateProgramAccountWithBump {
@@ -1558,12 +1599,6 @@ impl<'a> ProcessAccountInfos<'a> for ClaimSectionAccounts<'a> {
 		let args = ClaimSectionInstruction::try_from_bytes(data)?;
 		assert_config_account(self.config)?;
 		assert_game_account(self.game, args.game_index)?;
-		self.owner
-			.assert_signer()?
-			.assert_writable()?
-			.assert_owner(&system::ID)?;
-		self.system_program.assert_address(&system::ID)?;
-
 		let (claim_price, treasury, interval_seconds, early_unlock_flips) = {
 			let config = self.config.as_account::<ConfigState>(&ID)?;
 			(
@@ -1663,16 +1698,9 @@ impl<'a> ProcessAccountInfos<'a> for ClaimSectionAccounts<'a> {
 impl<'a> ProcessAccountInfos<'a> for FlipPixelsAccounts<'a> {
 	fn process(self, data: &[u8]) -> ProgramResult {
 		let args = FlipPixelsInstruction::try_from_bytes(data)?;
-		validate_flip_coordinates(args.count, &args.coordinates)?;
 		assert_config_account(self.config)?;
 		assert_game_account(self.game, args.game_index)?;
 		assert_section_account(self.section, args.game_index, args.section_index)?;
-		self.player
-			.assert_signer()?
-			.assert_writable()?
-			.assert_owner(&system::ID)?;
-		self.system_program.assert_address(&system::ID)?;
-
 		let bit_mint = configured_bit_mint(self.config)?;
 
 		let (starts_at, owner_share_basis_points, price_config) =
@@ -1771,7 +1799,6 @@ impl<'a> ProcessAccountInfos<'a> for SealSectionAccounts<'a> {
 		let args = SealSectionInstruction::try_from_bytes(data)?;
 		assert_game_account(self.game, args.game_index)?;
 		assert_section_account(self.section, args.game_index, args.section_index)?;
-		self.owner.assert_signer()?;
 		let clock = Clock::get()?;
 
 		{
@@ -1799,7 +1826,6 @@ impl<'a> ProcessAccountInfos<'a> for RecordSectionMintAccounts<'a> {
 		assert_config_account(self.config)?;
 		assert_game_account(self.game, args.game_index)?;
 		assert_section_account(self.section, args.game_index, args.section_index)?;
-		self.collection_authority.assert_signer()?;
 
 		let config = self.config.as_account::<ConfigState>(&ID)?;
 		self.collection_authority
@@ -1849,10 +1875,6 @@ impl<'a> ProcessAccountInfos<'a> for ListSectionAccounts<'a> {
 		let args = ListSectionInstruction::try_from_bytes(data)?;
 		assert_game_account(self.game, args.game_index)?;
 		assert_section_account(self.section, args.game_index, args.section_index)?;
-		self.owner.assert_signer()?;
-		if args.price_lamports.get() == 0 {
-			return Err(BitflipError::InvalidSalePrice.into());
-		}
 
 		{
 			let section = self.section.as_account::<SectionState>(&ID)?;
@@ -1876,7 +1898,6 @@ impl<'a> ProcessAccountInfos<'a> for CancelSectionListingAccounts<'a> {
 		let args = CancelSectionListingInstruction::try_from_bytes(data)?;
 		assert_game_account(self.game, args.game_index)?;
 		assert_section_account(self.section, args.game_index, args.section_index)?;
-		self.owner.assert_signer()?;
 
 		{
 			let section = self.section.as_account::<SectionState>(&ID)?;
@@ -1901,12 +1922,6 @@ impl<'a> ProcessAccountInfos<'a> for PurchaseSectionAccounts<'a> {
 		let args = PurchaseSectionInstruction::try_from_bytes(data)?;
 		assert_game_account(self.game, args.game_index)?;
 		assert_section_account(self.section, args.game_index, args.section_index)?;
-		self.buyer
-			.assert_signer()?
-			.assert_writable()?
-			.assert_owner(&system::ID)?;
-		self.seller.assert_writable()?.assert_owner(&system::ID)?;
-		self.system_program.assert_address(&system::ID)?;
 
 		let price = {
 			let section = self.section.as_account::<SectionState>(&ID)?;
@@ -1969,11 +1984,7 @@ impl<'a> ProcessAccountInfos<'a> for ConfigureBitCustodyAccounts<'a> {
 	fn process(self, data: &[u8]) -> ProgramResult {
 		let _ = ConfigureBitCustodyInstruction::try_from_bytes(data)?;
 		assert_config_account(self.config)?;
-		self.authority.assert_signer()?;
-		let token_program = *self
-			.token_program
-			.assert_address(&token_2022::ID)?
-			.address();
+		let token_program = *self.token_program.address();
 
 		{
 			let config = self.config.as_account::<ConfigState>(&ID)?;
@@ -2008,17 +2019,7 @@ impl<'a> ProcessAccountInfos<'a> for FundSectionVaultAccounts<'a> {
 		let args = FundSectionVaultInstruction::try_from_bytes(data)?;
 		assert_config_account(self.config)?;
 		assert_section_account(self.section, args.game_index, args.section_index)?;
-		self.funder
-			.assert_signer()?
-			.assert_writable()?
-			.assert_owner(&system::ID)?;
-		self.system_program.assert_address(&system::ID)?;
-		self.associated_token_program
-			.assert_address(&associated_token_account::ID)?;
-		let token_program = *self
-			.token_program
-			.assert_address(&token_2022::ID)?
-			.address();
+		let token_program = *self.token_program.address();
 
 		let (bit_mint, bit_reserve, config_bump) = {
 			let config = self.config.as_account::<ConfigState>(&ID)?;
@@ -2084,7 +2085,6 @@ impl<'a> ProcessAccountInfos<'a> for WithdrawSectionOwnerFeesAccounts<'a> {
 	fn process(self, data: &[u8]) -> ProgramResult {
 		let args = WithdrawSectionOwnerFeesInstruction::try_from_bytes(data)?;
 		assert_section_account(self.section, args.game_index, args.section_index)?;
-		self.owner.assert_signer()?;
 		pay_accrued_owner_fees(self.section, self.owner, true)?;
 
 		log!("Bitflip section owner fees withdrawn");
@@ -2096,7 +2096,6 @@ impl<'a> ProcessAccountInfos<'a> for ConfigureSectionPolicyAccounts<'a> {
 	fn process(self, data: &[u8]) -> ProgramResult {
 		let args = ConfigureSectionPolicyInstruction::try_from_bytes(data)?;
 		assert_section_account(self.section, args.game_index, args.section_index)?;
-		self.owner.assert_signer()?;
 		let clock = Clock::get()?;
 
 		{
@@ -2244,26 +2243,26 @@ mod tests {
 
 	#[test]
 	fn account_layouts_are_stable() {
-		assert_eq!(ConfigState::SIZE, 237);
-		assert_eq!(GameState::SIZE, 123);
-		assert_eq!(SectionState::SIZE, 854);
+		assert_eq!(ConfigState::SIZE, 238);
+		assert_eq!(GameState::SIZE, 124);
+		assert_eq!(SectionState::SIZE, 855);
 	}
 
 	#[test]
 	fn instruction_layouts_are_stable() {
-		assert_eq!(InitializeConfigInstruction::SIZE, 2);
-		assert_eq!(InitializeGameInstruction::SIZE, 5);
-		assert_eq!(FlipPixelsInstruction::SIZE, 77);
-		assert_eq!(RecordSectionMintInstruction::SIZE, 103);
-		assert_eq!(ListSectionInstruction::SIZE, 11);
-		assert_eq!(CancelSectionListingInstruction::SIZE, 3);
-		assert_eq!(PurchaseSectionInstruction::SIZE, 11);
-		assert_eq!(SettleSectionEconomyInstruction::SIZE, 3);
-		assert_eq!(ConfigureBitCustodyInstruction::SIZE, 1);
-		assert_eq!(FundSectionVaultInstruction::SIZE, 3);
-		assert_eq!(WithdrawSectionOwnerFeesInstruction::SIZE, 3);
-		assert_eq!(ConfigureSectionPolicyInstruction::SIZE, 78);
-		assert_eq!(ColourPixelsFlippedEvent::SIZE, 85);
+		assert_eq!(InitializeConfigInstruction::SIZE, 3);
+		assert_eq!(InitializeGameInstruction::SIZE, 6);
+		assert_eq!(FlipPixelsInstruction::SIZE, 78);
+		assert_eq!(RecordSectionMintInstruction::SIZE, 104);
+		assert_eq!(ListSectionInstruction::SIZE, 12);
+		assert_eq!(CancelSectionListingInstruction::SIZE, 4);
+		assert_eq!(PurchaseSectionInstruction::SIZE, 12);
+		assert_eq!(SettleSectionEconomyInstruction::SIZE, 4);
+		assert_eq!(ConfigureBitCustodyInstruction::SIZE, 2);
+		assert_eq!(FundSectionVaultInstruction::SIZE, 4);
+		assert_eq!(WithdrawSectionOwnerFeesInstruction::SIZE, 4);
+		assert_eq!(ConfigureSectionPolicyInstruction::SIZE, 79);
+		assert_eq!(ColourPixelsFlippedEvent::SIZE, 86);
 	}
 
 	#[test]
@@ -2285,11 +2284,12 @@ mod tests {
 		.expect("initialize event");
 
 		assert_eq!(data[0], BitflipEvent::ColourPixelsFlipped as u8);
-		assert_eq!(&data[1..33], player.as_ref());
-		assert_eq!(u64::from_le_bytes(data[33..41].try_into().unwrap()), 7);
-		assert_eq!(u64::from_le_bytes(data[41..49].try_into().unwrap()), 42);
-		assert_eq!(&data[49..53], &[1, 2, 63, 0]);
-		assert_eq!(&data[81..85], &[3, 255, 2, 6]);
+		assert_eq!(data[1], 0, "migration version envelope");
+		assert_eq!(&data[2..34], player.as_ref());
+		assert_eq!(u64::from_le_bytes(data[34..42].try_into().unwrap()), 7);
+		assert_eq!(u64::from_le_bytes(data[42..50].try_into().unwrap()), 42);
+		assert_eq!(&data[50..54], &[1, 2, 63, 0]);
+		assert_eq!(&data[82..86], &[3, 255, 2, 6]);
 	}
 
 	#[test]

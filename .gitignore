@@ -63,3 +63,5 @@ node_modules/
 /bitflip/style/output.css
 
 /bitflip.db
+.dart_tool/
+pubspec.lock

@@ -207,7 +207,7 @@ fn initialize_config_instruction(
 	bump: u8,
 ) -> pina_test::Instruction {
 	program.instruction(
-		&[BitflipInstruction::InitializeConfig as u8, bump],
+		&[BitflipInstruction::InitializeConfig as u8, 0, bump],
 		vec![
 			AccountMeta::new(*payer, true),
 			AccountMeta::new(*config, false),
@@ -226,6 +226,7 @@ fn initialize_game_instruction(
 	program.instruction(
 		&[
 			BitflipInstruction::InitializeGame as u8,
+			0,
 			game_index,
 			0,
 			game_bump,
@@ -249,8 +250,9 @@ fn update_config_instruction(
 	collection_authority: &Pubkey,
 	early_unlock_flips: u32,
 ) -> pina_test::Instruction {
-	let mut data = Vec::with_capacity(105);
+	let mut data = Vec::with_capacity(106);
 	data.push(BitflipInstruction::UpdateConfig as u8);
+	data.push(0); // migration version
 	data.extend_from_slice(&treasury.to_bytes());
 	data.extend_from_slice(&collection_authority.to_bytes());
 	data.extend_from_slice(&DEFAULT_CLAIM_PRICE_LAMPORTS.to_le_bytes());
@@ -274,8 +276,9 @@ fn propose_authority_instruction(
 	config: &Pubkey,
 	pending_authority: &Pubkey,
 ) -> pina_test::Instruction {
-	let mut data = Vec::with_capacity(33);
+	let mut data = Vec::with_capacity(34);
 	data.push(BitflipInstruction::ProposeAuthority as u8);
+	data.push(0); // migration version
 	data.extend_from_slice(&pending_authority.to_bytes());
 	program.instruction(
 		&data,
@@ -292,7 +295,7 @@ fn accept_authority_instruction(
 	config: &Pubkey,
 ) -> pina_test::Instruction {
 	program.instruction(
-		&[BitflipInstruction::AcceptAuthority as u8],
+		&[BitflipInstruction::AcceptAuthority as u8, 0],
 		vec![
 			AccountMeta::new_readonly(*pending_authority, true),
 			AccountMeta::new(*config, false),
@@ -308,7 +311,7 @@ fn configure_bit_custody_instruction(
 	bit_reserve: &Pubkey,
 ) -> pina_test::Instruction {
 	program.instruction(
-		&[BitflipInstruction::ConfigureBitCustody as u8],
+		&[BitflipInstruction::ConfigureBitCustody as u8, 0],
 		vec![
 			AccountMeta::new_readonly(*authority, true),
 			AccountMeta::new(*config, false),
@@ -331,7 +334,12 @@ fn fund_section_vault_instruction(
 	section_index: u8,
 ) -> pina_test::Instruction {
 	program.instruction(
-		&[BitflipInstruction::FundSectionVault as u8, 0, section_index],
+		&[
+			BitflipInstruction::FundSectionVault as u8,
+			0,
+			0,
+			section_index,
+		],
 		vec![
 			AccountMeta::new(*funder, true),
 			AccountMeta::new_readonly(*config, false),
@@ -467,9 +475,10 @@ fn claim_section_instruction(
 	bump: u8,
 	maximum_price_lamports: u64,
 ) -> pina_test::Instruction {
-	let mut data = Vec::with_capacity(12);
+	let mut data = Vec::with_capacity(13);
 	data.extend_from_slice(&[
 		BitflipInstruction::ClaimSection as u8,
+		0,
 		0,
 		section_index,
 		bump,
@@ -542,9 +551,10 @@ fn flip_pixels_instruction_with_policy(
 		packed_coordinates[index * 2] = *x;
 		packed_coordinates[index * 2 + 1] = *y;
 	}
-	let mut data = Vec::with_capacity(77);
+	let mut data = Vec::with_capacity(78);
 	data.extend_from_slice(&[
 		BitflipInstruction::FlipPixels as u8,
+		0,
 		limits.game_index,
 		limits.section_index,
 		coordinates.len() as u8,
@@ -587,6 +597,7 @@ fn settle_section_economy_instruction(
 		&[
 			BitflipInstruction::SettleSectionEconomy as u8,
 			0,
+			0,
 			section_index,
 		],
 		vec![
@@ -605,6 +616,7 @@ fn withdraw_section_owner_fees_instruction(
 	program.instruction(
 		&[
 			BitflipInstruction::WithdrawSectionOwnerFees as u8,
+			0,
 			0,
 			section_index,
 		],
@@ -628,9 +640,10 @@ fn configure_section_policy_instruction(
 	reward_per_action_tokens: u64,
 	rules_digest: [u8; 32],
 ) -> pina_test::Instruction {
-	let mut data = Vec::with_capacity(78);
+	let mut data = Vec::with_capacity(79);
 	data.extend_from_slice(&[
 		BitflipInstruction::ConfigureSectionPolicy as u8,
+		0,
 		0,
 		section_index,
 	]);
@@ -722,7 +735,7 @@ fn seal_section_instruction(
 	section_index: u8,
 ) -> pina_test::Instruction {
 	program.instruction(
-		&[BitflipInstruction::SealSection as u8, 0, section_index],
+		&[BitflipInstruction::SealSection as u8, 0, 0, section_index],
 		vec![
 			AccountMeta::new(*owner, true),
 			AccountMeta::new_readonly(*game, false),
@@ -739,8 +752,8 @@ fn list_section_instruction(
 	section_index: u8,
 	price_lamports: u64,
 ) -> pina_test::Instruction {
-	let mut data = Vec::with_capacity(11);
-	data.extend_from_slice(&[BitflipInstruction::ListSection as u8, 0, section_index]);
+	let mut data = Vec::with_capacity(12);
+	data.extend_from_slice(&[BitflipInstruction::ListSection as u8, 0, 0, section_index]);
 	data.extend_from_slice(&price_lamports.to_le_bytes());
 	program.instruction(
 		&data,
@@ -763,6 +776,7 @@ fn cancel_section_listing_instruction(
 		&[
 			BitflipInstruction::CancelSectionListing as u8,
 			0,
+			0,
 			section_index,
 		],
 		vec![
@@ -783,8 +797,13 @@ fn purchase_section_instruction(
 	section_index: u8,
 	maximum_price_lamports: u64,
 ) -> pina_test::Instruction {
-	let mut data = Vec::with_capacity(11);
-	data.extend_from_slice(&[BitflipInstruction::PurchaseSection as u8, 0, section_index]);
+	let mut data = Vec::with_capacity(12);
+	data.extend_from_slice(&[
+		BitflipInstruction::PurchaseSection as u8,
+		0,
+		0,
+		section_index,
+	]);
 	data.extend_from_slice(&maximum_price_lamports.to_le_bytes());
 	program.instruction(
 		&data,
@@ -811,9 +830,10 @@ fn record_mint_instruction(
 	merkle_tree: &Pubkey,
 	leaf_index: u32,
 ) -> pina_test::Instruction {
-	let mut data = Vec::with_capacity(103);
+	let mut data = Vec::with_capacity(104);
 	data.extend_from_slice(&[
 		BitflipInstruction::RecordSectionMint as u8,
+		0,
 		0,
 		section_index,
 	]);
@@ -899,15 +919,15 @@ fn permissionless_sponsor_initializes_safe_fixed_configuration() {
 		assert_eq!(account.owner, program_id);
 		assert_eq!(account.data.len(), ConfigState::SIZE);
 		assert_eq!(account.data[0], BitflipAccountType::ConfigState as u8);
-		assert_eq!(account.data[1], CONFIG_VERSION, "config ABI version");
-		assert_eq!(&account.data[130..194], &[0; 64], "custody unset");
-		assert_eq!(u64_at(&account.data, 194), DEFAULT_CLAIM_PRICE_LAMPORTS);
-		assert_eq!(u64_at(&account.data, 202), DEFAULT_FLIP_FEE_LAMPORTS);
-		assert_eq!(u64_at(&account.data, 210), DEFAULT_MIN_FLIP_FEE_LAMPORTS);
-		assert_eq!(u64_at(&account.data, 218), DEFAULT_MAX_FLIP_FEE_LAMPORTS);
-		assert_eq!(u32_at(&account.data, 226), DEFAULT_UNLOCK_INTERVAL_SECONDS);
-		assert_eq!(u32_at(&account.data, 230), DEFAULT_EARLY_UNLOCK_FLIPS);
-		assert_eq!(account.data[236], bump);
+		assert_eq!(account.data[2], CONFIG_VERSION, "config ABI version");
+		assert_eq!(&account.data[131..195], &[0; 64], "custody unset");
+		assert_eq!(u64_at(&account.data, 195), DEFAULT_CLAIM_PRICE_LAMPORTS);
+		assert_eq!(u64_at(&account.data, 203), DEFAULT_FLIP_FEE_LAMPORTS);
+		assert_eq!(u64_at(&account.data, 211), DEFAULT_MIN_FLIP_FEE_LAMPORTS);
+		assert_eq!(u64_at(&account.data, 219), DEFAULT_MAX_FLIP_FEE_LAMPORTS);
+		assert_eq!(u32_at(&account.data, 227), DEFAULT_UNLOCK_INTERVAL_SECONDS);
+		assert_eq!(u32_at(&account.data, 231), DEFAULT_EARLY_UNLOCK_FLIPS);
+		assert_eq!(account.data[237], bump);
 
 		program.stop().expect("stop isolated program test");
 	});
@@ -1015,7 +1035,7 @@ fn fixed_token_2022_custody_funds_each_section_vault_once() {
 			.expect_err("custody rejects a mint with live issuance authority");
 		assert_custom_error(&active_authority, BitflipError::InvalidBitMint);
 		assert_eq!(
-			&program.account(&config).expect("fetch config").data[130..194],
+			&program.account(&config).expect("fetch config").data[131..195],
 			&[0; 64],
 			"failed configuration is atomic"
 		);
@@ -1042,11 +1062,11 @@ fn fixed_token_2022_custody_funds_each_section_vault_once() {
 		assert_eq!(mint.supply, BIT_TOTAL_SUPPLY_TOKENS);
 		let config_account = program.account(&config).expect("fetch configured config");
 		assert_eq!(
-			&config_account.data[130..162],
+			&config_account.data[131..163],
 			bit_mint.pubkey().to_bytes().as_slice()
 		);
 		assert_eq!(
-			&config_account.data[162..194],
+			&config_account.data[163..195],
 			bit_reserve.to_bytes().as_slice()
 		);
 
@@ -1078,7 +1098,7 @@ fn fixed_token_2022_custody_funds_each_section_vault_once() {
 		);
 		let section_account = program.account(&section).expect("fetch funded section");
 		assert_eq!(
-			&section_account.data[97..129],
+			&section_account.data[98..130],
 			section_vault.to_bytes().as_slice()
 		);
 
@@ -1188,37 +1208,37 @@ fn game_bootstraps_one_program_owned_section() {
 
 		let game_account = program.account(&game).expect("fetch game account");
 		assert_eq!(game_account.data.len(), program_under_test::GameState::SIZE);
-		assert_eq!(game_account.data[4], ECONOMY_VERSION);
+		assert_eq!(game_account.data[5], ECONOMY_VERSION);
 		assert_eq!(
-			u16::from_le_bytes([game_account.data[13], game_account.data[14]]),
+			u16::from_le_bytes([game_account.data[14], game_account.data[15]]),
 			1,
 			"only the bootstrapped section exists"
 		);
 		assert_eq!(
-			u64_at(&game_account.data, 33),
+			u64_at(&game_account.data, 34),
 			BIT_SECTION_ALLOCATION_TOKENS
 		);
 		assert_eq!(
-			u64_at(&game_account.data, 41),
+			u64_at(&game_account.data, 42),
 			DEFAULT_EMISSION_DURATION_SECONDS
 		);
-		assert_eq!(u64_at(&game_account.data, 49), DEFAULT_WINDOW_SECONDS);
+		assert_eq!(u64_at(&game_account.data, 50), DEFAULT_WINDOW_SECONDS);
 		assert_eq!(
-			u64_at(&game_account.data, 57),
+			u64_at(&game_account.data, 58),
 			DEFAULT_TARGET_TOKENS_PER_WINDOW
 		);
-		assert_eq!(u64_at(&game_account.data, 65), DEFAULT_START_PRICE_LAMPORTS);
-		assert_eq!(u64_at(&game_account.data, 73), DEFAULT_MIN_PRICE_LAMPORTS);
-		assert_eq!(u64_at(&game_account.data, 81), DEFAULT_MAX_PRICE_LAMPORTS);
-		assert_eq!(u64_at(&game_account.data, 89), DEFAULT_MIN_PRICE_LAMPORTS);
+		assert_eq!(u64_at(&game_account.data, 66), DEFAULT_START_PRICE_LAMPORTS);
+		assert_eq!(u64_at(&game_account.data, 74), DEFAULT_MIN_PRICE_LAMPORTS);
+		assert_eq!(u64_at(&game_account.data, 82), DEFAULT_MAX_PRICE_LAMPORTS);
+		assert_eq!(u64_at(&game_account.data, 90), DEFAULT_MIN_PRICE_LAMPORTS);
 		assert_eq!(
-			u64_at(&game_account.data, 97),
+			u64_at(&game_account.data, 98),
 			DEFAULT_END_FLOOR_PRICE_LAMPORTS
 		);
-		assert_eq!(u64_at(&game_account.data, 105), DEFAULT_CHANGE_DENOMINATOR);
-		assert_eq!(u64_at(&game_account.data, 113), DEFAULT_BURST_ELASTICITY);
+		assert_eq!(u64_at(&game_account.data, 106), DEFAULT_CHANGE_DENOMINATOR);
+		assert_eq!(u64_at(&game_account.data, 114), DEFAULT_BURST_ELASTICITY);
 		assert_eq!(
-			u16::from_le_bytes([game_account.data[121], game_account.data[122]]),
+			u16::from_le_bytes([game_account.data[122], game_account.data[123]]),
 			DEFAULT_OWNER_SHARE_BASIS_POINTS
 		);
 		let section_account = program
@@ -1226,28 +1246,28 @@ fn game_bootstraps_one_program_owned_section() {
 			.expect("fetch initial section");
 		assert_eq!(section_account.owner, program.program_id());
 		assert_eq!(section_account.data.len(), SectionState::SIZE);
-		assert_eq!(&section_account.data[1..33], game.to_bytes().as_slice());
-		assert_eq!(&section_account.data[97..129], &[0; 32], "vault unset");
-		assert_eq!(section_account.data[130], 0, "initial section index");
-		assert_eq!(section_account.data[131], SECTION_STATUS_ACTIVE);
-		let launched_at = u64_at(&section_account.data, 171);
+		assert_eq!(&section_account.data[2..34], game.to_bytes().as_slice());
+		assert_eq!(&section_account.data[98..130], &[0; 32], "vault unset");
+		assert_eq!(section_account.data[131], 0, "initial section index");
+		assert_eq!(section_account.data[132], SECTION_STATUS_ACTIVE);
+		let launched_at = u64_at(&section_account.data, 172);
 		assert!(launched_at > 0);
-		assert_eq!(u64_at(&section_account.data, 179), launched_at);
-		assert_eq!(u64_at(&section_account.data, 187), launched_at);
-		assert_eq!(u64_at(&section_account.data, 195), 0);
+		assert_eq!(u64_at(&section_account.data, 180), launched_at);
+		assert_eq!(u64_at(&section_account.data, 188), launched_at);
+		assert_eq!(u64_at(&section_account.data, 196), 0);
 		assert_eq!(
-			u64_at(&section_account.data, 203),
+			u64_at(&section_account.data, 204),
 			DEFAULT_TARGET_TOKENS_PER_WINDOW
 		);
-		assert_eq!(u64_at(&section_account.data, 211), 0);
-		assert_eq!(u64_at(&section_account.data, 219), 0);
-		assert_eq!(u64_at(&section_account.data, 227), 0);
+		assert_eq!(u64_at(&section_account.data, 212), 0);
+		assert_eq!(u64_at(&section_account.data, 220), 0);
+		assert_eq!(u64_at(&section_account.data, 228), 0);
 		assert_eq!(
-			u64_at(&section_account.data, 235),
+			u64_at(&section_account.data, 236),
 			DEFAULT_START_PRICE_LAMPORTS
 		);
 		assert_eq!(
-			u64_at(&section_account.data, 243),
+			u64_at(&section_account.data, 244),
 			DEFAULT_START_PRICE_LAMPORTS
 		);
 
@@ -1262,8 +1282,8 @@ fn game_bootstraps_one_program_owned_section() {
 		let settled = program
 			.account(&initial_section)
 			.expect("fetch settled section");
-		assert_eq!(u64_at(&settled.data, 219), 0);
-		assert_eq!(u64_at(&settled.data, 227), 0);
+		assert_eq!(u64_at(&settled.data, 220), 0);
+		assert_eq!(u64_at(&settled.data, 228), 0);
 
 		program.stop().expect("stop isolated program test");
 	});
@@ -1397,24 +1417,24 @@ fn claims_enforce_order_and_activity_unlocks() {
 			.expect("activity unlocks the next section");
 
 		let game_account = program.account(&game).expect("fetch game account");
-		assert_eq!(game_account.data[2], GAME_STATUS_LIVE);
+		assert_eq!(game_account.data[3], GAME_STATUS_LIVE);
 		assert_eq!(
-			u16::from_le_bytes([game_account.data[13], game_account.data[14]]),
+			u16::from_le_bytes([game_account.data[14], game_account.data[15]]),
 			2
 		);
 		let claimed_section = program
 			.account(&section_one)
 			.expect("fetch newly claimed section");
-		let launched_at = u64_at(&claimed_section.data, 171);
+		let launched_at = u64_at(&claimed_section.data, 172);
 		assert!(launched_at > 0);
-		assert_eq!(u64_at(&claimed_section.data, 179), launched_at);
-		assert_eq!(u64_at(&claimed_section.data, 187), launched_at);
+		assert_eq!(u64_at(&claimed_section.data, 180), launched_at);
+		assert_eq!(u64_at(&claimed_section.data, 188), launched_at);
 		assert_eq!(
-			u64_at(&claimed_section.data, 203),
+			u64_at(&claimed_section.data, 204),
 			DEFAULT_TARGET_TOKENS_PER_WINDOW
 		);
-		assert_eq!(u64_at(&claimed_section.data, 219), 0);
-		assert_eq!(u64_at(&claimed_section.data, 227), 0);
+		assert_eq!(u64_at(&claimed_section.data, 220), 0);
+		assert_eq!(u64_at(&claimed_section.data, 228), 0);
 		program.stop().expect("stop isolated program test");
 	});
 }
@@ -1730,8 +1750,8 @@ fn user_owned_section_receives_fixed_fee_share_atomically() {
 		);
 		assert_eq!(token_amount(&program, &player_bits), 1);
 		let accrued = program.account(&section).expect("section fee ledgers");
-		assert_eq!(u64_at(&accrued.data, 251), split.protocol_lamports);
-		assert_eq!(u64_at(&accrued.data, 259), split.owner_lamports);
+		assert_eq!(u64_at(&accrued.data, 252), split.protocol_lamports);
+		assert_eq!(u64_at(&accrued.data, 260), split.owner_lamports);
 		let attacker = Keypair::new();
 		program
 			.fund(&attacker.pubkey(), 1_000_000)
@@ -1767,8 +1787,8 @@ fn user_owned_section_receives_fixed_fee_share_atomically() {
 			section_lamports_before + split.protocol_lamports,
 		);
 		let withdrawn = program.account(&section).expect("withdrawn fee ledgers");
-		assert_eq!(u64_at(&withdrawn.data, 251), split.protocol_lamports);
-		assert_eq!(u64_at(&withdrawn.data, 259), 0);
+		assert_eq!(u64_at(&withdrawn.data, 252), split.protocol_lamports);
+		assert_eq!(u64_at(&withdrawn.data, 260), 0);
 		let empty = program
 			.send_with_signers(
 				withdraw_section_owner_fees_instruction(&program, &owner.pubkey(), &section, 1),
@@ -1814,8 +1834,8 @@ fn user_owned_section_receives_fixed_fee_share_atomically() {
 		);
 		assert_eq!(token_amount(&program, &owner_bits), owner_tokens_before + 1);
 		let self_flip = program.account(&section).expect("self-flip fee ledgers");
-		assert_eq!(u64_at(&self_flip.data, 251), split.protocol_lamports * 2);
-		assert_eq!(u64_at(&self_flip.data, 259), split.owner_lamports);
+		assert_eq!(u64_at(&self_flip.data, 252), split.protocol_lamports * 2);
+		assert_eq!(u64_at(&self_flip.data, 260), split.owner_lamports);
 		program
 			.send_with_signers(
 				withdraw_section_owner_fees_instruction(&program, &owner.pubkey(), &section, 1),
@@ -1898,7 +1918,7 @@ fn owner_can_list_cancel_and_sell_a_section_atomically() {
 			.send_with_signers(list(), &[&seller])
 			.expect("owner lists the section");
 		assert_eq!(
-			u64_at(&program.account(&section).expect("fetch listing").data, 163,),
+			u64_at(&program.account(&section).expect("fetch listing").data, 164,),
 			SALE_PRICE
 		);
 
@@ -1970,11 +1990,11 @@ fn owner_can_list_cancel_and_sell_a_section_atomically() {
 			.expect("buyer purchases at the listed price");
 		let section_account = program.account(&section).expect("fetch sold section");
 		assert_eq!(
-			&section_account.data[1..33],
+			&section_account.data[2..34],
 			buyer.pubkey().to_bytes().as_slice()
 		);
-		assert_eq!(u64_at(&section_account.data, 163), 0);
-		assert_eq!(u64_at(&section_account.data, 259), 0);
+		assert_eq!(u64_at(&section_account.data, 164), 0);
+		assert_eq!(u64_at(&section_account.data, 260), 0);
 		assert_eq!(
 			program.balance(&seller.pubkey()).expect("seller balance"),
 			before_seller + SALE_PRICE + owner_share
@@ -2125,13 +2145,13 @@ fn section_policy_is_versioned_locked_while_live_and_survives_sale() {
 			)
 			.expect("owner publishes a colour-canvas policy");
 		let configured = program.account(&section).expect("configured policy");
-		assert_eq!(u64_at(&configured.data, 267), 1);
-		assert_eq!(i64_at(&configured.data, 275), starts_at);
-		assert_eq!(i64_at(&configured.data, 283), ends_at);
-		assert_eq!(&configured.data[307..339], &rules_digest);
-		assert_eq!(configured.data[339], SECTION_MODE_COLOUR_CANVAS);
-		assert_eq!(configured.data[340], SECTION_PALETTE_DEFAULT);
-		assert_eq!(configured.data[341], SECTION_REWARD_POLICY_NONE);
+		assert_eq!(u64_at(&configured.data, 268), 1);
+		assert_eq!(i64_at(&configured.data, 276), starts_at);
+		assert_eq!(i64_at(&configured.data, 284), ends_at);
+		assert_eq!(&configured.data[308..340], &rules_digest);
+		assert_eq!(configured.data[340], SECTION_MODE_COLOUR_CANVAS);
+		assert_eq!(configured.data[341], SECTION_PALETTE_DEFAULT);
+		assert_eq!(configured.data[342], SECTION_REWARD_POLICY_NONE);
 
 		let stale_update = program
 			.send_with_signers(
@@ -2295,10 +2315,10 @@ fn section_policy_is_versioned_locked_while_live_and_survives_sale() {
 			)
 			.expect("sell the section without changing campaign terms");
 		let sold = program.account(&section).expect("sold policy section");
-		assert_eq!(u64_at(&sold.data, 267), 1);
-		assert_eq!(i64_at(&sold.data, 275), starts_at);
-		assert_eq!(i64_at(&sold.data, 283), ends_at);
-		assert_eq!(&sold.data[307..339], &rules_digest);
+		assert_eq!(u64_at(&sold.data, 268), 1);
+		assert_eq!(i64_at(&sold.data, 276), starts_at);
+		assert_eq!(i64_at(&sold.data, 284), ends_at);
+		assert_eq!(&sold.data[308..340], &rules_digest);
 		let buyer_update = program
 			.send_with_signers(
 				configure_section_policy_instruction(
@@ -2363,10 +2383,10 @@ fn authority_rotation_requires_both_signers_and_revokes_the_old_authority() {
 			.expect("the proposed signer accepts authority");
 		let config_account = program.account(&config).expect("fetch config");
 		assert_eq!(
-			&config_account.data[2..34],
+			&config_account.data[3..35],
 			pending_authority.pubkey().to_bytes().as_slice()
 		);
-		assert_eq!(&config_account.data[34..66], &[0; 32]);
+		assert_eq!(&config_account.data[35..67], &[0; 32]);
 
 		let old_authority = program
 			.send_with_signers(
@@ -2439,7 +2459,7 @@ fn only_the_owner_can_seal_an_active_section() {
 			.expect_err("non-owner cannot seal a section");
 		assert!(!unauthorized.message().is_empty());
 		assert_eq!(
-			program.account(&section).expect("fetch section").data[131],
+			program.account(&section).expect("fetch section").data[132],
 			SECTION_STATUS_ACTIVE
 		);
 
@@ -2450,7 +2470,7 @@ fn only_the_owner_can_seal_an_active_section() {
 			)
 			.expect("owner seals the section");
 		assert_eq!(
-			program.account(&section).expect("fetch section").data[131],
+			program.account(&section).expect("fetch section").data[132],
 			SECTION_STATUS_SEALED
 		);
 		program.stop().expect("stop isolated program test");
@@ -2525,19 +2545,19 @@ fn mint_recording_requires_sealed_state_and_collection_authority() {
 			.expect("collection authority records the mint");
 
 		let section_account = program.account(&section).expect("fetch section");
-		assert_eq!(section_account.data[131], SECTION_STATUS_MINTED);
+		assert_eq!(section_account.data[132], SECTION_STATUS_MINTED);
 		assert_eq!(
-			&section_account.data[33..65],
+			&section_account.data[34..66],
 			asset_id.to_bytes().as_slice()
 		);
 		assert_eq!(
-			&section_account.data[65..97],
+			&section_account.data[66..98],
 			merkle_tree.to_bytes().as_slice()
 		);
-		assert_eq!(u32_at(&section_account.data, 135), 42);
+		assert_eq!(u32_at(&section_account.data, 136), 42);
 		let game_account = program.account(&game).expect("fetch game");
 		assert_eq!(
-			u16::from_le_bytes([game_account.data[15], game_account.data[16]]),
+			u16::from_le_bytes([game_account.data[16], game_account.data[17]]),
 			1
 		);
 
@@ -2628,16 +2648,16 @@ fn burst_traffic_preserves_real_sbf_accounting() {
 			u64::try_from(TRANSACTION_COUNT).expect("transaction count") * PIXELS_PER_TRANSACTION;
 		let section_account = program.account(&section).expect("section after burst");
 		let game_account = program.account(&game).expect("game after burst");
-		assert_eq!(u64_at(&section_account.data, 139), expected_flips);
+		assert_eq!(u64_at(&section_account.data, 140), expected_flips);
 		assert_eq!(
-			u64_at(&section_account.data, 147),
+			u64_at(&section_account.data, 148),
 			u64::try_from(TRANSACTION_COUNT).expect("transaction count")
 		);
-		assert_eq!(u64_at(&game_account.data, 25), 0);
-		assert_eq!(u64_at(&section_account.data, 211), expected_flips);
-		assert_eq!(u64_at(&section_account.data, 219), expected_flips);
+		assert_eq!(u64_at(&game_account.data, 26), 0);
+		assert_eq!(u64_at(&section_account.data, 212), expected_flips);
+		assert_eq!(u64_at(&section_account.data, 220), expected_flips);
 		assert_eq!(
-			u64_at(&section_account.data, 251),
+			u64_at(&section_account.data, 252),
 			expected_flips * DEFAULT_START_PRICE_LAMPORTS
 		);
 		assert_eq!(token_amount(&program, &player_bit_account), expected_flips);
@@ -2866,11 +2886,11 @@ fn independent_sections_process_concurrent_reward_traffic() {
 		let section_zero_account = program.account(&section_zero).expect("final section zero");
 		let section_one_account = program.account(&section_one).expect("final section one");
 		assert_eq!(
-			u64_at(&section_zero_account.data, 211),
+			u64_at(&section_zero_account.data, 212),
 			section_reward_tokens + 1
 		);
 		assert_eq!(
-			u64_at(&section_one_account.data, 211),
+			u64_at(&section_one_account.data, 212),
 			section_reward_tokens
 		);
 		assert_eq!(

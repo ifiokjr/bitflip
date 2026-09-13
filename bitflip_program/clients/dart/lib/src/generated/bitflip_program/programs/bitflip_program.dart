@@ -48,55 +48,55 @@ enum BitflipProgramInstruction {
 BitflipProgramInstruction identifyBitflipProgramInstruction(
   Uint8List data,
 ) {
-  if (containsBytes(data, getU8Encoder().encode(0), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(0), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) {
     return BitflipProgramInstruction.initializeConfig;
   }
-  if (containsBytes(data, getU8Encoder().encode(1), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(1), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) {
     return BitflipProgramInstruction.updateConfig;
   }
-  if (containsBytes(data, getU8Encoder().encode(2), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(2), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) {
     return BitflipProgramInstruction.proposeAuthority;
   }
-  if (containsBytes(data, getU8Encoder().encode(3), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(3), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) {
     return BitflipProgramInstruction.acceptAuthority;
   }
-  if (containsBytes(data, getU8Encoder().encode(4), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(4), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) {
     return BitflipProgramInstruction.initializeGame;
   }
-  if (containsBytes(data, getU8Encoder().encode(5), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(5), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) {
     return BitflipProgramInstruction.claimSection;
   }
-  if (containsBytes(data, getU8Encoder().encode(6), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(6), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) {
     return BitflipProgramInstruction.flipPixels;
   }
-  if (containsBytes(data, getU8Encoder().encode(7), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(7), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) {
     return BitflipProgramInstruction.sealSection;
   }
-  if (containsBytes(data, getU8Encoder().encode(8), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(8), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) {
     return BitflipProgramInstruction.recordSectionMint;
   }
-  if (containsBytes(data, getU8Encoder().encode(9), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(9), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) {
     return BitflipProgramInstruction.listSection;
   }
-  if (containsBytes(data, getU8Encoder().encode(10), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(10), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) {
     return BitflipProgramInstruction.cancelSectionListing;
   }
-  if (containsBytes(data, getU8Encoder().encode(11), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(11), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) {
     return BitflipProgramInstruction.purchaseSection;
   }
-  if (containsBytes(data, getU8Encoder().encode(12), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(12), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) {
     return BitflipProgramInstruction.settleSectionEconomy;
   }
-  if (containsBytes(data, getU8Encoder().encode(13), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(13), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) {
     return BitflipProgramInstruction.configureBitCustody;
   }
-  if (containsBytes(data, getU8Encoder().encode(14), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(14), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) {
     return BitflipProgramInstruction.fundSectionVault;
   }
-  if (containsBytes(data, getU8Encoder().encode(15), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(15), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) {
     return BitflipProgramInstruction.withdrawSectionOwnerFees;
   }
-  if (containsBytes(data, getU8Encoder().encode(16), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(16), 0) && containsBytes(data, getU8Encoder().encode(0), 1)) {
     return BitflipProgramInstruction.configureSectionPolicy;
   }
 

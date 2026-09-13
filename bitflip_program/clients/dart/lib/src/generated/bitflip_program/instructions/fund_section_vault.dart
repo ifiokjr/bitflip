@@ -19,9 +19,11 @@ class FundSectionVaultInstructionData {
     required this.gameIndex,
     required this.sectionIndex,
   }) :
-      discriminator = 14;
+      discriminator = 14,
+      migrationVersion = 0;
 
   final int discriminator;
+  final int migrationVersion;
   final int gameIndex;
   final int sectionIndex;
 }
@@ -29,6 +31,7 @@ class FundSectionVaultInstructionData {
 Encoder<FundSectionVaultInstructionData> getFundSectionVaultInstructionDataEncoder() {
   final structEncoder = getStructEncoder(<(String, Encoder<Object?>)>[
     ('discriminator', getU8Encoder()),
+    ('migrationVersion', getU8Encoder()),
     ('gameIndex', getU8Encoder()),
     ('sectionIndex', getU8Encoder()),
   ]);
@@ -37,6 +40,7 @@ Encoder<FundSectionVaultInstructionData> getFundSectionVaultInstructionDataEncod
     structEncoder,
     (FundSectionVaultInstructionData value) => <String, Object?>{
       'discriminator': 14,
+      'migrationVersion': 0,
       'gameIndex': value.gameIndex,
       'sectionIndex': value.sectionIndex,
     },
@@ -46,6 +50,7 @@ Encoder<FundSectionVaultInstructionData> getFundSectionVaultInstructionDataEncod
 Decoder<FundSectionVaultInstructionData> getFundSectionVaultInstructionDataDecoder() {
   final structDecoder = getStructDecoder(<(String, Decoder<Object?>)>[
     ('discriminator', getU8Decoder()),
+    ('migrationVersion', getU8Decoder()),
     ('gameIndex', getU8Decoder()),
     ('sectionIndex', getU8Decoder()),
   ]);
@@ -65,6 +70,9 @@ Decoder<FundSectionVaultInstructionData> getFundSectionVaultInstructionDataDecod
     getConstantDecoder(
       getU8Encoder().encode(14),
     ).read(bytes, offset + 0);
+    getConstantDecoder(
+      getU8Encoder().encode(0),
+    ).read(bytes, offset + 1);
     final (map, newOffset) = structDecoder.read(bytes, offset);
     if (newOffset != bytes.length) {
       throwInvalidByteLength(newOffset - offset, bytes.length - offset);

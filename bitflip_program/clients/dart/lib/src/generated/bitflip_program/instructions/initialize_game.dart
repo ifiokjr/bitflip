@@ -21,9 +21,11 @@ class InitializeGameInstructionData {
     required this.gameBump,
     required this.sectionBump,
   }) :
-      discriminator = 4;
+      discriminator = 4,
+      migrationVersion = 0;
 
   final int discriminator;
+  final int migrationVersion;
   final int gameIndex;
   final int sectionIndex;
   final int gameBump;
@@ -33,6 +35,7 @@ class InitializeGameInstructionData {
 Encoder<InitializeGameInstructionData> getInitializeGameInstructionDataEncoder() {
   final structEncoder = getStructEncoder(<(String, Encoder<Object?>)>[
     ('discriminator', getU8Encoder()),
+    ('migrationVersion', getU8Encoder()),
     ('gameIndex', getU8Encoder()),
     ('sectionIndex', getU8Encoder()),
     ('gameBump', getU8Encoder()),
@@ -43,6 +46,7 @@ Encoder<InitializeGameInstructionData> getInitializeGameInstructionDataEncoder()
     structEncoder,
     (InitializeGameInstructionData value) => <String, Object?>{
       'discriminator': 4,
+      'migrationVersion': 0,
       'gameIndex': value.gameIndex,
       'sectionIndex': value.sectionIndex,
       'gameBump': value.gameBump,
@@ -54,6 +58,7 @@ Encoder<InitializeGameInstructionData> getInitializeGameInstructionDataEncoder()
 Decoder<InitializeGameInstructionData> getInitializeGameInstructionDataDecoder() {
   final structDecoder = getStructDecoder(<(String, Decoder<Object?>)>[
     ('discriminator', getU8Decoder()),
+    ('migrationVersion', getU8Decoder()),
     ('gameIndex', getU8Decoder()),
     ('sectionIndex', getU8Decoder()),
     ('gameBump', getU8Decoder()),
@@ -75,6 +80,9 @@ Decoder<InitializeGameInstructionData> getInitializeGameInstructionDataDecoder()
     getConstantDecoder(
       getU8Encoder().encode(4),
     ).read(bytes, offset + 0);
+    getConstantDecoder(
+      getU8Encoder().encode(0),
+    ).read(bytes, offset + 1);
     final (map, newOffset) = structDecoder.read(bytes, offset);
     if (newOffset != bytes.length) {
       throwInvalidByteLength(newOffset - offset, bytes.length - offset);

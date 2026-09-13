@@ -20,9 +20,11 @@ class PurchaseSectionInstructionData {
     required this.sectionIndex,
     required this.maximumPriceLamports,
   }) :
-      discriminator = 11;
+      discriminator = 11,
+      migrationVersion = 0;
 
   final int discriminator;
+  final int migrationVersion;
   final int gameIndex;
   final int sectionIndex;
   final BigInt maximumPriceLamports;
@@ -31,6 +33,7 @@ class PurchaseSectionInstructionData {
 Encoder<PurchaseSectionInstructionData> getPurchaseSectionInstructionDataEncoder() {
   final structEncoder = getStructEncoder(<(String, Encoder<Object?>)>[
     ('discriminator', getU8Encoder()),
+    ('migrationVersion', getU8Encoder()),
     ('gameIndex', getU8Encoder()),
     ('sectionIndex', getU8Encoder()),
     ('maximumPriceLamports', getU64Encoder()),
@@ -40,6 +43,7 @@ Encoder<PurchaseSectionInstructionData> getPurchaseSectionInstructionDataEncoder
     structEncoder,
     (PurchaseSectionInstructionData value) => <String, Object?>{
       'discriminator': 11,
+      'migrationVersion': 0,
       'gameIndex': value.gameIndex,
       'sectionIndex': value.sectionIndex,
       'maximumPriceLamports': value.maximumPriceLamports,
@@ -50,6 +54,7 @@ Encoder<PurchaseSectionInstructionData> getPurchaseSectionInstructionDataEncoder
 Decoder<PurchaseSectionInstructionData> getPurchaseSectionInstructionDataDecoder() {
   final structDecoder = getStructDecoder(<(String, Decoder<Object?>)>[
     ('discriminator', getU8Decoder()),
+    ('migrationVersion', getU8Decoder()),
     ('gameIndex', getU8Decoder()),
     ('sectionIndex', getU8Decoder()),
     ('maximumPriceLamports', getU64Decoder()),
@@ -70,6 +75,9 @@ Decoder<PurchaseSectionInstructionData> getPurchaseSectionInstructionDataDecoder
     getConstantDecoder(
       getU8Encoder().encode(11),
     ).read(bytes, offset + 0);
+    getConstantDecoder(
+      getU8Encoder().encode(0),
+    ).read(bytes, offset + 1);
     final (map, newOffset) = structDecoder.read(bytes, offset);
     if (newOffset != bytes.length) {
       throwInvalidByteLength(newOffset - offset, bytes.length - offset);

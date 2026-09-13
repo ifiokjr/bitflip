@@ -1,0 +1,2561 @@
+{
+	"formatVersion": 3,
+	"programId": "5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM",
+	"versionType": "u8",
+	"contracts": {
+		"account:1:01": {
+			"identity": {
+				"kind": "account",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "01"
+			},
+			"rustName": "ConfigState",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "a8a169d36bcdf336f831c9996466cbb1271cb7a0dd954f5f15967cbafbf6c1c5",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "version",
+								"rustType": "u8"
+							},
+							{
+								"name": "authority",
+								"rustType": "Address"
+							},
+							{
+								"name": "pending_authority",
+								"rustType": "Address"
+							},
+							{
+								"name": "treasury",
+								"rustType": "Address"
+							},
+							{
+								"name": "collection_authority",
+								"rustType": "Address"
+							},
+							{
+								"name": "bit_mint",
+								"rustType": "Address"
+							},
+							{
+								"name": "bit_reserve",
+								"rustType": "Address"
+							},
+							{
+								"name": "claim_price_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "flip_fee_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "minimum_flip_fee_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "maximum_flip_fee_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "unlock_interval_seconds",
+								"rustType": "u32"
+							},
+							{
+								"name": "early_unlock_flips",
+								"rustType": "u32"
+							},
+							{
+								"name": "game_count",
+								"rustType": "u16"
+							},
+							{
+								"name": "bump",
+								"rustType": "u8"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 236,
+							"fields": [
+								{
+									"name": "version",
+									"offset": 0,
+									"size": 1
+								},
+								{
+									"name": "authority",
+									"offset": 1,
+									"size": 32
+								},
+								{
+									"name": "pending_authority",
+									"offset": 33,
+									"size": 32
+								},
+								{
+									"name": "treasury",
+									"offset": 65,
+									"size": 32
+								},
+								{
+									"name": "collection_authority",
+									"offset": 97,
+									"size": 32
+								},
+								{
+									"name": "bit_mint",
+									"offset": 129,
+									"size": 32
+								},
+								{
+									"name": "bit_reserve",
+									"offset": 161,
+									"size": 32
+								},
+								{
+									"name": "claim_price_lamports",
+									"offset": 193,
+									"size": 8
+								},
+								{
+									"name": "flip_fee_lamports",
+									"offset": 201,
+									"size": 8
+								},
+								{
+									"name": "minimum_flip_fee_lamports",
+									"offset": 209,
+									"size": 8
+								},
+								{
+									"name": "maximum_flip_fee_lamports",
+									"offset": 217,
+									"size": 8
+								},
+								{
+									"name": "unlock_interval_seconds",
+									"offset": 225,
+									"size": 4
+								},
+								{
+									"name": "early_unlock_flips",
+									"offset": 229,
+									"size": 4
+								},
+								{
+									"name": "game_count",
+									"offset": 233,
+									"size": 2
+								},
+								{
+									"name": "bump",
+									"offset": 235,
+									"size": 1
+								}
+							]
+						}
+					},
+					"transition": null
+				}
+			]
+		},
+		"account:1:02": {
+			"identity": {
+				"kind": "account",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "02"
+			},
+			"rustName": "GameState",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "f8d9f10dd41208ebcd930a61f035d47be9317ea499096f0af06f5114603be57d",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "game_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "status",
+								"rustType": "u8"
+							},
+							{
+								"name": "bump",
+								"rustType": "u8"
+							},
+							{
+								"name": "economy_version",
+								"rustType": "u8"
+							},
+							{
+								"name": "starts_at",
+								"rustType": "i64"
+							},
+							{
+								"name": "next_section",
+								"rustType": "u16"
+							},
+							{
+								"name": "minted_sections",
+								"rustType": "u16"
+							},
+							{
+								"name": "flip_fee_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "total_flips",
+								"rustType": "u64"
+							},
+							{
+								"name": "section_allocation_tokens",
+								"rustType": "u64"
+							},
+							{
+								"name": "emission_duration_seconds",
+								"rustType": "u64"
+							},
+							{
+								"name": "window_seconds",
+								"rustType": "u64"
+							},
+							{
+								"name": "target_tokens_per_window",
+								"rustType": "u64"
+							},
+							{
+								"name": "start_price_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "minimum_price_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "maximum_price_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "start_floor_price_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "end_floor_price_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "change_denominator",
+								"rustType": "u64"
+							},
+							{
+								"name": "burst_elasticity",
+								"rustType": "u64"
+							},
+							{
+								"name": "owner_share_basis_points",
+								"rustType": "u16"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 122,
+							"fields": [
+								{
+									"name": "game_index",
+									"offset": 0,
+									"size": 1
+								},
+								{
+									"name": "status",
+									"offset": 1,
+									"size": 1
+								},
+								{
+									"name": "bump",
+									"offset": 2,
+									"size": 1
+								},
+								{
+									"name": "economy_version",
+									"offset": 3,
+									"size": 1
+								},
+								{
+									"name": "starts_at",
+									"offset": 4,
+									"size": 8
+								},
+								{
+									"name": "next_section",
+									"offset": 12,
+									"size": 2
+								},
+								{
+									"name": "minted_sections",
+									"offset": 14,
+									"size": 2
+								},
+								{
+									"name": "flip_fee_lamports",
+									"offset": 16,
+									"size": 8
+								},
+								{
+									"name": "total_flips",
+									"offset": 24,
+									"size": 8
+								},
+								{
+									"name": "section_allocation_tokens",
+									"offset": 32,
+									"size": 8
+								},
+								{
+									"name": "emission_duration_seconds",
+									"offset": 40,
+									"size": 8
+								},
+								{
+									"name": "window_seconds",
+									"offset": 48,
+									"size": 8
+								},
+								{
+									"name": "target_tokens_per_window",
+									"offset": 56,
+									"size": 8
+								},
+								{
+									"name": "start_price_lamports",
+									"offset": 64,
+									"size": 8
+								},
+								{
+									"name": "minimum_price_lamports",
+									"offset": 72,
+									"size": 8
+								},
+								{
+									"name": "maximum_price_lamports",
+									"offset": 80,
+									"size": 8
+								},
+								{
+									"name": "start_floor_price_lamports",
+									"offset": 88,
+									"size": 8
+								},
+								{
+									"name": "end_floor_price_lamports",
+									"offset": 96,
+									"size": 8
+								},
+								{
+									"name": "change_denominator",
+									"offset": 104,
+									"size": 8
+								},
+								{
+									"name": "burst_elasticity",
+									"offset": 112,
+									"size": 8
+								},
+								{
+									"name": "owner_share_basis_points",
+									"offset": 120,
+									"size": 2
+								}
+							]
+						}
+					},
+					"transition": null
+				}
+			]
+		},
+		"account:1:03": {
+			"identity": {
+				"kind": "account",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "03"
+			},
+			"rustName": "SectionState",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "d95ca43ba5062b20941ad07c40713d42dbbdc7c5b715003ee80e4231c4a33f54",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "owner",
+								"rustType": "Address"
+							},
+							{
+								"name": "asset_id",
+								"rustType": "Address"
+							},
+							{
+								"name": "merkle_tree",
+								"rustType": "Address"
+							},
+							{
+								"name": "bit_vault",
+								"rustType": "Address"
+							},
+							{
+								"name": "game_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "section_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "status",
+								"rustType": "u8"
+							},
+							{
+								"name": "bump",
+								"rustType": "u8"
+							},
+							{
+								"name": "on_pixels",
+								"rustType": "u16"
+							},
+							{
+								"name": "leaf_index",
+								"rustType": "u32"
+							},
+							{
+								"name": "flip_count",
+								"rustType": "u64"
+							},
+							{
+								"name": "revision",
+								"rustType": "u64"
+							},
+							{
+								"name": "last_flip_at",
+								"rustType": "i64"
+							},
+							{
+								"name": "sale_price_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "economy_launched_at",
+								"rustType": "u64"
+							},
+							{
+								"name": "economy_window_started_at",
+								"rustType": "u64"
+							},
+							{
+								"name": "economy_last_updated_at",
+								"rustType": "u64"
+							},
+							{
+								"name": "economy_window_id",
+								"rustType": "u64"
+							},
+							{
+								"name": "economy_window_target_tokens",
+								"rustType": "u64"
+							},
+							{
+								"name": "economy_window_rewarded_tokens",
+								"rustType": "u64"
+							},
+							{
+								"name": "emitted_tokens",
+								"rustType": "u64"
+							},
+							{
+								"name": "reward_pool_tokens",
+								"rustType": "u64"
+							},
+							{
+								"name": "controller_price_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "posted_price_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "protocol_fee_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "owner_fee_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "policy_version",
+								"rustType": "u64"
+							},
+							{
+								"name": "policy_starts_at",
+								"rustType": "i64"
+							},
+							{
+								"name": "policy_ends_at",
+								"rustType": "i64"
+							},
+							{
+								"name": "policy_entry_price_tokens",
+								"rustType": "u64"
+							},
+							{
+								"name": "policy_reward_per_action_tokens",
+								"rustType": "u64"
+							},
+							{
+								"name": "policy_rules_digest",
+								"rustType": "[u8; 32]"
+							},
+							{
+								"name": "policy_mode",
+								"rustType": "u8"
+							},
+							{
+								"name": "policy_palette_id",
+								"rustType": "u8"
+							},
+							{
+								"name": "policy_reward_policy",
+								"rustType": "u8"
+							},
+							{
+								"name": "pixels",
+								"rustType": "[u8; 512]"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 853,
+							"fields": [
+								{
+									"name": "owner",
+									"offset": 0,
+									"size": 32
+								},
+								{
+									"name": "asset_id",
+									"offset": 32,
+									"size": 32
+								},
+								{
+									"name": "merkle_tree",
+									"offset": 64,
+									"size": 32
+								},
+								{
+									"name": "bit_vault",
+									"offset": 96,
+									"size": 32
+								},
+								{
+									"name": "game_index",
+									"offset": 128,
+									"size": 1
+								},
+								{
+									"name": "section_index",
+									"offset": 129,
+									"size": 1
+								},
+								{
+									"name": "status",
+									"offset": 130,
+									"size": 1
+								},
+								{
+									"name": "bump",
+									"offset": 131,
+									"size": 1
+								},
+								{
+									"name": "on_pixels",
+									"offset": 132,
+									"size": 2
+								},
+								{
+									"name": "leaf_index",
+									"offset": 134,
+									"size": 4
+								},
+								{
+									"name": "flip_count",
+									"offset": 138,
+									"size": 8
+								},
+								{
+									"name": "revision",
+									"offset": 146,
+									"size": 8
+								},
+								{
+									"name": "last_flip_at",
+									"offset": 154,
+									"size": 8
+								},
+								{
+									"name": "sale_price_lamports",
+									"offset": 162,
+									"size": 8
+								},
+								{
+									"name": "economy_launched_at",
+									"offset": 170,
+									"size": 8
+								},
+								{
+									"name": "economy_window_started_at",
+									"offset": 178,
+									"size": 8
+								},
+								{
+									"name": "economy_last_updated_at",
+									"offset": 186,
+									"size": 8
+								},
+								{
+									"name": "economy_window_id",
+									"offset": 194,
+									"size": 8
+								},
+								{
+									"name": "economy_window_target_tokens",
+									"offset": 202,
+									"size": 8
+								},
+								{
+									"name": "economy_window_rewarded_tokens",
+									"offset": 210,
+									"size": 8
+								},
+								{
+									"name": "emitted_tokens",
+									"offset": 218,
+									"size": 8
+								},
+								{
+									"name": "reward_pool_tokens",
+									"offset": 226,
+									"size": 8
+								},
+								{
+									"name": "controller_price_lamports",
+									"offset": 234,
+									"size": 8
+								},
+								{
+									"name": "posted_price_lamports",
+									"offset": 242,
+									"size": 8
+								},
+								{
+									"name": "protocol_fee_lamports",
+									"offset": 250,
+									"size": 8
+								},
+								{
+									"name": "owner_fee_lamports",
+									"offset": 258,
+									"size": 8
+								},
+								{
+									"name": "policy_version",
+									"offset": 266,
+									"size": 8
+								},
+								{
+									"name": "policy_starts_at",
+									"offset": 274,
+									"size": 8
+								},
+								{
+									"name": "policy_ends_at",
+									"offset": 282,
+									"size": 8
+								},
+								{
+									"name": "policy_entry_price_tokens",
+									"offset": 290,
+									"size": 8
+								},
+								{
+									"name": "policy_reward_per_action_tokens",
+									"offset": 298,
+									"size": 8
+								},
+								{
+									"name": "policy_rules_digest",
+									"offset": 306,
+									"size": 32
+								},
+								{
+									"name": "policy_mode",
+									"offset": 338,
+									"size": 1
+								},
+								{
+									"name": "policy_palette_id",
+									"offset": 339,
+									"size": 1
+								},
+								{
+									"name": "policy_reward_policy",
+									"offset": 340,
+									"size": 1
+								},
+								{
+									"name": "pixels",
+									"offset": 341,
+									"size": 512
+								}
+							]
+						}
+					},
+					"transition": null
+				}
+			]
+		},
+		"event:1:01": {
+			"identity": {
+				"kind": "event",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "01"
+			},
+			"rustName": "ColourPixelsFlippedEvent",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "2711a7699d390c1fb0bc4ab78de90b51c8ddf381ef23c5c166d611d403cb090a",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "player",
+								"rustType": "Address"
+							},
+							{
+								"name": "policy_version",
+								"rustType": "u64"
+							},
+							{
+								"name": "revision",
+								"rustType": "u64"
+							},
+							{
+								"name": "coordinates",
+								"rustType": "[u8; 32]"
+							},
+							{
+								"name": "game_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "section_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "count",
+								"rustType": "u8"
+							},
+							{
+								"name": "colour",
+								"rustType": "u8"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 84,
+							"fields": [
+								{
+									"name": "player",
+									"offset": 0,
+									"size": 32
+								},
+								{
+									"name": "policy_version",
+									"offset": 32,
+									"size": 8
+								},
+								{
+									"name": "revision",
+									"offset": 40,
+									"size": 8
+								},
+								{
+									"name": "coordinates",
+									"offset": 48,
+									"size": 32
+								},
+								{
+									"name": "game_index",
+									"offset": 80,
+									"size": 1
+								},
+								{
+									"name": "section_index",
+									"offset": 81,
+									"size": 1
+								},
+								{
+									"name": "count",
+									"offset": 82,
+									"size": 1
+								},
+								{
+									"name": "colour",
+									"offset": 83,
+									"size": 1
+								}
+							]
+						}
+					},
+					"transition": null
+				}
+			]
+		},
+		"instruction:1:00": {
+			"identity": {
+				"kind": "instruction",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "00"
+			},
+			"rustName": "InitializeConfigInstruction",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "43124b1aa7c67081addd4259a24fbc507a54bca9953fea6e38dadfaceee4a8ef",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "bump",
+								"rustType": "u8"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 1,
+							"fields": [
+								{
+									"name": "bump",
+									"offset": 0,
+									"size": 1
+								}
+							]
+						}
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "payer",
+								"writable": true,
+								"signer": true,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null,
+								"constraints": [
+									"owner=system::ID",
+									"signer"
+								]
+							},
+							{
+								"name": "config",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": "config",
+								"constraints": [
+									"empty"
+								]
+							},
+							{
+								"name": "system_program",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": "publicKey:11111111111111111111111111111111",
+								"pda": null,
+								"constraints": [
+									"address=system::ID"
+								]
+							}
+						]
+					},
+					"processSha256": "9d112b1b3296812da27ca284cdfa231c4fbf98f01beec5810c5699c81f681f24",
+					"transition": null
+				}
+			]
+		},
+		"instruction:1:01": {
+			"identity": {
+				"kind": "instruction",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "01"
+			},
+			"rustName": "UpdateConfigInstruction",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "9e4c2a54ebad1f3fccab776dd697bb6643124f3b9bdadcae6df477c7b22ba34c",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "treasury",
+								"rustType": "Address"
+							},
+							{
+								"name": "collection_authority",
+								"rustType": "Address"
+							},
+							{
+								"name": "claim_price_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "flip_fee_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "minimum_flip_fee_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "maximum_flip_fee_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "unlock_interval_seconds",
+								"rustType": "u32"
+							},
+							{
+								"name": "early_unlock_flips",
+								"rustType": "u32"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 104,
+							"fields": [
+								{
+									"name": "treasury",
+									"offset": 0,
+									"size": 32
+								},
+								{
+									"name": "collection_authority",
+									"offset": 32,
+									"size": 32
+								},
+								{
+									"name": "claim_price_lamports",
+									"offset": 64,
+									"size": 8
+								},
+								{
+									"name": "flip_fee_lamports",
+									"offset": 72,
+									"size": 8
+								},
+								{
+									"name": "minimum_flip_fee_lamports",
+									"offset": 80,
+									"size": 8
+								},
+								{
+									"name": "maximum_flip_fee_lamports",
+									"offset": 88,
+									"size": 8
+								},
+								{
+									"name": "unlock_interval_seconds",
+									"offset": 96,
+									"size": 4
+								},
+								{
+									"name": "early_unlock_flips",
+									"offset": 100,
+									"size": 4
+								}
+							]
+						}
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "authority",
+								"writable": false,
+								"signer": true,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null,
+								"constraints": [
+									"signer"
+								]
+							},
+							{
+								"name": "config",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							}
+						]
+					},
+					"processSha256": "681ceaf6812fbecf454b9444fde6e94ee1cd96de0835af292bbb4105aa4f77de",
+					"transition": null
+				}
+			]
+		},
+		"instruction:1:02": {
+			"identity": {
+				"kind": "instruction",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "02"
+			},
+			"rustName": "ProposeAuthorityInstruction",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "4db9826e83aa18a77ea93093624f4c047ba097e57fdb2bec6d074171079ebf27",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "pending_authority",
+								"rustType": "Address"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 32,
+							"fields": [
+								{
+									"name": "pending_authority",
+									"offset": 0,
+									"size": 32
+								}
+							]
+						}
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "authority",
+								"writable": false,
+								"signer": true,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null,
+								"constraints": [
+									"signer"
+								]
+							},
+							{
+								"name": "config",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							}
+						]
+					},
+					"processSha256": "681ceaf6812fbecf454b9444fde6e94ee1cd96de0835af292bbb4105aa4f77de",
+					"transition": null
+				}
+			]
+		},
+		"instruction:1:03": {
+			"identity": {
+				"kind": "instruction",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "03"
+			},
+			"rustName": "AcceptAuthorityInstruction",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "0964b5ff00a94fb98f2536839ca6abc68a04f31d844cbac2a3aa627a73eeca5a",
+					"schema": {
+						"layout": "fixed",
+						"fields": [],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 0,
+							"fields": []
+						}
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "pending_authority",
+								"writable": false,
+								"signer": true,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null,
+								"constraints": [
+									"signer"
+								]
+							},
+							{
+								"name": "config",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							}
+						]
+					},
+					"processSha256": "35dbb17f09567275ad1a1bb6e80d3a1b075fa47e6088ab83fc8db56fb1dc8faa",
+					"transition": null
+				}
+			]
+		},
+		"instruction:1:04": {
+			"identity": {
+				"kind": "instruction",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "04"
+			},
+			"rustName": "InitializeGameInstruction",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "1ce66c1e59793d7d31eb415e649f8568bb5de8ed458c9ab53b189d3a3ada5f72",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "game_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "section_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "game_bump",
+								"rustType": "u8"
+							},
+							{
+								"name": "section_bump",
+								"rustType": "u8"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 4,
+							"fields": [
+								{
+									"name": "game_index",
+									"offset": 0,
+									"size": 1
+								},
+								{
+									"name": "section_index",
+									"offset": 1,
+									"size": 1
+								},
+								{
+									"name": "game_bump",
+									"offset": 2,
+									"size": 1
+								},
+								{
+									"name": "section_bump",
+									"offset": 3,
+									"size": 1
+								}
+							]
+						}
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "payer",
+								"writable": true,
+								"signer": true,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null,
+								"constraints": [
+									"owner=system::ID",
+									"signer"
+								]
+							},
+							{
+								"name": "config",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "game",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": "game",
+								"constraints": [
+									"empty"
+								]
+							},
+							{
+								"name": "section",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": "section",
+								"constraints": [
+									"empty"
+								]
+							},
+							{
+								"name": "system_program",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": "publicKey:11111111111111111111111111111111",
+								"pda": null,
+								"constraints": [
+									"address=system::ID"
+								]
+							}
+						]
+					},
+					"processSha256": "ed2a7e6f075ec029633e57c2fc757e0b7971c764e2719295947dbb91ba551c0f",
+					"transition": null
+				}
+			]
+		},
+		"instruction:1:05": {
+			"identity": {
+				"kind": "instruction",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "05"
+			},
+			"rustName": "ClaimSectionInstruction",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "f4267a714f07d205a0189b7f46c92ac49d4c1c00ae269c1854d8c2a849eb8c59",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "game_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "section_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "bump",
+								"rustType": "u8"
+							},
+							{
+								"name": "maximum_price_lamports",
+								"rustType": "u64"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 11,
+							"fields": [
+								{
+									"name": "game_index",
+									"offset": 0,
+									"size": 1
+								},
+								{
+									"name": "section_index",
+									"offset": 1,
+									"size": 1
+								},
+								{
+									"name": "bump",
+									"offset": 2,
+									"size": 1
+								},
+								{
+									"name": "maximum_price_lamports",
+									"offset": 3,
+									"size": 8
+								}
+							]
+						}
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "owner",
+								"writable": true,
+								"signer": true,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null,
+								"constraints": [
+									"owner=system::ID",
+									"signer"
+								]
+							},
+							{
+								"name": "config",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "game",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "previous_section",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "section",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": "section"
+							},
+							{
+								"name": "treasury",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "system_program",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": "publicKey:11111111111111111111111111111111",
+								"pda": null,
+								"constraints": [
+									"address=system::ID"
+								]
+							}
+						]
+					},
+					"processSha256": "c7dfe6019bc4900add9ed366d6dde68f47d296fa81100706bc9b8e7e0ff8741b",
+					"transition": null
+				}
+			]
+		},
+		"instruction:1:06": {
+			"identity": {
+				"kind": "instruction",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "06"
+			},
+			"rustName": "FlipPixelsInstruction",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "214ee311dc41242129b47ef8370716a9662a54030ae427d9087e04d1ce81942f",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "game_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "section_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "count",
+								"rustType": "u8"
+							},
+							{
+								"name": "coordinates",
+								"rustType": "[u8; 32]"
+							},
+							{
+								"name": "colour",
+								"rustType": "u8"
+							},
+							{
+								"name": "expected_policy_version",
+								"rustType": "u64"
+							},
+							{
+								"name": "expected_window_id",
+								"rustType": "u64"
+							},
+							{
+								"name": "maximum_unit_price_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "maximum_total_price_lamports",
+								"rustType": "u64"
+							},
+							{
+								"name": "minimum_reward_tokens",
+								"rustType": "u64"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 76,
+							"fields": [
+								{
+									"name": "game_index",
+									"offset": 0,
+									"size": 1
+								},
+								{
+									"name": "section_index",
+									"offset": 1,
+									"size": 1
+								},
+								{
+									"name": "count",
+									"offset": 2,
+									"size": 1
+								},
+								{
+									"name": "coordinates",
+									"offset": 3,
+									"size": 32
+								},
+								{
+									"name": "colour",
+									"offset": 35,
+									"size": 1
+								},
+								{
+									"name": "expected_policy_version",
+									"offset": 36,
+									"size": 8
+								},
+								{
+									"name": "expected_window_id",
+									"offset": 44,
+									"size": 8
+								},
+								{
+									"name": "maximum_unit_price_lamports",
+									"offset": 52,
+									"size": 8
+								},
+								{
+									"name": "maximum_total_price_lamports",
+									"offset": 60,
+									"size": 8
+								},
+								{
+									"name": "minimum_reward_tokens",
+									"offset": 68,
+									"size": 8
+								}
+							]
+						}
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "player",
+								"writable": true,
+								"signer": true,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null,
+								"constraints": [
+									"owner=system::ID",
+									"signer"
+								]
+							},
+							{
+								"name": "config",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "game",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "section",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "bit_mint",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "section_vault",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "player_bit_account",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "token_program",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "system_program",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": "publicKey:11111111111111111111111111111111",
+								"pda": null,
+								"constraints": [
+									"address=system::ID"
+								]
+							}
+						]
+					},
+					"processSha256": "e84e80499199cf1c779e3458e32b4232b5a434a2830ef6b6a6f725e27bd60fc0",
+					"transition": null
+				}
+			]
+		},
+		"instruction:1:07": {
+			"identity": {
+				"kind": "instruction",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "07"
+			},
+			"rustName": "SealSectionInstruction",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "982e19417c9c992dfbba5efdaebea28d011f34f4adfd2c0332fa73cacc593838",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "game_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "section_index",
+								"rustType": "u8"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 2,
+							"fields": [
+								{
+									"name": "game_index",
+									"offset": 0,
+									"size": 1
+								},
+								{
+									"name": "section_index",
+									"offset": 1,
+									"size": 1
+								}
+							]
+						}
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "owner",
+								"writable": true,
+								"signer": true,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null,
+								"constraints": [
+									"signer"
+								]
+							},
+							{
+								"name": "game",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "section",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							}
+						]
+					},
+					"processSha256": "202230dece517179035f4c10a10444417f89668ad519d0a113f27a801aab0846",
+					"transition": null
+				}
+			]
+		},
+		"instruction:1:08": {
+			"identity": {
+				"kind": "instruction",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "08"
+			},
+			"rustName": "RecordSectionMintInstruction",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "acba0d4fa70dc0a638229a131147783b34a178de5630416aef5ee9521dd95192",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "game_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "section_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "expected_owner",
+								"rustType": "Address"
+							},
+							{
+								"name": "asset_id",
+								"rustType": "Address"
+							},
+							{
+								"name": "merkle_tree",
+								"rustType": "Address"
+							},
+							{
+								"name": "leaf_index",
+								"rustType": "u32"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 102,
+							"fields": [
+								{
+									"name": "game_index",
+									"offset": 0,
+									"size": 1
+								},
+								{
+									"name": "section_index",
+									"offset": 1,
+									"size": 1
+								},
+								{
+									"name": "expected_owner",
+									"offset": 2,
+									"size": 32
+								},
+								{
+									"name": "asset_id",
+									"offset": 34,
+									"size": 32
+								},
+								{
+									"name": "merkle_tree",
+									"offset": 66,
+									"size": 32
+								},
+								{
+									"name": "leaf_index",
+									"offset": 98,
+									"size": 4
+								}
+							]
+						}
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "collection_authority",
+								"writable": false,
+								"signer": true,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null,
+								"constraints": [
+									"signer"
+								]
+							},
+							{
+								"name": "config",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "game",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "section",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							}
+						]
+					},
+					"processSha256": "5e853fa8d2847f7678c788971a67614dac3ae92f91dbe38b8d1a83126d85f654",
+					"transition": null
+				}
+			]
+		},
+		"instruction:1:09": {
+			"identity": {
+				"kind": "instruction",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "09"
+			},
+			"rustName": "ListSectionInstruction",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "122a1c6b6bed60ad958410bc47dde84b93eb8928a46b987347b39f9fc2e36ad4",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "game_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "section_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "price_lamports",
+								"rustType": "u64"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 10,
+							"fields": [
+								{
+									"name": "game_index",
+									"offset": 0,
+									"size": 1
+								},
+								{
+									"name": "section_index",
+									"offset": 1,
+									"size": 1
+								},
+								{
+									"name": "price_lamports",
+									"offset": 2,
+									"size": 8
+								}
+							]
+						}
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "owner",
+								"writable": false,
+								"signer": true,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null,
+								"constraints": [
+									"signer"
+								]
+							},
+							{
+								"name": "game",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "section",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							}
+						]
+					},
+					"processSha256": "da86eccbaebb28377b71ddd735463360fabd847d96c6e4f7252826f74fc03382",
+					"transition": null
+				}
+			]
+		},
+		"instruction:1:0a": {
+			"identity": {
+				"kind": "instruction",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "0a"
+			},
+			"rustName": "CancelSectionListingInstruction",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "982e19417c9c992dfbba5efdaebea28d011f34f4adfd2c0332fa73cacc593838",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "game_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "section_index",
+								"rustType": "u8"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 2,
+							"fields": [
+								{
+									"name": "game_index",
+									"offset": 0,
+									"size": 1
+								},
+								{
+									"name": "section_index",
+									"offset": 1,
+									"size": 1
+								}
+							]
+						}
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "owner",
+								"writable": false,
+								"signer": true,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null,
+								"constraints": [
+									"signer"
+								]
+							},
+							{
+								"name": "game",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "section",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							}
+						]
+					},
+					"processSha256": "da86eccbaebb28377b71ddd735463360fabd847d96c6e4f7252826f74fc03382",
+					"transition": null
+				}
+			]
+		},
+		"instruction:1:0b": {
+			"identity": {
+				"kind": "instruction",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "0b"
+			},
+			"rustName": "PurchaseSectionInstruction",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "01545501ea8a72d610f3426be086a138fc3ac36eecd13ee92ff26f0ba1b03ef4",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "game_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "section_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "maximum_price_lamports",
+								"rustType": "u64"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 10,
+							"fields": [
+								{
+									"name": "game_index",
+									"offset": 0,
+									"size": 1
+								},
+								{
+									"name": "section_index",
+									"offset": 1,
+									"size": 1
+								},
+								{
+									"name": "maximum_price_lamports",
+									"offset": 2,
+									"size": 8
+								}
+							]
+						}
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "buyer",
+								"writable": true,
+								"signer": true,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null,
+								"constraints": [
+									"owner=system::ID",
+									"signer"
+								]
+							},
+							{
+								"name": "seller",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null,
+								"constraints": [
+									"owner=system::ID"
+								]
+							},
+							{
+								"name": "game",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "section",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "system_program",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": "publicKey:11111111111111111111111111111111",
+								"pda": null,
+								"constraints": [
+									"address=system::ID"
+								]
+							}
+						]
+					},
+					"processSha256": "c280119b3b4fb8b48ddb5e55ecc1436c27e8c51ce158caf7f5f6033fcfb9ff89",
+					"transition": null
+				}
+			]
+		},
+		"instruction:1:0c": {
+			"identity": {
+				"kind": "instruction",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "0c"
+			},
+			"rustName": "SettleSectionEconomyInstruction",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "982e19417c9c992dfbba5efdaebea28d011f34f4adfd2c0332fa73cacc593838",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "game_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "section_index",
+								"rustType": "u8"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 2,
+							"fields": [
+								{
+									"name": "game_index",
+									"offset": 0,
+									"size": 1
+								},
+								{
+									"name": "section_index",
+									"offset": 1,
+									"size": 1
+								}
+							]
+						}
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "game",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "section",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							}
+						]
+					},
+					"processSha256": "e8c5ba69b5d169ad8e392a0b90e41ae679e9de3fb1ae3c4e139eef871d37bfbe",
+					"transition": null
+				}
+			]
+		},
+		"instruction:1:0d": {
+			"identity": {
+				"kind": "instruction",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "0d"
+			},
+			"rustName": "ConfigureBitCustodyInstruction",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "0964b5ff00a94fb98f2536839ca6abc68a04f31d844cbac2a3aa627a73eeca5a",
+					"schema": {
+						"layout": "fixed",
+						"fields": [],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 0,
+							"fields": []
+						}
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "authority",
+								"writable": false,
+								"signer": true,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null,
+								"constraints": [
+									"signer"
+								]
+							},
+							{
+								"name": "config",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "bit_mint",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "bit_reserve",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "token_program",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": "publicKey:TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+								"pda": null,
+								"constraints": [
+									"address=token_2022::ID"
+								]
+							}
+						]
+					},
+					"processSha256": "eab45bd9f22ec632ddef9bc089054267eaa30d0ddc6a8da410fab4d9cd43b75d",
+					"transition": null
+				}
+			]
+		},
+		"instruction:1:0e": {
+			"identity": {
+				"kind": "instruction",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "0e"
+			},
+			"rustName": "FundSectionVaultInstruction",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "982e19417c9c992dfbba5efdaebea28d011f34f4adfd2c0332fa73cacc593838",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "game_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "section_index",
+								"rustType": "u8"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 2,
+							"fields": [
+								{
+									"name": "game_index",
+									"offset": 0,
+									"size": 1
+								},
+								{
+									"name": "section_index",
+									"offset": 1,
+									"size": 1
+								}
+							]
+						}
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "funder",
+								"writable": true,
+								"signer": true,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null,
+								"constraints": [
+									"owner=system::ID",
+									"signer"
+								]
+							},
+							{
+								"name": "config",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "section",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "bit_mint",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "bit_reserve",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "section_vault",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "associated_token_program",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": "publicKey:ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+								"pda": null,
+								"constraints": [
+									"address=associated_token_account::ID"
+								]
+							},
+							{
+								"name": "token_program",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": "publicKey:TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+								"pda": null,
+								"constraints": [
+									"address=token_2022::ID"
+								]
+							},
+							{
+								"name": "system_program",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": "publicKey:11111111111111111111111111111111",
+								"pda": null,
+								"constraints": [
+									"address=system::ID"
+								]
+							}
+						]
+					},
+					"processSha256": "f7f58f8fd00585567c038ab41b614d5628aeba0c48d2c0b2dfd9bd12f99c106c",
+					"transition": null
+				}
+			]
+		},
+		"instruction:1:0f": {
+			"identity": {
+				"kind": "instruction",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "0f"
+			},
+			"rustName": "WithdrawSectionOwnerFeesInstruction",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "982e19417c9c992dfbba5efdaebea28d011f34f4adfd2c0332fa73cacc593838",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "game_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "section_index",
+								"rustType": "u8"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 2,
+							"fields": [
+								{
+									"name": "game_index",
+									"offset": 0,
+									"size": 1
+								},
+								{
+									"name": "section_index",
+									"offset": 1,
+									"size": 1
+								}
+							]
+						}
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "owner",
+								"writable": true,
+								"signer": true,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null,
+								"constraints": [
+									"signer"
+								]
+							},
+							{
+								"name": "section",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							}
+						]
+					},
+					"processSha256": "d5b7fbd8e519f6da02cc9f910658628c80627b33193b731472371afc3fc0083d",
+					"transition": null
+				}
+			]
+		},
+		"instruction:1:10": {
+			"identity": {
+				"kind": "instruction",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "10"
+			},
+			"rustName": "ConfigureSectionPolicyInstruction",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "ada581515f27075cee7fc2a598edd1aff39ec94c7a514f135e8b7bab577c86cf",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "game_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "section_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "expected_policy_version",
+								"rustType": "u64"
+							},
+							{
+								"name": "mode",
+								"rustType": "u8"
+							},
+							{
+								"name": "palette_id",
+								"rustType": "u8"
+							},
+							{
+								"name": "reward_policy",
+								"rustType": "u8"
+							},
+							{
+								"name": "starts_at",
+								"rustType": "i64"
+							},
+							{
+								"name": "ends_at",
+								"rustType": "i64"
+							},
+							{
+								"name": "entry_price_tokens",
+								"rustType": "u64"
+							},
+							{
+								"name": "reward_per_action_tokens",
+								"rustType": "u64"
+							},
+							{
+								"name": "rules_digest",
+								"rustType": "[u8; 32]"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 77,
+							"fields": [
+								{
+									"name": "game_index",
+									"offset": 0,
+									"size": 1
+								},
+								{
+									"name": "section_index",
+									"offset": 1,
+									"size": 1
+								},
+								{
+									"name": "expected_policy_version",
+									"offset": 2,
+									"size": 8
+								},
+								{
+									"name": "mode",
+									"offset": 10,
+									"size": 1
+								},
+								{
+									"name": "palette_id",
+									"offset": 11,
+									"size": 1
+								},
+								{
+									"name": "reward_policy",
+									"offset": 12,
+									"size": 1
+								},
+								{
+									"name": "starts_at",
+									"offset": 13,
+									"size": 8
+								},
+								{
+									"name": "ends_at",
+									"offset": 21,
+									"size": 8
+								},
+								{
+									"name": "entry_price_tokens",
+									"offset": 29,
+									"size": 8
+								},
+								{
+									"name": "reward_per_action_tokens",
+									"offset": 37,
+									"size": 8
+								},
+								{
+									"name": "rules_digest",
+									"offset": 45,
+									"size": 32
+								}
+							]
+						}
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "owner",
+								"writable": false,
+								"signer": true,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null,
+								"constraints": [
+									"signer"
+								]
+							},
+							{
+								"name": "section",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							}
+						]
+					},
+					"processSha256": "d8aea2de8c589941ecf9ad2a10ca2ff49a3f53b539ac1a1c0c5cc7d74dde592f",
+					"transition": null
+				}
+			]
+		}
+	}
+}
