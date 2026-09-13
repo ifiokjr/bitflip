@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@codama/renderers-js':
+        specifier: 2.3.1
+        version: 2.3.1(typescript@7.0.2)
       '@solana/wallet-standard-chains':
         specifier: 1.1.2
         version: 1.1.2
@@ -27,8 +30,8 @@ importers:
         specifier: ^1.10.2
         version: 1.10.2
       codama-renderers-dart:
-        specifier: 0.5.3
-        version: 0.5.3
+        specifier: 0.5.5
+        version: 0.5.5
     devDependencies:
       '@types/node':
         specifier: 26.4.1
@@ -61,6 +64,10 @@ packages:
 
   '@codama/renderers-core@1.4.0':
     resolution: {integrity: sha512-JkqKWaN5nKampHgJ3jWh7u6kNPrwp7DB/lpkyS1hpL6NiC45tZGie6foaq8TnSTpaVPtVsL8Q46AP1MZpongpg==}
+
+  '@codama/renderers-js@2.3.1':
+    resolution: {integrity: sha512-+7WtjpcqnlPkweG+tWWiER2XkJP7SF+RJgYpI0RHc91ZP60Umt0qc+0JPuqMyiPhVrLTN2U/lpsBDQw2MeEsvA==}
+    engines: {node: '>=20.18.0'}
 
   '@codama/validators@1.10.2':
     resolution: {integrity: sha512-Ppf8qcbBMclncrTLZU/bxi2Y5Gf9cTg1SybHTIDankOholgRWzf8wdZ40Vc/BaphY223pHOUBXiEmwZ6eTRX7A==}
@@ -227,6 +234,46 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@solana/codecs-core@7.1.1':
+    resolution: {integrity: sha512-C1UOAQ7LH8RuCTfaij6hthTZeBlpp8GuD2g9Nag/xgiNKJGvAfVrcorb+kO/sufdYI8Lu+BiVvPeKOjQDQiKqg==}
+    engines: {node: '>=20.18.0'}
+    peerDependencies:
+      typescript: '>=5.4.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@solana/codecs-numbers@7.1.1':
+    resolution: {integrity: sha512-TWWrQq6Wp5Yf5bSc6RbxDDYCRUBBmRtRgjvUMHGp0P9K+4uFwxllRjSZFzBPHgXj3UTeZmFJdcoD271QhAgibg==}
+    engines: {node: '>=20.18.0'}
+    peerDependencies:
+      typescript: '>=5.4.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@solana/codecs-strings@7.1.1':
+    resolution: {integrity: sha512-6qWl+atG60D2LmP47GyGapQFhVsG1sVhVrEaM3lV09vwrGOMeOZARZ4ObaQ5m6uQmM04G+f8dY9d17nCMbGHGg==}
+    engines: {node: '>=20.18.0'}
+    peerDependencies:
+      fastestsmallesttextencoderdecoder: ^1.0.22
+      typescript: '>=5.4.0'
+    peerDependenciesMeta:
+      fastestsmallesttextencoderdecoder:
+        optional: true
+      typescript:
+        optional: true
+
+  '@solana/errors@7.1.1':
+    resolution: {integrity: sha512-q35qck8rBnNvJlPU00mnHEQm7gWvghzYz8khqVoLhjgodTzGp46VqnIOyI1LXOAF6XDal58bMNDO980MQgq8yw==}
+    engines: {node: '>=20.18.0'}
+    hasBin: true
+    peerDependencies:
+      typescript: '>=5.4.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   '@solana/wallet-standard-chains@1.1.2':
     resolution: {integrity: sha512-EZobEGclDBAFplpJC5F3d/s8Xnlqc5isNKuPrd5o9ZPZ7tWN84O0e68yIZ8MAOj9V7ieRadNiHtql7uIXCTyXg==}
     engines: {node: '>=22'}
@@ -382,8 +429,12 @@ packages:
     resolution: {integrity: sha512-+ys997U96po4Kx/ABpBCqhA9EuxJaQWDQg7295H4hBphv3IZg0boBKuwYpt4YXp6MZ5AmZQnU/tyMTlRpaSejg==}
     engines: {node: '>= 0.4'}
 
-  codama-renderers-dart@0.5.3:
-    resolution: {integrity: sha512-cQH4dUehQqaehUxYvM7XB7/6f4EtqmcNkDEqUit9/hsWlc6O1vaMJYTflnuBe1rXydS7m/SRSoUKjW2zLmDDwA==}
+  chalk@5.6.2:
+    resolution: {integrity: sha512-7NzBL0rN6fMUW+f7A6Io4h40qQlG+xGmtMxfbnH/K7TAtt8JQWVQK+6g0UXKMeVJoyV5EkkNsErQ8pVD3bLHbA==}
+    engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
+
+  codama-renderers-dart@0.5.5:
+    resolution: {integrity: sha512-19IH/9Ar7bl/KYNTkbEHWQa/nkm1b5q/JQAjRsSmzHxo7YB9Si1F7mJg0cIVQCGUtzMQ7Pdpenttq0Bh4NyJ+Q==}
     engines: {node: '>=18'}
 
   codama@1.10.2:
@@ -470,9 +521,19 @@ packages:
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
+  prettier@3.9.6:
+    resolution: {integrity: sha512-OpN0zzVdiaiAhxpuuj5efpIS4sY9j7bY6uR5mnj5yPzGkdkjNKSJeUThPb60Jw29QuAZgA4o+/iB49kFiaBX6g==}
+    engines: {node: '>=14'}
+    hasBin: true
+
   prompts@2.4.2:
     resolution: {integrity: sha512-NxNv/kLguCA7p3jE8oL2aEBsrJWgAakBpgmgK6lpPWV+WuOmY6r2/zbAVnP+T8bQlA0nzHXSJSJW0Hq7ylaD2Q==}
     engines: {node: '>= 6'}
+
+  semver@7.8.5:
+    resolution: {integrity: sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==}
+    engines: {node: '>=10'}
+    hasBin: true
 
   set-function-length@1.2.2:
     resolution: {integrity: sha512-pgRc4hJ4/sNjWCSS9AmnS40x3bNMDTknHgL5UaMBTMyJnU90EgWh1Rz+MC9eFu4BuN/UwZjKQuY/1v3rM7HMfg==}
@@ -523,6 +584,19 @@ snapshots:
       '@codama/fragments': 0.1.5
       '@codama/nodes': 1.10.2
       '@codama/visitors-core': 1.10.2
+
+  '@codama/renderers-js@2.3.1(typescript@7.0.2)':
+    dependencies:
+      '@codama/errors': 1.10.2
+      '@codama/nodes': 1.10.2
+      '@codama/renderers-core': 1.4.0
+      '@codama/visitors-core': 1.10.2
+      '@solana/codecs-strings': 7.1.1(typescript@7.0.2)
+      prettier: 3.9.6
+      semver: 7.8.5
+    transitivePeerDependencies:
+      - fastestsmallesttextencoderdecoder
+      - typescript
 
   '@codama/validators@1.10.2':
     dependencies:
@@ -619,6 +693,34 @@ snapshots:
 
   '@esbuild/win32-x64@0.28.2':
     optional: true
+
+  '@solana/codecs-core@7.1.1(typescript@7.0.2)':
+    dependencies:
+      '@solana/errors': 7.1.1(typescript@7.0.2)
+    optionalDependencies:
+      typescript: 7.0.2
+
+  '@solana/codecs-numbers@7.1.1(typescript@7.0.2)':
+    dependencies:
+      '@solana/codecs-core': 7.1.1(typescript@7.0.2)
+      '@solana/errors': 7.1.1(typescript@7.0.2)
+    optionalDependencies:
+      typescript: 7.0.2
+
+  '@solana/codecs-strings@7.1.1(typescript@7.0.2)':
+    dependencies:
+      '@solana/codecs-core': 7.1.1(typescript@7.0.2)
+      '@solana/codecs-numbers': 7.1.1(typescript@7.0.2)
+      '@solana/errors': 7.1.1(typescript@7.0.2)
+    optionalDependencies:
+      typescript: 7.0.2
+
+  '@solana/errors@7.1.1(typescript@7.0.2)':
+    dependencies:
+      chalk: 5.6.2
+      commander: 15.0.0
+    optionalDependencies:
+      typescript: 7.0.2
 
   '@solana/wallet-standard-chains@1.1.2':
     dependencies:
@@ -720,7 +822,9 @@ snapshots:
       call-bind-apply-helpers: 1.0.2
       get-intrinsic: 1.3.0
 
-  codama-renderers-dart@0.5.3:
+  chalk@5.6.2: {}
+
+  codama-renderers-dart@0.5.5:
     dependencies:
       '@codama/errors': 1.10.2
       '@codama/nodes': 1.10.2
@@ -838,10 +942,14 @@ snapshots:
 
   picocolors@1.1.1: {}
 
+  prettier@3.9.6: {}
+
   prompts@2.4.2:
     dependencies:
       kleur: 3.0.3
       sisteransi: 1.0.5
+
+  semver@7.8.5: {}
 
   set-function-length@1.2.2:
     dependencies:

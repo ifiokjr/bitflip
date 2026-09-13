@@ -1,0 +1,23 @@
+[package]
+name = "bitflip_program_cli"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Generated CLI for bitflipProgram"
+
+[lints.clippy]
+enum_variant_names = "allow"
+items_after_test_module = "allow"
+
+[[bin]]
+name = "bitflip-program-cli"
+path = "src/main.rs"
+
+[dependencies]
+bitflip-program-client = { path = "../../rust/bitflip_program" }
+bs58 = { workspace = true, default-features = true }
+clap = { workspace = true, default-features = true, features = ["derive", "std", "env"] }
+serde_json = { workspace = true, default-features = true }
+solana-rpc-client = { workspace = true, default-features = true }
+solana-sdk = { workspace = true, default-features = true }
+thiserror = { workspace = true, default-features = true }
