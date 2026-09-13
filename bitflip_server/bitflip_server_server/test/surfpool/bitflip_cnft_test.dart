@@ -262,12 +262,14 @@ Future<void> _setTestSectionPixel(
     ),
   };
   final data = Uint8List.fromList(section.data);
-  // Economy ABI v6: the versioned policy occupies bytes 267-341.
-  const pixelsOffset = 342;
+  // Economy ABI v6: the versioned policy occupies bytes 268-342. Account
+  // bytes carry the migration-version envelope after the discriminator, so
+  // every payload offset shifts by one.
+  const pixelsOffset = 343;
   final pixelIndex = y * 64 + x;
   data
-    ..[133] = 1
-    ..[134] = 0
+    ..[134] = 1
+    ..[135] = 0
     ..[pixelsOffset + pixelIndex ~/ 8] |= 1 << (pixelIndex % 8);
   await client.cheatcodes.setAccount(sectionAddress, data: data);
 }
@@ -330,11 +332,13 @@ Future<void> _setTestConfigAuthorities(
   final data = Uint8List.fromList(config.data);
   final authority = getAddressEncoder().encode(client.payer.address);
   data
-    ..setRange(2, 34, authority)
-    ..setRange(66, 98, authority)
-    ..setRange(98, 130, authority)
-    ..setRange(226, 230, const [1, 0, 0, 0])
-    ..setRange(230, 234, const [1, 0, 0, 0]);
+    // Account bytes carry the migration-version envelope after the
+    // discriminator, so every payload offset shifts by one.
+    ..setRange(3, 35, authority)
+    ..setRange(67, 99, authority)
+    ..setRange(99, 131, authority)
+    ..setRange(227, 231, const [1, 0, 0, 0])
+    ..setRange(231, 235, const [1, 0, 0, 0]);
   await client.cheatcodes.setAccount(configAddress, data: data);
 }
 
@@ -343,6 +347,10 @@ Future<String> _sendInstructions(
   List<Instruction> instructions, {
   List<KeyPairSigner> extraSigners = const [],
 }) async {
+  for (final instruction in instructions) {
+    // ignore: avoid_print
+    print('PROBE ix ${instruction.programAddress} data=${instruction.data}');
+  }
   final latest = await client.rpc.getLatestBlockhashValue().send();
   final transaction = compileTransaction(
     createTransactionMessage(version: TransactionVersion.v0)

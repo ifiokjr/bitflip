@@ -21,9 +21,11 @@ class ClaimSectionInstructionData {
     required this.bump,
     required this.maximumPriceLamports,
   }) :
-      discriminator = 5;
+      discriminator = 5,
+      migrationVersion = 0;
 
   final int discriminator;
+  final int migrationVersion;
   final int gameIndex;
   final int sectionIndex;
   final int bump;
@@ -33,6 +35,7 @@ class ClaimSectionInstructionData {
 Encoder<ClaimSectionInstructionData> getClaimSectionInstructionDataEncoder() {
   final structEncoder = getStructEncoder(<(String, Encoder<Object?>)>[
     ('discriminator', getU8Encoder()),
+    ('migrationVersion', getU8Encoder()),
     ('gameIndex', getU8Encoder()),
     ('sectionIndex', getU8Encoder()),
     ('bump', getU8Encoder()),
@@ -43,6 +46,7 @@ Encoder<ClaimSectionInstructionData> getClaimSectionInstructionDataEncoder() {
     structEncoder,
     (ClaimSectionInstructionData value) => <String, Object?>{
       'discriminator': 5,
+      'migrationVersion': 0,
       'gameIndex': value.gameIndex,
       'sectionIndex': value.sectionIndex,
       'bump': value.bump,
@@ -54,6 +58,7 @@ Encoder<ClaimSectionInstructionData> getClaimSectionInstructionDataEncoder() {
 Decoder<ClaimSectionInstructionData> getClaimSectionInstructionDataDecoder() {
   final structDecoder = getStructDecoder(<(String, Decoder<Object?>)>[
     ('discriminator', getU8Decoder()),
+    ('migrationVersion', getU8Decoder()),
     ('gameIndex', getU8Decoder()),
     ('sectionIndex', getU8Decoder()),
     ('bump', getU8Decoder()),
@@ -75,6 +80,9 @@ Decoder<ClaimSectionInstructionData> getClaimSectionInstructionDataDecoder() {
     getConstantDecoder(
       getU8Encoder().encode(5),
     ).read(bytes, offset + 0);
+    getConstantDecoder(
+      getU8Encoder().encode(0),
+    ).read(bytes, offset + 1);
     final (map, newOffset) = structDecoder.read(bytes, offset);
     if (newOffset != bytes.length) {
       throwInvalidByteLength(newOffset - offset, bytes.length - offset);

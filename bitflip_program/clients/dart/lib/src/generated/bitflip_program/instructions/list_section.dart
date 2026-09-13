@@ -20,9 +20,11 @@ class ListSectionInstructionData {
     required this.sectionIndex,
     required this.priceLamports,
   }) :
-      discriminator = 9;
+      discriminator = 9,
+      migrationVersion = 0;
 
   final int discriminator;
+  final int migrationVersion;
   final int gameIndex;
   final int sectionIndex;
   final BigInt priceLamports;
@@ -31,6 +33,7 @@ class ListSectionInstructionData {
 Encoder<ListSectionInstructionData> getListSectionInstructionDataEncoder() {
   final structEncoder = getStructEncoder(<(String, Encoder<Object?>)>[
     ('discriminator', getU8Encoder()),
+    ('migrationVersion', getU8Encoder()),
     ('gameIndex', getU8Encoder()),
     ('sectionIndex', getU8Encoder()),
     ('priceLamports', getU64Encoder()),
@@ -40,6 +43,7 @@ Encoder<ListSectionInstructionData> getListSectionInstructionDataEncoder() {
     structEncoder,
     (ListSectionInstructionData value) => <String, Object?>{
       'discriminator': 9,
+      'migrationVersion': 0,
       'gameIndex': value.gameIndex,
       'sectionIndex': value.sectionIndex,
       'priceLamports': value.priceLamports,
@@ -50,6 +54,7 @@ Encoder<ListSectionInstructionData> getListSectionInstructionDataEncoder() {
 Decoder<ListSectionInstructionData> getListSectionInstructionDataDecoder() {
   final structDecoder = getStructDecoder(<(String, Decoder<Object?>)>[
     ('discriminator', getU8Decoder()),
+    ('migrationVersion', getU8Decoder()),
     ('gameIndex', getU8Decoder()),
     ('sectionIndex', getU8Decoder()),
     ('priceLamports', getU64Decoder()),
@@ -70,6 +75,9 @@ Decoder<ListSectionInstructionData> getListSectionInstructionDataDecoder() {
     getConstantDecoder(
       getU8Encoder().encode(9),
     ).read(bytes, offset + 0);
+    getConstantDecoder(
+      getU8Encoder().encode(0),
+    ).read(bytes, offset + 1);
     final (map, newOffset) = structDecoder.read(bytes, offset);
     if (newOffset != bytes.length) {
       throwInvalidByteLength(newOffset - offset, bytes.length - offset);

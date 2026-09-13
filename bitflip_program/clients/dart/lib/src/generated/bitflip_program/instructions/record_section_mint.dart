@@ -23,9 +23,11 @@ class RecordSectionMintInstructionData {
     required this.merkleTree,
     required this.leafIndex,
   }) :
-      discriminator = 8;
+      discriminator = 8,
+      migrationVersion = 0;
 
   final int discriminator;
+  final int migrationVersion;
   final int gameIndex;
   final int sectionIndex;
   final Address expectedOwner;
@@ -37,6 +39,7 @@ class RecordSectionMintInstructionData {
 Encoder<RecordSectionMintInstructionData> getRecordSectionMintInstructionDataEncoder() {
   final structEncoder = getStructEncoder(<(String, Encoder<Object?>)>[
     ('discriminator', getU8Encoder()),
+    ('migrationVersion', getU8Encoder()),
     ('gameIndex', getU8Encoder()),
     ('sectionIndex', getU8Encoder()),
     ('expectedOwner', getAddressEncoder()),
@@ -49,6 +52,7 @@ Encoder<RecordSectionMintInstructionData> getRecordSectionMintInstructionDataEnc
     structEncoder,
     (RecordSectionMintInstructionData value) => <String, Object?>{
       'discriminator': 8,
+      'migrationVersion': 0,
       'gameIndex': value.gameIndex,
       'sectionIndex': value.sectionIndex,
       'expectedOwner': value.expectedOwner,
@@ -62,6 +66,7 @@ Encoder<RecordSectionMintInstructionData> getRecordSectionMintInstructionDataEnc
 Decoder<RecordSectionMintInstructionData> getRecordSectionMintInstructionDataDecoder() {
   final structDecoder = getStructDecoder(<(String, Decoder<Object?>)>[
     ('discriminator', getU8Decoder()),
+    ('migrationVersion', getU8Decoder()),
     ('gameIndex', getU8Decoder()),
     ('sectionIndex', getU8Decoder()),
     ('expectedOwner', getAddressDecoder()),
@@ -85,6 +90,9 @@ Decoder<RecordSectionMintInstructionData> getRecordSectionMintInstructionDataDec
     getConstantDecoder(
       getU8Encoder().encode(8),
     ).read(bytes, offset + 0);
+    getConstantDecoder(
+      getU8Encoder().encode(0),
+    ).read(bytes, offset + 1);
     final (map, newOffset) = structDecoder.read(bytes, offset);
     if (newOffset != bytes.length) {
       throwInvalidByteLength(newOffset - offset, bytes.length - offset);

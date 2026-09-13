@@ -37,9 +37,11 @@ class GameState {
     required this.burstElasticity,
     required this.ownerShareBasisPoints,
   }) :
-      discriminator = 2;
+      discriminator = 2,
+      migrationVersion = 0;
 
   final int discriminator;
+  final int migrationVersion;
   final int gameIndex;
   final int status;
   final int bump;
@@ -68,6 +70,7 @@ class GameState {
       other is GameState &&
           runtimeType == other.runtimeType &&
           discriminator == other.discriminator &&
+          migrationVersion == other.migrationVersion &&
           gameIndex == other.gameIndex &&
           status == other.status &&
           bump == other.bump &&
@@ -91,16 +94,17 @@ class GameState {
           ownerShareBasisPoints == other.ownerShareBasisPoints;
 
   @override
-  int get hashCode => Object.hashAll([discriminator, gameIndex, status, bump, economyVersion, startsAt, nextSection, mintedSections, flipFeeLamports, totalFlips, sectionAllocationTokens, emissionDurationSeconds, windowSeconds, targetTokensPerWindow, startPriceLamports, minimumPriceLamports, maximumPriceLamports, startFloorPriceLamports, endFloorPriceLamports, changeDenominator, burstElasticity, ownerShareBasisPoints]);
+  int get hashCode => Object.hashAll([discriminator, migrationVersion, gameIndex, status, bump, economyVersion, startsAt, nextSection, mintedSections, flipFeeLamports, totalFlips, sectionAllocationTokens, emissionDurationSeconds, windowSeconds, targetTokensPerWindow, startPriceLamports, minimumPriceLamports, maximumPriceLamports, startFloorPriceLamports, endFloorPriceLamports, changeDenominator, burstElasticity, ownerShareBasisPoints]);
 
   @override
-  String toString() => 'GameState(discriminator: $discriminator, gameIndex: $gameIndex, status: $status, bump: $bump, economyVersion: $economyVersion, startsAt: $startsAt, nextSection: $nextSection, mintedSections: $mintedSections, flipFeeLamports: $flipFeeLamports, totalFlips: $totalFlips, sectionAllocationTokens: $sectionAllocationTokens, emissionDurationSeconds: $emissionDurationSeconds, windowSeconds: $windowSeconds, targetTokensPerWindow: $targetTokensPerWindow, startPriceLamports: $startPriceLamports, minimumPriceLamports: $minimumPriceLamports, maximumPriceLamports: $maximumPriceLamports, startFloorPriceLamports: $startFloorPriceLamports, endFloorPriceLamports: $endFloorPriceLamports, changeDenominator: $changeDenominator, burstElasticity: $burstElasticity, ownerShareBasisPoints: $ownerShareBasisPoints)';
+  String toString() => 'GameState(discriminator: $discriminator, migrationVersion: $migrationVersion, gameIndex: $gameIndex, status: $status, bump: $bump, economyVersion: $economyVersion, startsAt: $startsAt, nextSection: $nextSection, mintedSections: $mintedSections, flipFeeLamports: $flipFeeLamports, totalFlips: $totalFlips, sectionAllocationTokens: $sectionAllocationTokens, emissionDurationSeconds: $emissionDurationSeconds, windowSeconds: $windowSeconds, targetTokensPerWindow: $targetTokensPerWindow, startPriceLamports: $startPriceLamports, minimumPriceLamports: $minimumPriceLamports, maximumPriceLamports: $maximumPriceLamports, startFloorPriceLamports: $startFloorPriceLamports, endFloorPriceLamports: $endFloorPriceLamports, changeDenominator: $changeDenominator, burstElasticity: $burstElasticity, ownerShareBasisPoints: $ownerShareBasisPoints)';
 }
 
 
 Encoder<GameState> getGameStateEncoder() {
   final structEncoder = getStructEncoder(<(String, Encoder<Object?>)>[
     ('discriminator', getU8Encoder()),
+    ('migrationVersion', getU8Encoder()),
     ('gameIndex', getU8Encoder()),
     ('status', getU8Encoder()),
     ('bump', getU8Encoder()),
@@ -128,6 +132,7 @@ Encoder<GameState> getGameStateEncoder() {
     structEncoder,
     (GameState value) => <String, Object?>{
       'discriminator': 2,
+      'migrationVersion': 0,
       'gameIndex': value.gameIndex,
       'status': value.status,
       'bump': value.bump,
@@ -156,6 +161,7 @@ Encoder<GameState> getGameStateEncoder() {
 Decoder<GameState> getGameStateDecoder() {
   final structDecoder = getStructDecoder(<(String, Decoder<Object?>)>[
     ('discriminator', getU8Decoder()),
+    ('migrationVersion', getU8Decoder()),
     ('gameIndex', getU8Decoder()),
     ('status', getU8Decoder()),
     ('bump', getU8Decoder()),
@@ -194,6 +200,14 @@ Decoder<GameState> getGameStateDecoder() {
     getConstantDecoder(
       getU8Encoder().encode(2),
     ).read(bytes, offset + 0);
+    final (storedMigrationVersion, _) = getU8Decoder().read(bytes, offset + 1);
+    if (storedMigrationVersion != 0) {
+      throw StateError(
+        storedMigrationVersion < 0
+            ? 'migration version mismatch: expected 0, received $storedMigrationVersion (the data predates this client; migrate it by sending a transaction to the program, or decode it with a client generated from an older IDL)'
+            : 'migration version mismatch: expected 0, received $storedMigrationVersion (the data was written by a newer program; upgrade this client)',
+      );
+    }
     final (map, newOffset) = structDecoder.read(bytes, offset);
 
     return (
@@ -250,4 +264,21 @@ Codec<GameState, GameState> getGameStateCodec() {
 
 Account<GameState> decodeGameState(EncodedAccount encodedAccount) {
   return decodeAccount(encodedAccount, getGameStateDecoder());
+}
+
+/// The account schema version this client was generated from.
+const int gameStateMigrationVersion = 0;
+
+/// Cheap envelope check for fetched `GameState` bytes: returns true only when
+/// the bytes carry this account's discriminator and a migration version older
+/// than this client's schema — exactly the accounts [getMigrateInstruction]
+/// can bring current. Decoding reports every other mismatch.
+bool gameStateNeedsMigration(List<int> data) {
+	if (data.length < 2) {
+		return false;
+	}
+	if (data[0] != 2) {
+		return false;
+	}
+	return data[1] < 0;
 }

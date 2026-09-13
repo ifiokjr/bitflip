@@ -53,9 +53,11 @@ class SectionState {
     required this.policyRewardPolicy,
     required this.pixels,
   }) :
-      discriminator = 3;
+      discriminator = 3,
+      migrationVersion = 0;
 
   final int discriminator;
+  final int migrationVersion;
   final Address owner;
   final Address assetId;
   final Address merkleTree;
@@ -99,6 +101,7 @@ class SectionState {
       other is SectionState &&
           runtimeType == other.runtimeType &&
           discriminator == other.discriminator &&
+          migrationVersion == other.migrationVersion &&
           owner == other.owner &&
           assetId == other.assetId &&
           merkleTree == other.merkleTree &&
@@ -137,16 +140,17 @@ class SectionState {
           pixels == other.pixels;
 
   @override
-  int get hashCode => Object.hashAll([discriminator, owner, assetId, merkleTree, bitVault, gameIndex, sectionIndex, status, bump, onPixels, leafIndex, flipCount, revision, lastFlipAt, salePriceLamports, economyLaunchedAt, economyWindowStartedAt, economyLastUpdatedAt, economyWindowId, economyWindowTargetTokens, economyWindowRewardedTokens, emittedTokens, rewardPoolTokens, controllerPriceLamports, postedPriceLamports, protocolFeeLamports, ownerFeeLamports, policyVersion, policyStartsAt, policyEndsAt, policyEntryPriceTokens, policyRewardPerActionTokens, policyRulesDigest, policyMode, policyPaletteId, policyRewardPolicy, pixels]);
+  int get hashCode => Object.hashAll([discriminator, migrationVersion, owner, assetId, merkleTree, bitVault, gameIndex, sectionIndex, status, bump, onPixels, leafIndex, flipCount, revision, lastFlipAt, salePriceLamports, economyLaunchedAt, economyWindowStartedAt, economyLastUpdatedAt, economyWindowId, economyWindowTargetTokens, economyWindowRewardedTokens, emittedTokens, rewardPoolTokens, controllerPriceLamports, postedPriceLamports, protocolFeeLamports, ownerFeeLamports, policyVersion, policyStartsAt, policyEndsAt, policyEntryPriceTokens, policyRewardPerActionTokens, policyRulesDigest, policyMode, policyPaletteId, policyRewardPolicy, pixels]);
 
   @override
-  String toString() => 'SectionState(discriminator: $discriminator, owner: $owner, assetId: $assetId, merkleTree: $merkleTree, bitVault: $bitVault, gameIndex: $gameIndex, sectionIndex: $sectionIndex, status: $status, bump: $bump, onPixels: $onPixels, leafIndex: $leafIndex, flipCount: $flipCount, revision: $revision, lastFlipAt: $lastFlipAt, salePriceLamports: $salePriceLamports, economyLaunchedAt: $economyLaunchedAt, economyWindowStartedAt: $economyWindowStartedAt, economyLastUpdatedAt: $economyLastUpdatedAt, economyWindowId: $economyWindowId, economyWindowTargetTokens: $economyWindowTargetTokens, economyWindowRewardedTokens: $economyWindowRewardedTokens, emittedTokens: $emittedTokens, rewardPoolTokens: $rewardPoolTokens, controllerPriceLamports: $controllerPriceLamports, postedPriceLamports: $postedPriceLamports, protocolFeeLamports: $protocolFeeLamports, ownerFeeLamports: $ownerFeeLamports, policyVersion: $policyVersion, policyStartsAt: $policyStartsAt, policyEndsAt: $policyEndsAt, policyEntryPriceTokens: $policyEntryPriceTokens, policyRewardPerActionTokens: $policyRewardPerActionTokens, policyRulesDigest: $policyRulesDigest, policyMode: $policyMode, policyPaletteId: $policyPaletteId, policyRewardPolicy: $policyRewardPolicy, pixels: $pixels)';
+  String toString() => 'SectionState(discriminator: $discriminator, migrationVersion: $migrationVersion, owner: $owner, assetId: $assetId, merkleTree: $merkleTree, bitVault: $bitVault, gameIndex: $gameIndex, sectionIndex: $sectionIndex, status: $status, bump: $bump, onPixels: $onPixels, leafIndex: $leafIndex, flipCount: $flipCount, revision: $revision, lastFlipAt: $lastFlipAt, salePriceLamports: $salePriceLamports, economyLaunchedAt: $economyLaunchedAt, economyWindowStartedAt: $economyWindowStartedAt, economyLastUpdatedAt: $economyLastUpdatedAt, economyWindowId: $economyWindowId, economyWindowTargetTokens: $economyWindowTargetTokens, economyWindowRewardedTokens: $economyWindowRewardedTokens, emittedTokens: $emittedTokens, rewardPoolTokens: $rewardPoolTokens, controllerPriceLamports: $controllerPriceLamports, postedPriceLamports: $postedPriceLamports, protocolFeeLamports: $protocolFeeLamports, ownerFeeLamports: $ownerFeeLamports, policyVersion: $policyVersion, policyStartsAt: $policyStartsAt, policyEndsAt: $policyEndsAt, policyEntryPriceTokens: $policyEntryPriceTokens, policyRewardPerActionTokens: $policyRewardPerActionTokens, policyRulesDigest: $policyRulesDigest, policyMode: $policyMode, policyPaletteId: $policyPaletteId, policyRewardPolicy: $policyRewardPolicy, pixels: $pixels)';
 }
 
 
 Encoder<SectionState> getSectionStateEncoder() {
   final structEncoder = getStructEncoder(<(String, Encoder<Object?>)>[
     ('discriminator', getU8Encoder()),
+    ('migrationVersion', getU8Encoder()),
     ('owner', getAddressEncoder()),
     ('assetId', getAddressEncoder()),
     ('merkleTree', getAddressEncoder()),
@@ -189,6 +193,7 @@ Encoder<SectionState> getSectionStateEncoder() {
     structEncoder,
     (SectionState value) => <String, Object?>{
       'discriminator': 3,
+      'migrationVersion': 0,
       'owner': value.owner,
       'assetId': value.assetId,
       'merkleTree': value.merkleTree,
@@ -232,6 +237,7 @@ Encoder<SectionState> getSectionStateEncoder() {
 Decoder<SectionState> getSectionStateDecoder() {
   final structDecoder = getStructDecoder(<(String, Decoder<Object?>)>[
     ('discriminator', getU8Decoder()),
+    ('migrationVersion', getU8Decoder()),
     ('owner', getAddressDecoder()),
     ('assetId', getAddressDecoder()),
     ('merkleTree', getAddressDecoder()),
@@ -285,6 +291,14 @@ Decoder<SectionState> getSectionStateDecoder() {
     getConstantDecoder(
       getU8Encoder().encode(3),
     ).read(bytes, offset + 0);
+    final (storedMigrationVersion, _) = getU8Decoder().read(bytes, offset + 1);
+    if (storedMigrationVersion != 0) {
+      throw StateError(
+        storedMigrationVersion < 0
+            ? 'migration version mismatch: expected 0, received $storedMigrationVersion (the data predates this client; migrate it by sending a transaction to the program, or decode it with a client generated from an older IDL)'
+            : 'migration version mismatch: expected 0, received $storedMigrationVersion (the data was written by a newer program; upgrade this client)',
+      );
+    }
     final (map, newOffset) = structDecoder.read(bytes, offset);
 
     return (
@@ -356,4 +370,21 @@ Codec<SectionState, SectionState> getSectionStateCodec() {
 
 Account<SectionState> decodeSectionState(EncodedAccount encodedAccount) {
   return decodeAccount(encodedAccount, getSectionStateDecoder());
+}
+
+/// The account schema version this client was generated from.
+const int sectionStateMigrationVersion = 0;
+
+/// Cheap envelope check for fetched `SectionState` bytes: returns true only when
+/// the bytes carry this account's discriminator and a migration version older
+/// than this client's schema — exactly the accounts [getMigrateInstruction]
+/// can bring current. Decoding reports every other mismatch.
+bool sectionStateNeedsMigration(List<int> data) {
+	if (data.length < 2) {
+		return false;
+	}
+	if (data[0] != 3) {
+		return false;
+	}
+	return data[1] < 0;
 }

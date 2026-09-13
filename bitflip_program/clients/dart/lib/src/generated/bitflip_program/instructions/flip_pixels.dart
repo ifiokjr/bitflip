@@ -27,9 +27,11 @@ class FlipPixelsInstructionData {
     required this.maximumTotalPriceLamports,
     required this.minimumRewardTokens,
   }) :
-      discriminator = 6;
+      discriminator = 6,
+      migrationVersion = 0;
 
   final int discriminator;
+  final int migrationVersion;
   final int gameIndex;
   final int sectionIndex;
   final int count;
@@ -45,6 +47,7 @@ class FlipPixelsInstructionData {
 Encoder<FlipPixelsInstructionData> getFlipPixelsInstructionDataEncoder() {
   final structEncoder = getStructEncoder(<(String, Encoder<Object?>)>[
     ('discriminator', getU8Encoder()),
+    ('migrationVersion', getU8Encoder()),
     ('gameIndex', getU8Encoder()),
     ('sectionIndex', getU8Encoder()),
     ('count', getU8Encoder()),
@@ -61,6 +64,7 @@ Encoder<FlipPixelsInstructionData> getFlipPixelsInstructionDataEncoder() {
     structEncoder,
     (FlipPixelsInstructionData value) => <String, Object?>{
       'discriminator': 6,
+      'migrationVersion': 0,
       'gameIndex': value.gameIndex,
       'sectionIndex': value.sectionIndex,
       'count': value.count,
@@ -78,6 +82,7 @@ Encoder<FlipPixelsInstructionData> getFlipPixelsInstructionDataEncoder() {
 Decoder<FlipPixelsInstructionData> getFlipPixelsInstructionDataDecoder() {
   final structDecoder = getStructDecoder(<(String, Decoder<Object?>)>[
     ('discriminator', getU8Decoder()),
+    ('migrationVersion', getU8Decoder()),
     ('gameIndex', getU8Decoder()),
     ('sectionIndex', getU8Decoder()),
     ('count', getU8Decoder()),
@@ -105,6 +110,9 @@ Decoder<FlipPixelsInstructionData> getFlipPixelsInstructionDataDecoder() {
     getConstantDecoder(
       getU8Encoder().encode(6),
     ).read(bytes, offset + 0);
+    getConstantDecoder(
+      getU8Encoder().encode(0),
+    ).read(bytes, offset + 1);
     final (map, newOffset) = structDecoder.read(bytes, offset);
     if (newOffset != bytes.length) {
       throwInvalidByteLength(newOffset - offset, bytes.length - offset);

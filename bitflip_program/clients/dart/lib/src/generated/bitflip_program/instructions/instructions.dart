@@ -1,6 +1,7 @@
 // Auto-generated. Do not edit.
 // ignore_for_file: type=lint
 
+export 'migrate.dart';
 export 'accept_authority.dart';
 export 'cancel_section_listing.dart';
 export 'claim_section.dart';
