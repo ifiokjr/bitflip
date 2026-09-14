@@ -6,8 +6,8 @@ The product is one responsive Flutter codebase for Android, iOS, macOS, and the 
 
 ## Architecture
 
-- `bitflip_program` — `no_std` Solana program built on Pina 0.12.2.
-- `bitflip_program/clients/dart` — generated Pina/Codama Dart client.
+- `bitflip_program` — `no_std` Solana program built on Pina 0.17.0 with automatic ABI migrations.
+- `bitflip_program/clients/` — generated Pina/Codama clients: Dart (consumed by the app and server), Rust, TypeScript, CPI, and a Rust CLI app (`cli-rust`).
 - `bitflip_app` — responsive Flutter app and website with an embedded mobile spending wallet, Android Mobile Wallet Adapter funding, and browser Wallet Standard signing.
 - `bitflip_server` — Serverpod 4 backend and generated typed client.
 - `bitflip_program/tests/surfpool` — real-SBF program integration tests running in isolated Surfpool nodes.
@@ -63,9 +63,10 @@ The web build bundles the official Wallet Standard registry and Solana extension
 ## Generation and migrations
 
 ```bash
-generate:clients  # Pina account/instruction client
+generate:clients  # Pina clients: Dart, Rust, TypeScript, CPI, and the Rust CLI app
 generate:server   # Serverpod protocol and app client
 migration:create  # after changing a .spy.yaml database model
+pina migrations make --project bitflip_program  # after changing an account, instruction, or event schema
 ```
 
 Generated Pina and Serverpod source should never be edited by hand.

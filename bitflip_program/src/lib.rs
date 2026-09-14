@@ -156,7 +156,7 @@ pub enum BitflipEvent {
 	ColourPixelsFlipped = 1,
 }
 
-#[account(discriminator = BitflipAccountType, migrations)]
+#[account(discriminator = BitflipAccountType)]
 #[pda(seeds = [CONFIG_SEED], bump = bump)]
 pub struct ConfigState {
 	pub version: u8,
@@ -176,7 +176,7 @@ pub struct ConfigState {
 	pub bump: u8,
 }
 
-#[account(discriminator = BitflipAccountType, migrations)]
+#[account(discriminator = BitflipAccountType)]
 #[pda(seeds = [GAME_SEED, game_index: u8], bump = bump)]
 pub struct GameState {
 	pub game_index: u8,
@@ -202,7 +202,7 @@ pub struct GameState {
 	pub owner_share_basis_points: u16,
 }
 
-#[account(discriminator = BitflipAccountType, migrations)]
+#[account(discriminator = BitflipAccountType)]
 #[pda(
 	seeds = [SECTION_SEED, game_index: u8, section_index: u8],
 	bump = bump
@@ -246,12 +246,12 @@ pub struct SectionState {
 	pub pixels: [u8; 512],
 }
 
-#[instruction(discriminator = BitflipInstruction::InitializeConfig, migrations)]
+#[instruction(discriminator = BitflipInstruction::InitializeConfig)]
 pub struct InitializeConfigInstruction {
 	pub bump: u8,
 }
 
-#[instruction(discriminator = BitflipInstruction::UpdateConfig, migrations)]
+#[instruction(discriminator = BitflipInstruction::UpdateConfig)]
 pub struct UpdateConfigInstruction {
 	pub treasury: Address,
 	pub collection_authority: Address,
@@ -263,15 +263,15 @@ pub struct UpdateConfigInstruction {
 	pub early_unlock_flips: u32,
 }
 
-#[instruction(discriminator = BitflipInstruction::ProposeAuthority, migrations)]
+#[instruction(discriminator = BitflipInstruction::ProposeAuthority)]
 pub struct ProposeAuthorityInstruction {
 	pub pending_authority: Address,
 }
 
-#[instruction(discriminator = BitflipInstruction::AcceptAuthority, migrations)]
+#[instruction(discriminator = BitflipInstruction::AcceptAuthority)]
 pub struct AcceptAuthorityInstruction {}
 
-#[instruction(discriminator = BitflipInstruction::InitializeGame, migrations)]
+#[instruction(discriminator = BitflipInstruction::InitializeGame)]
 pub struct InitializeGameInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
@@ -279,7 +279,7 @@ pub struct InitializeGameInstruction {
 	pub section_bump: u8,
 }
 
-#[instruction(discriminator = BitflipInstruction::ClaimSection, migrations)]
+#[instruction(discriminator = BitflipInstruction::ClaimSection)]
 pub struct ClaimSectionInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
@@ -289,7 +289,6 @@ pub struct ClaimSectionInstruction {
 
 #[instruction(
 	discriminator = BitflipInstruction::FlipPixels,
-	migrations,
 	validate(with = validate_flip_pixel_coordinates)
 )]
 pub struct FlipPixelsInstruction {
@@ -310,7 +309,7 @@ pub struct FlipPixelsInstruction {
 	pub minimum_reward_tokens: u64,
 }
 
-#[event(discriminator = BitflipEvent, variant = ColourPixelsFlipped, migrations)]
+#[event(discriminator = BitflipEvent, variant = ColourPixelsFlipped)]
 pub struct ColourPixelsFlippedEvent {
 	pub player: Address,
 	pub policy_version: u64,
@@ -329,13 +328,13 @@ pub struct ColourPixelsFlippedEvent {
 	pub colour: u8,
 }
 
-#[instruction(discriminator = BitflipInstruction::SealSection, migrations)]
+#[instruction(discriminator = BitflipInstruction::SealSection)]
 pub struct SealSectionInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
 }
 
-#[instruction(discriminator = BitflipInstruction::RecordSectionMint, migrations)]
+#[instruction(discriminator = BitflipInstruction::RecordSectionMint)]
 pub struct RecordSectionMintInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
@@ -345,7 +344,7 @@ pub struct RecordSectionMintInstruction {
 	pub leaf_index: u32,
 }
 
-#[instruction(discriminator = BitflipInstruction::ListSection, migrations)]
+#[instruction(discriminator = BitflipInstruction::ListSection)]
 pub struct ListSectionInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
@@ -353,41 +352,41 @@ pub struct ListSectionInstruction {
 	pub price_lamports: u64,
 }
 
-#[instruction(discriminator = BitflipInstruction::CancelSectionListing, migrations)]
+#[instruction(discriminator = BitflipInstruction::CancelSectionListing)]
 pub struct CancelSectionListingInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
 }
 
-#[instruction(discriminator = BitflipInstruction::PurchaseSection, migrations)]
+#[instruction(discriminator = BitflipInstruction::PurchaseSection)]
 pub struct PurchaseSectionInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
 	pub maximum_price_lamports: u64,
 }
 
-#[instruction(discriminator = BitflipInstruction::SettleSectionEconomy, migrations)]
+#[instruction(discriminator = BitflipInstruction::SettleSectionEconomy)]
 pub struct SettleSectionEconomyInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
 }
 
-#[instruction(discriminator = BitflipInstruction::ConfigureBitCustody, migrations)]
+#[instruction(discriminator = BitflipInstruction::ConfigureBitCustody)]
 pub struct ConfigureBitCustodyInstruction {}
 
-#[instruction(discriminator = BitflipInstruction::FundSectionVault, migrations)]
+#[instruction(discriminator = BitflipInstruction::FundSectionVault)]
 pub struct FundSectionVaultInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
 }
 
-#[instruction(discriminator = BitflipInstruction::WithdrawSectionOwnerFees, migrations)]
+#[instruction(discriminator = BitflipInstruction::WithdrawSectionOwnerFees)]
 pub struct WithdrawSectionOwnerFeesInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
 }
 
-#[instruction(discriminator = BitflipInstruction::ConfigureSectionPolicy, migrations)]
+#[instruction(discriminator = BitflipInstruction::ConfigureSectionPolicy)]
 pub struct ConfigureSectionPolicyInstruction {
 	pub game_index: u8,
 	pub section_index: u8,

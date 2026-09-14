@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:bitflip_program/bitflip_program.dart';
 import 'package:bitflip_program/bitflip_program_constraints.dart';
-import 'package:bs58/bs58.dart';
 
-const colourPixelsFlippedEventDiscriminator = 1;
-const colourPixelsFlippedEventSize = 85;
+const colourPixelsFlippedEventDiscriminator =
+    colourPixelsFlippedEventEventDiscriminator;
+const colourPixelsFlippedEventSize = colourPixelsFlippedEventEventSize;
 const colourPaletteSize = 8;
 const colourCanvasSide = 64;
 const colourCanvasPixelCount = colourCanvasSide * colourCanvasSide;
@@ -47,32 +48,30 @@ ColourPixelsFlipped decodeColourPixelsFlippedEvent(String encoded) {
   } on FormatException {
     throw const FormatException('Invalid Bitflip colour event encoding.');
   }
-  if (bytes.length != colourPixelsFlippedEventSize ||
-      bytes[0] != colourPixelsFlippedEventDiscriminator) {
+  final ColourPixelsFlippedEventEvent record;
+  try {
+    record = decodeColourPixelsFlippedEventEvent(bytes);
+  } on RangeError {
     throw const FormatException('Invalid Bitflip colour event layout.');
   }
-  final view = ByteData.sublistView(bytes);
-  final policyVersion = view.getUint64(33, Endian.little);
-  final revision = view.getUint64(41, Endian.little);
-  final gameIndex = bytes[81];
-  final sectionIndex = bytes[82];
-  final count = bytes[83];
-  final colour = bytes[84];
-  if (policyVersion == 0 ||
-      policyVersion > 0x7fffffffffffffff ||
-      revision == 0 ||
-      revision > 0x7fffffffffffffff ||
-      gameIndex >= bitflipGameCount ||
-      count == 0 ||
-      count > maximumColourFlipBatch ||
-      colour >= colourPaletteSize) {
+  final policyVersion = record.policyVersion;
+  final revision = record.revision;
+  final maximumPositiveValue = BigInt.from(0x7fffffffffffffff);
+  if (policyVersion == BigInt.zero ||
+      policyVersion > maximumPositiveValue ||
+      revision == BigInt.zero ||
+      revision > maximumPositiveValue ||
+      record.gameIndex >= bitflipGameCount ||
+      record.count == 0 ||
+      record.count > maximumColourFlipBatch ||
+      record.colour >= colourPaletteSize) {
     throw const FormatException('Invalid Bitflip colour event values.');
   }
   final coordinates = <ColourPixelCoordinate>[];
   final seenPixels = <int>{};
-  for (var index = 0; index < count; index++) {
-    final x = bytes[49 + index * 2];
-    final y = bytes[50 + index * 2];
+  for (var index = 0; index < record.count; index++) {
+    final x = record.coordinates[index * 2];
+    final y = record.coordinates[index * 2 + 1];
     if (x >= colourCanvasSide || y >= colourCanvasSide) {
       throw const FormatException('Invalid Bitflip colour coordinates.');
     }
@@ -83,12 +82,12 @@ ColourPixelsFlipped decodeColourPixelsFlippedEvent(String encoded) {
     coordinates.add(coordinate);
   }
   return ColourPixelsFlipped(
-    player: base58.encoder.convert(Uint8List.sublistView(bytes, 1, 33)),
-    policyVersion: policyVersion,
-    revision: revision,
-    gameIndex: gameIndex,
-    sectionIndex: sectionIndex,
-    colour: colour,
+    player: record.player as String,
+    policyVersion: policyVersion.toInt(),
+    revision: revision.toInt(),
+    gameIndex: record.gameIndex,
+    sectionIndex: record.sectionIndex,
+    colour: record.colour,
     coordinates: List.unmodifiable(coordinates),
   );
 }

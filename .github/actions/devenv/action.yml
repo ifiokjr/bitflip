@@ -28,6 +28,14 @@ runs:
         cache: true
         pub-cache: true
 
+    # Install the rust-toolchain.toml toolchain serially before devenv runs
+    # any task. Otherwise every concurrent rustc/cargo/rustfmt shim (dprint
+    # formats the generated client trees in parallel) triggers its own rustup
+    # install of the same toolchain and the downloads race each other.
+    - name: Install pinned Rust toolchain
+      run: rustup toolchain install
+      shell: bash
+
     - name: Install locked workspace dependencies
       run: install:all
       shell: devenv shell bash -- -e {0}
