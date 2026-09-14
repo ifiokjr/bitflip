@@ -14,7 +14,7 @@ name = "bitflip-program-cli"
 path = "src/main.rs"
 
 [dependencies]
-bitflip-program-client = { path = "../../rust/bitflip_program" }
+bitflip-program-client = { path = "../../rust/bitflip_program", version = "0.0.0" }
 bs58 = { workspace = true, default-features = true }
 clap = { workspace = true, default-features = true, features = ["derive", "std", "env"] }
 serde_json = { workspace = true, default-features = true }
