@@ -7,6 +7,12 @@ use pina_test::Pubkey;
 use pina_test::Rent;
 use pina_test::Signer;
 use pina_test::TestError;
+
+// The program is cdylib-only, so the harness compiles its source directly
+// instead of linking a `lib` target that would block LTO.
+#[path = "../../../src/lib.rs"]
+mod program_under_test;
+
 use program_under_test::BIT_GAME_COUNT;
 use program_under_test::BIT_MINT_DECIMALS;
 use program_under_test::BIT_SECTION_ALLOCATION_TOKENS;

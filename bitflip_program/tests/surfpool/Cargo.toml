@@ -7,8 +7,11 @@ publish = false
 [workspace]
 
 [dependencies]
-pina_test = "0.16.0"
-program_under_test = { package = "bitflip_program", path = "../.." }
+# The harness compiles the program source directly (`#[path = ...]`), so it
+# needs the same pina crates the program's macros expand against.
+pina = { version = "0.18.0", default-features = false, features = ["account-resize", "derive", "logs", "token", "validation"] }
+pina_test = "0.18.0"
+proptest = "=1.11.0"
 solana-program-pack = "3.1.0"
 solana-system-interface = { version = "3.2.0", features = ["bincode"] }
 spl-associated-token-account-interface = "2.0.0"

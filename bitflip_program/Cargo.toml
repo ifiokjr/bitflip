@@ -11,7 +11,11 @@ rust-version.workspace = true
 description = "The no_std Pina program powering the Bitflip pixel canvas"
 
 [lib]
-crate-type = ["cdylib", "lib"]
+crate-type = ["cdylib"]
+
+# The economic simulation moved into `src/pricing.rs` as a test: the crate is
+# cdylib-only now, and examples link the `lib` target, which rustc refuses to
+# build with LTO. `cargo test -p bitflip_program --lib` runs it.
 
 [features]
 bpf-entrypoint = []
