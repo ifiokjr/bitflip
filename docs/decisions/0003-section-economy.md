@@ -145,7 +145,7 @@ Section ownership also receives a protocol-defined share of that section's SOL f
 | One full 4,096-pixel board |            0.04096 SOL | 0.008192 SOL |   0.032768 SOL |
 | 26,214,400 paid flips      |            262.144 SOL |  52.4288 SOL |   209.7152 SOL |
 
-Ignoring rent and transaction fees, the current 0.01 SOL claim price is recovered after 5,000 paid flips at a 20% share. On 2026-09-06, mainnet reported 0.004933407 SOL as the rent-exempt minimum for the former 651-byte section; ABI version 7 now uses 854 bytes. Deployment tooling must query the exact current rent for the deployed layout and include it in the break-even model rather than hard-code that earlier observation.
+Ignoring rent and transaction fees, the current 0.01 SOL claim price is recovered after 5,000 paid flips at a 20% share. On 2026-09-06, mainnet reported 0.004933407 SOL as the rent-exempt minimum for the former 651-byte section; ABI version 7 now uses 855 bytes, including Pina's migration envelope. Deployment tooling must query the exact current rent for the deployed layout and include it in the break-even model rather than hard-code that earlier observation.
 
 This is only a staging hypothesis, not an income promise. The final share and claim price require observed retention, bot behaviour, SOL price sensitivity, and programme costs.
 

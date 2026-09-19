@@ -55,7 +55,16 @@ void main() {
 
     test('rejects malformed or out-of-range events', () {
       expect(
-        () => decodeColourPixelsFlippedEvent(base64Encode(Uint8List(84))),
+        () => decodeColourPixelsFlippedEvent(base64Encode(Uint8List(85))),
+        throwsFormatException,
+      );
+      expect(
+        () => decodeColourPixelsFlippedEvent(
+          _encodedEvent(
+            migrationVersion: 1,
+            coordinates: const [ColourPixelCoordinate(0, 0)],
+          ),
+        ),
         throwsFormatException,
       );
       expect(
@@ -101,6 +110,7 @@ void main() {
 }
 
 String _encodedEvent({
+  int migrationVersion = colourPixelsFlippedEventMigrationVersion,
   int policyVersion = 1,
   int revision = 1,
   int gameIndex = 0,
@@ -110,19 +120,20 @@ String _encodedEvent({
 }) {
   final bytes = Uint8List(colourPixelsFlippedEventSize);
   bytes[0] = colourPixelsFlippedEventDiscriminator;
+  bytes[1] = migrationVersion;
   for (var index = 0; index < 32; index++) {
-    bytes[1 + index] = index;
+    bytes[2 + index] = index;
   }
   ByteData.sublistView(bytes)
-    ..setUint64(33, policyVersion, Endian.little)
-    ..setUint64(41, revision, Endian.little);
+    ..setUint64(34, policyVersion, Endian.little)
+    ..setUint64(42, revision, Endian.little);
   for (var index = 0; index < coordinates.length; index++) {
-    bytes[49 + index * 2] = coordinates[index].x;
-    bytes[50 + index * 2] = coordinates[index].y;
+    bytes[50 + index * 2] = coordinates[index].x;
+    bytes[51 + index * 2] = coordinates[index].y;
   }
-  bytes[81] = gameIndex;
-  bytes[82] = sectionIndex;
-  bytes[83] = coordinates.length;
-  bytes[84] = colour;
+  bytes[82] = gameIndex;
+  bytes[83] = sectionIndex;
+  bytes[84] = coordinates.length;
+  bytes[85] = colour;
   return base64Encode(bytes);
 }

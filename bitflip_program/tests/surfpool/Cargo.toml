@@ -9,8 +9,9 @@ publish = false
 [dependencies]
 # The harness compiles the program source directly (`#[path = ...]`), so it
 # needs the same pina crates the program's macros expand against.
+base64 = "0.23.1"
 pina = { version = "0.19.0", default-features = false, features = ["account-resize", "derive", "logs", "token", "validation"] }
-pina_test = "0.18.0"
+pina_test = "0.19.0"
 proptest = "=1.11.0"
 solana-program-pack = "3.1.0"
 solana-system-interface = { version = "3.2.0", features = ["bincode"] }

@@ -6,7 +6,7 @@ The product is one responsive Flutter codebase for Android, iOS, macOS, and the 
 
 ## Architecture
 
-- `bitflip_program` — `no_std` Solana program built on Pina 0.12.2.
+- `bitflip_program` — `no_std` Solana program built on Pina 0.19.0.
 - `bitflip_program/clients/dart` — generated Pina/Codama Dart client.
 - `bitflip_app` — responsive Flutter app and website with an embedded mobile spending wallet, Android Mobile Wallet Adapter funding, and browser Wallet Standard signing.
 - `bitflip_server` — Serverpod 4 backend and generated typed client.
@@ -88,7 +88,7 @@ build:web
 build:container
 ```
 
-`test:surfpool` builds the actual SBF program before testing. `test:surfpool:cnft` deploys Bitflip, Bubblegum, Account Compression, and Noop to an offline Surfnet, then proves that minting and recording the Pina receipt are atomic and idempotent. The external binaries are fetched from a pinned commit and SHA-256 verified. Serverpod tests use its managed embedded PostgreSQL and do not require Docker. `test:wallet` checks chain/feature filtering and rejects wallets that return altered signed-message bytes.
+`test:surfpool` builds the actual SBF program with its public test authority in an isolated target directory before testing, so it cannot replace the deployable production artifact. `test:surfpool:cnft` deploys Bitflip, Bubblegum, Account Compression, and Noop to an offline Surfnet, then proves that minting and recording the Pina receipt are atomic and idempotent. The external binaries are fetched from a pinned commit and SHA-256 verified. Serverpod tests use its managed embedded PostgreSQL and do not require Docker. `test:wallet` checks chain/feature filtering and rejects wallets that return altered signed-message bytes.
 
 ## Compressed-NFT minting
 

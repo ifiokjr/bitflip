@@ -23,7 +23,7 @@ The defaults are 1,024 paid flips or one hour per sector. Both values are config
 
 The claimant is the payer for the new sector PDA and, when BIT rewards are enabled, its lazily created Token-2022 vault. Their launch flow therefore pays:
 
-- Solana rent for the 854-byte bitmap, economy, and policy account;
+- Solana rent for the 855-byte bitmap, economy, and policy account;
 - current rent for one section-PDA-owned Token-2022 associated account; and
 - `claim_price_lamports`, transferred to the configured treasury.
 
@@ -45,4 +45,4 @@ Minted sectors cannot use this listing mechanism. After minting, the compressed 
 
 ## Deployment compatibility
 
-Economy ABI version 7 uses a 237-byte config, 123-byte game, and 854-byte section. It includes the immutable BIT mint/reserve registry, a canonical vault for every funded section, atomic paid issuance, fixed owner fee sharing, shard-local protocol and owner fee ledgers, owner-only withdrawal, versioned section policies, and authenticated colour events, and rejects initialization beyond the four configured games. Do not point the updated app at accounts from an older layout. For staging and launch, deploy the reviewed program under a fresh program ID and initialize fresh games so every section uses the current layout, controller configuration, custody rules, policy-version protection, and event layout.
+Economy ABI version 7 uses a 238-byte config, 124-byte game, and 855-byte section, including Pina's two-byte migration envelope. It includes the immutable BIT mint/reserve registry, a canonical vault for every funded section, atomic paid issuance, fixed owner fee sharing, shard-local protocol and owner fee ledgers, owner and protocol-authority withdrawal paths, versioned section policies, and authenticated colour events, and rejects initialization beyond the four configured games. Do not point the updated app at accounts from an older layout. For staging and launch, deploy the reviewed program under a fresh program ID and initialize fresh games so every section uses the current layout, controller configuration, custody rules, policy-version protection, and event layout.
