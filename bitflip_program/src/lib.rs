@@ -77,6 +77,8 @@ pub const NO_FLIP_COLOUR: u8 = u8::MAX;
 pub const SECTION_REWARD_POLICY_NONE: u8 = 0;
 pub const MAX_SECTION_POLICY_DURATION_SECONDS: u64 = 30 * 24 * 60 * 60;
 pub const SECTION_POLICY_START_GRACE_SECONDS: i64 = 60;
+/// Maximum rent top-up one reserved migration instruction may charge its payer.
+pub const MAX_MIGRATION_LAMPORTS: u64 = 1_000_000;
 
 const CONFIG_SEED: &[u8] = b"config";
 const GAME_SEED: &[u8] = b"game";
@@ -86,44 +88,85 @@ const ZERO_ADDRESS: Address = Address::new_from_array([0; ADDRESS_BYTES]);
 #[error]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BitflipError {
+	/// The signer is not authorized for the requested state transition.
 	Unauthorized = 0,
+	/// Stored or proposed protocol configuration violates an invariant.
 	InvalidConfiguration = 1,
+	/// The game index is outside the fixed game range or creation order.
 	InvalidGameIndex = 2,
+	/// The game cannot accept the requested operation in its current state.
 	GameNotLive = 3,
+	/// The game launch time has not been reached.
 	GameNotStarted = 4,
+	/// The section index or section account does not match the instruction.
 	InvalidSectionIndex = 5,
+	/// The next section has not met its time or activity unlock condition.
 	SectionLocked = 6,
+	/// The flip batch is empty or exceeds the per-transaction bound.
 	InvalidFlipCount = 7,
+	/// A pixel coordinate is outside the section canvas.
 	InvalidCoordinate = 8,
+	/// A paid flip batch contains the same coordinate more than once.
 	DuplicateCoordinate = 9,
+	/// The current price exceeds a limit signed by the player.
 	PriceSlippage = 10,
+	/// The section is not active.
 	SectionNotActive = 11,
+	/// The section has not been sealed.
 	SectionNotSealed = 12,
+	/// A compressed-NFT receipt was already recorded for the section.
 	SectionAlreadyMinted = 13,
+	/// The proposed compressed-NFT identity is invalid.
 	InvalidAsset = 14,
+	/// The paying or custody account cannot cover the requested amount.
 	InsufficientFunds = 15,
+	/// A section listing must have a nonzero price.
 	InvalidSalePrice = 16,
+	/// The section has no active sale listing.
 	SectionNotForSale = 17,
+	/// The section state does not permit ownership transfer.
 	SectionNotTransferable = 18,
+	/// The current owner cannot buy their own section.
 	CannotPurchaseOwnSection = 19,
+	/// The section owner changed before a trusted receipt was recorded.
 	OwnerChanged = 20,
+	/// The runtime timestamp is invalid for the price controller.
 	InvalidControllerTimestamp = 21,
+	/// The persisted price-controller state is invalid.
 	InvalidControllerState = 22,
+	/// BIT custody was already configured and is immutable.
 	CustodyAlreadyConfigured = 23,
+	/// BIT custody or the section vault has not been configured.
 	CustodyNotConfigured = 24,
+	/// The BIT mint violates the zero-decimal fixed-cap contract.
 	InvalidBitMint = 25,
+	/// A BIT reserve, vault, or recipient token account is invalid.
 	InvalidBitTokenAccount = 26,
+	/// The section already received its one-time BIT allocation.
 	SectionVaultAlreadyFunded = 27,
+	/// The signed quote belongs to a different controller window.
 	StalePriceWindow = 28,
+	/// The section cannot provide the minimum reward signed by the player.
 	InsufficientReward = 29,
+	/// The section owner has no accrued fees to withdraw.
 	NoOwnerFees = 30,
+	/// The proposed section policy is invalid or promises unsupported rewards.
 	InvalidSectionPolicy = 31,
+	/// A live section policy cannot be replaced or bypassed.
 	SectionPolicyLocked = 32,
+	/// The signed section-policy version is stale.
 	SectionPolicyChanged = 33,
+	/// The colour is not valid for the active section mode.
 	InvalidFlipColour = 34,
+	/// The section has no accrued protocol fees to withdraw.
+	NoProtocolFees = 35,
 }
 
-#[discriminator]
+#[discriminator(
+	entrypoint,
+	migrations(ConfigState, GameState, SectionState),
+	migrations_max_lamports = MAX_MIGRATION_LAMPORTS
+)]
 pub enum BitflipInstruction {
 	InitializeConfig = 0,
 	UpdateConfig = 1,
@@ -142,6 +185,7 @@ pub enum BitflipInstruction {
 	FundSectionVault = 14,
 	WithdrawSectionOwnerFees = 15,
 	ConfigureSectionPolicy = 16,
+	WithdrawProtocolFees = 17,
 }
 
 #[discriminator]
@@ -402,6 +446,12 @@ pub struct ConfigureSectionPolicyInstruction {
 	pub rules_digest: [u8; 32],
 }
 
+#[instruction(discriminator = BitflipInstruction::WithdrawProtocolFees, migrations)]
+pub struct WithdrawProtocolFeesInstruction {
+	pub game_index: u8,
+	pub section_index: u8,
+}
+
 #[derive(Accounts, Debug)]
 pub struct InitializeConfigAccounts<'a> {
 	#[pina(validate(signer))]
@@ -571,6 +621,15 @@ pub struct ConfigureSectionPolicyAccounts<'a> {
 	#[pina(validate(signer))]
 	pub owner: &'a AccountView,
 	pub section: &'a mut AccountView,
+}
+
+#[derive(Accounts, Debug)]
+pub struct WithdrawProtocolFeesAccounts<'a> {
+	#[pina(validate(signer))]
+	pub authority: &'a AccountView,
+	pub config: &'a AccountView,
+	pub section: &'a mut AccountView,
+	pub treasury: &'a mut AccountView,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -781,7 +840,16 @@ fn validate_configuration(
 		&& early_unlock_flips > 0
 		&& usize::try_from(early_unlock_flips).is_ok_and(|value| value <= SECTION_PIXEL_COUNT);
 
-	if !addresses_are_valid || !fees_are_valid || !progression_is_valid {
+	let price_config_is_valid = fees_are_valid
+		&& configured_price_config(
+			flip_fee_lamports,
+			minimum_flip_fee_lamports,
+			maximum_flip_fee_lamports,
+		)
+		.validate()
+		.is_ok();
+
+	if !addresses_are_valid || !fees_are_valid || !progression_is_valid || !price_config_is_valid {
 		return Err(BitflipError::InvalidConfiguration.into());
 	}
 
@@ -871,6 +939,30 @@ fn game_price_config(game: &GameStateZc) -> Result<pricing::PriceControllerConfi
 	config.validate().map_err(controller_error)?;
 
 	Ok(config)
+}
+
+fn configured_price_config(
+	start_price_lamports: u64,
+	minimum_price_lamports: u64,
+	maximum_price_lamports: u64,
+) -> pricing::PriceControllerConfig {
+	pricing::PriceControllerConfig {
+		start_price_lamports,
+		minimum_price_lamports,
+		maximum_price_lamports,
+		start_floor_price_lamports: minimum_price_lamports,
+		end_floor_price_lamports: pricing::DEFAULT_END_FLOOR_PRICE_LAMPORTS
+			.clamp(minimum_price_lamports, maximum_price_lamports),
+		..pricing::PriceControllerConfig::STAGING
+	}
+}
+
+fn initial_game_price_config(config: &ConfigStateZc) -> pricing::PriceControllerConfig {
+	configured_price_config(
+		config.flip_fee_lamports.get(),
+		config.minimum_flip_fee_lamports.get(),
+		config.maximum_flip_fee_lamports.get(),
+	)
 }
 
 fn live_game_price_config(
@@ -1122,6 +1214,29 @@ fn pay_accrued_owner_fees(
 	Ok(amount)
 }
 
+fn pay_accrued_protocol_fees(
+	section: &mut AccountView,
+	treasury: &mut AccountView,
+) -> Result<u64, ProgramError> {
+	let amount = section
+		.as_account::<SectionState>(&ID)?
+		.protocol_fee_lamports
+		.get();
+	if amount == 0 {
+		return Err(BitflipError::NoProtocolFees.into());
+	}
+
+	treasury.assert_writable()?.assert_owner(&system::ID)?;
+	section.assert_writable()?.assert_owner(&ID)?;
+	section
+		.as_account_mut::<SectionState>(&ID)?
+		.protocol_fee_lamports
+		.set(0);
+	section.send_owned(&ID, amount, treasury)?;
+
+	Ok(amount)
+}
+
 fn split_flip_fee(
 	section_owner: &Address,
 	game: &Address,
@@ -1140,7 +1255,7 @@ fn split_flip_fee(
 	.map_err(controller_error)
 }
 
-fn assert_bit_mint(bit_mint: &AccountView, token_program: &Address) -> ProgramResult {
+fn assert_bit_mint(bit_mint: &AccountView, token_program: &Address) -> Result<u64, ProgramError> {
 	let mint = bit_mint
 		.as_token_mint_for_program(token_program)
 		.and_then(token::TokenMintRef::assert_no_extensions)
@@ -1148,14 +1263,14 @@ fn assert_bit_mint(bit_mint: &AccountView, token_program: &Address) -> ProgramRe
 
 	if !mint.is_initialized()
 		|| mint.decimals() != BIT_MINT_DECIMALS
-		|| mint.supply() != BIT_TOTAL_SUPPLY_TOKENS
+		|| mint.supply() > BIT_TOTAL_SUPPLY_TOKENS
 		|| mint.mint_authority().is_some()
 		|| mint.freeze_authority().is_some()
 	{
 		return Err(BitflipError::InvalidBitMint.into());
 	}
 
-	Ok(())
+	Ok(mint.supply())
 }
 
 fn bit_token_account_balance(
@@ -1365,14 +1480,6 @@ impl<'a> ProcessAccountInfos<'a> for InitializeConfigAccounts<'a> {
 	fn process(self, data: &[u8]) -> ProgramResult {
 		let args = InitializeConfigInstruction::try_from_bytes(data)?;
 		let seeds = ConfigState::seeds();
-		let seeds_with_bump = seeds.with_bump(args.bump);
-
-		let canonical_bump = self.config.assert_canonical_bump(&seeds.as_slices(), &ID)?;
-		if canonical_bump != args.bump {
-			return Err(ProgramError::InvalidSeeds);
-		}
-		self.config
-			.assert_seeds_with_bump(&seeds_with_bump.as_slices(), &ID)?;
 
 		CreateProgramAccountWithBump {
 			account: self.config,
@@ -1504,29 +1611,21 @@ impl<'a> ProcessAccountInfos<'a> for InitializeGameAccounts<'a> {
 		}
 		assert_config_account(self.config)?;
 
-		let flip_fee_lamports = {
+		let price_config = {
 			let config = self.config.as_account::<ConfigState>(&ID)?;
 			self.payer.assert_address(&config.authority)?;
 			if config.game_count.get() != u16::from(args.game_index) {
 				return Err(BitflipError::InvalidGameIndex.into());
 			}
-			config.flip_fee_lamports.get()
+			initial_game_price_config(&config)
 		};
 
 		let clock = Clock::get()?;
 		let launched_at = controller_timestamp(clock.unix_timestamp)?;
-		let price_config = pricing::PriceControllerConfig::STAGING;
 		let controller = pricing::PriceControllerState::new(&price_config, launched_at)
 			.map_err(controller_error)?;
 		let game_address = *self.game.address();
 		let seeds = GameState::seeds(args.game_index);
-		let seeds_with_bump = seeds.with_bump(args.game_bump);
-		let canonical_bump = self.game.assert_canonical_bump(&seeds.as_slices(), &ID)?;
-		if canonical_bump != args.game_bump {
-			return Err(ProgramError::InvalidSeeds);
-		}
-		self.game
-			.assert_seeds_with_bump(&seeds_with_bump.as_slices(), &ID)?;
 
 		CreateProgramAccountWithBump {
 			account: self.game,
@@ -1541,7 +1640,7 @@ impl<'a> ProcessAccountInfos<'a> for InitializeGameAccounts<'a> {
 				args.game_index,
 				args.game_bump,
 				clock.unix_timestamp,
-				flip_fee_lamports,
+				price_config.start_price_lamports,
 				price_config,
 			);
 
@@ -1549,17 +1648,6 @@ impl<'a> ProcessAccountInfos<'a> for InitializeGameAccounts<'a> {
 		})?;
 
 		let section_seeds = SectionState::seeds(args.game_index, args.section_index);
-		let section_seeds_with_bump = section_seeds.with_bump(args.section_bump);
-		let canonical_section_bump = self
-			.section
-			.assert_canonical_bump(&section_seeds.as_slices(), &ID)?;
-		if canonical_section_bump != args.section_bump {
-			return Err(ProgramError::InvalidSeeds);
-		}
-		self.section
-			.assert_empty()?
-			.assert_writable()?
-			.assert_seeds_with_bump(&section_seeds_with_bump.as_slices(), &ID)?;
 
 		CreateProgramAccountWithBump {
 			account: self.section,
@@ -1647,17 +1735,6 @@ impl<'a> ProcessAccountInfos<'a> for ClaimSectionAccounts<'a> {
 		}
 
 		let seeds = SectionState::seeds(args.game_index, args.section_index);
-		let seeds_with_bump = seeds.with_bump(args.bump);
-		let canonical_bump = self
-			.section
-			.assert_canonical_bump(&seeds.as_slices(), &ID)?;
-		if canonical_bump != args.bump {
-			return Err(ProgramError::InvalidSeeds);
-		}
-		self.section
-			.assert_empty()?
-			.assert_writable()?
-			.assert_seeds_with_bump(&seeds_with_bump.as_slices(), &ID)?;
 
 		CreateProgramAccountWithBump {
 			account: self.section,
@@ -1994,7 +2071,10 @@ impl<'a> ProcessAccountInfos<'a> for ConfigureBitCustodyAccounts<'a> {
 			}
 		}
 
-		assert_bit_mint(self.bit_mint, &token_program)?;
+		let mint_supply = assert_bit_mint(self.bit_mint, &token_program)?;
+		if mint_supply != BIT_TOTAL_SUPPLY_TOKENS {
+			return Err(BitflipError::InvalidBitMint.into());
+		}
 		let reserve_balance = bit_token_account_balance(
 			self.bit_reserve,
 			self.config.address(),
@@ -2030,8 +2110,14 @@ impl<'a> ProcessAccountInfos<'a> for FundSectionVaultAccounts<'a> {
 		};
 		self.bit_mint.assert_address(&bit_mint)?;
 		self.bit_reserve.assert_address(&bit_reserve)?;
-		if self.section.as_account::<SectionState>(&ID)?.bit_vault != ZERO_ADDRESS {
-			return Err(BitflipError::SectionVaultAlreadyFunded.into());
+		{
+			let section = self.section.as_account::<SectionState>(&ID)?;
+			if section.status != SECTION_STATUS_ACTIVE {
+				return Err(BitflipError::SectionNotActive.into());
+			}
+			if section.bit_vault != ZERO_ADDRESS {
+				return Err(BitflipError::SectionVaultAlreadyFunded.into());
+			}
 		}
 
 		assert_bit_mint(self.bit_mint, &token_program)?;
@@ -2142,74 +2228,29 @@ impl<'a> ProcessAccountInfos<'a> for ConfigureSectionPolicyAccounts<'a> {
 	}
 }
 
+impl<'a> ProcessAccountInfos<'a> for WithdrawProtocolFeesAccounts<'a> {
+	fn process(self, data: &[u8]) -> ProgramResult {
+		let args = WithdrawProtocolFeesInstruction::try_from_bytes(data)?;
+		assert_config_account(self.config)?;
+		assert_section_account(self.section, args.game_index, args.section_index)?;
+
+		{
+			let config = self.config.as_account::<ConfigState>(&ID)?;
+			self.authority.assert_address(&config.authority)?;
+			self.treasury.assert_address(&config.treasury)?;
+		}
+		pay_accrued_protocol_fees(self.section, self.treasury)?;
+
+		log!("Bitflip protocol fees withdrawn");
+		Ok(())
+	}
+}
+
 #[cfg(feature = "bpf-entrypoint")]
 pub mod entrypoint {
 	use super::*;
 
-	nostd_entrypoint!(process_instruction);
-
-	#[inline(always)]
-	pub fn process_instruction(
-		program_id: &Address,
-		accounts: &mut [AccountView],
-		data: &[u8],
-	) -> ProgramResult {
-		let instruction: BitflipInstruction = parse_instruction(program_id, &ID, data)?;
-
-		match instruction {
-			BitflipInstruction::InitializeConfig => {
-				InitializeConfigAccounts::try_from((program_id, accounts))?.process(data)
-			}
-			BitflipInstruction::UpdateConfig => {
-				UpdateConfigAccounts::try_from((program_id, accounts))?.process(data)
-			}
-			BitflipInstruction::ProposeAuthority => {
-				ProposeAuthorityAccounts::try_from((program_id, accounts))?.process(data)
-			}
-			BitflipInstruction::AcceptAuthority => {
-				AcceptAuthorityAccounts::try_from((program_id, accounts))?.process(data)
-			}
-			BitflipInstruction::InitializeGame => {
-				InitializeGameAccounts::try_from((program_id, accounts))?.process(data)
-			}
-			BitflipInstruction::ClaimSection => {
-				ClaimSectionAccounts::try_from((program_id, accounts))?.process(data)
-			}
-			BitflipInstruction::FlipPixels => {
-				FlipPixelsAccounts::try_from((program_id, accounts))?.process(data)
-			}
-			BitflipInstruction::SealSection => {
-				SealSectionAccounts::try_from((program_id, accounts))?.process(data)
-			}
-			BitflipInstruction::RecordSectionMint => {
-				RecordSectionMintAccounts::try_from((program_id, accounts))?.process(data)
-			}
-			BitflipInstruction::ListSection => {
-				ListSectionAccounts::try_from((program_id, accounts))?.process(data)
-			}
-			BitflipInstruction::CancelSectionListing => {
-				CancelSectionListingAccounts::try_from((program_id, accounts))?.process(data)
-			}
-			BitflipInstruction::PurchaseSection => {
-				PurchaseSectionAccounts::try_from((program_id, accounts))?.process(data)
-			}
-			BitflipInstruction::SettleSectionEconomy => {
-				SettleSectionEconomyAccounts::try_from((program_id, accounts))?.process(data)
-			}
-			BitflipInstruction::ConfigureBitCustody => {
-				ConfigureBitCustodyAccounts::try_from((program_id, accounts))?.process(data)
-			}
-			BitflipInstruction::FundSectionVault => {
-				FundSectionVaultAccounts::try_from((program_id, accounts))?.process(data)
-			}
-			BitflipInstruction::WithdrawSectionOwnerFees => {
-				WithdrawSectionOwnerFeesAccounts::try_from((program_id, accounts))?.process(data)
-			}
-			BitflipInstruction::ConfigureSectionPolicy => {
-				ConfigureSectionPolicyAccounts::try_from((program_id, accounts))?.process(data)
-			}
-		}
-	}
+	nostd_entrypoint!(BitflipInstruction::process_instruction);
 }
 
 #[cfg(test)]
@@ -2262,6 +2303,7 @@ mod tests {
 		assert_eq!(FundSectionVaultInstruction::SIZE, 4);
 		assert_eq!(WithdrawSectionOwnerFeesInstruction::SIZE, 4);
 		assert_eq!(ConfigureSectionPolicyInstruction::SIZE, 79);
+		assert_eq!(WithdrawProtocolFeesInstruction::SIZE, 4);
 		assert_eq!(ColourPixelsFlippedEvent::SIZE, 86);
 	}
 

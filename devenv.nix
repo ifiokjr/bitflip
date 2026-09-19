@@ -103,7 +103,7 @@ in
 
   env = {
     PINA_BPF_TOOLCHAIN = "nightly-2025-11-20";
-    PINA_LINT_TOOLCHAIN = "nightly-2026-02-20";
+    PINA_LINT_TOOLCHAIN = "nightly-2026-09-15";
     SBF_TOOLS_VERSION = "v1.54";
     SOLANA_RPC_URL = "http://127.0.0.1:8899";
     SURFPOOL_RPC_URL = "http://127.0.0.1:8899";
@@ -451,6 +451,12 @@ in
         # Pina's prebuilt lint driver links the compiler libraries of the
         # nightly release it was built with, so the lint run must use that
         # exact toolchain.
+        # On macOS, use the system linker so the driver's Rust LLVM libraries
+        # cannot be loaded into devenv's independently versioned Clang.
+        if [ "$(uname -s)" = Darwin ]; then
+          export CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER=/usr/bin/clang
+          export CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER=/usr/bin/clang
+        fi
         RUSTUP_TOOLCHAIN="$PINA_LINT_TOOLCHAIN" \
           pina lint --project "$DEVENV_ROOT/bitflip_program"
       '';
@@ -510,7 +516,7 @@ in
     "simulate:economics" = {
       exec = ''
         set -euo pipefail
-        cargo run --package bitflip_program --example economics_simulation
+        cargo test --package bitflip_program --all-features economics_simulation
       '';
       description = "Simulate target, burst, idle, and adversarial BIT issuance traffic.";
       binary = "bash";
@@ -518,11 +524,13 @@ in
     "test:surfpool" = {
       exec = ''
         set -euo pipefail
-        pina build \
+        surfpool_sbf_target="$DEVENV_ROOT/target/surfpool-sbf"
+        CARGO_TARGET_DIR="$surfpool_sbf_target" pina build \
           --project "$DEVENV_ROOT/bitflip_program" \
           --features sbf-test-authority
-        PINA_SBF_ARTIFACT="$DEVENV_ROOT/target/deploy/bitflip_program.so" \
+        PINA_SBF_ARTIFACT="$surfpool_sbf_target/deploy/bitflip_program.so" \
           cargo test \
+            --locked \
             --manifest-path "$DEVENV_ROOT/bitflip_program/tests/surfpool/Cargo.toml" \
             -- \
             --ignored

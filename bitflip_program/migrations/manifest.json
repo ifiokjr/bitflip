@@ -1,5 +1,5 @@
 {
-	"formatVersion": 3,
+	"formatVersion": 4,
 	"programId": "5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM",
 	"versionType": "u8",
 	"contracts": {
@@ -2553,6 +2553,91 @@
 						]
 					},
 					"processSha256": "d8aea2de8c589941ecf9ad2a10ca2ff49a3f53b539ac1a1c0c5cc7d74dde592f",
+					"transition": null
+				}
+			]
+		},
+		"instruction:1:11": {
+			"identity": {
+				"kind": "instruction",
+				"discriminatorBytes": 1,
+				"discriminatorHex": "11"
+			},
+			"rustName": "WithdrawProtocolFeesInstruction",
+			"versions": [
+				{
+					"version": 0,
+					"schemaSha256": "982e19417c9c992dfbba5efdaebea28d011f34f4adfd2c0332fa73cacc593838",
+					"schema": {
+						"layout": "fixed",
+						"fields": [
+							{
+								"name": "game_index",
+								"rustType": "u8"
+							},
+							{
+								"name": "section_index",
+								"rustType": "u8"
+							}
+						],
+						"codec": "pinaPodV2",
+						"physical": {
+							"kind": "fixed",
+							"size": 2,
+							"fields": [
+								{
+									"name": "game_index",
+									"offset": 0,
+									"size": 1
+								},
+								{
+									"name": "section_index",
+									"offset": 1,
+									"size": 1
+								}
+							]
+						}
+					},
+					"process": {
+						"accounts": [
+							{
+								"name": "authority",
+								"writable": false,
+								"signer": true,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null,
+								"constraints": [
+									"signer"
+								]
+							},
+							{
+								"name": "config",
+								"writable": false,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "section",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							},
+							{
+								"name": "treasury",
+								"writable": true,
+								"signer": false,
+								"optional": false,
+								"defaultValue": null,
+								"pda": null
+							}
+						]
+					},
+					"processSha256": "34c33a5c26b239f36736fd967924f3709f73535c0c8411574df84db32553d191",
 					"transition": null
 				}
 			]

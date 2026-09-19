@@ -18,5 +18,6 @@ export 'record_section_mint.dart';
 export 'seal_section.dart';
 export 'settle_section_economy.dart';
 export 'update_config.dart';
+export 'withdraw_protocol_fees.dart';
 export 'withdraw_section_owner_fees.dart';
 
