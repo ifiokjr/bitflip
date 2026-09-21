@@ -25,6 +25,54 @@ pub mod pricing;
 
 declare_id!("5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM");
 
+/// Marker opening a security.txt block.
+pub const SECURITY_TXT_BEGIN: &str = "=======BEGIN SECURITY.TXT V1=======\0";
+/// Marker closing a security.txt block.
+pub const SECURITY_TXT_END: &str = "=======END SECURITY.TXT V1=======\0";
+
+/// RFC-9116-style contact and policy block, embedded in the program binary.
+///
+/// `query-security-txt` and the explorer verified badges locate this by
+/// scanning program data for [`SECURITY_TXT_BEGIN`]. The delimiters, the `\0`
+/// separators, and the alternating NUL-terminated key/value encoding are fixed
+/// by that parser, so they are kept byte for byte: a block that does not parse
+/// is invisible rather than merely wrong. The body is `concat!`-ed at compile
+/// time, so there is no runtime cost and no allocation.
+///
+/// Kept ungated so the host-side format test can validate it.
+#[cfg_attr(not(any(target_os = "solana", target_arch = "bpf")), allow(dead_code))]
+const SECURITY_TXT_CONTENT: &str = concat!(
+	"=======BEGIN SECURITY.TXT V1=======\0",
+	"name\0Bitflip\0",
+	"project_url\0https://bitflip.xyz\0",
+	"contacts\0email:security@ifiokjr.com,link:https://github.com/ifiokjr/bitflip/blob/main/security.md\0",
+	"policy\0https://github.com/ifiokjr/bitflip/blob/main/security.md\0",
+	"source_code\0https://github.com/ifiokjr/bitflip\0",
+	"auditors\0Internal release audit 2026-09-05; independent audit pending\0",
+	"=======END SECURITY.TXT V1=======\0",
+);
+
+/// The block as it appears in program data.
+///
+/// `query-security-txt` finds it by scanning *all* program data for
+/// [`SECURITY_TXT_BEGIN`]; it does not read a named ELF section. Two attributes
+/// that look correct here are actively harmful, and both were measured against
+/// the real-SBF suite rather than assumed:
+///
+/// - `link_section = ".security.txt"` (what the upstream `solana-security-txt`
+///   crate does) emits a writable, allocatable section into the SBF ELF and the
+///   loader then misplaces the program image: every instruction returns success
+///   without executing anything, so `InitializeConfig` reports ok while creating
+///   no account. All 24 isolated SBF tests fail this way.
+/// - `#[used]` alone keeps the bytes but breaks the image the same way.
+///
+/// A plain `no_mangle` static is what survives `--lto` and the size profile
+/// without disturbing the program layout: the string stays in `.rodata`, the
+/// scan finds it, and the SBF suite passes. `#[used]` must not be re-added.
+#[allow(unsafe_code)]
+#[unsafe(no_mangle)]
+pub static SECURITY_TXT: &str = SECURITY_TXT_CONTENT;
+
 /// Fresh external bootstrap authority. One-time config creation is safe to
 /// sponsor permissionlessly because callers cannot replace this value.
 #[cfg(not(feature = "sbf-test-authority"))]
@@ -211,8 +259,14 @@ pub struct ConfigState {
 	pub bit_mint: Address,
 	pub bit_reserve: Address,
 	pub claim_price_lamports: u64,
+	/// Per-flip price at game creation. Renamed in spirit: it is no longer a flat
+	/// fee but the controller's *start price* (`start_price_lamports`), bounded by
+	/// `minimum_flip_fee_lamports` and `maximum_flip_fee_lamports`. The controller
+	/// then moves the posted price within those bounds as windows settle.
 	pub flip_fee_lamports: u64,
+	/// Lower bound for the congestion controller and the posted price.
 	pub minimum_flip_fee_lamports: u64,
+	/// Upper bound for the congestion controller and the posted price.
 	pub maximum_flip_fee_lamports: u64,
 	pub unlock_interval_seconds: u32,
 	pub early_unlock_flips: u32,
@@ -230,6 +284,12 @@ pub struct GameState {
 	pub starts_at: i64,
 	pub next_section: u16,
 	pub minted_sections: u16,
+	/// Snapshot of the config start price at game creation.
+	///
+	/// Vestigial for pricing: the live controller reads [`Self::start_price_lamports`],
+	/// which is written from the same source in the same instruction. This field is
+	/// retained only because removing it changes the ABI layout. Do not read it as
+	/// the current price — use `start_price_lamports` and the section controller.
 	pub flip_fee_lamports: u64,
 	pub total_flips: u64,
 	pub section_allocation_tokens: u64,
@@ -2256,6 +2316,75 @@ pub mod entrypoint {
 #[cfg(test)]
 mod tests {
 	use super::*;
+
+	/// Parse the embedded block the way `query-security-txt` does. A block that
+	/// scans but does not parse is worse than none, because explorers and
+	/// researchers would show nothing while the source claims disclosure.
+	#[test]
+	fn security_txt_block_is_well_formed_for_the_standard_parser() {
+		let data = SECURITY_TXT_CONTENT.as_bytes();
+		assert!(
+			data.starts_with(SECURITY_TXT_BEGIN.as_bytes()),
+			"block must open with the parser's begin marker"
+		);
+		let end = data
+			.windows(SECURITY_TXT_END.len())
+			.position(|window| window == SECURITY_TXT_END.as_bytes())
+			.expect("block must contain the end marker");
+		let body = &data[SECURITY_TXT_BEGIN.len()..end];
+
+		// The parser alternates NUL-terminated field names and values, and the
+		// body ends with a trailing NUL. Dropping it must leave an even number of
+		// parts, or some field would be left without a value.
+		assert_eq!(
+			body.last(),
+			Some(&0),
+			"the block body must end with a NUL separator"
+		);
+		let parts = &body[..body.len() - 1];
+		assert_eq!(
+			parts.split(|byte| *byte == 0).count() % 2,
+			0,
+			"fields and values must alternate"
+		);
+
+		let mut seen_name = false;
+		let mut seen_project_url = false;
+		let mut seen_policy = false;
+		let mut contacts = None;
+		let mut expect_value_for: Option<&str> = None;
+		for part in parts.split(|byte| *byte == 0) {
+			let text = core::str::from_utf8(part).expect("fields and values are UTF-8");
+			match expect_value_for.take() {
+				Some(field) => match field {
+					"name" => seen_name = !text.is_empty(),
+					"project_url" => seen_project_url = text.starts_with("https://"),
+					"policy" => seen_policy = text.starts_with("https://"),
+					"contacts" => contacts = Some(text),
+					_ => {}
+				},
+				None => expect_value_for = Some(text),
+			}
+		}
+		assert!(expect_value_for.is_none(), "every field must have a value");
+		assert!(seen_name, "name must be present and non-empty");
+		assert!(seen_project_url, "project_url must be an HTTPS URL");
+		assert!(seen_policy, "policy must be an HTTPS URL");
+
+		// The contact parser rejects the whole block on an unknown prefix.
+		let contacts = contacts.expect("contacts must be present");
+		for contact in contacts.split(',') {
+			let (kind, value) = contact.split_once(':').expect("contact is typed");
+			assert!(
+				matches!(
+					kind.trim(),
+					"email" | "discord" | "telegram" | "twitter" | "link" | "other"
+				),
+				"unsupported contact type {kind}"
+			);
+			assert!(!value.trim().is_empty(), "contact value must not be empty");
+		}
+	}
 
 	#[test]
 	fn canvas_geometry_is_exact() {

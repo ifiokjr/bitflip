@@ -169,6 +169,8 @@ This lets successful sections recycle activity into prizes instead of depending 
 
 Colour does not occupy the permanent bitmap. During a live colour policy, the flip instruction validates an eight-colour index and emits the colour, player, coordinates, policy version, and resulting section revision. ABI version 7's backend verifies a confirmed successful transaction, accepts event bytes only while the Bitflip program is executing, and uses per-pixel revisions to make replay and out-of-order ingestion deterministic. The on-chain bitmap remains one bit per pixel.
 
+**Events are not a complete activity record.** `FlipPixels` emits `ColourPixelsFlipped` only when the flip carries a colour (`colour != NO_FLIP_COLOUR`), which is possible only while a colour-mode policy is live. Open-canvas flips are silent. Anything that needs "how many flips happened" or "who touched this section" must read the on-chain `flip_count` and `revision` counters, or the colour indexer's reduced state — never infer activity from the presence or absence of logs. A section with heavy open-canvas traffic can legitimately produce zero events.
+
 The first-party client submits its confirmed signature as a low-latency indexing hint. That cannot forge the canvas. A recurring Serverpod worker now independently scans confirmed program history from an explicit launch signature, persists multi-page catch-up state, and uses a crash-expiring lease to provide one logical consumer across replicas. Cursor advancement happens only after every successful transaction in the page has been fetched and reduced; a crash safely replays the page. Release operation must use an archival RPC, monitor completed sweeps, and rehearse catch-up with client hints disabled.
 
 An emitted colour is objectively attributable to a paid on-chain action. The winner of an off-chain drawing or capture-the-flag game is not. The beta may use a configured Bitflip game attestor to issue single-use, expiring claim vouchers that are bounded by the campaign budget. The UI and rules must describe that trust explicitly. A later optimistic Merkle settlement with a challenge window can reduce that trust, but should not be built before a real game needs it.
@@ -191,6 +193,12 @@ The inequality permits third parties to send extra BIT to the vault without corr
 This adds one Token-2022 account only when its section becomes active. The protocol funds the starting section's vault; each later claimant funds both the bitmap/ledger account and its vault. A player also needs one associated BIT token account the first time they receive BIT; the transaction and UI must disclose who pays that rent. Deployment tooling must query current rent for the exact Token-2022 account layout rather than hard-code an observation.
 
 The config PDA can sign transfers from the launch reserve only. A section PDA can sign transfers from its own vault only. Human owners cannot withdraw either balance. With mint/freeze authority revoked and no permanent delegate, the program cannot mint more BIT, freeze holders, or seize BIT that has reached a player's wallet.
+
+### Pool distribution must not depend on section status
+
+A section can be sealed while it still holds unspent allocation: the owner may seal an active, funded section before all base issuance is claimed, and `FlipPixels` then refuses further issuance. The unspent remainder is already accounted to `reward_pool_tokens` at that point, but the BIT is still physically in the section vault.
+
+The future pool-distribution instruction (implementation order step 8) must therefore pay from `reward_pool_tokens` **regardless of `section.status`**, and must remain payable for `SECTION_STATUS_SEALED` and `SECTION_STATUS_MINTED` as well as `SECTION_STATUS_ACTIVE`. A design that assumes active sections, or that requires a flip before it can pay, would strand the pool of every sealed section permanently. When that instruction is written it must be accompanied by real-SBF tests for the sealed and minted cases, not only the active one.
 
 ## Required implementation order
 
