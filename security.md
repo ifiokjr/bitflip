@@ -2,9 +2,12 @@
 
 Please report vulnerabilities privately to `security@ifiokjr.com`. Do not open a public issue for an exploitable finding.
 
+The deployed program embeds this contact and policy in its own binary as an RFC-9116-style `security.txt` block, so the details survive independently of this file. Read it with `query-security-txt <program-id>` or the explorer verified badge. The block lives in `bitflip_program/src/lib.rs`; changing the contact here means changing it there too.
+
 Before a mainnet launch:
 
 - deploy the verified program artifact and record its immutable hash;
+- complete the authority and custody sign-off in [docs/operations/authority-policy.md](docs/operations/authority-policy.md);
 - use a dedicated collection-authority key held in managed secret storage;
 - create a private Bubblegum V1 tree delegated only to that authority;
 - put Serverpod behind TLS and restrict database and Insights access;
@@ -12,6 +15,14 @@ Before a mainnet launch:
 - configure RPC rate limits, alerts, backups, and operator-key rotation;
 - run `lint:all`, `test:all`, `cargo audit`, `cargo deny check`, and `gitleaks`;
 - commission an independent review of both the program and mint operator.
+
+## Known open items before mainnet
+
+These are tracked in [docs/audit-remediation.md](docs/audit-remediation.md) and must not be lost:
+
+- **Durable mint reconciliation is not implemented.** The mint path is idempotent and user-recoverable, but the persisted mint-job schema, single-consumer worker, and signature tracking do not exist yet. Until they do, exactly one mint-capable server process must run, because two replicas can race private-tree leaf allocation.
+- **Independent review is pending.** The 2026-09-05 audit was internal. Mainnet is blocked on an independent program and operator review, a witnessed ceremony, fresh keys, and a recorded authority policy.
+- **No bounty program is registered yet.**
 
 The backend intentionally holds a PostgreSQL advisory transaction lock while a compressed mint is submitted. This serializes leaf allocation across replicas. Because the tree is private, only the same operator can increment it. If a process dies after chain confirmation but before the database commit, retrying is safe: the on-chain Bitflip receipt is authoritative and the mint service returns the already-recorded asset.
 

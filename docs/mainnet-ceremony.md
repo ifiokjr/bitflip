@@ -12,22 +12,24 @@ This ceremony requires two people: an operator and an independent witness. Do no
 
 ## Keys and authorities
 
+Custody requirements, the authority inventory, rotation procedures, and the incident playbook live in [operations/authority-policy.md](operations/authority-policy.md). Read it before this section; its sign-off checklist must be complete before the ceremony begins.
+
 1. Generate fresh deployment, bootstrap authority, collection authority, operator, and tree keys on an offline machine or managed HSM/KMS.
-2. Back them up using the documented recovery policy. Never copy private bytes into chat, CI logs, shell history, or git.
+2. Back them up according to [operations/authority-policy.md](operations/authority-policy.md#key-custody-rules). Never copy private bytes into chat, CI logs, shell history, or git.
 3. Create a private Bubblegum V1 tree and delegate it only to the operator.
 4. Initialize Bitflip with the intended treasury, prices, collection authority, game index, and unlock policy. Independently read every account back.
 5. Create BIT as a Token-2022 mint with no extensions and zero decimals. Mint exactly 26,843,545,600 BIT into the canonical config-PDA associated account, then revoke mint authority. Use no freeze authority. Independently verify mint supply, decimals, extensions, authorities, reserve owner, reserve mint, and reserve balance before registering custody.
 6. Register the mint and launch reserve once with `ConfigureBitCustody`. Fund only the initial section vault; later section claimants pay their own vault rent. Record every transaction signature and independently reconcile the reserve reduction.
-7. Transfer or revoke the program upgrade authority according to the policy below. Use Bitflip's propose/accept flow to rotate temporary bootstrap authority to the production authority.
+7. Transfer or revoke the program upgrade authority according to the policy below. Use Bitflip's propose/accept flow to rotate temporary bootstrap authority to the production authority. **`InitializeConfig` sets config authority, treasury, and collection authority to the same bootstrap key; this rotation is the step that ends that window, so treat it as the first production action, then split treasury and collection off the config authority with `UpdateConfig`.**
 
 ## Upgrade-authority decision
 
-Choose and record exactly one policy before deployment:
+Choose and record exactly one policy before deployment. The default is governed; immutable requires `WithdrawProtocolFees` to be live (it is) _and_ an accepted statement that no future fix is needed, because an immutable program cannot recover stranded lamports or patch a defect.
 
 - Immutable: revoke the program upgrade authority after the canary period.
-- Governed: place it behind a disclosed multisig with a review delay, signer roster, quorum, incident process, and public upgrade announcement policy.
+- Governed: place it behind a disclosed multisig with a review delay, signer roster, quorum, incident process, and public upgrade announcement policy. Record the platform, threshold, timelock, and roster in the sign-off checklist in [operations/authority-policy.md](operations/authority-policy.md#sign-off-required-before-mainnet).
 
-A single hot-wallet upgrade authority is not an acceptable production policy.
+A single hot-wallet upgrade authority is not an acceptable production policy. Neither is a low-threshold multisig without a timelock: that is the configuration Drift lost ~$285M to in April 2026.
 
 ## Canary and opening
 
