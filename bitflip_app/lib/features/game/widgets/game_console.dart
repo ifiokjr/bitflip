@@ -424,6 +424,7 @@ class _OwnerRow extends HookWidget {
   Widget build(BuildContext context) {
     final section = snapshot.section;
     late final String ownerLabel;
+
     if (section.isProtocolOwned) {
       ownerLabel = context.l10n.bitflipProgram;
     } else if (section.owner == null) {
@@ -431,6 +432,7 @@ class _OwnerRow extends HookWidget {
     } else {
       ownerLabel = _shortAddress(section.owner!);
     }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -481,11 +483,13 @@ class _PolicyPanel extends HookWidget {
     final policy = section.policy;
     final now = BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000);
     final isLive = policy?.isLiveAt(now) ?? false;
+
     final modeLabel = switch (policy?.mode) {
       SectionPolicyMode.openCanvas => context.l10n.openCanvasMode,
       SectionPolicyMode.colourCanvas => context.l10n.colourCanvasMode,
       null => context.l10n.baseCanvasMode,
     };
+
     final timingLabel = switch (policy) {
       null => context.l10n.noCampaign,
       _ when !policy.isConfigured => context.l10n.noCampaign,
@@ -498,6 +502,7 @@ class _PolicyPanel extends HookWidget {
       ),
       _ => context.l10n.campaignEnded,
     };
+
     final canConfigure =
         section.isEditable &&
         !section.isProtocolOwned &&
@@ -701,6 +706,7 @@ class _ActivityPulse extends HookWidget {
       GameNotice.walletIssue => context.l10n.walletIssue,
       GameNotice.connectionIssue => context.l10n.connectionIssue,
     };
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -762,6 +768,7 @@ String _formatUnlockTime(BuildContext context, BigInt unixSeconds) {
     isUtc: true,
   ).toLocal();
   final localizations = MaterialLocalizations.of(context);
+
   return '${localizations.formatMediumDate(date)} '
       '${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(date))}';
 }

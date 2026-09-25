@@ -40,6 +40,7 @@ void main() {
       for (var x = 0; x < maxFlipBatch + 1; x++) {
         controller.togglePixel(PixelCoordinate(x, 0));
       }
+
       final state = container.read(gameControllerProvider);
 
       expect(state.queued, hasLength(maxFlipBatch));

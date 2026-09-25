@@ -47,6 +47,7 @@ class PixelCanvas extends HookWidget {
     KeyEventResult handleKey(FocusNode _, KeyEvent event) {
       if (event is! KeyDownEvent) return KeyEventResult.ignored;
       final selected = cursor ?? const PixelCoordinate(0, 0);
+
       final next = switch (event.logicalKey) {
         LogicalKeyboardKey.arrowLeft => PixelCoordinate(
           math.max(0, selected.x - 1),
@@ -66,22 +67,27 @@ class PixelCanvas extends HookWidget {
         ),
         _ => null,
       };
+
       if (next != null) {
         onCursorMoved(next);
+
         return KeyEventResult.handled;
       }
       if (enabled &&
           (event.logicalKey == LogicalKeyboardKey.space ||
               event.logicalKey == LogicalKeyboardKey.enter)) {
         onPixelPressed(selected);
+
         return KeyEventResult.handled;
       }
+
       return KeyEventResult.ignored;
     }
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final side = math.min(constraints.maxWidth, 720.0);
+
         return Center(
           child: SizedBox(
             width: side,
@@ -228,16 +234,20 @@ class PixelCanvasPainter extends CustomPainter {
         .toList(growable: false);
     final queuedOffPaint = Paint()
       ..color = BitflipColors.cyan.withValues(alpha: 0.32);
+
     for (var y = 0; y < sectionSide; y++) {
       for (var x = 0; x < sectionSide; x++) {
         final coordinate = PixelCoordinate(x, y);
         final queuedHere = queued.contains(coordinate);
+
         if (queuedHere && activeColour != null) {
           final rect = Rect.fromLTWH(x * cell, y * cell, cell, cell);
           canvas.drawRect(rect.deflate(cell > 5 ? 0.55 : 0.18), colourPaint);
           continue;
         }
+
         final committedColour = colourMap?.colourAt(x, y);
+
         if (committedColour != null) {
           final rect = Rect.fromLTWH(x * cell, y * cell, cell, cell);
           canvas.drawRect(
@@ -246,8 +256,10 @@ class PixelCanvasPainter extends CustomPainter {
           );
           continue;
         }
+
         final wasOn = bitmap.isOn(x, y);
         final isOn = queuedHere ? !wasOn : wasOn;
+
         if (!isOn && !queuedHere) continue;
         final rect = Rect.fromLTWH(x * cell, y * cell, cell, cell);
         canvas.drawRect(
@@ -264,6 +276,7 @@ class PixelCanvasPainter extends CustomPainter {
     final gridPaint = Paint()
       ..color = BitflipColors.line.withValues(alpha: 0.52)
       ..strokeWidth = 1;
+
     for (var index = 0; index <= sectionSide; index += 8) {
       final position = index * cell;
       canvas
@@ -280,6 +293,7 @@ class PixelCanvasPainter extends CustomPainter {
     }
 
     final selected = cursor;
+
     if (selected != null) {
       final cursorPaint = Paint()
         ..color = BitflipColors.paper

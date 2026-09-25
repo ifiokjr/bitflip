@@ -88,6 +88,7 @@ final class FakeBitflipRepository implements BitflipRepository {
   Future<void> initializeWallet() async {
     initializeCalls++;
     final error = initializeError;
+
     if (error != null) throw error;
     if (walletKind == BitflipWalletKind.embedded) {
       walletAddress ??= 'Embedded111111111111111111111111111111111111';
@@ -97,7 +98,9 @@ final class FakeBitflipRepository implements BitflipRepository {
   @override
   Future<BigInt?> loadWalletBalance() async {
     final error = balanceError;
+
     if (error != null) throw error;
+
     return walletBalanceLamports;
   }
 
@@ -105,6 +108,7 @@ final class FakeBitflipRepository implements BitflipRepository {
   Future<String> claimSection(GameSnapshot snapshot) async {
     claimCalls++;
     final error = claimError;
+
     if (error != null) throw error;
     final owner = walletAddress;
     this.snapshot = this.snapshot.copyWith(
@@ -114,6 +118,7 @@ final class FakeBitflipRepository implements BitflipRepository {
         owner: owner,
       ),
     );
+
     return 'claim-signature';
   }
 
@@ -125,10 +130,12 @@ final class FakeBitflipRepository implements BitflipRepository {
     listCalls++;
     lastListingPriceLamports = priceLamports;
     final error = listError;
+
     if (error != null) throw error;
     this.snapshot = this.snapshot.copyWith(
       section: this.snapshot.section.copyWith(salePriceLamports: priceLamports),
     );
+
     return 'list-signature';
   }
 
@@ -136,10 +143,12 @@ final class FakeBitflipRepository implements BitflipRepository {
   Future<String> cancelSectionListing(GameSnapshot snapshot) async {
     cancelListingCalls++;
     final error = cancelListingError;
+
     if (error != null) throw error;
     this.snapshot = this.snapshot.copyWith(
       section: this.snapshot.section.copyWith(salePriceLamports: BigInt.zero),
     );
+
     return 'cancel-listing-signature';
   }
 
@@ -147,6 +156,7 @@ final class FakeBitflipRepository implements BitflipRepository {
   Future<String> purchaseSection(GameSnapshot snapshot) async {
     purchaseCalls++;
     final error = purchaseError;
+
     if (error != null) throw error;
     this.snapshot = this.snapshot.copyWith(
       section: this.snapshot.section.copyWith(
@@ -154,6 +164,7 @@ final class FakeBitflipRepository implements BitflipRepository {
         salePriceLamports: BigInt.zero,
       ),
     );
+
     return 'purchase-signature';
   }
 
@@ -161,7 +172,9 @@ final class FakeBitflipRepository implements BitflipRepository {
   Future<String> withdrawSectionOwnerFees(GameSnapshot snapshot) async {
     withdrawOwnerFeesCalls++;
     final error = withdrawOwnerFeesError;
+
     if (error != null) throw error;
+
     return 'withdraw-owner-fees-signature';
   }
 
@@ -173,6 +186,7 @@ final class FakeBitflipRepository implements BitflipRepository {
     configurePolicyCalls++;
     lastPolicyDraft = policy;
     final error = configurePolicyError;
+
     if (error != null) throw error;
     final currentVersion = this.snapshot.section.policy?.version ?? BigInt.zero;
     this.snapshot = this.snapshot.copyWith(
@@ -190,6 +204,7 @@ final class FakeBitflipRepository implements BitflipRepository {
         ),
       ),
     );
+
     return 'configure-policy-signature';
   }
 
@@ -198,8 +213,10 @@ final class FakeBitflipRepository implements BitflipRepository {
     connectCalls++;
     lastWalletId = walletId;
     final error = connectError;
+
     if (error != null) throw error;
     walletAddress ??= 'DemoWallet111111111111111111111111111111111';
+
     return walletAddress!;
   }
 
@@ -208,8 +225,10 @@ final class FakeBitflipRepository implements BitflipRepository {
     fundCalls++;
     lastFundingLamports = lamports;
     final error = fundError;
+
     if (error != null) throw error;
     walletBalanceLamports = (walletBalanceLamports ?? BigInt.zero) + lamports;
+
     return 'fund-signature';
   }
 
@@ -221,6 +240,7 @@ final class FakeBitflipRepository implements BitflipRepository {
   }) async {
     flipCalls++;
     final error = flipError;
+
     if (error != null) throw error;
     lastFlips = List.unmodifiable(coordinates);
     lastColour = colour;
@@ -237,6 +257,7 @@ final class FakeBitflipRepository implements BitflipRepository {
         revision: this.snapshot.section.revision + BigInt.one,
       ),
     );
+
     return 'flip-signature';
   }
 
@@ -244,7 +265,9 @@ final class FakeBitflipRepository implements BitflipRepository {
   Future<GameSnapshot?> loadSection(int sectionIndex) async {
     loadCalls++;
     final error = loadError;
+
     if (error != null) throw error;
+
     return returnNullOnLoad ? null : snapshot;
   }
 
@@ -252,6 +275,7 @@ final class FakeBitflipRepository implements BitflipRepository {
   Future<BitflipMintResult> mintSection(GameSnapshot snapshot) async {
     mintCalls++;
     final error = mintError;
+
     if (error != null) throw error;
     this.snapshot = this.snapshot.copyWith(
       mintedSections: this.snapshot.mintedSections + 1,
@@ -260,6 +284,7 @@ final class FakeBitflipRepository implements BitflipRepository {
         assetId: 'Asset11111111111111111111111111111111111111',
       ),
     );
+
     return const BitflipMintResult(
       assetId: 'Asset11111111111111111111111111111111111111',
       transactionSignature: 'mint-signature',
@@ -271,12 +296,14 @@ final class FakeBitflipRepository implements BitflipRepository {
   Future<String> sealSection(GameSnapshot snapshot) async {
     sealCalls++;
     final error = sealError;
+
     if (error != null) throw error;
     this.snapshot = this.snapshot.copyWith(
       section: this.snapshot.section.copyWith(
         lifecycle: SectionLifecycle.sealed,
       ),
     );
+
     return 'seal-signature';
   }
 }

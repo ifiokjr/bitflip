@@ -20,6 +20,7 @@ void main() {
           api: MapRpcApi({
             'getSignaturesForAddress': (parameters) {
               capturedParameters = parameters;
+
               return RpcPlan(
                 execute: (_) async => <Object?>[
                   {'signature': newest, 'err': null},

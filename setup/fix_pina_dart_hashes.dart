@@ -8,13 +8,16 @@ void main(List<String> arguments) {
       'Usage: dart fix_pina_dart_hashes.dart <generated-directory>',
     );
     exitCode = 64;
+
     return;
   }
 
   final generatedDirectory = Directory(arguments.single);
+
   if (!generatedDirectory.existsSync()) {
     stderr.writeln('Generated directory does not exist: ${arguments.single}');
     exitCode = 66;
+
     return;
   }
 
@@ -28,6 +31,7 @@ void main(List<String> arguments) {
       _hashGetter,
       (match) => 'int get hashCode => Object.hashAll([${match.group(1)}]);',
     );
+
     if (fixed != original) {
       entity.writeAsStringSync(fixed);
     }

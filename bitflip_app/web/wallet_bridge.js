@@ -8,6 +8,7 @@
 			if (typeof n == "function" ? e !== n || !r : !n.has(e)) {
 				throw new TypeError("Cannot read private member from an object whose class did not declare it");
 			}
+
 			return t === "m" ? r : t === "a" ? r.call(e) : r ? r.value : n.get(e);
 		},
 		H = function(e, n, t, r, a) {
@@ -16,6 +17,7 @@
 			if (typeof n == "function" ? e !== n || !a : !n.has(e)) {
 				throw new TypeError("Cannot write private member to an object whose class did not declare it");
 			}
+
 			return r === "a" ? a.call(e, t) : a ? a.value = t : n.set(e, t), t;
 		},
 		h,
@@ -49,6 +51,7 @@
 				n,
 			);
 		}
+
 		return l;
 	}
 	function E(...e) {
@@ -112,6 +115,7 @@
 		d = null;
 	function N(e) {
 		if (!b.some(n => n === e)) throw new Error(`Unsupported Solana chain: ${e}`);
+
 		return e;
 	}
 	function w(e) {
@@ -120,6 +124,7 @@
 	function F(e, n) {
 		if (!e.chains.includes(n)) return !1;
 		let t = e.features[m], r = e.features[f], a = e.features[g];
+
 		return w(t) && t.version === "1.0.0" && typeof t.connect == "function" && w(r) && r.version === "1.0.0"
 			&& typeof r.signAndSendTransaction == "function" && Array.isArray(r.supportedTransactionVersions)
 			&& r.supportedTransactionVersions.includes(0) && w(a) && (a.version === "1.0.0" || a.version === "1.1.0")
@@ -140,10 +145,12 @@
 			for (; a > 0;) n.push(a & 255), a >>= 8;
 		}
 		for (let t = 0; t < e.length - 1 && e[t] === "1"; t += 1) n.push(0);
+
 		return n.length !== 32 ? null : Uint8Array.from(n.reverse());
 	}
 	function A(e, n) {
 		let t = J(e.address);
+
 		return e.publicKey.byteLength === 32 && t !== null && I(t, Uint8Array.from(e.publicKey)) && e.chains.includes(n)
 			&& e.features.includes(f) && e.features.includes(g);
 	}
@@ -154,14 +161,17 @@
 		let n = T.get(e);
 		if (n !== void 0) return n;
 		let t = `wallet-${x}`;
+
 		return x += 1, T.set(e, t), t;
 	}
 	function Q(e) {
 		let n = N(e), t = M(n).map(r => ({ id: O(r), name: X(r.name) }));
+
 		return JSON.stringify(t);
 	}
 	function X(e) {
 		let n = e.replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, 80);
+
 		return n.length === 0 ? "Solana wallet" : n;
 	}
 	function L() {
@@ -169,6 +179,7 @@
 		if (e === null || !F(e.wallet, e.chain) || !A(e.account, e.chain)) {
 			throw new Error("Connect a compatible wallet before signing.");
 		}
+
 		return e;
 	}
 	function Y(e) {
@@ -180,8 +191,10 @@
 			let a = r.accounts.find(o => o.address === e.account.address && A(o, e.chain));
 			if (a === void 0) {
 				u = null, d?.(), d = null;
+
 				return;
 			}
+
 			e.account = a;
 		});
 	}
@@ -191,6 +204,7 @@
 		let o = (await r.features[m].connect()).accounts.find(y => A(y, t));
 		if (o === void 0) throw new Error("The wallet did not authorize an account with the required Solana features.");
 		let s = { wallet: r, account: o, chain: t };
+
 		return u = s, Y(s), o.address;
 	}
 	function ne() {
@@ -203,11 +217,13 @@
 		) throw new Error("The transaction is not valid base64.");
 		let n = atob(e);
 		if (n.length === 0 || n.length > G) throw new Error("The serialized transaction has an invalid size.");
+
 		return Uint8Array.from(n, t => t.charCodeAt(0));
 	}
 	function re(e) {
 		let n = "";
 		for (let t of e) n += String.fromCharCode(t);
+
 		return btoa(n);
 	}
 	function ae(e) {
@@ -222,12 +238,14 @@
 			for (; r > 0;) n.push(r % 58), r = Math.floor(r / 58);
 		}
 		for (let t = 0; t < e.length - 1 && e[t] === 0; t += 1) n.push(0);
+
 		return n.reverse().map(t => _[t]).join("");
 	}
 	function I(e, n) {
 		if (e.byteLength !== n.byteLength) return !1;
 		let t = 0;
 		for (let r = 0; r < e.byteLength; r += 1) t |= (e[r] ?? 0) ^ (n[r] ?? 0);
+
 		return t === 0;
 	}
 	async function oe(e) {
@@ -242,6 +260,7 @@
 		if (r.length !== 1 || r[0]?.signature.byteLength !== P) {
 			throw new Error("The wallet returned an invalid transaction signature.");
 		}
+
 		return ae(r[0].signature);
 	}
 	async function ie(e) {
@@ -252,6 +271,7 @@
 			r.length !== 1 || a === void 0 || a.signature.byteLength !== P
 			|| a.signatureType !== void 0 && a.signatureType !== "ed25519" || !I(a.signedMessage, t)
 		) throw new Error("The wallet returned an invalid message signature.");
+
 		return re(a.signature);
 	}
 	globalThis.bitflipWallet = Object.freeze({

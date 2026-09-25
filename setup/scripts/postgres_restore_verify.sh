@@ -15,6 +15,7 @@ if [[ "$BITFLIP_RESTORE_DATABASE" != *_restore_verify ]] ||
 	echo "Restore verification requires a distinct, confirmed database ending in _restore_verify." >&2
 	exit 1
 fi
+
 if [[ ! -f "$BITFLIP_BACKUP_FILE" ]]; then
 	echo "Backup does not exist: $BITFLIP_BACKUP_FILE" >&2
 	exit 1
@@ -43,6 +44,7 @@ table_count="$(
 		--set=ON_ERROR_STOP=1 \
 		--command="SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';"
 )"
+
 if [[ ! "$table_count" =~ ^[1-9][0-9]*$ ]]; then
 	echo "Restore verification found no public tables." >&2
 	exit 1

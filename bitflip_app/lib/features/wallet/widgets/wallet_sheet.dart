@@ -20,6 +20,7 @@ Future<void> showBitflipWalletSheet(
     showDragHandle: true,
     builder: (context) => _WalletSheet(state: state),
   );
+
   if (lamports != null) {
     await controller.fundWithMobileWallet(lamports);
   }
@@ -27,6 +28,7 @@ Future<void> showBitflipWalletSheet(
 
 BigInt? parseSolToLamports(String input) {
   final value = input.trim();
+
   if (!RegExp(r'^\d+(\.\d{1,9})?$').hasMatch(value)) return null;
   final parts = value.split('.');
   final whole = BigInt.parse(parts.first);
@@ -34,6 +36,7 @@ BigInt? parseSolToLamports(String input) {
       ? BigInt.zero
       : BigInt.parse(parts.last.padRight(9, '0'));
   final lamports = whole * BigInt.from(1000000000) + fraction;
+
   return lamports > BigInt.zero ? lamports : null;
 }
 

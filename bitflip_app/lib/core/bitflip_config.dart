@@ -23,6 +23,7 @@ final class BitflipConfig {
     const rpcUrl = String.fromEnvironment('SOLANA_RPC_URL');
     const serverpodUrl = String.fromEnvironment('SERVERPOD_URL');
     const gameIndex = String.fromEnvironment('BITFLIP_GAME_INDEX');
+
     return BitflipConfig.parse(
       environment: environment,
       walletChain: walletChain,
@@ -58,6 +59,7 @@ final class BitflipConfig {
       if (serverpodUrl.trim().isEmpty) 'SERVERPOD_URL',
       if (gameIndex.trim().isEmpty) 'BITFLIP_GAME_INDEX',
     ];
+
     if (missing.isNotEmpty) {
       throw StateError(
         'Missing required Bitflip configuration: ${missing.join(', ')}.',
@@ -94,6 +96,7 @@ final class BitflipConfig {
       if (walletChain != 'solana:mainnet') {
         throw StateError('Production must use solana:mainnet.');
       }
+
       _requirePublicHttps('SOLANA_RPC_URL', parsedRpcUrl);
       _requirePublicHttps('SERVERPOD_URL', parsedServerpodUrl);
     }
@@ -116,12 +119,15 @@ final class BitflipConfig {
 
 Uri _validatedUrl(String name, String value) {
   final uri = Uri.tryParse(value);
+
   if (uri == null || !uri.hasScheme || !uri.hasAuthority) {
     throw StateError('$name must be an absolute URL.');
   }
+
   if (uri.scheme != 'http' && uri.scheme != 'https') {
     throw StateError('$name must use HTTP or HTTPS.');
   }
+
   return uri;
 }
 

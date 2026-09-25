@@ -44,6 +44,7 @@ class GameScreen extends HookConsumerWidget {
         const Duration(seconds: 12),
         (_) => unawaited(controller.refresh()),
       );
+
       return () {
         initialRefresh.cancel();
         liveRefresh.cancel();
@@ -168,11 +169,13 @@ class _Header extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final wallet = state.walletAddress;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 22),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 460;
+
           return Row(
             children: [
               const _BitflipMark(size: 34),
@@ -326,6 +329,7 @@ class _SignalTicker extends HookWidget {
       true => (context.l10n.demoNotice, BitflipColors.coral),
       false => (context.l10n.securityNote, BitflipColors.acid),
     };
+
     return Container(
       color: color,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
@@ -376,6 +380,7 @@ class _GameWorkspace extends HookWidget {
             children: [canvas, const SizedBox(height: 22), console],
           );
         }
+
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -398,6 +403,7 @@ Future<void> _confirmPolicy(
     SectionPolicyMode.openCanvas => context.l10n.openCanvasMode,
     SectionPolicyMode.colourCanvas => context.l10n.colourCanvasMode,
   };
+
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
@@ -416,6 +422,7 @@ Future<void> _confirmPolicy(
       ],
     ),
   );
+
   if (confirmed != true || !context.mounted) return;
   await controller.configureSectionPolicy(
     SectionPolicyDraft.startingNow(
@@ -448,6 +455,7 @@ Future<void> _confirmSeal(
       ],
     ),
   );
+
   if (confirmed ?? false) await controller.sealSection();
 }
 
@@ -463,6 +471,7 @@ Future<void> _openResult(GameViewState state) async {
     path,
     cluster == 'mainnet' ? null : {'cluster': cluster},
   );
+
   if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
     throw StateError('Could not open the Solana explorer.');
   }
@@ -473,10 +482,13 @@ Future<void> _connectWallet(
   GameController controller,
 ) async {
   final wallets = controller.availableWallets;
+
   if (wallets == null) {
     await controller.connectWallet();
+
     return;
   }
+
   if (!context.mounted) return;
   if (wallets.isEmpty) {
     await showDialog<void>(
@@ -493,8 +505,10 @@ Future<void> _connectWallet(
         ],
       ),
     );
+
     return;
   }
+
   final selected = wallets.length == 1
       ? wallets.single
       : await showModalBottomSheet<BitflipWalletOption>(
@@ -503,6 +517,7 @@ Future<void> _connectWallet(
           showDragHandle: true,
           builder: (context) => _WalletPicker(wallets: wallets),
         );
+
   if (selected == null) return;
   await controller.connectWallet(selected.id);
 }
@@ -541,6 +556,7 @@ class _WalletPicker extends HookWidget {
                   separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final wallet = wallets[index];
+
                     return ListTile(
                       shape: const Border.fromBorderSide(
                         BorderSide(color: BitflipColors.line),
@@ -583,6 +599,7 @@ class _CanvasPanel extends HookWidget {
         section.isEditable &&
         !state.isBusy;
     final selectedPixel = state.cursor ?? const PixelCoordinate(0, 0);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -724,6 +741,7 @@ class _CanvasPanel extends HookWidget {
                 children: [copy, const SizedBox(height: 22), navigator],
               );
             }
+
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -873,6 +891,7 @@ class _CoordinatePicker extends HookWidget {
                 children: [xPicker, const SizedBox(height: 10), yPicker],
               );
             }
+
             return Row(
               children: [
                 Expanded(child: xPicker),
@@ -916,6 +935,7 @@ class _GameLoadBanner extends HookWidget {
         context.l10n.activityReady,
       ),
     };
+
     return Semantics(
       liveRegion: true,
       child: DecoratedBox(
@@ -946,6 +966,7 @@ class _HowItWorks extends HookWidget {
       (context.l10n.flipStep, context.l10n.flipStepBody, BitflipColors.coral),
       (context.l10n.sealStep, context.l10n.sealStepBody, BitflipColors.cyan),
     ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -959,6 +980,7 @@ class _HowItWorks extends HookWidget {
             final width = constraints.maxWidth >= 900
                 ? (constraints.maxWidth - 32) / 3
                 : constraints.maxWidth;
+
             return Wrap(
               spacing: 16,
               runSpacing: 16,
@@ -1159,6 +1181,7 @@ class _BitflipMarkPainter extends CustomPainter {
     final cell = size.width / 5;
     final paint = Paint()..color = BitflipColors.acid;
     final alt = Paint()..color = BitflipColors.coral;
+
     for (var y = 0; y < pattern.length; y++) {
       for (var x = 0; x < 5; x++) {
         if ((pattern[y] & (1 << (4 - x))) == 0) continue;
@@ -1199,6 +1222,7 @@ class _AtmospherePainter extends CustomPainter {
     final line = Paint()
       ..color = BitflipColors.line.withValues(alpha: 0.16)
       ..strokeWidth = 1;
+
     for (var y = 0.0; y < size.height; y += 6) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), line);
     }

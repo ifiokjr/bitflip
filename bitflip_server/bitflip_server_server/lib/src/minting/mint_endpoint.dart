@@ -35,9 +35,11 @@ class MintEndpoint extends Endpoint {
     final chainSection = await MintServiceRegistry.service
         .loadSection(gameIndex, sectionIndex)
         .timeout(_chainReadDeadline);
+
     if (chainSection.owner != wallet) {
       throw StateError('Only the on-chain section owner can request a mint.');
     }
+
     if (!chainSection.isSealed && !chainSection.isMinted) {
       throw StateError('Seal the section before requesting a mint.');
     }
@@ -80,6 +82,7 @@ class MintEndpoint extends Endpoint {
         transaction: transaction,
       );
     });
+
     return MintChallengeView(
       nonce: nonce,
       message: message,
@@ -148,6 +151,7 @@ class MintEndpoint extends Endpoint {
         if (section.owner != wallet) {
           throw StateError('The section owner changed before minting.');
         }
+
         return MintServiceRegistry.service.mint(section).timeout(_mintDeadline);
       });
       _logMint(
@@ -157,6 +161,7 @@ class MintEndpoint extends Endpoint {
         startedAt: startedAt,
         outcome: result.alreadyMinted ? 'already_minted' : 'confirmed',
       );
+
       return MintSectionResult(
         assetId: result.assetId.value,
         merkleTree: result.merkleTree.value,
@@ -164,6 +169,7 @@ class MintEndpoint extends Endpoint {
         transactionSignature: result.transactionSignature,
         alreadyMinted: result.alreadyMinted,
       );
+
     } on Object catch (error, stackTrace) {
       _logMint(
         session,
@@ -200,11 +206,13 @@ final class ChallengeRateLimiter {
     final now = _clock().toUtc();
     final cutoff = now.subtract(window);
     _globalAttempts.removeWhere((attempt) => attempt.isBefore(cutoff));
+
     if (_globalAttempts.isEmpty) {
       _attemptsBySource.removeWhere(
         (_, attempts) => attempts.every((attempt) => attempt.isBefore(cutoff)),
       );
     }
+
     final attempts = _attemptsBySource.putIfAbsent(source, () => []);
     attempts.removeWhere((attempt) => attempt.isBefore(cutoff));
     if (attempts.length >= maximumPerSource ||
@@ -230,6 +238,7 @@ final class MintOperatorGate {
     if (_inFlight >= maximumInFlight) {
       throw StateError('The mint operator is busy. Try again shortly.');
     }
+
     _inFlight++;
     try {
       return await action();
@@ -288,19 +297,24 @@ String mintAuthorizationMessage({
 
 Address _validatedWallet(String value) {
   final normalized = value.trim();
+
   if (normalized.length < 32 || normalized.length > 44) {
     throw const FormatException('Invalid Solana wallet address.');
   }
+
   final wallet = Address(normalized);
   decodeBase58PublicKey(wallet.value);
+
   return wallet;
 }
 
 String _validatedNonce(String value) {
   final normalized = value.trim();
+
   if (!_noncePattern.hasMatch(normalized)) {
     throw const FormatException('Invalid mint authorization nonce.');
   }
+
   return normalized;
 }
 
@@ -313,6 +327,7 @@ void _validateIndices(int gameIndex, int sectionIndex) {
       'gameIndex',
     );
   }
+
   if (sectionIndex < 0 || sectionIndex > bitflipMaximumSectionIndex) {
     throw RangeError.range(
       sectionIndex,
@@ -325,5 +340,6 @@ void _validateIndices(int gameIndex, int sectionIndex) {
 
 String _nonce() {
   final bytes = List<int>.generate(24, (_) => _secureRandom.nextInt(256));
+
   return base64UrlEncode(bytes).replaceAll('=', '');
 }

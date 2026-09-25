@@ -38,6 +38,7 @@ class SectionNavigator extends HookWidget {
               : isClaimed
               ? BitflipColors.acid.withValues(alpha: 0.55)
               : BitflipColors.raised;
+
           return ExcludeSemantics(
             child: DecoratedBox(
               decoration: BoxDecoration(

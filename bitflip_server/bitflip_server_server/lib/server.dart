@@ -59,11 +59,13 @@ void run(List<String> args) async {
     ..addRoute(SectionArtRoute(mintService), '/art/:game/:section');
 
   final flutterWeb = Directory('web/app');
+
   if (flutterWeb.existsSync()) {
     pod.webServer.addRoute(FlutterRoute(flutterWeb));
   }
 
   await pod.start();
+
   if (colourIndexerConfiguration.enabled) {
     final identifier =
         'colour-indexer-${colourIndexerConfiguration.cluster}-'
@@ -83,10 +85,12 @@ void run(List<String> args) async {
 String? _argumentValue(List<String> args, String name) {
   for (var index = 0; index < args.length; index++) {
     final argument = args[index];
+
     if (argument == name && index + 1 < args.length) return args[index + 1];
     if (argument.startsWith('$name=')) {
       return argument.substring(name.length + 1);
     }
   }
+
   return null;
 }

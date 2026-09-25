@@ -166,6 +166,7 @@ Future<T> _run<T>(
 Future<ColourIndexerCursor> _cursor(TestSessionBuilder builder) async {
   return _run(builder, (session) async {
     final cursor = await ColourIndexerCursor.db.findFirstRow(session);
+
     return cursor!;
   });
 }
@@ -185,16 +186,19 @@ final class _FakeIndexerSource
     String? until,
   }) async {
     requests.add(_SignatureRequest(before: before, until: until));
+
     return pages.removeAt(0);
   }
 
   @override
   Future<List<ColourPixelsFlipped>> eventsForSignature(String signature) async {
     eventRequests.add(signature);
+
     if (failOnceFor == signature) {
       failOnceFor = null;
       throw StateError('temporary RPC failure');
     }
+
     return events[signature] ?? const [];
   }
 }

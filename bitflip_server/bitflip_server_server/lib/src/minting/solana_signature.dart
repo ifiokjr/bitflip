@@ -11,24 +11,31 @@ Uint8List decodeBase58PublicKey(String value) {
   final Uint8List bytes;
   try {
     bytes = base58.decoder.convert(value.trim());
+
   } on Object {
     throw const FormatException('Invalid Solana wallet address.');
   }
+
   if (bytes.length != solanaPublicKeyLength) {
     throw const FormatException('Invalid Solana wallet address.');
   }
+
   return bytes;
 }
 
 Uint8List decodeBase64Signature(String value) {
   final normalized = value.trim();
+
   if (normalized.length > 128) {
     throw const FormatException('Invalid Solana signature.');
   }
+
   final bytes = base64Decode(normalized);
+
   if (bytes.length != solanaSignatureLength) {
     throw const FormatException('Invalid Solana signature.');
   }
+
   return bytes;
 }
 
@@ -47,6 +54,7 @@ bool verifySolanaSignature({
       Uint8List.fromList(utf8.encode(message)),
       signatureBytes,
     );
+
   } on Object {
     return false;
   }

@@ -26,6 +26,7 @@ final class ColourCanvasEndpoint extends Endpoint {
           table.gameIndex.equals(gameIndex) &
           table.sectionIndex.equals(sectionIndex),
     );
+
     return _viewFor(gameIndex, sectionIndex, stored);
   }
 
@@ -49,6 +50,7 @@ final class ColourCanvasEndpoint extends Endpoint {
               event.sectionIndex == sectionIndex,
         )
         .toList();
+
     if (relevantEvents.isEmpty) {
       throw StateError(
         'The transaction has no verified colour event for this section.',
@@ -61,6 +63,7 @@ final class ColourCanvasEndpoint extends Endpoint {
       sectionIndex: sectionIndex,
       events: relevantEvents,
     );
+
     return _viewFor(gameIndex, sectionIndex, result);
   }
 }
@@ -78,6 +81,7 @@ ColourCanvasView _viewFor(
           colours: bytesFromByteData(state.colours),
           pixelRevisions: bytesFromByteData(state.pixelRevisions),
         );
+
   return ColourCanvasView(
     gameIndex: gameIndex,
     sectionIndex: sectionIndex,
@@ -96,6 +100,7 @@ void _validateIndices(int gameIndex, int sectionIndex) {
       'gameIndex',
     );
   }
+
   if (sectionIndex < 0 || sectionIndex > bitflipMaximumSectionIndex) {
     throw RangeError.range(
       sectionIndex,
@@ -129,6 +134,7 @@ final class ColourSubmissionRateLimiter {
     _globalAttempts.removeWhere((attempt) => attempt.isBefore(cutoff));
     _attemptsBySource.removeWhere((_, attempts) {
       attempts.removeWhere((attempt) => attempt.isBefore(cutoff));
+
       return attempts.isEmpty;
     });
     final attempts = _attemptsBySource.putIfAbsent(source, () => []);

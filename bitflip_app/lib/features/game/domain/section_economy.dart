@@ -64,6 +64,7 @@ final class SectionEconomySnapshot {
         requestedRewardTokens > BigInt.from(16)) {
       throw ArgumentError.value(requestedRewardTokens, 'requestedRewardTokens');
     }
+
     if (now < launchedAt || now < lastUpdatedAt) {
       throw StateError('The local clock predates the section economy.');
     }
@@ -97,6 +98,7 @@ final class SectionEconomySnapshot {
       accruePool(_max(BigInt.zero, nextWindowTarget - nextWindowRewarded));
 
       final missedEmptyWindows = completedWindows - BigInt.one;
+
       if (missedEmptyWindows > BigInt.zero) {
         final maximumChange =
             config.startPriceLamports ~/ config.changeDenominator;
@@ -111,6 +113,7 @@ final class SectionEconomySnapshot {
       nextWindowStartedAt += completedWindows * config.windowSeconds;
       nextWindowId += completedWindows;
       nextWindowRewarded = BigInt.zero;
+
       if (nextWindowStartedAt >= emissionEndsAt) {
         accruePool(remainingBase());
       }
@@ -139,6 +142,7 @@ final class SectionEconomySnapshot {
       requestedRewardTokens,
       _min(remaining, remainingWindowCapacity),
     );
+
     return SectionFlipQuote(
       windowId: nextWindowId,
       rewardTokens: rewardTokens,
@@ -176,6 +180,7 @@ BigInt _adjustedControllerPrice({
   final adjusted = boundedRewarded >= targetTokens
       ? currentPrice + change
       : currentPrice - change;
+
   return _clamp(
     adjusted,
     config.minimumPriceLamports,
@@ -185,6 +190,7 @@ BigInt _adjustedControllerPrice({
 
 BigInt _inventoryFloor(SectionPriceConfig config, BigInt emittedTokens) {
   final range = config.endFloorPriceLamports - config.startFloorPriceLamports;
+
   return config.startFloorPriceLamports +
       (range * emittedTokens ~/ config.allocationTokens);
 }

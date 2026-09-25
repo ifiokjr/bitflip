@@ -17,6 +17,7 @@ class LegalScreen extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final content = _content(context, document);
+
     return Scaffold(
       body: SafeArea(
         child: SelectionArea(
@@ -121,6 +122,7 @@ class _DocumentSection extends HookWidget {
 
 Future<void> _openSupport() async {
   final uri = Uri.https('github.com', '/ifiokjr/bitflip/issues/new');
+
   if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
     throw StateError('Could not open Bitflip support.');
   }
@@ -128,6 +130,8 @@ Future<void> _openSupport() async {
 
 _LegalContent _content(BuildContext context, LegalDocument document) {
   final l10n = context.l10n;
+
+
   return switch (document) {
     LegalDocument.privacy => _LegalContent(
       title: l10n.privacyTitle,

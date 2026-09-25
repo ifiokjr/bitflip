@@ -38,10 +38,13 @@ final class SolanaRpcHealthIndicator extends HealthIndicator<int> {
   Future<HealthCheckResult> check() async {
     try {
       final slot = await readSlot().timeout(deadline);
+
       if (slot.isNegative) {
         return fail(output: 'Solana RPC returned an invalid slot.');
       }
+
       return pass(observedValue: slot.toInt());
+
     } on Object catch (error) {
       return fail(output: 'Solana RPC check failed (${error.runtimeType}).');
     }

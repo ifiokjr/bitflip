@@ -48,12 +48,14 @@ ColourPixelsFlipped decodeColourPixelsFlippedEvent(String encoded) {
   final Uint8List bytes;
   try {
     bytes = base64Decode(encoded);
+
   } on FormatException {
     throw const FormatException('Invalid Bitflip colour event encoding.');
   }
   final pina_client.ColourPixelsFlippedEventEvent event;
   try {
     event = pina_client.decodeColourPixelsFlippedEventEvent(bytes);
+
   } on RangeError {
     throw const FormatException('Invalid Bitflip colour event layout.');
   }
@@ -70,18 +72,24 @@ ColourPixelsFlipped decodeColourPixelsFlippedEvent(String encoded) {
   }
   final coordinates = <ColourPixelCoordinate>[];
   final seenPixels = <int>{};
+
   for (var index = 0; index < event.count; index++) {
     final x = event.coordinates[index * 2];
     final y = event.coordinates[index * 2 + 1];
+
     if (x >= colourCanvasSide || y >= colourCanvasSide) {
       throw const FormatException('Invalid Bitflip colour coordinates.');
     }
+
     final coordinate = ColourPixelCoordinate(x, y);
+
     if (!seenPixels.add(coordinate.linearIndex)) {
       throw const FormatException('Duplicate Bitflip colour coordinates.');
     }
+
     coordinates.add(coordinate);
   }
+
   return ColourPixelsFlipped(
     player: event.player.value,
     policyVersion: event.policyVersion.toInt(),
@@ -99,8 +107,10 @@ List<ColourPixelsFlipped> colourEventsFromProgramLogs(
 }) {
   final invocationStack = <String>[];
   final events = <ColourPixelsFlipped>[];
+
   for (final log in logs) {
     final invoked = _programFromSuffix(log, ' invoke [');
+
     if (invoked != null) {
       invocationStack.add(invoked);
       continue;
@@ -108,20 +118,24 @@ List<ColourPixelsFlipped> colourEventsFromProgramLogs(
     if (log.startsWith('Program data: ') &&
         invocationStack.lastOrNull == programAddress) {
       final fields = log.substring('Program data: '.length).trim().split(' ');
+
       for (final field in fields) {
         if (field.isEmpty) continue;
         try {
           events.add(decodeColourPixelsFlippedEvent(field));
+
         } on FormatException {
           // A Bitflip instruction may log unrelated binary data. Only the
           // exact, versioned colour event layout is accepted.
         }
       }
+
       continue;
     }
     final completed =
         _programFromSuffix(log, ' success') ??
         _programFromSuffix(log, ' failed:');
+
     if (completed == null || invocationStack.isEmpty) continue;
     if (invocationStack.last == completed) {
       invocationStack.removeLast();
@@ -129,13 +143,16 @@ List<ColourPixelsFlipped> colourEventsFromProgramLogs(
       invocationStack.clear();
     }
   }
+
   return List.unmodifiable(events);
 }
 
 String? _programFromSuffix(String log, String suffix) {
   const prefix = 'Program ';
+
   if (!log.startsWith(prefix)) return null;
   final suffixIndex = log.indexOf(suffix, prefix.length);
+
   if (suffixIndex < 0) return null;
   return log.substring(prefix.length, suffixIndex);
 }

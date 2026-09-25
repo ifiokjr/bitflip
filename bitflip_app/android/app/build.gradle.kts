@@ -69,6 +69,7 @@ android {
 
 gradle.taskGraph.whenReady {
     val buildsRelease = allTasks.any { it.project == project && it.name.contains("Release") }
+
     if (buildsRelease && !hasReleaseSigning && !allowDebugReleaseSigning) {
         error(
             "Android release signing is required. Configure ANDROID_KEYSTORE_PATH, " +

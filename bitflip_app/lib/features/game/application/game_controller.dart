@@ -109,9 +109,11 @@ final class GameViewState {
 
   bool get isColourRoundLive {
     final policy = snapshot.section.policy;
+
     if (policy == null || policy.mode != SectionPolicyMode.colourCanvas) {
       return false;
     }
+
     return policy.isLiveAt(
       BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000),
     );
@@ -122,6 +124,7 @@ final class GameViewState {
   SectionFlipQuote? get queuedQuote {
     final economy = snapshot.section.economy;
     final priceConfig = snapshot.priceConfig;
+
     if (economy == null || priceConfig == null || queued.isEmpty) return null;
     return economy.quote(
       config: priceConfig,
@@ -207,18 +210,23 @@ class GameController extends _$GameController {
     try {
       try {
         await _repository.initializeWallet();
+
       } on Object {
         walletInitializationFailed = true;
       }
+
       if (!ref.mounted) return;
       final loaded = await _repository.loadSection(sectionIndex);
+
       if (!ref.mounted) return;
       BigInt? walletBalance;
       try {
         walletBalance = await _repository.loadWalletBalance();
+
       } on Object {
         walletInitializationFailed = true;
       }
+
       if (!ref.mounted) return;
       final snapshot = loaded == null
           ? GameSnapshot.empty(
@@ -244,6 +252,7 @@ class GameController extends _$GameController {
             ? GameLoadStatus.unavailable
             : GameLoadStatus.ready,
       );
+
     } on Object {
       if (!ref.mounted) return;
       state = state.copyWith(
@@ -260,6 +269,7 @@ class GameController extends _$GameController {
         loaded.section.revision >= current.section.revision) {
       return loaded;
     }
+
     return current;
   }
 
@@ -268,12 +278,14 @@ class GameController extends _$GameController {
     state = state.copyWith(isBusy: true);
     try {
       final address = await _repository.connectWallet(walletId);
+
       if (!ref.mounted) return;
       state = state.copyWith(
         isBusy: false,
         walletAddress: address,
         activity: const GameActivity(GameNotice.connected),
       );
+
     } on Object {
       if (!ref.mounted) return;
       state = state.copyWith(
@@ -295,14 +307,17 @@ class GameController extends _$GameController {
       final transactionSignature = await _repository.fundWithMobileWallet(
         lamports,
       );
+
       if (!ref.mounted) return;
       var walletBalance = state.walletBalanceLamports;
       try {
         walletBalance = await _repository.loadWalletBalance();
+
       } on Object {
         // The transfer is already confirmed; a balance refresh failure must
         // not be reported as though the funding transaction failed.
       }
+
       if (!ref.mounted) return;
       state = state.copyWith(
         isBusy: false,
@@ -312,6 +327,7 @@ class GameController extends _$GameController {
           transactionSignature: transactionSignature,
         ),
       );
+
     } on Object {
       if (!ref.mounted) return;
       state = state.copyWith(
@@ -328,16 +344,20 @@ class GameController extends _$GameController {
       return;
     }
     final queued = {...state.queued};
+
     if (!queued.remove(coordinate)) {
       if (queued.length == maxFlipBatch) {
         state = state.copyWith(
           cursor: coordinate,
           activity: const GameActivity(GameNotice.batchFull),
         );
+
         return;
       }
+
       queued.add(coordinate);
     }
+
     state = state.copyWith(
       queued: queued,
       cursor: coordinate,
@@ -371,13 +391,16 @@ class GameController extends _$GameController {
   Future<void> commitMoves() async {
     if (state.queued.isEmpty || state.isBusy || !state.canTransact) return;
     final coordinates = state.queued.toList()..sort();
+
     if (state.snapshot.isDemo) {
       _commitLocally(
         coordinates,
         colour: state.isColourRoundLive ? state.selectedColour : null,
       );
+
       return;
     }
+
     state = state.copyWith(isBusy: true);
     try {
       final transactionSignature = await _repository.flipPixels(
@@ -391,6 +414,7 @@ class GameController extends _$GameController {
         transactionSignature: transactionSignature,
       );
       unawaited(refresh());
+
     } on Object {
       state = state.copyWith(
         isBusy: false,
@@ -407,6 +431,7 @@ class GameController extends _$GameController {
         !state.canTransact) {
       return;
     }
+
     if (state.snapshot.isDemo) {
       final section = state.snapshot.section.copyWith(
         lifecycle: SectionLifecycle.active,
@@ -415,8 +440,10 @@ class GameController extends _$GameController {
       state = state.copyWith(
         snapshot: state.snapshot.copyWith(section: section),
       );
+
       return;
     }
+
     state = state.copyWith(isBusy: true);
     try {
       final transactionSignature = await _repository.claimSection(
@@ -430,6 +457,7 @@ class GameController extends _$GameController {
         ),
       );
       await refresh();
+
     } on Object {
       state = state.copyWith(
         isBusy: false,
@@ -448,6 +476,7 @@ class GameController extends _$GameController {
         state.walletAddress != section.owner) {
       return;
     }
+
     if (state.snapshot.isDemo) {
       state = state.copyWith(
         snapshot: state.snapshot.copyWith(
@@ -455,14 +484,17 @@ class GameController extends _$GameController {
         ),
         activity: const GameActivity(GameNotice.listed),
       );
+
       return;
     }
+
     state = state.copyWith(isBusy: true);
     try {
       final transactionSignature = await _repository.listSection(
         state.snapshot,
         priceLamports,
       );
+
       if (!ref.mounted) return;
       state = state.copyWith(
         isBusy: false,
@@ -472,6 +504,7 @@ class GameController extends _$GameController {
         ),
       );
       await refresh();
+
     } on Object {
       if (!ref.mounted) return;
       state = state.copyWith(
@@ -489,6 +522,7 @@ class GameController extends _$GameController {
         state.walletAddress != section.owner) {
       return;
     }
+
     if (state.snapshot.isDemo) {
       state = state.copyWith(
         snapshot: state.snapshot.copyWith(
@@ -496,13 +530,16 @@ class GameController extends _$GameController {
         ),
         activity: const GameActivity(GameNotice.listingCancelled),
       );
+
       return;
     }
+
     state = state.copyWith(isBusy: true);
     try {
       final transactionSignature = await _repository.cancelSectionListing(
         state.snapshot,
       );
+
       if (!ref.mounted) return;
       state = state.copyWith(
         isBusy: false,
@@ -512,6 +549,7 @@ class GameController extends _$GameController {
         ),
       );
       await refresh();
+
     } on Object {
       if (!ref.mounted) return;
       state = state.copyWith(
@@ -529,6 +567,7 @@ class GameController extends _$GameController {
         state.walletAddress == section.owner) {
       return;
     }
+
     if (state.snapshot.isDemo) {
       state = state.copyWith(
         snapshot: state.snapshot.copyWith(
@@ -539,13 +578,16 @@ class GameController extends _$GameController {
         ),
         activity: const GameActivity(GameNotice.purchased),
       );
+
       return;
     }
+
     state = state.copyWith(isBusy: true);
     try {
       final transactionSignature = await _repository.purchaseSection(
         state.snapshot,
       );
+
       if (!ref.mounted) return;
       state = state.copyWith(
         isBusy: false,
@@ -555,6 +597,7 @@ class GameController extends _$GameController {
         ),
       );
       await refresh();
+
     } on Object {
       if (!ref.mounted) return;
       state = state.copyWith(
@@ -574,17 +617,21 @@ class GameController extends _$GameController {
         state.walletAddress != section.owner) {
       return;
     }
+
     if (state.snapshot.isDemo) {
       state = state.copyWith(
         activity: const GameActivity(GameNotice.ownerFeesWithdrawn),
       );
+
       return;
     }
+
     state = state.copyWith(isBusy: true);
     try {
       final transactionSignature = await _repository.withdrawSectionOwnerFees(
         state.snapshot,
       );
+
       if (!ref.mounted) return;
       state = state.copyWith(
         isBusy: false,
@@ -594,6 +641,7 @@ class GameController extends _$GameController {
         ),
       );
       await refresh();
+
     } on Object {
       if (!ref.mounted) return;
       state = state.copyWith(
@@ -614,6 +662,7 @@ class GameController extends _$GameController {
         (section.policy?.isLiveAt(now) ?? false)) {
       return;
     }
+
     if (state.snapshot.isDemo) {
       final currentVersion = section.policy?.version ?? BigInt.zero;
       final snapshot = SectionPolicySnapshot(
@@ -633,14 +682,17 @@ class GameController extends _$GameController {
         ),
         activity: const GameActivity(GameNotice.policyConfigured),
       );
+
       return;
     }
+
     state = state.copyWith(isBusy: true);
     try {
       final transactionSignature = await _repository.configureSectionPolicy(
         state.snapshot,
         policy,
       );
+
       if (!ref.mounted) return;
       state = state.copyWith(
         isBusy: false,
@@ -650,6 +702,7 @@ class GameController extends _$GameController {
         ),
       );
       await refresh();
+
     } on Object {
       if (!ref.mounted) return;
       state = state.copyWith(
@@ -668,6 +721,7 @@ class GameController extends _$GameController {
         !state.canTransact) {
       return;
     }
+
     if (!state.snapshot.isDemo) {
       state = state.copyWith(isBusy: true);
       try {
@@ -680,14 +734,17 @@ class GameController extends _$GameController {
             transactionSignature: transactionSignature,
           ),
         );
+
       } on Object {
         state = state.copyWith(
           isBusy: false,
           activity: const GameActivity(GameNotice.connectionIssue),
         );
+
         return;
       }
     }
+
     final updatedSection = state.snapshot.section.copyWith(
       lifecycle: SectionLifecycle.sealed,
     );
@@ -699,6 +756,7 @@ class GameController extends _$GameController {
           ? const GameActivity(GameNotice.sealed)
           : state.activity,
     );
+
     if (!state.snapshot.isDemo) unawaited(refresh());
   }
 
@@ -732,6 +790,7 @@ class GameController extends _$GameController {
           assetId: result.assetId,
         ),
       );
+
       if (!state.snapshot.isDemo) unawaited(refresh());
     } on Object {
       state = state.copyWith(
@@ -756,6 +815,7 @@ class GameController extends _$GameController {
       activity: GameActivity(GameNotice.sectionChanged, sectionIndex: index),
       loadStatus: demoMode ? GameLoadStatus.demo : GameLoadStatus.loading,
     );
+
     if (!demoMode) await refresh();
   }
 

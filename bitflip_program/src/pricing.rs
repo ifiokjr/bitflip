@@ -337,11 +337,13 @@ impl PriceControllerState {
 		if quote.window_id != limits.expected_window_id {
 			return Err(PriceControllerError::StaleWindow);
 		}
+
 		if quote.unit_price_lamports > limits.maximum_unit_price_lamports
 			|| quote.total_price_lamports > limits.maximum_total_price_lamports
 		{
 			return Err(PriceControllerError::PriceSlippage);
 		}
+
 		if quote.reward_tokens < limits.minimum_reward_tokens {
 			return Err(PriceControllerError::InsufficientReward);
 		}
@@ -366,6 +368,7 @@ impl PriceControllerState {
 		now: u64,
 	) -> Result<(), PriceControllerError> {
 		config.validate()?;
+
 		if now < self.launched_at || now < self.last_updated_at {
 			return Err(PriceControllerError::InvalidTimestamp);
 		}
@@ -391,6 +394,7 @@ impl PriceControllerState {
 			self.accrue_reward_pool(config, completed_shortfall)?;
 
 			let missed_empty_windows = completed_windows - 1;
+
 			if missed_empty_windows > 0 {
 				self.controller_price_lamports = decay_empty_windows(
 					config,
@@ -419,12 +423,14 @@ impl PriceControllerState {
 				.checked_add(completed_windows)
 				.ok_or(PriceControllerError::ArithmeticOverflow)?;
 			self.window_rewarded_tokens = 0;
+
 			if self.window_started_at >= emission_ends_at {
 				let remaining = self.remaining_base_tokens(config)?;
 				self.accrue_reward_pool(config, remaining)?;
 			}
 
 			let remaining = self.remaining_base_tokens(config)?;
+
 			if self.window_started_at < emission_ends_at && remaining > 0 {
 				self.window_target_tokens = min(config.target_tokens_per_window, remaining);
 				self.posted_price_lamports = max(
@@ -500,6 +506,7 @@ pub fn inventory_floor(
 	emitted_tokens: u64,
 ) -> Result<u64, PriceControllerError> {
 	config.validate()?;
+
 	if emitted_tokens > config.allocation_tokens {
 		return Err(PriceControllerError::ArithmeticOverflow);
 	}
@@ -531,6 +538,7 @@ pub fn adjusted_controller_price(
 	target_tokens: u64,
 ) -> Result<u64, PriceControllerError> {
 	config.validate()?;
+
 	if target_tokens == 0 {
 		return Ok(config.minimum_price_lamports);
 	}
@@ -680,12 +688,14 @@ mod tests {
 		state
 			.execute(&config, 1_001, 16, exact_limits(first))
 			.expect("first batch");
+
 		for _ in 1..128 {
 			let quote = state.preview(&config, 1_299, 16).expect("next quote");
 			state
 				.execute(&config, 1_299, 16, exact_limits(quote))
 				.expect("next batch");
 		}
+
 		let exhausted = state.preview(&config, 1_299, 1).expect("exhausted quote");
 
 		assert_eq!(first.unit_price_lamports, DEFAULT_START_PRICE_LAMPORTS);
@@ -751,6 +761,7 @@ mod tests {
 				.execute(&config, 0, 16, exact_limits(quote))
 				.expect("initial execution");
 		}
+
 		state.settle(&config, 300).expect("settle partial window");
 		let exhausted = state.preview(&config, 300, 16).expect("pooled quote");
 
@@ -773,6 +784,7 @@ mod tests {
 				.execute(&config, 1, 16, exact_limits(quote))
 				.expect("half-target execution");
 		}
+
 		state.settle(&config, 300).expect("settle first window");
 
 		assert_eq!(state.emitted_tokens, 512);
@@ -966,6 +978,7 @@ mod tests {
 			for requested in &requests {
 				forward_paid += execute_exact(&mut forward, &config, 1, *requested).total_price_lamports;
 			}
+
 			for requested in requests.iter().rev() {
 				reversed_paid += execute_exact(&mut reversed, &config, 1, *requested).total_price_lamports;
 			}
@@ -1004,6 +1017,7 @@ mod tests {
 		for _ in 0..128 {
 			batched_paid += execute_exact(&mut full_batches, &config, 1, 16).total_price_lamports;
 		}
+
 		for _ in 0..2_048 {
 			sybil_paid += execute_exact(&mut split_wallets, &config, 1, 1).total_price_lamports;
 		}
@@ -1038,6 +1052,7 @@ mod tests {
 			rewards += quote.reward_tokens;
 			paid += quote.total_price_lamports;
 		}
+
 		for _ in 0..128 {
 			let quote = execute_exact(&mut state, &config, 300, 16);
 			rewards += quote.reward_tokens;
@@ -1059,9 +1074,11 @@ mod tests {
 
 		for cycle in 0..64 {
 			let busy_at = cycle * config.window_seconds * 2;
+
 			for _ in 0..128 {
 				let _ = execute_exact(&mut state, &config, busy_at, 16);
 			}
+
 			let idle_at = busy_at + config.window_seconds;
 			let _ = state
 				.preview(&config, idle_at, 1)
@@ -1215,6 +1232,7 @@ mod economics_simulation {
 		requests_by_window: &[u64],
 	) -> Result<(), PriceControllerError> {
 		let mut state = PriceControllerState::new(config, 0)?;
+
 		let mut totals = ScenarioTotals::default();
 		for (window, requested_tokens) in requests_by_window.iter().copied().enumerate() {
 			let now = u64::try_from(window)

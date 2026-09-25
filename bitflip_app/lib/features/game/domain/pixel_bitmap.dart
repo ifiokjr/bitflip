@@ -39,11 +39,13 @@ final class PixelBitmap {
     if (bytes.length != sectionByteCount) {
       throw ArgumentError.value(bytes.length, 'bytes.length', 'must be 512');
     }
+
     return PixelBitmap._(Uint8List.fromList(bytes));
   }
 
   factory PixelBitmap.demo(int seed) {
     final bitmap = PixelBitmap.empty();
+
     for (var y = 0; y < sectionSide; y++) {
       for (var x = 0; x < sectionSide; x++) {
         final wave = 31 + math.sin((x + seed * 5) * 0.19) * 9;
@@ -53,11 +55,13 @@ final class PixelBitmap {
         final isEcho = (y - echo).abs() < 0.7 && (x + seed).isEven;
         final isRing = (ring - (11 + seed % 7)).abs() < 0.65;
         final isMarker = (x + (y * 3) + (seed * 7)) % 97 == 0;
+
         if (isSignal || isEcho || isRing || isMarker) {
           bitmap._set(x, y, true);
         }
       }
     }
+
     return bitmap;
   }
 
@@ -67,20 +71,24 @@ final class PixelBitmap {
 
   int get onCount {
     var count = 0;
+
     for (final byte in _bytes) {
       count += _bitCount[byte];
     }
+
     return count;
   }
 
   bool isOn(int x, int y) {
     _validateCoordinate(x, y);
     final index = (y * sectionSide) + x;
+
     return (_bytes[index >> 3] & (1 << (index & 7))) != 0;
   }
 
   PixelBitmap toggled(Iterable<PixelCoordinate> coordinates) {
     final next = PixelBitmap.fromBytes(_bytes);
+
     for (final coordinate in coordinates) {
       next._set(
         coordinate.x,
@@ -88,6 +96,7 @@ final class PixelBitmap {
         !next.isOn(coordinate.x, coordinate.y),
       );
     }
+
     return next;
   }
 

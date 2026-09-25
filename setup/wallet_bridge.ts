@@ -63,6 +63,7 @@ function parseChain(value: string): SolanaChain {
 	if (!SOLANA_CHAINS.some((chain) => chain === value)) {
 		throw new Error(`Unsupported Solana chain: ${value}`);
 	}
+
 	return value as SolanaChain;
 }
 
@@ -76,6 +77,7 @@ function isCompatible(wallet: Wallet, chain: SolanaChain): wallet is CompatibleW
 	const connect = wallet.features[StandardConnect];
 	const signAndSend = wallet.features[SolanaSignAndSendTransaction];
 	const signMessage = wallet.features[SolanaSignMessage];
+
 	return (
 		isRecord(connect)
 		&& connect.version === "1.0.0"
@@ -95,18 +97,23 @@ function decodeBase58Address(value: string): Uint8Array | null {
 	if (value.length < 32 || value.length > 44) return null;
 
 	const bytes = [0];
+
 	for (const character of value) {
 		const alphabetIndex = base58Alphabet.indexOf(character);
+
 		if (alphabetIndex < 0) return null;
 
 		let carry = alphabetIndex;
+
 		for (let index = 0; index < bytes.length; index += 1) {
 			const byte = bytes[index];
+
 			if (byte === undefined) return null;
 			carry += byte * 58;
 			bytes[index] = carry & 0xff;
 			carry >>= 8;
 		}
+
 		while (carry > 0) {
 			bytes.push(carry & 0xff);
 			carry >>= 8;
@@ -116,12 +123,14 @@ function decodeBase58Address(value: string): Uint8Array | null {
 	for (let index = 0; index < value.length - 1 && value[index] === "1"; index += 1) {
 		bytes.push(0);
 	}
+
 	if (bytes.length !== 32) return null;
 	return Uint8Array.from(bytes.reverse());
 }
 
 function accountSupports(account: WalletAccount, chain: SolanaChain): boolean {
 	const decodedAddress = decodeBase58Address(account.address);
+
 	return (
 		account.publicKey.byteLength === 32
 		&& decodedAddress !== null
@@ -141,10 +150,12 @@ function compatibleWallets(chain: SolanaChain): readonly CompatibleWallet[] {
 
 function walletId(wallet: Wallet): string {
 	const existing = walletIds.get(wallet);
+
 	if (existing !== undefined) return existing;
 	const id = `wallet-${nextWalletId}`;
 	nextWalletId += 1;
 	walletIds.set(wallet, id);
+
 	return id;
 }
 
@@ -153,11 +164,13 @@ function listWallets(chainValue: string): string {
 	const options: readonly WalletOption[] = compatibleWallets(chain).map(
 		(wallet) => ({ id: walletId(wallet), name: safeWalletName(wallet.name) }),
 	);
+
 	return JSON.stringify(options);
 }
 
 function safeWalletName(value: string): string {
 	const cleaned = value.replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, 80);
+
 	return cleaned.length === 0 ? "Solana wallet" : cleaned;
 }
 
@@ -170,6 +183,7 @@ function requireActiveSession(): ActiveSession {
 	) {
 		throw new Error("Connect a compatible wallet before signing.");
 	}
+
 	return session;
 }
 
@@ -178,6 +192,7 @@ function watchActiveAccount(session: ActiveSession): void {
 	unsubscribeFromWallet = null;
 
 	const feature = session.wallet.features[StandardEvents];
+
 	if (!isRecord(feature) || typeof feature.on !== "function") return;
 	const events = feature as StandardEventsFeature[typeof StandardEvents];
 	unsubscribeFromWallet = events.on(
@@ -193,8 +208,10 @@ function watchActiveAccount(session: ActiveSession): void {
 				activeSession = null;
 				unsubscribeFromWallet?.();
 				unsubscribeFromWallet = null;
+
 				return;
 			}
+
 			session.account = current;
 		},
 	);
@@ -205,12 +222,14 @@ async function connect(walletIdValue: string, chainValue: string): Promise<strin
 	const wallet = compatibleWallets(chain).find(
 		(candidate) => walletId(candidate) === walletIdValue,
 	);
+
 	if (wallet === undefined) {
 		throw new Error("The selected wallet is no longer available.");
 	}
 
 	const output = await wallet.features[StandardConnect].connect();
 	const account = output.accounts.find((candidate) => accountSupports(candidate, chain));
+
 	if (account === undefined) {
 		throw new Error(
 			"The wallet did not authorize an account with the required Solana features.",
@@ -220,6 +239,7 @@ async function connect(walletIdValue: string, chainValue: string): Promise<strin
 	const session: ActiveSession = { wallet, account, chain };
 	activeSession = session;
 	watchActiveAccount(session);
+
 	return account.address;
 }
 
@@ -238,37 +258,47 @@ function decodeBase64(value: string): Uint8Array {
 		throw new Error("The transaction is not valid base64.");
 	}
 	const decoded = atob(value);
+
 	if (decoded.length === 0 || decoded.length > maxWireTransactionBytes) {
 		throw new Error("The serialized transaction has an invalid size.");
 	}
+
 	return Uint8Array.from(decoded, (character) => character.charCodeAt(0));
 }
 
 function encodeBase64(value: Uint8Array): string {
 	let binary = "";
+
 	for (const byte of value) binary += String.fromCharCode(byte);
+
 	return btoa(binary);
 }
 
 function encodeBase58(value: Uint8Array): string {
 	const digits = [0];
+
 	for (const byte of value) {
 		let carry = byte;
+
 		for (let index = 0; index < digits.length; index += 1) {
 			const digit = digits[index];
+
 			if (digit === undefined) throw new Error("Invalid base58 encoder state.");
 			carry += digit << 8;
 			digits[index] = carry % 58;
 			carry = Math.floor(carry / 58);
 		}
+
 		while (carry > 0) {
 			digits.push(carry % 58);
 			carry = Math.floor(carry / 58);
 		}
 	}
+
 	for (let index = 0; index < value.length - 1 && value[index] === 0; index += 1) {
 		digits.push(0);
 	}
+
 	return digits
 		.reverse()
 		.map((digit) => base58Alphabet[digit])
@@ -278,9 +308,11 @@ function encodeBase58(value: Uint8Array): string {
 function constantTimeEqual(left: Uint8Array, right: Uint8Array): boolean {
 	if (left.byteLength !== right.byteLength) return false;
 	let difference = 0;
+
 	for (let index = 0; index < left.byteLength; index += 1) {
 		difference |= (left[index] ?? 0) ^ (right[index] ?? 0);
 	}
+
 	return difference === 0;
 }
 
@@ -295,18 +327,22 @@ async function signAndSend(wireTransactionBase64: string): Promise<string> {
 		transaction,
 		options: { preflightCommitment: "confirmed" },
 	});
+
 	if (outputs.length !== 1 || outputs[0]?.signature.byteLength !== ed25519SignatureBytes) {
 		throw new Error("The wallet returned an invalid transaction signature.");
 	}
+
 	return encodeBase58(outputs[0].signature);
 }
 
 async function signMessage(message: string): Promise<string> {
 	const session = requireActiveSession();
 	const messageBytes = new TextEncoder().encode(message);
+
 	if (messageBytes.length === 0 || messageBytes.length > maxSignedMessageBytes) {
 		throw new Error("The message has an invalid size.");
 	}
+
 	const outputs = await session.wallet.features[SolanaSignMessage].signMessage({
 		account: session.account,
 		message: messageBytes,
@@ -321,6 +357,7 @@ async function signMessage(message: string): Promise<string> {
 	) {
 		throw new Error("The wallet returned an invalid message signature.");
 	}
+
 	return encodeBase64(output.signature);
 }
 

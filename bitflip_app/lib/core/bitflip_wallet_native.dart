@@ -96,6 +96,7 @@ class BitflipWallet {
 
   String? get address {
     final keyPair = _keyPair;
+
     return keyPair == null
         ? null
         : getAddressFromPublicKey(keyPair.publicKey).value;
@@ -110,7 +111,9 @@ class BitflipWallet {
     if (!_isMobile) {
       throw UnsupportedError('Embedded signing is only available on mobile.');
     }
+
     await initialize();
+
     return address!;
   }
 
@@ -120,6 +123,7 @@ class BitflipWallet {
       Uint8List.fromList(base64Decode(wireTransaction)),
     );
     final signed = await signTransaction([keyPair], transaction);
+
     return _transactionSender(getBase64EncodedWireTransaction(signed));
   }
 
@@ -129,6 +133,7 @@ class BitflipWallet {
       keyPair.privateKey,
       Uint8List.fromList(utf8.encode(message)),
     );
+
     return base64Encode(signature.value);
   }
 
@@ -138,18 +143,23 @@ class BitflipWallet {
         'Mobile Wallet Adapter funding is only available on Android.',
       );
     }
+
     if (lamports <= BigInt.zero) {
       throw ArgumentError.value(lamports, 'lamports', 'Must be positive.');
     }
+
     await initialize();
+
     return _mobileWalletFunder(Address(address!), lamports);
   }
 
   Future<void> _loadOrCreateKeyPair() async {
     try {
       final stored = await _storage.readPrivateKey();
+
       if (stored != null) {
         _keyPair = createKeyPairFromPrivateKeyBytes(_decodePrivateKey(stored));
+
         return;
       }
 
@@ -157,11 +167,13 @@ class BitflipWallet {
       final encoded = 'v1:${base64Encode(generated.privateKey)}';
       try {
         await _storage.writePrivateKey(encoded);
+
       } on Object {
         generated.dispose();
         rethrow;
       }
       _keyPair = generated;
+
     } on Object {
       _initialization = null;
       rethrow;
@@ -172,7 +184,9 @@ class BitflipWallet {
     if (!_isMobile) {
       throw UnsupportedError('Embedded signing is only available on mobile.');
     }
+
     await initialize();
+
     return _keyPair!;
   }
 
@@ -200,6 +214,7 @@ class BitflipWallet {
       if (authorization.accounts.isEmpty) {
         throw StateError('The funding wallet did not authorize an account.');
       }
+
       final source = Address(
         _decodeMobileWalletAddress(authorization.accounts.first.address),
       );
@@ -228,6 +243,7 @@ class BitflipWallet {
       if (signatures.length != 1) {
         throw StateError('The funding wallet returned an invalid response.');
       }
+
       final transactionSignature = decodeMobileWalletSignature(
         signatures.single,
       );
@@ -240,6 +256,7 @@ class BitflipWallet {
           pollInterval: Duration(milliseconds: 400),
         ),
       );
+
       return transactionSignature.value;
     });
   }
@@ -249,32 +266,40 @@ Uint8List _decodePrivateKey(String value) {
   if (!value.startsWith('v1:')) {
     throw const FormatException('Unsupported embedded wallet key version.');
   }
+
   final bytes = base64Decode(value.substring(3));
+
   if (bytes.length != 32) {
     throw const FormatException('Invalid embedded wallet private key.');
   }
+
   return Uint8List.fromList(bytes);
 }
 
 String _decodeMobileWalletAddress(String encodedAddress) {
   final bytes = base64Decode(encodedAddress);
+
   if (bytes.length != 32) {
     throw StateError('The mobile wallet returned an invalid Solana address.');
   }
+
   return getBase58Decoder().decode(Uint8List.fromList(bytes));
 }
 
 Signature decodeMobileWalletSignature(String encodedSignature) {
   final bytes = base64Decode(encodedSignature);
+
   if (bytes.length != 64) {
     throw StateError(
       'The mobile wallet returned an invalid transaction signature.',
     );
   }
+
   return signature(getBase58Decoder().decode(Uint8List.fromList(bytes)));
 }
 
 bool _isLoopback(String value) {
   final host = Uri.tryParse(value)?.host.toLowerCase();
+
   return host == '127.0.0.1' || host == 'localhost' || host == '::1';
 }

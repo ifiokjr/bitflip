@@ -37,6 +37,7 @@ final class ColourCanvasBuffer {
         pixelRevisions.length != colourRevisionByteCount) {
       throw const FormatException('Stored colour canvas has an invalid size.');
     }
+
     return ColourCanvasBuffer._(
       policyVersion: policyVersion,
       highestRevision: highestRevision,
@@ -58,8 +59,10 @@ final class ColourCanvasBuffer {
       colours.fillRange(0, colours.length, noPixelColour);
       pixelRevisions.fillRange(0, pixelRevisions.length, 0);
     }
+
     final revisions = ByteData.sublistView(pixelRevisions);
     var changed = false;
+
     for (final coordinate in event.coordinates) {
       final pixel = coordinate.linearIndex;
       final revisionOffset = pixel * 8;
@@ -71,7 +74,9 @@ final class ColourCanvasBuffer {
       colours[pixel] = event.colour;
       changed = true;
     }
+
     if (event.revision > highestRevision) highestRevision = event.revision;
+
     return changed;
   }
 }

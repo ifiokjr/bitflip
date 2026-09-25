@@ -32,11 +32,14 @@ class BitflipWallet {
 
   List<BitflipWalletOption>? get availableWallets {
     final bridge = _bitflipWalletBridge;
+
     if (bridge == null) return const [];
     final decoded = jsonDecode(bridge.listWallets(walletChain.toJS).toDart);
+
     if (decoded is! List<Object?>) {
       throw StateError('The wallet bridge returned invalid wallet options.');
     }
+
     return List.unmodifiable(decoded.map(_decodeWalletOption));
   }
 
@@ -53,6 +56,7 @@ class BitflipWallet {
         !options.any((option) => option.id == selectedId)) {
       throw StateError('Choose an available Solana wallet before connecting.');
     }
+
     return (await bridge.connect(selectedId.toJS, walletChain.toJS).toDart)
         .toDart;
   }
@@ -75,20 +79,25 @@ BitflipWalletOption _decodeWalletOption(Object? value) {
   if (value is! Map<String, Object?>) {
     throw StateError('The wallet bridge returned an invalid wallet option.');
   }
+
   final id = value['id'];
   final name = value['name'];
+
   if (id is! String || id.isEmpty || name is! String || name.isEmpty) {
     throw StateError('The wallet bridge returned an invalid wallet option.');
   }
+
   return BitflipWalletOption(id: id, name: name);
 }
 
 _WalletBridge _requireBridge() {
   final bridge = _bitflipWalletBridge;
+
   if (bridge == null) {
     throw UnsupportedError(
       'Solana Wallet Standard is unavailable in this browser.',
     );
   }
+
   return bridge;
 }

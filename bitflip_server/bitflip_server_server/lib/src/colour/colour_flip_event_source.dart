@@ -52,6 +52,7 @@ final class SolanaColourFlipEventSource
     if (limit < 1 || limit > 1000) {
       throw RangeError.range(limit, 1, 1000, 'limit');
     }
+
     final response = await rpc
         .request<List<Object?>>(
           'getSignaturesForAddress',
@@ -70,6 +71,7 @@ final class SolanaColourFlipEventSource
           ),
         )
         .send();
+
     return ColourProgramSignaturePage(
       List.unmodifiable(response.map(_parseProgramSignature)),
     );
@@ -87,17 +89,23 @@ final class SolanaColourFlipEventSource
           ),
         )
         .send();
+
     if (transaction == null) {
       throw StateError('The confirmed colour transaction is not available.');
     }
+
     final meta = transaction['meta'];
+
     if (meta is! Map || meta['err'] != null) {
       throw StateError('The colour transaction did not succeed.');
     }
+
     final rawLogs = meta['logMessages'];
+
     if (rawLogs is! List) {
       throw StateError('The colour transaction has no program logs.');
     }
+
     return colourEventsFromProgramLogs(
       rawLogs.whereType<String>(),
       programAddress: bitflipProgramProgramAddress.value,
@@ -109,10 +117,13 @@ ColourProgramSignature _parseProgramSignature(Object? value) {
   if (value is! Map) {
     throw const FormatException('Invalid Solana signature history response.');
   }
+
   final signature = value['signature'];
+
   if (signature is! String) {
     throw const FormatException('Invalid Solana signature history response.');
   }
+
   return ColourProgramSignature(
     signature: validateTransactionSignature(signature),
     succeeded: value['err'] == null,
@@ -121,18 +132,23 @@ ColourProgramSignature _parseProgramSignature(Object? value) {
 
 String validateTransactionSignature(String value) {
   final normalized = value.trim();
+
   if (normalized.length < 80 || normalized.length > 90) {
     throw const FormatException('Invalid Solana transaction signature.');
   }
+
   try {
     if (base58.decoder.convert(normalized).length != 64) {
       throw const FormatException('Invalid Solana transaction signature.');
     }
+
   } on FormatException {
     rethrow;
+
   } on Object {
     throw const FormatException('Invalid Solana transaction signature.');
   }
+
   return normalized;
 }
 

@@ -99,9 +99,11 @@ final class SectionPolicyDraft {
     required List<int> rulesDigest,
   }) : rulesDigest = List.unmodifiable(rulesDigest) {
     final duration = endsAtUnixSeconds - startsAtUnixSeconds;
+
     if (duration <= BigInt.zero || duration > BigInt.from(30 * 24 * 60 * 60)) {
       throw ArgumentError.value(duration, 'duration');
     }
+
     if (this.rulesDigest.length != 32) {
       throw ArgumentError.value(this.rulesDigest.length, 'rulesDigest.length');
     }
@@ -114,11 +116,13 @@ final class SectionPolicyDraft {
   }) {
     final clock = now ?? DateTime.now();
     final startsAt = BigInt.from(clock.millisecondsSinceEpoch ~/ 1000);
+
     final rulesId = switch (mode) {
       SectionPolicyMode.openCanvas => 'bitflip:section-rules:v1:open-canvas',
       SectionPolicyMode.colourCanvas =>
         'bitflip:section-rules:v1:eight-colour-canvas',
     };
+
     return SectionPolicyDraft(
       mode: mode,
       startsAtUnixSeconds: startsAt,

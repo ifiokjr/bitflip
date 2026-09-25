@@ -44,6 +44,7 @@ void main() {
     final release = Completer<void>();
     final first = gate.run(() async {
       await release.future;
+
       return 1;
     });
     await Future<void>.delayed(Duration.zero);

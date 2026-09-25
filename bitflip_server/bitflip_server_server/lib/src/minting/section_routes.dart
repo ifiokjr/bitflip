@@ -27,6 +27,7 @@ final class SectionMetadataRoute extends Route {
       final section = await _sections.get(gameIndex, sectionIndex);
       final paddedSection = sectionIndex.toString().padLeft(3, '0');
       final imageUri = '$_publicBaseUrl/art/$gameIndex/$sectionIndex.svg';
+
       return Response.ok(
         body: Body.fromString(
           jsonEncode({
@@ -57,10 +58,13 @@ final class SectionMetadataRoute extends Route {
           mimeType: MimeType.json,
         ),
       );
+
     } on FormatException {
       return Response.badRequest();
+
     } on RangeError {
       return Response.notFound();
+
     } on StateError {
       return Response.notFound();
     }
@@ -82,13 +86,17 @@ final class SectionArtRoute extends Route {
       final gameIndex = request.pathParameters.get(_gameParam);
       final sectionIndex = request.pathParameters.get(_sectionParam);
       final section = await _sections.get(gameIndex, sectionIndex);
+
       return Response.ok(
         body: Body.fromString(_renderSvg(section), mimeType: _svgMimeType),
       );
+
     } on FormatException {
       return Response.badRequest();
+
     } on RangeError {
       return Response.notFound();
+
     } on StateError {
       return Response.notFound();
     }
@@ -105,16 +113,21 @@ final class _SealedSectionCache {
     _validateIndices(gameIndex, sectionIndex);
     final key = '$gameIndex:$sectionIndex';
     final cached = _cache[key];
+
     if (cached != null) return cached;
 
     final section = await _mintService.loadSection(gameIndex, sectionIndex);
+
     if (!section.isSealed && !section.isMinted) {
       throw StateError('Only sealed sections have permanent artwork.');
     }
+
     if (section.bitmap.length != 512) {
       throw StateError('The section bitmap has an invalid length.');
     }
+
     _cache[key] = section;
+
     return section;
   }
 }
@@ -123,15 +136,18 @@ String _renderSvg(MintableSection section) {
   final label =
       'Bitflip ${section.gameIndex}:${section.sectionIndex.toString().padLeft(3, '0')}';
   final pixels = StringBuffer();
+
   for (var y = 0; y < 64; y++) {
     for (var x = 0; x < 64; x++) {
       final offset = y * 64 + x;
       final enabled = section.bitmap[offset >> 3] & (1 << (offset & 7)) != 0;
+
       if (enabled) {
         pixels.write('<rect x="$x" y="$y" width="1" height="1"/>');
       }
     }
   }
+
   return '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="1024" height="1024" shape-rendering="crispEdges" role="img" aria-label="$label">
 <title>$label</title>
 <rect width="64" height="64" fill="#050b0a"/>
@@ -142,13 +158,16 @@ String _renderSvg(MintableSection section) {
 
 int _countEnabledPixels(List<int> bitmap) {
   var count = 0;
+
   for (final byte in bitmap) {
     var value = byte;
+
     while (value != 0) {
       value &= value - 1;
       count++;
     }
   }
+
   return count;
 }
 
@@ -161,6 +180,7 @@ void _validateIndices(int gameIndex, int sectionIndex) {
       'gameIndex',
     );
   }
+
   if (sectionIndex < 0 || sectionIndex > bitflipMaximumSectionIndex) {
     throw RangeError.range(
       sectionIndex,
@@ -179,5 +199,6 @@ int _parseIndex(String value, String extension) {
   if (!value.endsWith(extension)) {
     throw const FormatException('Invalid section asset path.');
   }
+
   return int.parse(value.substring(0, value.length - extension.length));
 }

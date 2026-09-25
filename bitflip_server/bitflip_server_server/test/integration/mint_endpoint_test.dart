@@ -241,6 +241,7 @@ final class _FakeMintService implements BitflipMintService {
   @override
   Future<MintSubmission> mint(MintableSection section) async {
     mintCalls++;
+
     return const MintSubmission(
       assetId: _address,
       merkleTree: _address,
@@ -260,5 +261,6 @@ String _signature(ed25519.KeyPair keyPair, String message) {
     keyPair.privateKey,
     Uint8List.fromList(utf8.encode(message)),
   );
+
   return base64Encode(signature);
 }

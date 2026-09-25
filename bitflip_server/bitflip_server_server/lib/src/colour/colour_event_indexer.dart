@@ -23,6 +23,7 @@ final class ColourIndexerConfiguration {
     required bool requireEnabled,
   }) {
     final enabledValue = environment['BITFLIP_COLOUR_INDEXER_ENABLED']?.trim();
+
     final enabled = switch (enabledValue) {
       null || '' => false,
       'true' => true,
@@ -31,28 +32,34 @@ final class ColourIndexerConfiguration {
         'BITFLIP_COLOUR_INDEXER_ENABLED must be true or false.',
       ),
     };
+
     if (requireEnabled && !enabled) {
       throw StateError(
         'BITFLIP_COLOUR_INDEXER_ENABLED must be true for release deployments.',
       );
     }
+
     final cluster = environment['BITFLIP_CLUSTER']?.trim();
     final startSignature = environment['BITFLIP_COLOUR_INDEXER_START_SIGNATURE']
         ?.trim();
+
     if (enabled && (cluster == null || cluster.isEmpty)) {
       throw StateError(
         'BITFLIP_CLUSTER is required when the colour indexer is enabled.',
       );
     }
+
     if (enabled && (startSignature == null || startSignature.isEmpty)) {
       throw StateError(
         'BITFLIP_COLOUR_INDEXER_START_SIGNATURE is required when the colour '
         'indexer is enabled.',
       );
     }
+
     if (startSignature != null && startSignature.isNotEmpty) {
       validateTransactionSignature(startSignature);
     }
+
     return ColourIndexerConfiguration(
       enabled: enabled,
       cluster: cluster ?? 'development',
@@ -125,7 +132,9 @@ final class ColourEventIndexer {
     if (!configuration.enabled) {
       return const ColourIndexerBatchResult.disabled();
     }
+
     final claim = await _claim(session);
+
     if (claim == null) return const ColourIndexerBatchResult.leased();
 
     try {
@@ -152,6 +161,7 @@ final class ColourEventIndexer {
         catchUpHeadSignature: completesSweep ? null : batchHead,
         beforeSignature: completesSweep ? null : page.oldestSignature,
       );
+
       return ColourIndexerBatchResult.completed(
         signaturesScanned: page.entries.length,
         successfulTransactions: page.entries
@@ -160,6 +170,7 @@ final class ColourEventIndexer {
         eventsApplied: events.length,
         sweepCompleted: completesSweep,
       );
+
     } on Object catch (error, stackTrace) {
       await _releaseAfterFailure(session, claim);
       Error.throwWithStackTrace(error, stackTrace);
@@ -189,10 +200,12 @@ final class ColourEventIndexer {
                   .timeout(transactionDeadline),
             ),
       );
+
       for (final batch in batches) {
         events.addAll(batch);
       }
     }
+
     return events;
   }
 
@@ -248,6 +261,7 @@ final class ColourEventIndexer {
       );
       claim = _ColourIndexerClaim(stored, token);
     });
+
     return claim;
   }
 
@@ -271,6 +285,7 @@ final class ColourEventIndexer {
       if (cursor?.leaseToken != claim.token) {
         throw StateError('The colour indexer lease expired during a batch.');
       }
+
       await ColourIndexerCursor.db.updateRow(
         session,
         cursor!.copyWith(
@@ -312,6 +327,7 @@ final class ColourEventIndexer {
           transaction: transaction,
         );
       });
+
     } on Object {
       // The durable lease expires on its own if recovery cannot reach the DB.
     }
@@ -386,6 +402,7 @@ abstract final class ColourEventIndexerRegistry {
 
 String _secureLeaseToken() {
   final random = Random.secure();
+
   return base64Url.encode(List.generate(24, (_) => random.nextInt(256)));
 }
 
@@ -400,8 +417,10 @@ int _environmentInteger(
   final parsed = value == null || value.isEmpty
       ? defaultValue
       : int.tryParse(value);
+
   if (parsed == null || parsed < minimum || parsed > maximum) {
     throw StateError('$name must be between $minimum and $maximum.');
   }
+
   return parsed;
 }

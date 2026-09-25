@@ -22,6 +22,7 @@ final class ColourIndexerFutureCall extends FutureCall {
               .inMilliseconds,
         },
       );
+
     } on Object catch (error, stackTrace) {
       session.log(
         'Bitflip colour indexer batch failed.',

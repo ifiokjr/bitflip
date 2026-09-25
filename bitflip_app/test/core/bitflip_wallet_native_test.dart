@@ -65,6 +65,7 @@ void main() {
           submitted = getTransactionDecoder().decode(
             Uint8List.fromList(base64Decode(wireTransaction)),
           );
+
           return 'submitted-signature';
         },
       );
@@ -98,6 +99,7 @@ void main() {
         mobileWalletFunder: (target, lamports) async {
           destination = target;
           amount = lamports;
+
           return 'fund-signature';
         },
       );
