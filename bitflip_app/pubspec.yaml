@@ -25,14 +25,14 @@ dependencies:
   intl: any
   riverpod_annotation: 4.0.7
   serverpod_client: 4.0.0-rc.2
-  solana_kit: 0.9.1
-  solana_kit_mobile_wallet_adapter: 0.5.1
-  solana_kit_mobile_wallet_adapter_protocol: 0.5.1
-  solana_kit_rpc_api: 0.9.1
-  solana_kit_rpc_spec: 0.9.1
-  solana_kit_rpc_types: 0.9.1
-  solana_kit_system: 0.7.1
-  solana_kit_token: 0.8.1
+  solana_kit: 0.10.0
+  solana_kit_mobile_wallet_adapter: 0.6.0
+  solana_kit_mobile_wallet_adapter_protocol: 0.6.0
+  solana_kit_rpc_api: 0.10.0
+  solana_kit_rpc_spec: 0.10.0
+  solana_kit_rpc_types: 0.10.0
+  solana_kit_system: 0.8.0
+  solana_kit_token: 0.9.0
   url_launcher: 6.3.2
 
 dev_dependencies:
@@ -44,7 +44,7 @@ dev_dependencies:
     sdk: flutter
   patrol: 4.9.0
   riverpod_generator: 4.0.9
-  solana_kit_surfpool: 0.3.1
+  solana_kit_surfpool: 0.4.0
 
 patrol:
   app_name: Bitflip

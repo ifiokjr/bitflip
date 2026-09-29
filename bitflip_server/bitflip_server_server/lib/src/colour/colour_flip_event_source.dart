@@ -3,7 +3,6 @@ import 'package:bitflip_server_server/src/colour/colour_flip_event.dart';
 import 'package:bs58/bs58.dart';
 import 'package:solana_kit/solana_kit.dart';
 import 'package:solana_kit_rpc_api/solana_kit_rpc_api.dart' as rpc_api;
-import 'package:solana_kit_rpc_spec/solana_kit_rpc_spec.dart';
 import 'package:solana_kit_rpc_types/solana_kit_rpc_types.dart' as rpc_types;
 
 abstract interface class ColourFlipEventSource {

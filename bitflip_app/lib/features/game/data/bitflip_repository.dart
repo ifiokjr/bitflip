@@ -10,7 +10,6 @@ import 'package:bitflip_app/features/game/domain/section_policy.dart';
 import 'package:bitflip_program/bitflip_program.dart';
 import 'package:bitflip_server_client/bitflip_server_client.dart' as serverpod;
 import 'package:solana_kit/solana_kit.dart';
-import 'package:solana_kit_rpc_spec/solana_kit_rpc_spec.dart';
 import 'package:solana_kit_token/solana_kit_token.dart';
 
 abstract interface class BitflipRepository {
