@@ -400,8 +400,7 @@ pub struct FlipPixelsInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
 	#[pina(validate(
-		min = 1,
-		max = MAX_FLIPS_PER_TRANSACTION as u8,
+		value >= 1 && value <= MAX_FLIPS_PER_TRANSACTION as u8,
 		error = BitflipError::InvalidFlipCount
 	))]
 	pub count: u8,
@@ -420,16 +419,15 @@ pub struct ColourPixelsFlippedEvent {
 	pub policy_version: u64,
 	pub revision: u64,
 	pub coordinates: [u8; 32],
-	#[pina(validate(max = BIT_GAME_COUNT - 1))]
+	#[pina(validate(value <= BIT_GAME_COUNT - 1))]
 	pub game_index: u8,
 	pub section_index: u8,
 	#[pina(validate(
-		min = 1,
-		max = MAX_FLIPS_PER_TRANSACTION as u8,
+		value >= 1 && value <= MAX_FLIPS_PER_TRANSACTION as u8,
 		error = BitflipError::InvalidFlipCount
 	))]
 	pub count: u8,
-	#[pina(validate(max = SECTION_PALETTE_COLOUR_COUNT - 1))]
+	#[pina(validate(value <= SECTION_PALETTE_COLOUR_COUNT - 1))]
 	pub colour: u8,
 }
 
@@ -453,7 +451,7 @@ pub struct RecordSectionMintInstruction {
 pub struct ListSectionInstruction {
 	pub game_index: u8,
 	pub section_index: u8,
-	#[pina(validate(min = 1, error = BitflipError::InvalidSalePrice))]
+	#[pina(validate(value >= 1, error = BitflipError::InvalidSalePrice))]
 	pub price_lamports: u64,
 }
 
