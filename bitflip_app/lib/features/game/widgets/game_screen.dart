@@ -9,7 +9,6 @@ import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
 import 'package:bitflip_app/features/game/domain/section_policy.dart';
 import 'package:bitflip_app/features/game/widgets/game_console.dart';
 import 'package:bitflip_app/features/game/widgets/pixel_canvas.dart';
-
 import 'package:bitflip_app/features/game/widgets/section_navigator.dart';
 import 'package:bitflip_app/features/wallet/widgets/wallet_sheet.dart';
 import 'package:bitflip_app/l10n/l10n.dart';
@@ -18,7 +17,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-
 import 'package:url_launcher/url_launcher.dart';
 
 class GameScreen extends HookConsumerWidget {

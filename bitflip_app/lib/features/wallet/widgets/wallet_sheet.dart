@@ -6,7 +6,6 @@ import 'package:bitflip_app/l10n/l10n.dart';
 import 'package:bitflip_app/testing/bitflip_test_keys.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import 'package:flutter_hooks/flutter_hooks.dart';
 
 Future<void> showBitflipWalletSheet(

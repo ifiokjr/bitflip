@@ -8,7 +8,6 @@ use pina_test::ProgramTest;
 use pina_test::Pubkey;
 use pina_test::Rent;
 use pina_test::Signer;
-
 use pina_test::TestError;
 use pina_test::assert_custom_error as assert_structured_custom_error;
 
@@ -25,7 +24,6 @@ use program_under_test::BitflipAccountType;
 use program_under_test::BitflipError;
 use program_under_test::BitflipEvent;
 use program_under_test::BitflipInstruction;
-
 use program_under_test::CONFIG_VERSION;
 use program_under_test::ColourPixelsFlippedEvent;
 use program_under_test::ConfigState;
@@ -34,7 +32,6 @@ use program_under_test::DEFAULT_EARLY_UNLOCK_FLIPS;
 use program_under_test::DEFAULT_FLIP_FEE_LAMPORTS;
 use program_under_test::DEFAULT_MAX_FLIP_FEE_LAMPORTS;
 use program_under_test::DEFAULT_MIN_FLIP_FEE_LAMPORTS;
-
 use program_under_test::DEFAULT_UNLOCK_INTERVAL_SECONDS;
 use program_under_test::ECONOMY_VERSION;
 use program_under_test::GAME_STATUS_LIVE;
@@ -43,7 +40,6 @@ use program_under_test::NO_FLIP_COLOUR;
 use program_under_test::SECTION_BYTES;
 use program_under_test::SECTION_MODE_COLOUR_CANVAS;
 use program_under_test::SECTION_PALETTE_COLOUR_COUNT;
-
 use program_under_test::SECTION_PALETTE_DEFAULT;
 use program_under_test::SECTION_REWARD_POLICY_NONE;
 use program_under_test::SECTION_STATUS_ACTIVE;

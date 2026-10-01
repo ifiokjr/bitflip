@@ -1237,7 +1237,6 @@ fn initialize_section_state(
 	section.policy_rules_digest.fill(0);
 	section.policy_mode = SECTION_MODE_OPEN_CANVAS;
 	section.policy_palette_id = SECTION_PALETTE_DEFAULT;
-
 	section.policy_reward_policy = SECTION_REWARD_POLICY_NONE;
 	store_section_controller_state(section, controller);
 	section.pixels.fill(0);

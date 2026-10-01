@@ -8,7 +8,6 @@ import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
 import 'package:bitflip_app/features/game/domain/pixel_colour_map.dart';
 import 'package:bitflip_app/features/game/domain/section_economy.dart';
 import 'package:bitflip_app/features/game/domain/section_policy.dart';
-
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'game_controller.g.dart';
@@ -252,7 +251,6 @@ class GameController extends _$GameController {
             ? GameLoadStatus.unavailable
             : GameLoadStatus.ready,
       );
-
     } on Object {
       if (!ref.mounted) return;
       state = state.copyWith(
