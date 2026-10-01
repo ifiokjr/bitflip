@@ -787,7 +787,6 @@ class GameController extends _$GameController {
 
       if (!state.snapshot.isDemo) unawaited(refresh());
     } on Object {
-
       state = state.copyWith(
         isBusy: false,
         activity: const GameActivity(GameNotice.connectionIssue),

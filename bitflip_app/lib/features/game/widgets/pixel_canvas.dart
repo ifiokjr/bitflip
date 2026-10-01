@@ -235,9 +235,9 @@ class PixelCanvasPainter extends CustomPainter {
       ..color = BitflipColors.cyan.withValues(alpha: 0.32);
 
     for (var y = 0; y < sectionSide; y++) {
-
       for (var x = 0; x < sectionSide; x++) {
         final coordinate = PixelCoordinate(x, y);
+
         final queuedHere = queued.contains(coordinate);
 
         if (queuedHere && activeColour != null) {
