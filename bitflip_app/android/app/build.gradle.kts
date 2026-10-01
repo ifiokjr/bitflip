@@ -17,6 +17,7 @@ val releaseSigningValues = listOf(
 val hasReleaseSigning = releaseSigningValues.all { !it.isNullOrBlank() }
 val hasPartialReleaseSigning = releaseSigningValues.any { !it.isNullOrBlank() } && !hasReleaseSigning
 val allowDebugReleaseSigning =
+
     System.getenv("BITFLIP_ALLOW_DEBUG_RELEASE_SIGNING") == "true" &&
         System.getenv("BITFLIP_ENVIRONMENT") != "production"
 
@@ -69,6 +70,7 @@ android {
 
 gradle.taskGraph.whenReady {
     val buildsRelease = allTasks.any { it.project == project && it.name.contains("Release") }
+
     if (buildsRelease && !hasReleaseSigning && !allowDebugReleaseSigning) {
         error(
             "Android release signing is required. Configure ANDROID_KEYSTORE_PATH, " +

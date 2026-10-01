@@ -398,6 +398,7 @@ Future<void> _confirmPolicy(
     SectionPolicyMode.openCanvas => context.l10n.openCanvasMode,
     SectionPolicyMode.colourCanvas => context.l10n.colourCanvasMode,
   };
+
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
@@ -416,6 +417,7 @@ Future<void> _confirmPolicy(
       ],
     ),
   );
+
   if (confirmed != true || !context.mounted) return;
   await controller.configureSectionPolicy(
     SectionPolicyDraft.startingNow(
@@ -448,6 +450,7 @@ Future<void> _confirmSeal(
       ],
     ),
   );
+
   if (confirmed ?? false) await controller.sealSection();
 }
 
@@ -463,6 +466,7 @@ Future<void> _openResult(GameViewState state) async {
     path,
     cluster == 'mainnet' ? null : {'cluster': cluster},
   );
+
   if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
     throw StateError('Could not open the Solana explorer.');
   }
@@ -473,11 +477,15 @@ Future<void> _connectWallet(
   GameController controller,
 ) async {
   final wallets = controller.availableWallets;
+
   if (wallets == null) {
     await controller.connectWallet();
+
     return;
   }
+
   if (!context.mounted) return;
+
   if (wallets.isEmpty) {
     await showDialog<void>(
       context: context,
@@ -493,8 +501,10 @@ Future<void> _connectWallet(
         ],
       ),
     );
+
     return;
   }
+
   final selected = wallets.length == 1
       ? wallets.single
       : await showModalBottomSheet<BitflipWalletOption>(
@@ -503,6 +513,7 @@ Future<void> _connectWallet(
           showDragHandle: true,
           builder: (context) => _WalletPicker(wallets: wallets),
         );
+
   if (selected == null) return;
   await controller.connectWallet(selected.id);
 }
@@ -1159,6 +1170,7 @@ class _BitflipMarkPainter extends CustomPainter {
     final cell = size.width / 5;
     final paint = Paint()..color = BitflipColors.acid;
     final alt = Paint()..color = BitflipColors.coral;
+
     for (var y = 0; y < pattern.length; y++) {
       for (var x = 0; x < 5; x++) {
         if ((pattern[y] & (1 << (4 - x))) == 0) continue;
@@ -1199,6 +1211,7 @@ class _AtmospherePainter extends CustomPainter {
     final line = Paint()
       ..color = BitflipColors.line.withValues(alpha: 0.16)
       ..strokeWidth = 1;
+
     for (var y = 0.0; y < size.height; y += 6) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), line);
     }
