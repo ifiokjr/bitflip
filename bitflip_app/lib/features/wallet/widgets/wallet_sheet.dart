@@ -6,6 +6,7 @@ import 'package:bitflip_app/l10n/l10n.dart';
 import 'package:bitflip_app/testing/bitflip_test_keys.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'package:flutter_hooks/flutter_hooks.dart';
 
 Future<void> showBitflipWalletSheet(
@@ -27,6 +28,7 @@ Future<void> showBitflipWalletSheet(
 
 BigInt? parseSolToLamports(String input) {
   final value = input.trim();
+
   if (!RegExp(r'^\d+(\.\d{1,9})?$').hasMatch(value)) return null;
   final parts = value.split('.');
   final whole = BigInt.parse(parts.first);
@@ -34,6 +36,7 @@ BigInt? parseSolToLamports(String input) {
       ? BigInt.zero
       : BigInt.parse(parts.last.padRight(9, '0'));
   final lamports = whole * BigInt.from(1000000000) + fraction;
+
   return lamports > BigInt.zero ? lamports : null;
 }
 

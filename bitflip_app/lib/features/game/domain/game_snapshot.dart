@@ -180,6 +180,7 @@ final class GameSnapshot {
         section.index > 0 &&
         (previousSectionFlipCount ?? BigInt.zero) >=
             BigInt.from(earlyUnlockFlips);
+
     return unlockedByTime || unlockedByActivity;
   }
 
@@ -220,11 +221,13 @@ String lamportsToSol(BigInt lamports) {
       .toString()
       .padLeft(9, '0')
       .replaceFirst(RegExp(r'0+$'), '');
+
   return fraction.isEmpty ? '$whole' : '$whole.$fraction';
 }
 
 BigInt? trySolToLamports(String value) {
   final match = RegExp(r'^(\d+)(?:\.(\d{0,9}))?$').firstMatch(value.trim());
+
   if (match == null) return null;
   final whole = BigInt.parse(match.group(1)!);
   final fraction = (match.group(2) ?? '').padRight(9, '0');
@@ -232,5 +235,6 @@ BigInt? trySolToLamports(String value) {
       whole * BigInt.from(1000000000) +
       (fraction.isEmpty ? BigInt.zero : BigInt.parse(fraction));
   final maximumU64 = (BigInt.one << 64) - BigInt.one;
+
   return lamports > BigInt.zero && lamports <= maximumU64 ? lamports : null;
 }

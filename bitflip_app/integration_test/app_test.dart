@@ -6,6 +6,7 @@ import 'package:bitflip_app/testing/bitflip_test_keys.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+
 import 'package:integration_test/integration_test.dart';
 
 import '../test/support/fake_bitflip_repository.dart';

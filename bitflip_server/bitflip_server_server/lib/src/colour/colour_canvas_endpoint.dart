@@ -96,6 +96,7 @@ void _validateIndices(int gameIndex, int sectionIndex) {
       'gameIndex',
     );
   }
+
   if (sectionIndex < 0 || sectionIndex > bitflipMaximumSectionIndex) {
     throw RangeError.range(
       sectionIndex,

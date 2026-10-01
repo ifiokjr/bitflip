@@ -14,6 +14,7 @@ const SECURITY_TXT_END = "=======END SECURITY.TXT V1=======\u0000";
 /// run does not fail for a missing build product.
 function releaseArtifact(): Buffer | undefined {
 	const path = process.env.PINA_SBF_ARTIFACT;
+
 	if (!path || !existsSync(path)) {
 		return undefined;
 	}

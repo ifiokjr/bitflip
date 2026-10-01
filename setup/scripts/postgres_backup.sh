@@ -21,6 +21,7 @@ pg_dump \
 	--no-owner \
 	--no-acl \
 	--file="$BITFLIP_BACKUP_OUTPUT"
+
 pg_restore --list "$BITFLIP_BACKUP_OUTPUT" >/dev/null
 
 if command -v sha256sum >/dev/null 2>&1; then

@@ -55,6 +55,7 @@ function mockWallet(
 			},
 		},
 	};
+
 	return Object.freeze(wallet);
 }
 
@@ -77,17 +78,21 @@ function isWalletOption(value: unknown): value is WalletOption {
 function bridge() {
 	const value = globalThis.bitflipWallet;
 	assert.ok(value);
+
 	return value;
 }
 
 function walletOption(walletName: string): WalletOption {
 	const rawOptions = bridge().listWallets(SOLANA_DEVNET_CHAIN);
 	const options: unknown = JSON.parse(rawOptions);
+
 	if (!Array.isArray(options)) throw new Error("Expected wallet options.");
 	const option = options.find(
 		(value: unknown) => isWalletOption(value) && value.name === walletName,
 	);
+
 	if (!isWalletOption(option)) throw new Error(`Missing wallet: ${walletName}`);
+
 	return option;
 }
 

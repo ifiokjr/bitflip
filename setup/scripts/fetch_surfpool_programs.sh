@@ -29,6 +29,7 @@ fetch() {
 
 	local actual
 	actual="$(checksum "$temporary")"
+
 	if [[ "$actual" != "$expected" ]]; then
 		rm -f "$temporary"
 		echo "Checksum mismatch for ${name}: expected ${expected}, received ${actual}." >&2

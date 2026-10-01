@@ -6,6 +6,7 @@ import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
 import 'package:bitflip_app/features/game/domain/section_economy.dart';
 import 'package:bitflip_app/features/game/domain/section_policy.dart';
 import 'package:bitflip_app/features/game/widgets/game_console.dart';
+
 import 'package:bitflip_app/l10n/generated/app_localizations.dart';
 import 'package:bitflip_app/testing/bitflip_test_keys.dart';
 import 'package:flutter/material.dart';
