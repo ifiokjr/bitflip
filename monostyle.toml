@@ -21,6 +21,8 @@ patterns = [
 	"**/*.gen.ts",
 	"**/*.min.js",
 	"**/l10n/generated/**",
+	# The pina-generated ABI layout test.
+	"bitflip_program/tests/abi_layout.rs",
 	"bitflip_app/web/wallet_bridge.js",
 	"bitflip_program/clients/dart/lib/src/generated/**",
 ]
