@@ -119,6 +119,7 @@ pub const SECTION_STATUS_SEALED: u8 = 2;
 pub const SECTION_STATUS_MINTED: u8 = 3;
 pub const SECTION_MODE_OPEN_CANVAS: u8 = 0;
 pub const SECTION_MODE_COLOUR_CANVAS: u8 = 1;
+
 pub const SECTION_PALETTE_DEFAULT: u8 = 0;
 pub const SECTION_PALETTE_COLOUR_COUNT: u8 = 8;
 pub const NO_FLIP_COLOUR: u8 = u8::MAX;
@@ -720,6 +721,7 @@ fn validate_flip_coordinates(
 	coordinates: &[u8; FLIP_COORDINATE_BYTES],
 ) -> ProgramResult {
 	let count = usize::from(count);
+
 	if count == 0 || count > MAX_FLIPS_PER_TRANSACTION {
 		return Err(BitflipError::InvalidFlipCount.into());
 	}
@@ -732,6 +734,7 @@ fn validate_flip_coordinates(
 
 		for prior in 0..index {
 			let prior_offset = prior * 2;
+
 			if coordinates[prior_offset] == x && coordinates[prior_offset + 1] == y {
 				return Err(BitflipError::DuplicateCoordinate.into());
 			}
@@ -761,6 +764,7 @@ fn validate_section_policy(
 	let inactive_reward_terms = reward_policy == SECTION_REWARD_POLICY_NONE
 		&& entry_price_tokens == 0
 		&& reward_per_action_tokens == 0;
+
 	if !mode_is_allowed
 		|| palette_id != SECTION_PALETTE_DEFAULT
 		|| starts_at < now.saturating_sub(SECTION_POLICY_START_GRACE_SECONDS)
@@ -796,6 +800,7 @@ fn validate_flip_colour(section: &SectionStateZc, colour: u8, now: i64) -> Progr
 	} else {
 		colour == NO_FLIP_COLOUR
 	};
+
 	if !colour_is_valid {
 		return Err(BitflipError::InvalidFlipColour.into());
 	}
@@ -817,12 +822,15 @@ fn section_flip_state(
 	now: i64,
 ) -> Result<SectionFlipState, ProgramError> {
 	let section = section_account.as_account::<SectionState>(&ID)?;
+
 	if section.status != SECTION_STATUS_ACTIVE {
 		return Err(BitflipError::SectionNotActive.into());
 	}
+
 	if section.bit_vault == ZERO_ADDRESS {
 		return Err(BitflipError::CustodyNotConfigured.into());
 	}
+
 	assert_section_policy_version(&section, args.expected_policy_version.get())?;
 	validate_flip_colour(&section, args.colour, now)?;
 
@@ -1027,6 +1035,7 @@ fn live_game_price_config(
 	game_account: &AccountView,
 ) -> Result<(i64, u16, pricing::PriceControllerConfig), ProgramError> {
 	let game = game_account.as_account::<GameState>(&ID)?;
+
 	if game.status != GAME_STATUS_LIVE && game.status != GAME_STATUS_CLAIMS_COMPLETE {
 		return Err(BitflipError::GameNotLive.into());
 	}
@@ -1040,6 +1049,7 @@ fn live_game_price_config(
 
 fn configured_bit_mint(config_account: &AccountView) -> Result<Address, ProgramError> {
 	let bit_mint = config_account.as_account::<ConfigState>(&ID)?.bit_mint;
+
 	if bit_mint == ZERO_ADDRESS {
 		return Err(BitflipError::CustodyNotConfigured.into());
 	}
@@ -1080,6 +1090,7 @@ fn store_section_controller_state(
 		.set(state.window_rewarded_tokens);
 	section.emitted_tokens.set(state.emitted_tokens);
 	section.reward_pool_tokens.set(state.reward_pool_tokens);
+
 	section
 		.controller_price_lamports
 		.set(state.controller_price_lamports);
@@ -1097,6 +1108,7 @@ fn store_paid_flip(
 	controller: pricing::PriceControllerState,
 ) -> Result<u64, ProgramError> {
 	let mut on_pixels = section.on_pixels.get();
+
 	for index in 0..usize::from(count) {
 		let offset = index * 2;
 		let turned_on = toggle_pixel(
@@ -1114,6 +1126,7 @@ fn store_paid_flip(
 				.ok_or(ProgramError::ArithmeticOverflow)?
 		};
 	}
+
 	section.on_pixels.set(on_pixels);
 	section.flip_count.set(
 		section
@@ -1164,6 +1177,7 @@ fn initialize_game_state(
 	game.next_section.set(1);
 	game.minted_sections.set(0);
 	game.flip_fee_lamports.set(flip_fee_lamports);
+
 	game.total_flips.set(0);
 	game.section_allocation_tokens
 		.set(price_config.allocation_tokens);
@@ -1178,6 +1192,7 @@ fn initialize_game_state(
 		.set(price_config.minimum_price_lamports);
 	game.maximum_price_lamports
 		.set(price_config.maximum_price_lamports);
+
 	game.start_floor_price_lamports
 		.set(price_config.start_floor_price_lamports);
 	game.end_floor_price_lamports
@@ -1204,6 +1219,7 @@ fn initialize_section_state(
 	section.section_index = section_index;
 	section.status = SECTION_STATUS_ACTIVE;
 	section.bump = bump;
+
 	section.on_pixels.set(0);
 	section.leaf_index.set(0);
 	section.flip_count.set(0);
@@ -1212,6 +1228,7 @@ fn initialize_section_state(
 	section.sale_price_lamports.set(0);
 	section.protocol_fee_lamports.set(0);
 	section.owner_fee_lamports.set(0);
+
 	section.policy_version.set(0);
 	section.policy_starts_at.set(0);
 	section.policy_ends_at.set(0);
@@ -1220,6 +1237,7 @@ fn initialize_section_state(
 	section.policy_rules_digest.fill(0);
 	section.policy_mode = SECTION_MODE_OPEN_CANVAS;
 	section.policy_palette_id = SECTION_PALETTE_DEFAULT;
+
 	section.policy_reward_policy = SECTION_REWARD_POLICY_NONE;
 	store_section_controller_state(section, controller);
 	section.pixels.fill(0);
@@ -1234,9 +1252,11 @@ fn transfer_lamports(
 	if lamports == 0 {
 		return Ok(());
 	}
+
 	if from.lamports() < lamports {
 		return Err(BitflipError::InsufficientFunds.into());
 	}
+
 	system_program.assert_address(&system::ID)?;
 	system::instructions::Transfer { from, to, lamports }.invoke()
 }
@@ -1254,6 +1274,7 @@ fn pay_accrued_owner_fees(
 		.assert_address(&owner)?
 		.assert_writable()?
 		.assert_owner(&system::ID)?;
+
 	if amount == 0 {
 		return if require_nonzero {
 			Err(BitflipError::NoOwnerFees.into())
@@ -1280,6 +1301,7 @@ fn pay_accrued_protocol_fees(
 		.as_account::<SectionState>(&ID)?
 		.protocol_fee_lamports
 		.get();
+
 	if amount == 0 {
 		return Err(BitflipError::NoProtocolFees.into());
 	}
@@ -1413,6 +1435,7 @@ fn assert_flip_custody(
 		bit_mint.address(),
 		&token_program,
 	)?;
+
 	if vault_balance
 		.checked_add(emitted_tokens)
 		.ok_or(ProgramError::ArithmeticOverflow)?
@@ -1440,6 +1463,7 @@ fn transfer_bit_reward(
 	if reward_tokens == 0 {
 		return Ok(());
 	}
+
 	token_program_account.assert_address(&token_2022::ID)?;
 	let token_program = *token_program_account.address();
 	let vault_amount_before = section_vault
@@ -1473,6 +1497,7 @@ fn transfer_bit_reward(
 	let recipient_credit = recipient_amount_after
 		.checked_sub(recipient_amount_before)
 		.ok_or(BitflipError::InvalidBitTokenAccount)?;
+
 	if vault_debit != reward_tokens || recipient_credit != reward_tokens {
 		return Err(BitflipError::InvalidBitTokenAccount.into());
 	}
@@ -1525,6 +1550,7 @@ fn transfer_section_allocation(
 	let destination_credit = destination_amount_after
 		.checked_sub(destination_amount_before)
 		.ok_or(BitflipError::InvalidBitTokenAccount)?;
+
 	if reserve_debit != BIT_SECTION_ALLOCATION_TOKENS
 		|| destination_credit != BIT_SECTION_ALLOCATION_TOKENS
 	{
@@ -1607,6 +1633,7 @@ impl<'a> ProcessAccountInfos<'a> for UpdateConfigAccounts<'a> {
 		config.minimum_flip_fee_lamports = args.minimum_flip_fee_lamports;
 		config.maximum_flip_fee_lamports = args.maximum_flip_fee_lamports;
 		config.unlock_interval_seconds = args.unlock_interval_seconds;
+
 		config.early_unlock_flips = args.early_unlock_flips;
 
 		Ok(())
@@ -1622,6 +1649,7 @@ impl<'a> ProcessAccountInfos<'a> for ProposeAuthorityAccounts<'a> {
 			let config = self.config.as_account::<ConfigState>(&ID)?;
 			self.authority.assert_address(&config.authority)?;
 		}
+
 		if args.pending_authority == ZERO_ADDRESS
 			|| args.pending_authority == *self.authority.address()
 		{
@@ -1643,9 +1671,11 @@ impl<'a> ProcessAccountInfos<'a> for AcceptAuthorityAccounts<'a> {
 
 		{
 			let config = self.config.as_account::<ConfigState>(&ID)?;
+
 			if config.pending_authority == ZERO_ADDRESS {
 				return Err(BitflipError::Unauthorized.into());
 			}
+
 			self.pending_authority
 				.assert_address(&config.pending_authority)?;
 		}
@@ -1661,12 +1691,15 @@ impl<'a> ProcessAccountInfos<'a> for AcceptAuthorityAccounts<'a> {
 impl<'a> ProcessAccountInfos<'a> for InitializeGameAccounts<'a> {
 	fn process(self, data: &[u8]) -> ProgramResult {
 		let args = InitializeGameInstruction::try_from_bytes(data)?;
+
 		if args.section_index != 0 {
 			return Err(BitflipError::InvalidSectionIndex.into());
 		}
+
 		if args.game_index >= BIT_GAME_COUNT {
 			return Err(BitflipError::InvalidGameIndex.into());
 		}
+
 		assert_config_account(self.config)?;
 
 		let price_config = {
@@ -1675,6 +1708,7 @@ impl<'a> ProcessAccountInfos<'a> for InitializeGameAccounts<'a> {
 			if config.game_count.get() != u16::from(args.game_index) {
 				return Err(BitflipError::InvalidGameIndex.into());
 			}
+
 			initial_game_price_config(&config)
 		};
 
@@ -1755,6 +1789,7 @@ impl<'a> ProcessAccountInfos<'a> for ClaimSectionAccounts<'a> {
 			)
 		};
 		self.treasury.assert_address(&treasury)?;
+
 		if claim_price > args.maximum_price_lamports.get() {
 			return Err(BitflipError::PriceSlippage.into());
 		}
@@ -1768,6 +1803,7 @@ impl<'a> ProcessAccountInfos<'a> for ClaimSectionAccounts<'a> {
 				game_price_config(&game)?,
 			)
 		};
+
 		if status != GAME_STATUS_LIVE || next_section != u16::from(args.section_index) {
 			return Err(BitflipError::GameNotLive.into());
 		}
@@ -1788,6 +1824,7 @@ impl<'a> ProcessAccountInfos<'a> for ClaimSectionAccounts<'a> {
 				.flip_count
 				.get() >= u64::from(early_unlock_flips)
 		};
+
 		if !unlocked_by_time && !unlocked_by_activity {
 			return Err(BitflipError::SectionLocked.into());
 		}
@@ -1821,6 +1858,7 @@ impl<'a> ProcessAccountInfos<'a> for ClaimSectionAccounts<'a> {
 			.ok_or(ProgramError::ArithmeticOverflow)?;
 		let mut game = self.game.as_account_mut::<GameState>(&ID)?;
 		game.next_section.set(next_section);
+
 		if next_section == SECTION_COUNT {
 			game.status = GAME_STATUS_CLAIMS_COMPLETE;
 		}
@@ -1841,6 +1879,7 @@ impl<'a> ProcessAccountInfos<'a> for FlipPixelsAccounts<'a> {
 		let (starts_at, owner_share_basis_points, price_config) =
 			live_game_price_config(self.game)?;
 		let clock = Clock::get()?;
+
 		if clock.unix_timestamp < starts_at {
 			return Err(BitflipError::GameNotStarted.into());
 		}
@@ -1876,9 +1915,11 @@ impl<'a> ProcessAccountInfos<'a> for FlipPixelsAccounts<'a> {
 				},
 			)
 			.map_err(controller_error)?;
+
 		if quote.reward_tokens != flip_count {
 			return Err(BitflipError::InsufficientReward.into());
 		}
+
 		let fee_split = split_flip_fee(
 			&section_state.owner,
 			self.game.address(),
@@ -1915,6 +1956,7 @@ impl<'a> ProcessAccountInfos<'a> for FlipPixelsAccounts<'a> {
 			section_state.controller,
 		)?;
 		drop(section);
+
 		if args.colour != NO_FLIP_COLOUR {
 			emit_colour_pixels_flipped(
 				*self.player.address(),
@@ -1939,9 +1981,11 @@ impl<'a> ProcessAccountInfos<'a> for SealSectionAccounts<'a> {
 		{
 			let section = self.section.as_account::<SectionState>(&ID)?;
 			self.owner.assert_address(&section.owner)?;
+
 			if section.status != SECTION_STATUS_ACTIVE {
 				return Err(BitflipError::SectionNotActive.into());
 			}
+
 			if section_policy_is_live(&section, clock.unix_timestamp) {
 				return Err(BitflipError::SectionPolicyLocked.into());
 			}
@@ -1965,6 +2009,7 @@ impl<'a> ProcessAccountInfos<'a> for RecordSectionMintAccounts<'a> {
 		let config = self.config.as_account::<ConfigState>(&ID)?;
 		self.collection_authority
 			.assert_address(&config.collection_authority)?;
+
 		if args.expected_owner == ZERO_ADDRESS
 			|| args.asset_id == ZERO_ADDRESS
 			|| args.merkle_tree == ZERO_ADDRESS
@@ -1974,12 +2019,15 @@ impl<'a> ProcessAccountInfos<'a> for RecordSectionMintAccounts<'a> {
 
 		{
 			let section = self.section.as_account::<SectionState>(&ID)?;
+
 			if section.status == SECTION_STATUS_MINTED {
 				return Err(BitflipError::SectionAlreadyMinted.into());
 			}
+
 			if section.status != SECTION_STATUS_SEALED {
 				return Err(BitflipError::SectionNotSealed.into());
 			}
+
 			if section.owner != args.expected_owner {
 				return Err(BitflipError::OwnerChanged.into());
 			}
@@ -2014,6 +2062,7 @@ impl<'a> ProcessAccountInfos<'a> for ListSectionAccounts<'a> {
 		{
 			let section = self.section.as_account::<SectionState>(&ID)?;
 			self.owner.assert_address(&section.owner)?;
+
 			if section.status != SECTION_STATUS_ACTIVE && section.status != SECTION_STATUS_SEALED {
 				return Err(BitflipError::SectionNotTransferable.into());
 			}
@@ -2037,6 +2086,7 @@ impl<'a> ProcessAccountInfos<'a> for CancelSectionListingAccounts<'a> {
 		{
 			let section = self.section.as_account::<SectionState>(&ID)?;
 			self.owner.assert_address(&section.owner)?;
+
 			if section.sale_price_lamports.get() == 0 {
 				return Err(BitflipError::SectionNotForSale.into());
 			}
@@ -2067,6 +2117,7 @@ impl<'a> ProcessAccountInfos<'a> for PurchaseSectionAccounts<'a> {
 			if section.status != SECTION_STATUS_ACTIVE && section.status != SECTION_STATUS_SEALED {
 				return Err(BitflipError::SectionNotTransferable.into());
 			}
+
 			let price = section.sale_price_lamports.get();
 			if price == 0 {
 				return Err(BitflipError::SectionNotForSale.into());
@@ -2074,6 +2125,7 @@ impl<'a> ProcessAccountInfos<'a> for PurchaseSectionAccounts<'a> {
 			if price > args.maximum_price_lamports.get() {
 				return Err(BitflipError::PriceSlippage.into());
 			}
+
 			price
 		};
 
@@ -2124,21 +2176,25 @@ impl<'a> ProcessAccountInfos<'a> for ConfigureBitCustodyAccounts<'a> {
 		{
 			let config = self.config.as_account::<ConfigState>(&ID)?;
 			self.authority.assert_address(&config.authority)?;
+
 			if config.bit_mint != ZERO_ADDRESS || config.bit_reserve != ZERO_ADDRESS {
 				return Err(BitflipError::CustodyAlreadyConfigured.into());
 			}
 		}
 
 		let mint_supply = assert_bit_mint(self.bit_mint, &token_program)?;
+
 		if mint_supply != BIT_TOTAL_SUPPLY_TOKENS {
 			return Err(BitflipError::InvalidBitMint.into());
 		}
+
 		let reserve_balance = bit_token_account_balance(
 			self.bit_reserve,
 			self.config.address(),
 			self.bit_mint.address(),
 			&token_program,
 		)?;
+
 		if reserve_balance != BIT_TOTAL_SUPPLY_TOKENS {
 			return Err(BitflipError::InvalidBitTokenAccount.into());
 		}
@@ -2164,15 +2220,18 @@ impl<'a> ProcessAccountInfos<'a> for FundSectionVaultAccounts<'a> {
 			if config.bit_mint == ZERO_ADDRESS || config.bit_reserve == ZERO_ADDRESS {
 				return Err(BitflipError::CustodyNotConfigured.into());
 			}
+
 			(config.bit_mint, config.bit_reserve, config.bump)
 		};
 		self.bit_mint.assert_address(&bit_mint)?;
 		self.bit_reserve.assert_address(&bit_reserve)?;
 		{
 			let section = self.section.as_account::<SectionState>(&ID)?;
+
 			if section.status != SECTION_STATUS_ACTIVE {
 				return Err(BitflipError::SectionNotActive.into());
 			}
+
 			if section.bit_vault != ZERO_ADDRESS {
 				return Err(BitflipError::SectionVaultAlreadyFunded.into());
 			}
@@ -2185,6 +2244,7 @@ impl<'a> ProcessAccountInfos<'a> for FundSectionVaultAccounts<'a> {
 			self.bit_mint.address(),
 			&token_program,
 		)?;
+
 		if reserve_balance < BIT_SECTION_ALLOCATION_TOKENS {
 			return Err(BitflipError::InsufficientFunds.into());
 		}
@@ -2245,14 +2305,18 @@ impl<'a> ProcessAccountInfos<'a> for ConfigureSectionPolicyAccounts<'a> {
 		{
 			let section = self.section.as_account::<SectionState>(&ID)?;
 			self.owner.assert_address(&section.owner)?;
+
 			if section.status != SECTION_STATUS_ACTIVE {
 				return Err(BitflipError::SectionNotActive.into());
 			}
+
 			assert_section_policy_version(&section, args.expected_policy_version.get())?;
+
 			if section_policy_is_live(&section, clock.unix_timestamp) {
 				return Err(BitflipError::SectionPolicyLocked.into());
 			}
 		}
+
 		validate_section_policy(
 			args.mode,
 			args.palette_id,
@@ -2277,6 +2341,7 @@ impl<'a> ProcessAccountInfos<'a> for ConfigureSectionPolicyAccounts<'a> {
 		section.policy_entry_price_tokens = args.entry_price_tokens;
 		section.policy_reward_per_action_tokens = args.reward_per_action_tokens;
 		section.policy_rules_digest = args.rules_digest;
+
 		section.policy_mode = args.mode;
 		section.policy_palette_id = args.palette_id;
 		section.policy_reward_policy = args.reward_policy;
@@ -2351,8 +2416,10 @@ mod tests {
 		let mut seen_policy = false;
 		let mut contacts = None;
 		let mut expect_value_for: Option<&str> = None;
+
 		for part in parts.split(|byte| *byte == 0) {
 			let text = core::str::from_utf8(part).expect("fields and values are UTF-8");
+
 			match expect_value_for.take() {
 				Some(field) => match field {
 					"name" => seen_name = !text.is_empty(),
@@ -2361,9 +2428,11 @@ mod tests {
 					"contacts" => contacts = Some(text),
 					_ => {}
 				},
+
 				None => expect_value_for = Some(text),
 			}
 		}
+
 		assert!(expect_value_for.is_none(), "every field must have a value");
 		assert!(seen_name, "name must be present and non-empty");
 		assert!(seen_project_url, "project_url must be an HTTPS URL");
@@ -2371,6 +2440,7 @@ mod tests {
 
 		// The contact parser rejects the whole block on an unknown prefix.
 		let contacts = contacts.expect("contacts must be present");
+
 		for contact in contacts.split(',') {
 			let (kind, value) = contact.split_once(':').expect("contact is typed");
 			assert!(
@@ -2426,6 +2496,7 @@ mod tests {
 		assert_eq!(CancelSectionListingInstruction::SIZE, 4);
 		assert_eq!(PurchaseSectionInstruction::SIZE, 12);
 		assert_eq!(SettleSectionEconomyInstruction::SIZE, 4);
+
 		assert_eq!(ConfigureBitCustodyInstruction::SIZE, 2);
 		assert_eq!(FundSectionVaultInstruction::SIZE, 4);
 		assert_eq!(WithdrawSectionOwnerFeesInstruction::SIZE, 4);

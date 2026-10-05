@@ -35,6 +35,7 @@ final class SecurityHeadersMiddleware extends MiddlewareObject {
   Handler call(Handler next) {
     return (request) async {
       final result = await next(request);
+
       if (result is! Response) return result;
       return result.copyWith(headers: withSecurityHeaders(result.headers));
     };

@@ -121,19 +121,24 @@ String _encodedEvent({
   final bytes = Uint8List(colourPixelsFlippedEventSize);
   bytes[0] = colourPixelsFlippedEventDiscriminator;
   bytes[1] = migrationVersion;
+
   for (var index = 0; index < 32; index++) {
     bytes[2 + index] = index;
   }
+
   ByteData.sublistView(bytes)
     ..setUint64(34, policyVersion, Endian.little)
     ..setUint64(42, revision, Endian.little);
+
   for (var index = 0; index < coordinates.length; index++) {
     bytes[50 + index * 2] = coordinates[index].x;
     bytes[51 + index * 2] = coordinates[index].y;
   }
+
   bytes[82] = gameIndex;
   bytes[83] = sectionIndex;
   bytes[84] = coordinates.length;
   bytes[85] = colour;
+
   return base64Encode(bytes);
 }

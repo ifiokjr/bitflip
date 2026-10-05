@@ -17,6 +17,7 @@ abstract final class ColourCanvasStore {
     if (orderedEvents.isEmpty) {
       throw ArgumentError.value(events, 'events', 'Events cannot be empty.');
     }
+
     late ColourCanvasState result;
     await DatabaseUtil.runInTransactionOrSavepoint(session.db, null, (
       transaction,
@@ -52,6 +53,7 @@ abstract final class ColourCanvasStore {
         }
         canvas.apply(event);
       }
+
       final next = ColourCanvasState(
         id: stored?.id,
         gameIndex: gameIndex,
@@ -82,11 +84,13 @@ abstract final class ColourCanvasStore {
     Iterable<ColourPixelsFlipped> events,
   ) async {
     final bySection = <(int, int), List<ColourPixelsFlipped>>{};
+
     for (final event in events) {
       bySection
           .putIfAbsent((event.gameIndex, event.sectionIndex), () => [])
           .add(event);
     }
+
     for (final entry in bySection.entries) {
       await applySectionEvents(
         session,

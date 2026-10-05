@@ -36,6 +36,7 @@ final class ColourIndexerConfiguration {
         'BITFLIP_COLOUR_INDEXER_ENABLED must be true for release deployments.',
       );
     }
+
     final cluster = environment['BITFLIP_CLUSTER']?.trim();
     final startSignature = environment['BITFLIP_COLOUR_INDEXER_START_SIGNATURE']
         ?.trim();
@@ -125,7 +126,9 @@ final class ColourEventIndexer {
     if (!configuration.enabled) {
       return const ColourIndexerBatchResult.disabled();
     }
+
     final claim = await _claim(session);
+
     if (claim == null) return const ColourIndexerBatchResult.leased();
 
     try {
@@ -162,6 +165,7 @@ final class ColourEventIndexer {
       );
     } on Object catch (error, stackTrace) {
       await _releaseAfterFailure(session, claim);
+
       Error.throwWithStackTrace(error, stackTrace);
     }
   }
@@ -189,10 +193,12 @@ final class ColourEventIndexer {
                   .timeout(transactionDeadline),
             ),
       );
+
       for (final batch in batches) {
         events.addAll(batch);
       }
     }
+
     return events;
   }
 
@@ -248,6 +254,7 @@ final class ColourEventIndexer {
       );
       claim = _ColourIndexerClaim(stored, token);
     });
+
     return claim;
   }
 
@@ -271,6 +278,7 @@ final class ColourEventIndexer {
       if (cursor?.leaseToken != claim.token) {
         throw StateError('The colour indexer lease expired during a batch.');
       }
+
       await ColourIndexerCursor.db.updateRow(
         session,
         cursor!.copyWith(
@@ -386,6 +394,7 @@ abstract final class ColourEventIndexerRegistry {
 
 String _secureLeaseToken() {
   final random = Random.secure();
+
   return base64Url.encode(List.generate(24, (_) => random.nextInt(256)));
 }
 
