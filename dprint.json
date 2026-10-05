@@ -48,6 +48,7 @@
 		"**/pnpm-lock.yaml",
 		"**/pubspec.lock",
 		"**/lib/src/generated/**",
+		"**/.pina-generated.json",
 		"bitflip_program/tests/abi_layout.rs",
 		"**/dist",
 		".devenv/**",

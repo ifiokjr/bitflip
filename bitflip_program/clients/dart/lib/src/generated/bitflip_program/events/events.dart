@@ -7,19 +7,73 @@ export 'colour_pixels_flipped_event.dart';
 import 'event_log.dart';
 import 'colour_pixels_flipped_event.dart';
 
-/// Decode every `Program data:` line that names one of this program's events.
+/// The program whose invocation frames emit the events decoded here.
+const bitflipProgramEventSourceAddress = '5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM';
+
+final _programInvokeLog = RegExp(r'^Program (\S+) invoke \[\d+\]$');
+final _programExitLog = RegExp(r'^Program (\S+) (?:success|failed: .*)$');
+
+/// Decode every `Program data:` line this program emitted in a transaction's
+/// logs.
 ///
-/// Unrelated lines and programs are skipped. A log that names an event but
-/// carries an unknown, future, or non-projectable version throws instead of
-/// being silently dropped.
-List<BitflipProgramEvent> parseBitflipProgramEventsFromLogs(List<String> logs) {
+/// [logs] must be the complete, ordered log messages of one transaction. The
+/// parser follows the runtime's `Program <address> invoke [n]` and
+/// `Program <address> success` / `failed` frames and decodes a data line only
+/// while [programAddress] is the innermost invoked program. Any program can
+/// write a `Program data:` line with this program's discriminator, so data
+/// lines from other programs (including ones this program invokes through CPI)
+/// and lines outside any frame are skipped rather than trusted.
+///
+/// Unrelated lines are skipped. A line this program emitted that names an event
+/// but carries a version no generated event describes throws instead of being
+/// silently dropped. The per-event `parse*FromLog` helpers decode one line
+/// without this attribution and are only safe for data already known to come
+/// from this program.
+List<BitflipProgramEvent> parseBitflipProgramEventsFromLogs(
+  List<String> logs, {
+  String programAddress = bitflipProgramEventSourceAddress,
+}) {
   final discovered = <BitflipProgramEvent>[];
+  final frames = <String>[];
   for (final log in logs) {
+    final invoke = _programInvokeLog.firstMatch(log);
+    if (invoke != null) {
+      frames.add(invoke.group(1)!);
+      continue;
+    }
+    if (_programExitLog.hasMatch(log)) {
+      if (frames.isNotEmpty) {
+        frames.removeLast();
+      }
+      continue;
+    }
+    if (frames.isEmpty || frames.last != programAddress) {
+      continue;
+    }
     final colourPixelsFlippedEvent = parseColourPixelsFlippedEventEventFromLog(log);
     if (colourPixelsFlippedEvent != null) {
       discovered.add(colourPixelsFlippedEvent);
       continue;
     }
+    final unknownVersion = _unrecognizedEventVersion(log);
+    if (unknownVersion != null) {
+      throw RangeError(unknownVersion);
+    }
   }
   return discovered;
+}
+
+/// Explain a `Program data:` line that names a migration-aware event but that
+/// no generated event claimed, or return null for an unrelated line.
+String? _unrecognizedEventVersion(String log) {
+  final bytes = decodeProgramDataLog(log);
+  if (bytes == null) {
+    return null;
+  }
+  if (bytes.length >= 1 && bytes[0] == 1) {
+    return bytes.length < 2
+        ? 'event "colourPixelsFlippedEvent" log is too short for its version envelope'
+        : 'event "colourPixelsFlippedEvent" log carries migration version ${bytes[1]}, which this client cannot decode; regenerate it';
+  }
+  return null;
 }
