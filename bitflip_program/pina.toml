@@ -1,9 +1,6 @@
 [project]
 program = "."
 
-[migrations]
-version-type = "u8"
-
 [clients]
 output = "clients"
 languages = ["dart", "rust", "typescript"]
