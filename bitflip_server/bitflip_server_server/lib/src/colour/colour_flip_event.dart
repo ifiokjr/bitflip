@@ -12,6 +12,7 @@ const colourPixelsFlippedEventSize =
     pina_client.colourPixelsFlippedEventEventSize;
 const colourPaletteSize = 8;
 const colourCanvasSide = 64;
+
 const colourCanvasPixelCount = colourCanvasSide * colourCanvasSide;
 const maximumColourFlipBatch = 16;
 
@@ -54,6 +55,7 @@ ColourPixelsFlipped decodeColourPixelsFlippedEvent(String encoded) {
   final pina_client.ColourPixelsFlippedEventEvent event;
   try {
     event = pina_client.decodeColourPixelsFlippedEventEvent(bytes);
+
   } on RangeError {
     throw const FormatException('Invalid Bitflip colour event layout.');
   }
@@ -70,16 +72,21 @@ ColourPixelsFlipped decodeColourPixelsFlippedEvent(String encoded) {
   }
   final coordinates = <ColourPixelCoordinate>[];
   final seenPixels = <int>{};
+
   for (var index = 0; index < event.count; index++) {
     final x = event.coordinates[index * 2];
     final y = event.coordinates[index * 2 + 1];
+
     if (x >= colourCanvasSide || y >= colourCanvasSide) {
       throw const FormatException('Invalid Bitflip colour coordinates.');
     }
+
     final coordinate = ColourPixelCoordinate(x, y);
+
     if (!seenPixels.add(coordinate.linearIndex)) {
       throw const FormatException('Duplicate Bitflip colour coordinates.');
     }
+
     coordinates.add(coordinate);
   }
   return ColourPixelsFlipped(
@@ -101,6 +108,7 @@ List<ColourPixelsFlipped> colourEventsFromProgramLogs(
   final events = <ColourPixelsFlipped>[];
   for (final log in logs) {
     final invoked = _programFromSuffix(log, ' invoke [');
+
     if (invoked != null) {
       invocationStack.add(invoked);
       continue;
@@ -108,7 +116,9 @@ List<ColourPixelsFlipped> colourEventsFromProgramLogs(
     if (log.startsWith('Program data: ') &&
         invocationStack.lastOrNull == programAddress) {
       final fields = log.substring('Program data: '.length).trim().split(' ');
+
       for (final field in fields) {
+
         if (field.isEmpty) continue;
         try {
           events.add(decodeColourPixelsFlippedEvent(field));
@@ -117,12 +127,15 @@ List<ColourPixelsFlipped> colourEventsFromProgramLogs(
           // exact, versioned colour event layout is accepted.
         }
       }
+
       continue;
     }
     final completed =
         _programFromSuffix(log, ' success') ??
         _programFromSuffix(log, ' failed:');
+
     if (completed == null || invocationStack.isEmpty) continue;
+
     if (invocationStack.last == completed) {
       invocationStack.removeLast();
     } else {
@@ -134,8 +147,10 @@ List<ColourPixelsFlipped> colourEventsFromProgramLogs(
 
 String? _programFromSuffix(String log, String suffix) {
   const prefix = 'Program ';
+
   if (!log.startsWith(prefix)) return null;
   final suffixIndex = log.indexOf(suffix, prefix.length);
+
   if (suffixIndex < 0) return null;
   return log.substring(prefix.length, suffixIndex);
 }

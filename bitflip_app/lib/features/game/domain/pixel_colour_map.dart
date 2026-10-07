@@ -27,6 +27,7 @@ final class PixelColourMap {
     )) {
       throw const FormatException('The canvas contains an unknown colour.');
     }
+
     return PixelColourMap._(Uint8List.fromList(colours));
   }
 
@@ -36,7 +37,9 @@ final class PixelColourMap {
     if (x < 0 || x >= sectionSide || y < 0 || y >= sectionSide) {
       throw RangeError('Pixel coordinates must be within 0–63.');
     }
+
     final colour = _colours[y * sectionSide + x];
+
     return colour == noSectionColour ? null : SectionColour.fromCode(colour);
   }
 
@@ -45,9 +48,11 @@ final class PixelColourMap {
     SectionColour colour,
   ) {
     final next = PixelColourMap._(Uint8List.fromList(_colours));
+
     for (final coordinate in coordinates) {
       next._colours[coordinate.linearIndex] = colour.code;
     }
+
     return next;
   }
 }

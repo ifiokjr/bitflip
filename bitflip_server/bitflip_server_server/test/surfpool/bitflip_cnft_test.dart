@@ -207,6 +207,7 @@ void main() {
         ExistingAccount<Uint8List>(:final data) => data,
         NonExistingAccount<Uint8List>() => fail('Tree config should exist.'),
       };
+
       expect(data.length, 96);
       expect(data[88], 0, reason: 'Bitflip trees must be private');
 
@@ -261,6 +262,7 @@ Future<void> _setTestSectionPixel(
       'Bitflip section should exist before test setup.',
     ),
   };
+
   final data = Uint8List.fromList(section.data);
   // Economy ABI v6: the versioned policy occupies bytes 268-342. Account
   // bytes carry the migration-version envelope after the discriminator, so
@@ -323,12 +325,14 @@ Future<void> _setTestConfigAuthorities(
   Address configAddress,
 ) async {
   final maybeConfig = await fetchEncodedAccount(client.rpc, configAddress);
+
   final config = switch (maybeConfig) {
     ExistingAccount<Uint8List>(:final account) => account,
     NonExistingAccount<Uint8List>() => throw StateError(
       'Bitflip config should exist before test setup.',
     ),
   };
+
   final data = Uint8List.fromList(config.data);
   final authority = getAddressEncoder().encode(client.payer.address);
   data
@@ -351,6 +355,7 @@ Future<String> _sendInstructions(
     // ignore: avoid_print
     print('PROBE ix ${instruction.programAddress} data=${instruction.data}');
   }
+
   final latest = await client.rpc.getLatestBlockhashValue().send();
   final transaction = compileTransaction(
     createTransactionMessage(version: TransactionVersion.v0)
@@ -399,6 +404,7 @@ Future<void> _deployProgram(
   if (!File(path).existsSync()) {
     throw StateError('Missing Surfpool program artifact: $path');
   }
+
   return client.surfnet.deploy(DeployOptions(programId: program, soPath: path));
 }
 
@@ -415,6 +421,7 @@ int _concurrentMerkleTreeAccountSize({
   const treePrefixSize = 24;
   final changeLogSize = 40 + (32 * maxDepth);
   final rightMostPathSize = 40 + (32 * maxDepth);
+
   return headerSize +
       treePrefixSize +
       (maxBufferSize * changeLogSize) +

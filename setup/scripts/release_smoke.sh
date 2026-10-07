@@ -36,8 +36,10 @@ request() {
 		--output /dev/null \
 		"$url"; then
 		rm -f "$headers"
+
 		return 1
 	fi
+
 	if [[ -n "$content_type" ]] && ! grep -Eiq "^content-type:[[:space:]]*$content_type" "$headers"; then
 		rm -f "$headers"
 		echo "$label returned an unexpected content type." >&2

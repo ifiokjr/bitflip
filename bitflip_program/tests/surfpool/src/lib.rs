@@ -117,6 +117,7 @@ async fn start_config() -> (ProgramTest, Keypair, Pubkey, Pubkey) {
 
 async fn start_game(early_unlock_flips: u32) -> (ProgramTest, Keypair, Pubkey, Pubkey) {
 	let (program, authority, config, program_id) = start_config().await;
+
 	if early_unlock_flips != DEFAULT_EARLY_UNLOCK_FLIPS {
 		program
 			.send_with_signers(
@@ -137,6 +138,7 @@ async fn start_game(early_unlock_flips: u32) -> (ProgramTest, Keypair, Pubkey, P
 			)
 			.expect("configure test progression");
 	}
+
 	let (game, game_bump) = game_address(&program_id, 0);
 	let (initial_section, section_bump) = section_address(&program_id, 0, 0);
 	program
@@ -603,10 +605,12 @@ fn flip_pixels_instruction_with_policy(
 	colour: u8,
 ) -> pina_test::Instruction {
 	let mut packed_coordinates = [0; 32];
+
 	for (index, (x, y)) in coordinates.iter().enumerate() {
 		packed_coordinates[index * 2] = *x;
 		packed_coordinates[index * 2 + 1] = *y;
 	}
+
 	let mut data = Vec::with_capacity(78);
 	data.extend_from_slice(&[
 		BitflipInstruction::FlipPixels as u8,
@@ -2765,6 +2769,7 @@ fn section_policy_is_versioned_locked_while_live_and_survives_sale() {
 				.fund(&account.pubkey(), 100_000_000)
 				.expect("fund policy test signer");
 		}
+
 		let section = claim_first_user_section(
 			&mut program,
 			&authority,
@@ -3609,6 +3614,7 @@ fn independent_sections_process_concurrent_reward_traffic() {
 							coordinates_for_batch(batch_index),
 						)
 					};
+
 					let instruction = flip_pixels_instruction(
 						program_ref,
 						[&player, &config, &game, &section, &bit_mint.pubkey()],

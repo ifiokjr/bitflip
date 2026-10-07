@@ -147,14 +147,18 @@ final class SolanaBitflipMintService implements BitflipMintService {
     );
     if (strictConfiguration) {
       final cluster = _requiredEnvironmentValue(environment, 'BITFLIP_CLUSTER');
+
       if (production && cluster != 'mainnet') {
         throw StateError('Production BITFLIP_CLUSTER must be mainnet.');
       }
+
       if (!production && cluster != 'devnet') {
         throw StateError('Staging BITFLIP_CLUSTER must be devnet.');
       }
+
       _requirePublicHttps('SOLANA_RPC_URL', rpcUrl);
       _requirePublicHttps('BITFLIP_METADATA_BASE_URL', metadataBaseUrl);
+
       if (production &&
           (rpcUrl.toLowerCase().contains('devnet') ||
               rpcUrl.toLowerCase().contains('testnet'))) {
@@ -163,6 +167,7 @@ final class SolanaBitflipMintService implements BitflipMintService {
       _requiredConfiguration(tree, 'BITFLIP_MERKLE_TREE');
       _requiredConfiguration(operator, 'BITFLIP_OPERATOR_PRIVATE_KEY');
     }
+
     final service = SolanaBitflipMintService(
       rpc: createSolanaRpc(url: rpcUrl, allowInsecureHttp: _isLoopback(rpcUrl)),
       merkleTreeAddress: tree,
@@ -250,21 +255,25 @@ final class SolanaBitflipMintService implements BitflipMintService {
   Future<MintSubmission> mint(MintableSection section) async {
     Object? lastError;
     StackTrace? lastStackTrace;
+
     for (var attempt = 1; attempt <= maximumSubmitAttempts; attempt++) {
       try {
         return await _mintOnce(section);
       } on Object catch (error, stackTrace) {
         lastError = error;
         lastStackTrace = stackTrace;
+
         if (attempt == maximumSubmitAttempts) break;
         await Future<void>.delayed(Duration(milliseconds: 250 * attempt));
       }
     }
+
     Error.throwWithStackTrace(lastError!, lastStackTrace!);
   }
 
   Future<MintSubmission> _mintOnce(MintableSection section) async {
     final fresh = await loadSection(section.gameIndex, section.sectionIndex);
+
     if (fresh.isMinted) {
       return MintSubmission(
         assetId: fresh.assetId!,
@@ -273,9 +282,11 @@ final class SolanaBitflipMintService implements BitflipMintService {
         alreadyMinted: true,
       );
     }
+
     if (!fresh.isSealed) {
       throw StateError('Only sealed artwork can be minted.');
     }
+
     final tree = Address(
       _requiredConfiguration(merkleTreeAddress, 'BITFLIP_MERKLE_TREE'),
     );
@@ -286,6 +297,7 @@ final class SolanaBitflipMintService implements BitflipMintService {
           'The operator signer does not match the on-chain collection authority.',
         );
       }
+
       final (treeAuthority, _) = await bubblegum.findTreeAuthorityPda(
         merkleTree: tree,
       );
@@ -293,6 +305,7 @@ final class SolanaBitflipMintService implements BitflipMintService {
         rpc,
         treeAuthority,
       ).timeout(rpcTimeout);
+
       final encodedTreeConfig = switch (treeConfigAccount) {
         ExistingAccount<Uint8List>(:final account) => account,
         NonExistingAccount<Uint8List>() => throw StateError(
@@ -301,20 +314,25 @@ final class SolanaBitflipMintService implements BitflipMintService {
       };
       if (encodedTreeConfig.programAddress !=
           bubblegum.mplBubblegumProgramAddressObject) {
+
         throw StateError(
           'The configured tree authority is not owned by Bubblegum.',
         );
       }
       final treeConfig = _decodeTreeConfig(encodedTreeConfig.data);
+
       if (treeConfig.isPublic || treeConfig.treeDelegate != signer.address) {
         throw StateError(
           'Bitflip requires a private Bubblegum tree delegated to the operator.',
         );
       }
+
       final leafIndex = treeConfig.numMinted;
+
       if (leafIndex < 0 || leafIndex > 0xffffffff) {
         throw StateError('The Bubblegum leaf index exceeds Bitflip capacity.');
       }
+
       final assetId = await _deriveAssetId(tree, leafIndex);
       final mintInstruction = bubblegum.getMintV1Instruction(
         programAddress: bubblegum.mplBubblegumProgramAddressObject,
@@ -416,6 +434,7 @@ final class SolanaBitflipMintService implements BitflipMintService {
         pollInterval: Duration(milliseconds: 500),
       ),
     ).timeout(confirmationTimeout);
+
     return transactionSignature.value;
   }
 
@@ -425,16 +444,21 @@ final class SolanaBitflipMintService implements BitflipMintService {
       'BITFLIP_OPERATOR_PRIVATE_KEY',
     );
     final decoded = jsonDecode(encoded);
+
     if (decoded is! List || decoded.any((value) => value is! int)) {
       throw StateError(
         'BITFLIP_OPERATOR_PRIVATE_KEY must be a JSON byte array.',
       );
     }
+
     final bytes = Uint8List.fromList(decoded.cast<int>());
+
     if (bytes.length != 32 && bytes.length != 64) {
       throw StateError('The operator private key must contain 32 or 64 bytes.');
     }
+
     try {
+
       return bytes.length == 64
           ? createKeyPairSignerFromBytes(bytes)
           : createKeyPairSignerFromPrivateKeyBytes(bytes);
@@ -445,6 +469,7 @@ final class SolanaBitflipMintService implements BitflipMintService {
 
   String _metadataUri(int gameIndex, int sectionIndex) {
     final base = metadataBaseUrl.replaceFirst(RegExp(r'/+$'), '');
+
     return '$base/metadata/$gameIndex/$sectionIndex.json';
   }
 
@@ -453,6 +478,7 @@ final class SolanaBitflipMintService implements BitflipMintService {
       programAddress: bubblegum.mplBubblegumProgramAddressObject,
       seeds: ['asset', getAddressEncoder().encode(tree), _u64(leafIndex)],
     );
+
     return assetId;
   }
 
@@ -466,9 +492,11 @@ final class SolanaBitflipMintService implements BitflipMintService {
         'The Bitflip $label account does not exist.',
       ),
     };
+
     if (encoded.programAddress != bitflipProgramProgramAddress) {
       throw StateError('The Bitflip $label account has an invalid owner.');
     }
+
     return encoded;
   }
 }
@@ -496,6 +524,7 @@ Instruction _computeUnitPriceInstruction(int microLamports) {
 Uint8List _u64(int value) {
   final bytes = Uint8List(8);
   ByteData.sublistView(bytes).setUint64(0, value, Endian.little);
+
   return bytes;
 }
 
@@ -507,6 +536,7 @@ Uint8List _u64(int value) {
   const u64Size = 8;
   const requiredSize =
       discriminatorSize + (addressSize * 2) + (u64Size * 2) + 1;
+
   if (data.length < requiredSize) {
     throw StateError(
       'The Bubblegum tree config is truncated: expected at least '
@@ -534,6 +564,7 @@ String _requiredConfiguration(String? value, String name) {
   if (value == null || value.isEmpty) {
     throw StateError('$name is required before compressed NFTs can be minted.');
   }
+
   return value;
 }
 
@@ -551,9 +582,11 @@ String _environmentValue(
 
 String _requiredEnvironmentValue(Map<String, String> environment, String name) {
   final value = environment[name]?.trim();
+
   if (value == null || value.isEmpty) {
     throw StateError('$name is required for release deployments.');
   }
+
   return value;
 }
 
@@ -632,6 +665,7 @@ void _validateIndices(int gameIndex, int sectionIndex) {
       'gameIndex',
     );
   }
+
   if (sectionIndex < 0 || sectionIndex > bitflipMaximumSectionIndex) {
     throw RangeError.range(
       sectionIndex,
@@ -644,6 +678,7 @@ void _validateIndices(int gameIndex, int sectionIndex) {
 
 bool _isLoopback(String value) {
   final host = Uri.tryParse(value)?.host.toLowerCase();
+
   return host == '127.0.0.1' || host == 'localhost' || host == '::1';
 }
 
@@ -656,15 +691,18 @@ String _validatedMetadataBaseUrl(String value) {
       uri.userInfo.isEmpty &&
       !uri.hasQuery &&
       !uri.hasFragment;
+
   final validTransport =
       uri?.scheme == 'https' ||
       (uri?.scheme == 'http' && _isLoopback(normalized));
+
   if (!validUri || !validTransport) {
     throw StateError(
       'BITFLIP_METADATA_BASE_URL must be an HTTPS origin or an HTTP '
       'loopback URL without credentials, a query, or a fragment.',
     );
   }
+
   return normalized.replaceFirst(RegExp(r'/+$'), '');
 }
 
