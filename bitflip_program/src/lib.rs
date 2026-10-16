@@ -843,6 +843,34 @@ fn section_flip_state(
 	})
 }
 
+/// Byte-slice view matching the runtime's `SolBytes` ABI for `sol_log_data`.
+#[repr(C)]
+struct SolByteSlice {
+	addr: *const u8,
+	len: u64,
+}
+
+// The workspace denies `unsafe_code`; one raw syscall binding is the deliberate
+// exception that keeps the `logs` feature (and `solana-program-log`) out of
+// the deployed binary.
+#[allow(unsafe_code)]
+unsafe extern "C" {
+	fn sol_log_data(fields: *const SolByteSlice, fields_len: u64);
+}
+
+fn log_event_data(data: &[u8]) {
+	let fields = [SolByteSlice {
+		addr: data.as_ptr(),
+		len: data.len() as u64,
+	}];
+	// SAFETY: `fields` holds one ABI-compatible slice view that stays valid
+	// for the duration of the call.
+	#[allow(unsafe_code)]
+	unsafe {
+		sol_log_data(fields.as_ptr(), 1);
+	}
+}
+
 fn emit_colour_pixels_flipped(
 	player: Address,
 	policy_version: u64,
@@ -862,7 +890,7 @@ fn emit_colour_pixels_flipped(
 
 		Ok(())
 	})?;
-	solana_program_log::log_data(&[&data]);
+	log_event_data(&data);
 
 	Ok(())
 }
@@ -1600,7 +1628,6 @@ impl<'a> ProcessAccountInfos<'a> for InitializeConfigAccounts<'a> {
 			Ok(())
 		})?;
 
-		log!("Bitflip config initialized");
 		Ok(())
 	}
 }
@@ -1769,7 +1796,6 @@ impl<'a> ProcessAccountInfos<'a> for InitializeGameAccounts<'a> {
 			.ok_or(ProgramError::ArithmeticOverflow)?;
 		config.game_count.set(game_count);
 
-		log!("Bitflip game initialized");
 		Ok(())
 	}
 }
@@ -1863,7 +1889,6 @@ impl<'a> ProcessAccountInfos<'a> for ClaimSectionAccounts<'a> {
 			game.status = GAME_STATUS_CLAIMS_COMPLETE;
 		}
 
-		log!("Bitflip section claimed");
 		Ok(())
 	}
 }
@@ -1966,7 +1991,6 @@ impl<'a> ProcessAccountInfos<'a> for FlipPixelsAccounts<'a> {
 			)?;
 		}
 
-		log!("Bitflip pixels toggled and BIT distributed");
 		Ok(())
 	}
 }
@@ -1994,7 +2018,6 @@ impl<'a> ProcessAccountInfos<'a> for SealSectionAccounts<'a> {
 		pay_accrued_owner_fees(self.section, self.owner, false)?;
 		self.section.as_account_mut::<SectionState>(&ID)?.status = SECTION_STATUS_SEALED;
 
-		log!("Bitflip section sealed");
 		Ok(())
 	}
 }
@@ -2048,7 +2071,6 @@ impl<'a> ProcessAccountInfos<'a> for RecordSectionMintAccounts<'a> {
 			.ok_or(ProgramError::ArithmeticOverflow)?;
 		game.minted_sections.set(next_minted_sections);
 
-		log!("Bitflip section mint recorded");
 		Ok(())
 	}
 }
@@ -2072,7 +2094,6 @@ impl<'a> ProcessAccountInfos<'a> for ListSectionAccounts<'a> {
 			.as_account_mut::<SectionState>(&ID)?
 			.sale_price_lamports = args.price_lamports;
 
-		log!("Bitflip section listed");
 		Ok(())
 	}
 }
@@ -2097,7 +2118,6 @@ impl<'a> ProcessAccountInfos<'a> for CancelSectionListingAccounts<'a> {
 			.sale_price_lamports
 			.set(0);
 
-		log!("Bitflip section listing cancelled");
 		Ok(())
 	}
 }
@@ -2136,7 +2156,6 @@ impl<'a> ProcessAccountInfos<'a> for PurchaseSectionAccounts<'a> {
 		section.owner = *self.buyer.address();
 		section.sale_price_lamports.set(0);
 
-		log!("Bitflip section purchased");
 		Ok(())
 	}
 }
@@ -2162,7 +2181,6 @@ impl<'a> ProcessAccountInfos<'a> for SettleSectionEconomyAccounts<'a> {
 		let mut section = self.section.as_account_mut::<SectionState>(&ID)?;
 		store_section_controller_state(&mut section, controller);
 
-		log!("Bitflip section economy settled");
 		Ok(())
 	}
 }
@@ -2203,7 +2221,6 @@ impl<'a> ProcessAccountInfos<'a> for ConfigureBitCustodyAccounts<'a> {
 		config.bit_mint = *self.bit_mint.address();
 		config.bit_reserve = *self.bit_reserve.address();
 
-		log!("BIT custody configured");
 		Ok(())
 	}
 }
@@ -2280,7 +2297,6 @@ impl<'a> ProcessAccountInfos<'a> for FundSectionVaultAccounts<'a> {
 
 		self.section.as_account_mut::<SectionState>(&ID)?.bit_vault = *self.section_vault.address();
 
-		log!("BIT section vault funded");
 		Ok(())
 	}
 }
@@ -2291,7 +2307,6 @@ impl<'a> ProcessAccountInfos<'a> for WithdrawSectionOwnerFeesAccounts<'a> {
 		assert_section_account(self.section, args.game_index, args.section_index)?;
 		pay_accrued_owner_fees(self.section, self.owner, true)?;
 
-		log!("Bitflip section owner fees withdrawn");
 		Ok(())
 	}
 }
@@ -2346,7 +2361,6 @@ impl<'a> ProcessAccountInfos<'a> for ConfigureSectionPolicyAccounts<'a> {
 		section.policy_palette_id = args.palette_id;
 		section.policy_reward_policy = args.reward_policy;
 
-		log!("Bitflip section policy configured");
 		Ok(())
 	}
 }
@@ -2364,7 +2378,6 @@ impl<'a> ProcessAccountInfos<'a> for WithdrawProtocolFeesAccounts<'a> {
 		}
 		pay_accrued_protocol_fees(self.section, self.treasury)?;
 
-		log!("Bitflip protocol fees withdrawn");
 		Ok(())
 	}
 }
