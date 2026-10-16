@@ -59,6 +59,12 @@ wildcard_imports = "allow"
 [profile.release]
 codegen-units = 1
 lto = "fat"
+# Size over speed: "z" trims the deployed SBF binary versus the default
+# optimization level. `build:program` passes `--no-size-profile` so pina's
+# CLI leaves this profile untouched; otherwise the CLI would force its own
+# default level. If instruction CU ever regresses past budget, revert this
+# line to the default level first.
+opt-level = "z"
 overflow-checks = true
 panic = "abort"
 

@@ -274,7 +274,9 @@ in
     "build:program" = {
       exec = ''
         set -euo pipefail
-        pina build --project "$DEVENV_ROOT/bitflip_program"
+        # --no-size-profile: the workspace [profile.release] is the single
+        # source of truth (opt-level "z", fat LTO, overflow checks).
+        pina build --no-size-profile --project "$DEVENV_ROOT/bitflip_program"
       '';
       description = "Build the Bitflip Solana program and IDL.";
       binary = "bash";
