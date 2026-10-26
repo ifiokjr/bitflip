@@ -1,7 +1,6 @@
-import 'dart:typed_data';
-
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
 import 'package:bitflip_app/features/game/domain/section_policy.dart';
+import 'package:flutter/foundation.dart';
 
 const noSectionColour = 255;
 
@@ -32,6 +31,21 @@ final class PixelColourMap {
   }
 
   final Uint8List _colours;
+
+  Uint8List get codes => Uint8List.fromList(_colours);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is PixelColourMap && listEquals(other._colours, _colours);
+  }
+
+  @override
+  int get hashCode => Object.hashAll(_colours);
+
+  /// The raw palette code stored for the pixel at [linearIndex], which is
+  /// [noSectionColour] when the pixel has never been painted.
+  int codeAt(int linearIndex) => _colours[linearIndex];
 
   SectionColour? colourAt(int x, int y) {
     if (x < 0 || x >= sectionSide || y < 0 || y >= sectionSide) {

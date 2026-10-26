@@ -27,4 +27,23 @@ void main() {
     expect(() => SectionPolicyMode.fromCode(2), throwsStateError);
     expect(() => SectionRewardPolicy.fromCode(1), throwsStateError);
   });
+
+  test('policy snapshots compare by value including the rules digest', () {
+    SectionPolicySnapshot policy({int digestByte = 0xab}) =>
+        SectionPolicySnapshot(
+          version: BigInt.one,
+          startsAtUnixSeconds: BigInt.from(100),
+          endsAtUnixSeconds: BigInt.from(200),
+          entryPriceTokens: BigInt.zero,
+          rewardPerActionTokens: BigInt.zero,
+          rulesDigest: List.filled(32, digestByte),
+          mode: SectionPolicyMode.colourCanvas,
+          paletteId: 0,
+          rewardPolicy: SectionRewardPolicy.none,
+        );
+
+    expect(policy(), equals(policy()));
+    expect(policy().hashCode, policy().hashCode);
+    expect(policy(), isNot(equals(policy(digestByte: 0xac))));
+  });
 }

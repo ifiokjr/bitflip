@@ -1,5 +1,6 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart';
 
 const sectionSide = 64;
 const sectionPixelCount = sectionSide * sectionSide;
@@ -69,6 +70,17 @@ final class PixelBitmap {
   final Uint8List _bytes;
 
   Uint8List get bytes => Uint8List.fromList(_bytes);
+
+  /// Two bitmaps are equal when every pixel matches, so a freshly decoded
+  /// account that has not changed compares equal to the one already shown.
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is PixelBitmap && listEquals(other._bytes, _bytes);
+  }
+
+  @override
+  int get hashCode => Object.hashAll(_bytes);
 
   int get onCount {
     var count = 0;

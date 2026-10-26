@@ -34,6 +34,48 @@ void main() {
     ownerFeeLamports: BigInt.zero,
   );
 
+  test('price config and economy snapshots compare by value', () {
+    final sameConfig = SectionPriceConfig(
+      allocationTokens: BigInt.from(26_214_400),
+      emissionDurationSeconds: BigInt.from(5_184_000),
+      windowSeconds: BigInt.from(300),
+      targetTokensPerWindow: BigInt.from(1024),
+      startPriceLamports: BigInt.from(10_000),
+      minimumPriceLamports: BigInt.from(5000),
+      maximumPriceLamports: BigInt.from(1_000_000),
+      startFloorPriceLamports: BigInt.from(5000),
+      endFloorPriceLamports: BigInt.from(100_000),
+      changeDenominator: BigInt.from(8),
+      burstElasticity: BigInt.from(2),
+    );
+
+    expect(config, equals(sameConfig));
+    expect(config.hashCode, sameConfig.hashCode);
+    expect(
+      config,
+      isNot(
+        equals(
+          SectionPriceConfig(
+            allocationTokens: config.allocationTokens,
+            emissionDurationSeconds: config.emissionDurationSeconds,
+            windowSeconds: config.windowSeconds,
+            targetTokensPerWindow: config.targetTokensPerWindow,
+            startPriceLamports: config.startPriceLamports,
+            minimumPriceLamports: config.minimumPriceLamports,
+            maximumPriceLamports: config.maximumPriceLamports,
+            startFloorPriceLamports: config.startFloorPriceLamports,
+            endFloorPriceLamports: config.endFloorPriceLamports,
+            changeDenominator: config.changeDenominator,
+            burstElasticity: BigInt.from(3),
+          ),
+        ),
+      ),
+    );
+    expect(economy(), equals(economy()));
+    expect(economy().hashCode, economy().hashCode);
+    expect(economy(), isNot(equals(economy(emittedTokens: BigInt.one))));
+  });
+
   test('quotes whole BIT at the fixed price within a window', () {
     final quote = economy().quote(
       config: config,

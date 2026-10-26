@@ -40,6 +40,42 @@ final class SectionSnapshot {
   bool get isClaimed => lifecycle != SectionLifecycle.unclaimed;
   bool get isListed => salePriceLamports > BigInt.zero;
 
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is SectionSnapshot &&
+            other.index == index &&
+            other.lifecycle == lifecycle &&
+            other.bitmap == bitmap &&
+            other.owner == owner &&
+            other.flipCount == flipCount &&
+            other.revision == revision &&
+            other.salePriceLamports == salePriceLamports &&
+            other.isProtocolOwned == isProtocolOwned &&
+            other.assetId == assetId &&
+            other.bitVault == bitVault &&
+            other.economy == economy &&
+            other.policy == policy &&
+            other.colourMap == colourMap;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    index,
+    lifecycle,
+    bitmap,
+    owner,
+    flipCount,
+    revision,
+    salePriceLamports,
+    isProtocolOwned,
+    assetId,
+    bitVault,
+    economy,
+    policy,
+    colourMap,
+  );
+
   SectionSnapshot copyWith({
     SectionLifecycle? lifecycle,
     PixelBitmap? bitmap,
@@ -167,6 +203,50 @@ final class GameSnapshot {
   final String? bitMint;
   final String? bitReserve;
   final SectionPriceConfig? priceConfig;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is GameSnapshot &&
+            other.gameIndex == gameIndex &&
+            other.isDemo == isDemo &&
+            other.nextSection == nextSection &&
+            other.totalFlips == totalFlips &&
+            other.mintedSections == mintedSections &&
+            other.claimPriceLamports == claimPriceLamports &&
+            other.flipFeeLamports == flipFeeLamports &&
+            other.startsAtUnixSeconds == startsAtUnixSeconds &&
+            other.unlockIntervalSeconds == unlockIntervalSeconds &&
+            other.earlyUnlockFlips == earlyUnlockFlips &&
+            other.previousSectionFlipCount == previousSectionFlipCount &&
+            other.treasury == treasury &&
+            other.section == section &&
+            other.ownerShareBasisPoints == ownerShareBasisPoints &&
+            other.bitMint == bitMint &&
+            other.bitReserve == bitReserve &&
+            other.priceConfig == priceConfig;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    gameIndex,
+    isDemo,
+    nextSection,
+    totalFlips,
+    mintedSections,
+    claimPriceLamports,
+    flipFeeLamports,
+    startsAtUnixSeconds,
+    unlockIntervalSeconds,
+    earlyUnlockFlips,
+    previousSectionFlipCount,
+    treasury,
+    section,
+    ownerShareBasisPoints,
+    bitMint,
+    bitReserve,
+    priceConfig,
+  );
 
   int get claimedSections => nextSection.clamp(0, sectionCount);
 

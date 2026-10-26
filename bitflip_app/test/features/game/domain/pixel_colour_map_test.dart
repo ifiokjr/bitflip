@@ -28,4 +28,18 @@ void main() {
       ..[42] = 8;
     expect(() => PixelColourMap.fromBytes(colours), throwsFormatException);
   });
+
+  test('compares by palette content and exposes raw codes', () {
+    final painted = PixelColourMap.empty().painted(const [
+      PixelCoordinate(5, 6),
+    ], SectionColour.amber);
+    final copy = PixelColourMap.fromBytes(painted.codes);
+
+    expect(painted, equals(copy));
+    expect(painted.hashCode, copy.hashCode);
+    expect(painted, isNot(equals(PixelColourMap.empty())));
+    expect(painted.codeAt(const PixelCoordinate(5, 6).linearIndex), 5);
+    expect(painted.codeAt(0), noSectionColour);
+    expect(painted.codes, hasLength(sectionPixelCount));
+  });
 }

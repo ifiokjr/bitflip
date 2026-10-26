@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 
 enum SectionPolicyMode {
   openCanvas(0),
@@ -79,6 +80,34 @@ final class SectionPolicySnapshot {
   final SectionPolicyMode mode;
   final int paletteId;
   final SectionRewardPolicy rewardPolicy;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is SectionPolicySnapshot &&
+            other.version == version &&
+            other.startsAtUnixSeconds == startsAtUnixSeconds &&
+            other.endsAtUnixSeconds == endsAtUnixSeconds &&
+            other.entryPriceTokens == entryPriceTokens &&
+            other.rewardPerActionTokens == rewardPerActionTokens &&
+            listEquals(other.rulesDigest, rulesDigest) &&
+            other.mode == mode &&
+            other.paletteId == paletteId &&
+            other.rewardPolicy == rewardPolicy;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    version,
+    startsAtUnixSeconds,
+    endsAtUnixSeconds,
+    entryPriceTokens,
+    rewardPerActionTokens,
+    Object.hashAll(rulesDigest),
+    mode,
+    paletteId,
+    rewardPolicy,
+  );
 
   bool get isConfigured => version > BigInt.zero;
 

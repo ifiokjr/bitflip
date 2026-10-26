@@ -1,4 +1,6 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' show PointMode;
 
 import 'package:bitflip_app/app/theme/bitflip_theme.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
@@ -6,6 +8,7 @@ import 'package:bitflip_app/features/game/domain/pixel_colour_map.dart';
 import 'package:bitflip_app/features/game/domain/section_policy.dart';
 import 'package:bitflip_app/l10n/l10n.dart';
 import 'package:bitflip_app/testing/bitflip_test_keys.dart';
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -222,55 +225,70 @@ class PixelCanvasPainter extends CustomPainter {
     final background = Paint()..color = BitflipColors.voidColor;
     canvas.drawRect(Offset.zero & size, background);
 
-    final pixelPaint = Paint()..color = BitflipColors.acid;
-    final queuedOnPaint = Paint()..color = BitflipColors.coral;
-    final colourPaint = Paint()
-      ..color = activeColour == null
-          ? BitflipColors.coral
-          : BitflipColors.sectionPalette[activeColour!.code];
-    final committedColourPaints = BitflipColors.sectionPalette
-        .map((colour) => Paint()..color = colour)
-        .toList(growable: false);
-    final queuedOffPaint = Paint()
-      ..color = BitflipColors.cyan.withValues(alpha: 0.32);
+    final queuedMask = Uint8List(sectionPixelCount);
 
-    for (var y = 0; y < sectionSide; y++) {
-      for (var x = 0; x < sectionSide; x++) {
-        final coordinate = PixelCoordinate(x, y);
+    for (final coordinate in queued) {
+      queuedMask[coordinate.linearIndex] = 1;
+    }
 
-        final queuedHere = queued.contains(coordinate);
+    final committed = List.generate(
+      SectionColour.values.length,
+      (_) => _CellBatch(),
+      growable: false,
+    );
+    final on = _CellBatch();
+    final queuedOn = _CellBatch();
+    final queuedOff = _CellBatch();
+    final preview = _CellBatch();
+    final bytes = bitmap.bytes;
 
-        if (queuedHere && activeColour != null) {
-          final rect = Rect.fromLTWH(x * cell, y * cell, cell, cell);
-          canvas.drawRect(rect.deflate(cell > 5 ? 0.55 : 0.18), colourPaint);
-          continue;
-        }
+    for (var index = 0; index < sectionPixelCount; index++) {
+      final queuedHere = queuedMask[index] != 0;
 
-        final committedColour = colourMap?.colourAt(x, y);
-
-        if (committedColour != null) {
-          final rect = Rect.fromLTWH(x * cell, y * cell, cell, cell);
-          canvas.drawRect(
-            rect.deflate(cell > 5 ? 0.55 : 0.18),
-            committedColourPaints[committedColour.code],
-          );
-          continue;
-        }
-
-        final wasOn = bitmap.isOn(x, y);
-        final isOn = queuedHere ? !wasOn : wasOn;
-
-        if (!isOn && !queuedHere) continue;
-        final rect = Rect.fromLTWH(x * cell, y * cell, cell, cell);
-        canvas.drawRect(
-          rect.deflate(cell > 5 ? 0.55 : 0.18),
-          queuedHere
-              ? isOn
-                    ? queuedOnPaint
-                    : queuedOffPaint
-              : pixelPaint,
-        );
+      if (queuedHere && activeColour != null) {
+        preview.add(index);
+        continue;
       }
+
+      final committedCode = colourMap?.codeAt(index) ?? noSectionColour;
+
+      if (committedCode != noSectionColour) {
+        committed[committedCode].add(index);
+        continue;
+      }
+
+      final wasOn = (bytes[index >> 3] & (1 << (index & 7))) != 0;
+      final isOn = queuedHere ? !wasOn : wasOn;
+
+      if (!isOn && !queuedHere) continue;
+      (queuedHere ? (isOn ? queuedOn : queuedOff) : on).add(index);
+    }
+
+    final inset = cell > 5 ? 0.55 : 0.18;
+    final cellSide = math.max(0.0, cell - inset * 2);
+
+    void drawBatch(_CellBatch batch, Color colour) {
+      if (batch.isEmpty) return;
+      canvas.drawRawPoints(
+        PointMode.points,
+        batch.centres(cell),
+        Paint()
+          ..color = colour
+          ..strokeCap = StrokeCap.square
+          ..strokeWidth = cellSide,
+      );
+    }
+
+    for (var code = 0; code < committed.length; code++) {
+      drawBatch(committed[code], BitflipColors.sectionPalette[code]);
+    }
+
+    drawBatch(on, BitflipColors.acid);
+    drawBatch(queuedOn, BitflipColors.coral);
+    drawBatch(queuedOff, BitflipColors.cyan.withValues(alpha: 0.32));
+
+    if (activeColour case final colour?) {
+      drawBatch(preview, BitflipColors.sectionPalette[colour.code]);
     }
 
     final gridPaint = Paint()
@@ -321,8 +339,31 @@ class PixelCanvasPainter extends CustomPainter {
   bool shouldRepaint(PixelCanvasPainter oldDelegate) {
     return oldDelegate.bitmap != bitmap ||
         oldDelegate.colourMap != colourMap ||
-        oldDelegate.queued != queued ||
+        !setEquals(oldDelegate.queued, queued) ||
         oldDelegate.cursor != cursor ||
         oldDelegate.activeColour != activeColour;
+  }
+}
+
+/// Cells that share one paint. Square stroke caps turn each centre point into
+/// the same inset square `drawRect` produced, so a whole colour is one call.
+final class _CellBatch {
+  final List<int> _linearIndices = [];
+
+  bool get isEmpty => _linearIndices.isEmpty;
+
+  void add(int linearIndex) => _linearIndices.add(linearIndex);
+
+  Float32List centres(double cell) {
+    final points = Float32List(_linearIndices.length * 2);
+    final half = cell / 2;
+
+    for (var i = 0; i < _linearIndices.length; i++) {
+      final index = _linearIndices[i];
+      points[i * 2] = (index % sectionSide) * cell + half;
+      points[i * 2 + 1] = (index ~/ sectionSide) * cell + half;
+    }
+
+    return points;
   }
 }

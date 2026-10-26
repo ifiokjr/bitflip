@@ -58,6 +58,45 @@ void main() {
       expect(state.queued, isEmpty);
     });
 
+    test('unrelated state changes keep the queued set instance', () {
+      final controller = container.read(gameControllerProvider.notifier);
+      controller.togglePixel(const PixelCoordinate(2, 3));
+      final queued = container.read(gameControllerProvider).queued;
+
+      controller.selectPixel(const PixelCoordinate(18, 27));
+      final state = container.read(gameControllerProvider);
+
+      expect(identical(state.queued, queued), isTrue);
+      expect(identical(state.copyWith(queued: queued).queued, queued), isTrue);
+      expect(
+        () => state.queued.add(const PixelCoordinate(0, 0)),
+        throwsUnsupportedError,
+      );
+    });
+
+    test('an unchanged poll keeps the snapshot and queue instances', () async {
+      repository.snapshot = _liveSnapshot(SectionLifecycle.active);
+      final controller = container.read(gameControllerProvider.notifier);
+      await controller.refresh();
+      controller.togglePixel(const PixelCoordinate(4, 4));
+      final before = container.read(gameControllerProvider);
+
+      repository.snapshot = _liveSnapshot(SectionLifecycle.active);
+      await controller.refresh();
+      final unchanged = container.read(gameControllerProvider);
+
+      expect(identical(unchanged.snapshot, before.snapshot), isTrue);
+      expect(identical(unchanged.queued, before.queued), isTrue);
+
+      repository.snapshot = _liveSnapshot(SectionLifecycle.active)
+          .copyWith(totalFlips: BigInt.from(5));
+      await controller.refresh();
+      final changed = container.read(gameControllerProvider);
+
+      expect(identical(changed.snapshot, before.snapshot), isFalse);
+      expect(changed.snapshot.totalFlips, BigInt.from(5));
+    });
+
     test('commits a demo batch locally and clears the preview queue', () async {
       final controller = container.read(gameControllerProvider.notifier);
       final before = container.read(gameControllerProvider).snapshot;

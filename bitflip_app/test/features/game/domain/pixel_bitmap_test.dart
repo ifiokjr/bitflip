@@ -80,6 +80,18 @@ void main() {
       expect(first.bytes, isNot(orderedEquals(different.bytes)));
       expect(first.onCount, greaterThan(0));
     });
+
+    test('compares by pixel content rather than identity', () {
+      final bytes = PixelBitmap.demo(8).bytes;
+      final first = PixelBitmap.fromBytes(bytes);
+      final second = PixelBitmap.fromBytes(Uint8List.fromList(bytes));
+      final toggled = first.toggled(const [PixelCoordinate(0, 0)]);
+
+      expect(first, equals(second));
+      expect(first.hashCode, second.hashCode);
+      expect(first, isNot(equals(toggled)));
+      expect(first, isNot(equals(PixelBitmap.empty())));
+    });
   });
 
   group('PixelCoordinate', () {
