@@ -261,13 +261,21 @@ final class FakeBitflipRepository implements BitflipRepository {
   }
 
   @override
-  Future<GameSnapshot?> loadSection(int sectionIndex) async {
+  Future<GameRefresh> loadRefresh(
+    int sectionIndex, {
+    bool colourLikely = false,
+  }) async {
     loadCalls++;
     final error = loadError;
 
     if (error != null) throw error;
 
-    return returnNullOnLoad ? null : snapshot;
+    return GameRefresh(
+      snapshot: returnNullOnLoad ? null : snapshot,
+      walletBalanceLamports: walletAddress == null
+          ? null
+          : walletBalanceLamports,
+    );
   }
 
   @override

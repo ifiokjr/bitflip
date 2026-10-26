@@ -40,13 +40,31 @@ class GameScreen extends HookConsumerWidget {
           unawaited(controller.refresh());
         }
       });
-      final liveRefresh = Timer.periodic(
-        const Duration(seconds: 12),
-        (_) => unawaited(controller.refresh()),
+
+      // The 12-second chain poll only runs while the app is visible; a
+      // backgrounded device keeps its battery and RPC quota.
+      Timer? liveRefresh;
+      void startPolling() {
+        liveRefresh ??= Timer.periodic(
+          const Duration(seconds: 12),
+          (_) => unawaited(controller.refresh()),
+        );
+      }
+
+      void stopPolling() {
+        liveRefresh?.cancel();
+        liveRefresh = null;
+      }
+
+      final lifecycle = AppLifecycleListener(
+        onPause: stopPolling,
+        onResume: startPolling,
       );
+      startPolling();
       return () {
+        lifecycle.dispose();
         initialRefresh.cancel();
-        liveRefresh.cancel();
+        stopPolling();
       };
     }, [controller, requestedSection]);
 

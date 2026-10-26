@@ -219,26 +219,23 @@ class GameController extends _$GameController {
       }
 
       if (!ref.mounted) return;
-      final loaded = await _repository.loadSection(sectionIndex);
+      final colourLikely =
+          state.snapshot.section.policy?.mode == SectionPolicyMode.colourCanvas;
+      final loaded = await _repository.loadRefresh(
+        sectionIndex,
+        colourLikely: colourLikely,
+      );
 
       if (!ref.mounted) return;
-      BigInt? walletBalance;
-
-      try {
-        walletBalance = await _repository.loadWalletBalance();
-      } on Object {
-        walletInitializationFailed = true;
-      }
-
-      if (!ref.mounted) return;
-      final snapshot = loaded == null
+      final loadedSnapshot = loaded.snapshot;
+      final snapshot = loadedSnapshot == null
           ? GameSnapshot.empty(
               gameIndex: state.snapshot.gameIndex,
               sectionIndex: state.snapshot.section.index,
             )
-          : _reconcileSnapshot(state.snapshot, loaded);
+          : _reconcileSnapshot(state.snapshot, loadedSnapshot);
       final retainQueue =
-          loaded != null &&
+          loadedSnapshot != null &&
           snapshot.section.lifecycle == SectionLifecycle.active;
       state = state.copyWith(
         snapshot: snapshot,
@@ -246,12 +243,12 @@ class GameController extends _$GameController {
         clearCursor: !retainQueue,
         isBusy: false,
         walletAddress: _repository.walletAddress,
-        walletBalanceLamports: walletBalance,
-        clearWalletBalance: walletBalance == null,
+        walletBalanceLamports: loaded.walletBalanceLamports,
+        clearWalletBalance: loaded.walletBalanceLamports == null,
         activity: walletInitializationFailed
             ? const GameActivity(GameNotice.walletIssue)
             : state.activity,
-        loadStatus: loaded == null
+        loadStatus: loadedSnapshot == null
             ? GameLoadStatus.unavailable
             : GameLoadStatus.ready,
       );

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:bitflip_app/core/bitflip_config.dart';
 import 'package:bitflip_app/core/bitflip_wallet.dart';
+import 'package:bitflip_app/features/game/data/bitflip_address_book.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
 import 'package:bitflip_app/features/game/domain/pixel_colour_map.dart';
@@ -23,7 +24,10 @@ abstract interface class BitflipRepository {
 
   Future<void> initializeWallet();
   Future<BigInt?> loadWalletBalance();
-  Future<GameSnapshot?> loadSection(int sectionIndex);
+
+  /// Loads the section snapshot and, when a wallet is connected, its balance
+  /// in one chain round trip.
+  Future<GameRefresh> loadRefresh(int sectionIndex, {bool colourLikely});
   Future<String> connectWallet([String? walletId]);
   Future<String> fundWithMobileWallet(BigInt lamports);
   Future<String> claimSection(GameSnapshot snapshot);
@@ -56,16 +60,32 @@ final class BitflipMintResult {
   final bool alreadyMinted;
 }
 
+/// One refresh round trip: the section snapshot plus the wallet balance read
+/// from the same account fetch. Either field keeps its nullability so the
+/// controller can distinguish "unavailable" from "absent".
+final class GameRefresh {
+  const GameRefresh({required this.snapshot, this.walletBalanceLamports});
+
+  final GameSnapshot? snapshot;
+  final BigInt? walletBalanceLamports;
+}
+
 final class SolanaBitflipRepository implements BitflipRepository {
   SolanaBitflipRepository({
     required BitflipConfig config,
+    Rpc? rpc,
+    BitflipAddressBook? addresses,
+    this.colourCanvasLoader,
     BitflipWallet? wallet,
   }) : _config = config,
        _gameIndex = config.gameIndex,
-       _rpc = createSolanaRpc(
-         url: config.rpcUrl,
-         allowInsecureHttp: _isLoopback(config.rpcUrl),
-       ),
+       _rpc =
+           rpc ??
+           createSolanaRpc(
+             url: config.rpcUrl,
+             allowInsecureHttp: _isLoopback(config.rpcUrl),
+           ),
+       _addresses = addresses ?? BitflipAddressBook(),
        _serverpod = serverpod.Client(config.serverpodUrl),
        _wallet =
            wallet ??
@@ -77,8 +97,34 @@ final class SolanaBitflipRepository implements BitflipRepository {
   final BitflipConfig _config;
   final int _gameIndex;
   final Rpc _rpc;
+  final BitflipAddressBook _addresses;
   final serverpod.Client _serverpod;
+  final Future<serverpod.ColourCanvasView?> Function(int, int)?
+  colourCanvasLoader;
   final BitflipWallet _wallet;
+
+  /// The off-chain colour layer is optional: a missing or unreachable
+  /// rendering backend leaves the chain snapshot fully usable, and a
+  /// speculative prefetch that turns out unneeded is simply discarded.
+  Future<serverpod.ColourCanvasView?> _loadColourCanvas(
+    int gameIndex,
+    int sectionIndex,
+  ) async {
+    try {
+      final loader = colourCanvasLoader;
+
+      if (loader != null) {
+        return await loader(gameIndex, sectionIndex);
+      }
+
+      return await _serverpod.colourCanvas.load(
+        gameIndex: gameIndex,
+        sectionIndex: sectionIndex,
+      );
+    } on Object {
+      return null;
+    }
+  }
 
   @override
   bool get isDemoMode => false;
@@ -115,43 +161,50 @@ final class SolanaBitflipRepository implements BitflipRepository {
   }
 
   @override
-  Future<GameSnapshot?> loadSection(int sectionIndex) async {
+  Future<GameRefresh> loadRefresh(
+    int sectionIndex, {
+    bool colourLikely = false,
+  }) async {
     if (sectionIndex < 0 || sectionIndex >= sectionCount) {
       throw RangeError.range(sectionIndex, 0, sectionCount - 1);
     }
 
-    final (configAddress, _) = await findConfigPda(
-      programAddress: bitflipProgramProgramAddress,
-    );
-    final (gameAddress, _) = await findGamePda(
-      programAddress: bitflipProgramProgramAddress,
-      seeds: GameSeeds(gameIndex: _gameIndex),
-    );
-    final (sectionAddress, _) = await findSectionPda(
-      programAddress: bitflipProgramProgramAddress,
-      seeds: SectionSeeds(gameIndex: _gameIndex, sectionIndex: sectionIndex),
-    );
+    final wallet = walletAddress;
+
+    // Start the optional colour fetch before the chain fetch so both run in
+    // parallel; when the guess is wrong the canvas is discarded unused.
+    final colourCanvas = colourLikely
+        ? _loadColourCanvas(_gameIndex, sectionIndex)
+        : null;
+    final configAddress = await _addresses.config();
+    final gameAddress = await _addresses.game(_gameIndex);
+    final sectionAddress = await _addresses.section(_gameIndex, sectionIndex);
     final previousSectionAddress = sectionIndex == 0
         ? null
-        : (await findSectionPda(
-            programAddress: bitflipProgramProgramAddress,
-            seeds: SectionSeeds(
-              gameIndex: _gameIndex,
-              sectionIndex: sectionIndex - 1,
-            ),
-          )).$1;
+        : await _addresses.section(_gameIndex, sectionIndex - 1);
+    final walletAccountAddress = wallet == null ? null : Address(wallet);
     final addresses = [
       configAddress,
       gameAddress,
       sectionAddress,
       ?previousSectionAddress,
+      ?walletAccountAddress,
     ];
     final accounts = await fetchEncodedAccounts(_rpc, addresses);
+    final walletAccount = walletAccountAddress == null
+        ? null
+        : _existingAccount(accounts[addresses.length - 1]);
+
+    // An unfunded wallet has no account on chain yet; its balance is zero,
+    // exactly as getBalance reports.
+    final walletBalance = walletAccountAddress == null
+        ? null
+        : walletAccount?.lamports.value ?? BigInt.zero;
     final configAccount = _existingAccount(accounts[0]);
     final gameAccount = _existingAccount(accounts[1]);
 
     if (configAccount == null || gameAccount == null) {
-      return null;
+      return GameRefresh(snapshot: null, walletBalanceLamports: walletBalance);
     }
 
     _assertProgramOwner(configAccount);
@@ -180,29 +233,24 @@ final class SolanaBitflipRepository implements BitflipRepository {
         : _decodeSection(encodedSection, gameAddress: gameAddress);
 
     if (section.policy?.mode == SectionPolicyMode.colourCanvas) {
-      try {
-        final canvas = await _serverpod.colourCanvas.load(
-          gameIndex: game.gameIndex,
-          sectionIndex: section.index,
-        );
+      final canvas =
+          await (colourCanvas ??
+              _loadColourCanvas(game.gameIndex, section.index));
 
-        if (BigInt.from(canvas.policyVersion) == section.policy?.version) {
-          section = section.copyWith(
-            colourMap: PixelColourMap.fromBytes(
-              canvas.colours.buffer.asUint8List(
-                canvas.colours.offsetInBytes,
-                canvas.colours.lengthInBytes,
-              ),
+      if (canvas != null &&
+          BigInt.from(canvas.policyVersion) == section.policy?.version) {
+        section = section.copyWith(
+          colourMap: PixelColourMap.fromBytes(
+            canvas.colours.buffer.asUint8List(
+              canvas.colours.offsetInBytes,
+              canvas.colours.lengthInBytes,
             ),
-          );
-        }
-      } on Object {
-        // The coloured layer is optional and off-chain. Chain state remains
-        // usable if the rendering backend is temporarily unavailable.
+          ),
+        );
       }
     }
 
-    return GameSnapshot(
+    final snapshot = GameSnapshot(
       gameIndex: game.gameIndex,
       isDemo: false,
       nextSection: game.nextSection,
@@ -235,6 +283,11 @@ final class SolanaBitflipRepository implements BitflipRepository {
         burstElasticity: game.burstElasticity,
       ),
     );
+
+    return GameRefresh(
+      snapshot: snapshot,
+      walletBalanceLamports: walletBalance,
+    );
   }
 
   @override
@@ -258,29 +311,15 @@ final class SolanaBitflipRepository implements BitflipRepository {
     final bitMint = Address(bitMintValue);
     final bitReserve = Address(bitReserveValue);
     final sectionIndex = snapshot.section.index;
-    final (config, _) = await findConfigPda(
-      programAddress: bitflipProgramProgramAddress,
-    );
-    final (game, _) = await findGamePda(
-      programAddress: bitflipProgramProgramAddress,
-      seeds: GameSeeds(gameIndex: snapshot.gameIndex),
-    );
-    final (section, bump) = await findSectionPda(
-      programAddress: bitflipProgramProgramAddress,
-      seeds: SectionSeeds(
-        gameIndex: snapshot.gameIndex,
-        sectionIndex: sectionIndex,
-      ),
+    final config = await _addresses.config();
+    final game = await _addresses.game(snapshot.gameIndex);
+    final (section, bump) = await _addresses.sectionAccount(
+      snapshot.gameIndex,
+      sectionIndex,
     );
     final previousSection = sectionIndex == 0
         ? systemProgramAddress
-        : (await findSectionPda(
-            programAddress: bitflipProgramProgramAddress,
-            seeds: SectionSeeds(
-              gameIndex: snapshot.gameIndex,
-              sectionIndex: sectionIndex - 1,
-            ),
-          )).$1;
+        : await _addresses.section(snapshot.gameIndex, sectionIndex - 1);
     final claim = getClaimSectionInstruction(
       programAddress: bitflipProgramProgramAddress,
       owner: owner,
@@ -493,19 +532,11 @@ final class SolanaBitflipRepository implements BitflipRepository {
       ),
       programAddress: associatedTokenProgramAddress,
     );
-    final (config, _) = await findConfigPda(
-      programAddress: bitflipProgramProgramAddress,
-    );
-    final (game, _) = await findGamePda(
-      programAddress: bitflipProgramProgramAddress,
-      seeds: GameSeeds(gameIndex: snapshot.gameIndex),
-    );
-    final (section, _) = await findSectionPda(
-      programAddress: bitflipProgramProgramAddress,
-      seeds: SectionSeeds(
-        gameIndex: snapshot.gameIndex,
-        sectionIndex: snapshot.section.index,
-      ),
+    final config = await _addresses.config();
+    final game = await _addresses.game(snapshot.gameIndex);
+    final section = await _addresses.section(
+      snapshot.gameIndex,
+      snapshot.section.index,
     );
     final packedCoordinates = Uint8List(32);
     for (var index = 0; index < coordinates.length; index++) {
@@ -568,16 +599,10 @@ final class SolanaBitflipRepository implements BitflipRepository {
   @override
   Future<String> sealSection(GameSnapshot snapshot) async {
     final owner = _requireWalletAddress();
-    final (game, _) = await findGamePda(
-      programAddress: bitflipProgramProgramAddress,
-      seeds: GameSeeds(gameIndex: snapshot.gameIndex),
-    );
-    final (section, _) = await findSectionPda(
-      programAddress: bitflipProgramProgramAddress,
-      seeds: SectionSeeds(
-        gameIndex: snapshot.gameIndex,
-        sectionIndex: snapshot.section.index,
-      ),
+    final game = await _addresses.game(snapshot.gameIndex);
+    final section = await _addresses.section(
+      snapshot.gameIndex,
+      snapshot.section.index,
     );
     final instruction = getSealSectionInstruction(
       programAddress: bitflipProgramProgramAddress,
@@ -594,16 +619,10 @@ final class SolanaBitflipRepository implements BitflipRepository {
   Future<(Address, Address)> _gameAndSectionAddresses(
     GameSnapshot snapshot,
   ) async {
-    final (game, _) = await findGamePda(
-      programAddress: bitflipProgramProgramAddress,
-      seeds: GameSeeds(gameIndex: snapshot.gameIndex),
-    );
-    final (section, _) = await findSectionPda(
-      programAddress: bitflipProgramProgramAddress,
-      seeds: SectionSeeds(
-        gameIndex: snapshot.gameIndex,
-        sectionIndex: snapshot.section.index,
-      ),
+    final game = await _addresses.game(snapshot.gameIndex);
+    final section = await _addresses.section(
+      snapshot.gameIndex,
+      snapshot.section.index,
     );
 
     return (game, section);
