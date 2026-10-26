@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:bitflip_app/core/bitflip_config.dart';
 import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/data/bitflip_address_book.dart';
+import 'package:bitflip_app/features/game/data/compute_budget.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
 import 'package:bitflip_app/features/game/domain/pixel_colour_map.dart';
@@ -393,7 +394,11 @@ final class SolanaBitflipRepository implements BitflipRepository {
       sectionIndex: sectionIndex,
     );
 
-    return _sendAll([claim, fundVault], owner);
+    return _sendAll(
+      [claim, fundVault],
+      owner,
+      computeUnitLimit: ComputeUnitLimit.claimAndFundSection,
+    );
   }
 
   @override
@@ -417,7 +422,11 @@ final class SolanaBitflipRepository implements BitflipRepository {
       priceLamports: priceLamports,
     );
 
-    return _send(instruction, owner);
+    return _send(
+      instruction,
+      owner,
+      computeUnitLimit: ComputeUnitLimit.sectionAdministration,
+    );
   }
 
   @override
@@ -433,7 +442,11 @@ final class SolanaBitflipRepository implements BitflipRepository {
       sectionIndex: snapshot.section.index,
     );
 
-    return _send(instruction, owner);
+    return _send(
+      instruction,
+      owner,
+      computeUnitLimit: ComputeUnitLimit.sectionAdministration,
+    );
   }
 
   @override
@@ -464,7 +477,11 @@ final class SolanaBitflipRepository implements BitflipRepository {
       maximumPriceLamports: price,
     );
 
-    return _send(instruction, buyer);
+    return _send(
+      instruction,
+      buyer,
+      computeUnitLimit: ComputeUnitLimit.sectionAdministration,
+    );
   }
 
   @override
@@ -479,7 +496,11 @@ final class SolanaBitflipRepository implements BitflipRepository {
       sectionIndex: snapshot.section.index,
     );
 
-    return _send(instruction, owner);
+    return _send(
+      instruction,
+      owner,
+      computeUnitLimit: ComputeUnitLimit.sectionAdministration,
+    );
   }
 
   @override
@@ -506,7 +527,11 @@ final class SolanaBitflipRepository implements BitflipRepository {
       rulesDigest: Uint8List.fromList(policy.rulesDigest),
     );
 
-    return _send(instruction, owner);
+    return _send(
+      instruction,
+      owner,
+      computeUnitLimit: ComputeUnitLimit.sectionAdministration,
+    );
   }
 
   @override
@@ -612,10 +637,11 @@ final class SolanaBitflipRepository implements BitflipRepository {
       maximumTotalPriceLamports: quote.totalPriceLamports,
       minimumRewardTokens: quote.rewardTokens,
     );
-    final transactionSignature = await _sendAll([
-      createPlayerBitAccount,
-      flip,
-    ], player);
+    final transactionSignature = await _sendAll(
+      [createPlayerBitAccount, flip],
+      player,
+      computeUnitLimit: ComputeUnitLimit.flipPixels,
+    );
     if (colour != null) {
       try {
 
@@ -649,7 +675,11 @@ final class SolanaBitflipRepository implements BitflipRepository {
       sectionIndex: snapshot.section.index,
     );
 
-    return _send(instruction, owner);
+    return _send(
+      instruction,
+      owner,
+      computeUnitLimit: ComputeUnitLimit.sectionAdministration,
+    );
   }
 
   Future<(Address, Address)> _gameAndSectionAddresses(
@@ -687,15 +717,28 @@ final class SolanaBitflipRepository implements BitflipRepository {
     );
   }
 
-  Future<String> _send(Instruction instruction, Address feePayer) async {
-    return _sendAll([instruction], feePayer);
+  Future<String> _send(
+    Instruction instruction,
+    Address feePayer, {
+    required int computeUnitLimit,
+  }) async {
+    return _sendAll(
+      [instruction],
+      feePayer,
+      computeUnitLimit: computeUnitLimit,
+    );
   }
 
+  /// Every transaction declares the compute units it can consume and, when
+  /// the deployment configures one, a priority fee, so wallets and the
+  /// scheduler price it accurately instead of assuming the default budget.
   Future<String> _sendAll(
     List<Instruction> instructions,
-    Address feePayer,
-  ) async {
+    Address feePayer, {
+    required int computeUnitLimit,
+  }) async {
     final latest = await _rpc.getLatestBlockhashValue().send();
+    final priorityFee = _config.priorityFeeMicroLamports;
     final transaction = compileTransaction(
       createTransactionMessage(version: TransactionVersion.v0)
           .withFeePayer(feePayer)
@@ -705,7 +748,11 @@ final class SolanaBitflipRepository implements BitflipRepository {
               lastValidBlockHeight: latest.value.lastValidBlockHeight,
             ),
           )
-          .appendInstructions(instructions),
+          .appendInstructions([
+            setComputeUnitLimitInstruction(computeUnitLimit),
+            if (priorityFee > 0) setComputeUnitPriceInstruction(priorityFee),
+            ...instructions,
+          ]),
     );
     final transactionSignature = signature(
       await _wallet.signAndSend(getBase64EncodedWireTransaction(transaction)),

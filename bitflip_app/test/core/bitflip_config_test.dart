@@ -63,6 +63,23 @@ void main() {
       expect(config.gameIndex, 3);
     });
 
+    test('reads development defaults from an empty environment', () {
+      final config = BitflipConfig.fromEnvironment(releaseMode: false);
+
+      expect(config.environment, BitflipEnvironment.development);
+      expect(config.priorityFeeMicroLamports, 0);
+    });
+
+    test('attaches a priority fee only when one is configured', () {
+      expect(_productionConfig().priorityFeeMicroLamports, 0);
+      expect(
+        _productionConfig(priorityFee: ' 2500 ').priorityFeeMicroLamports,
+        2500,
+      );
+      expect(() => _productionConfig(priorityFee: '-1'), throwsStateError);
+      expect(() => _productionConfig(priorityFee: 'cheap'), throwsStateError);
+    });
+
     test('rejects a game outside the four configured games', () {
       expect(
         () => _productionConfig(gameIndex: '4'),
@@ -83,6 +100,7 @@ BitflipConfig _productionConfig({
   String rpcUrl = 'https://rpc.bitflip.xyz',
   String serverpodUrl = 'https://api.bitflip.xyz/',
   String gameIndex = '3',
+  String priorityFee = '',
 }) {
   return BitflipConfig.parse(
     environment: 'production',
@@ -90,6 +108,7 @@ BitflipConfig _productionConfig({
     rpcUrl: rpcUrl,
     serverpodUrl: serverpodUrl,
     gameIndex: gameIndex,
+    priorityFeeMicroLamports: priorityFee,
     releaseMode: true,
   );
 }

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:bitflip_app/core/bitflip_config.dart';
 import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/data/bitflip_repository.dart';
+import 'package:bitflip_app/features/game/data/compute_budget.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
 import 'package:bitflip_app/features/game/domain/pixel_colour_map.dart';
@@ -31,11 +32,19 @@ void main() {
 
   SolanaBitflipRepository repository({
     bool connectWallet = true,
+    int priorityFeeMicroLamports = 0,
     Future<serverpod.ColourCanvasView?> Function(int, int, ColourCanvasHint?)?
     colourCanvasLoader,
   }) {
     return SolanaBitflipRepository(
-      config: _config,
+      config: BitflipConfig(
+        environment: _config.environment,
+        walletChain: _config.walletChain,
+        rpcUrl: _config.rpcUrl,
+        serverpodUrl: _config.serverpodUrl,
+        gameIndex: _config.gameIndex,
+        priorityFeeMicroLamports: priorityFeeMicroLamports,
+      ),
       rpc: createSolanaRpcFromTransport(script.transport),
       wallet: connectWallet ? wallet : _FakeWallet(null),
       colourCanvasLoader: colourCanvasLoader,
@@ -315,6 +324,67 @@ void main() {
           containsAll(['getLatestBlockhash', 'getSignatureStatuses']),
         );
         expect(script.methods, isNot(contains('getMultipleAccounts')));
+      },
+    );
+
+    test(
+      'declares a measured compute unit limit on every transaction',
+      () async {
+        final repo = repository();
+
+        await repo.listSection(_transactionSnapshot(), BigInt.from(5000));
+        await repo.claimSection(_transactionSnapshot(sectionIndex: 1));
+        await repo.flipPixels(_transactionSnapshot(), const [
+          PixelCoordinate(1, 2),
+        ], colour: null);
+
+        final budgets = wallet.signedTransactions
+            .map(_computeBudgetOf)
+            .toList();
+
+        expect(budgets, [
+          (ComputeUnitLimit.sectionAdministration, null),
+          (ComputeUnitLimit.claimAndFundSection, null),
+          (ComputeUnitLimit.flipPixels, null),
+        ]);
+      },
+    );
+
+    test(
+      'adds a priority fee only when the deployment configures one',
+      () async {
+        await repository(priorityFeeMicroLamports: 1500)
+            .sealSection(_transactionSnapshot());
+
+        expect(_computeBudgetOf(wallet.signedTransactions.single), (
+          ComputeUnitLimit.sectionAdministration,
+          1500,
+        ));
+      },
+    );
+
+    test(
+      'purchases, withdraws fees, and configures a policy on the small budget',
+      () async {
+        final repo = repository();
+
+        await repo.purchaseSection(_transactionSnapshot());
+        await repo.withdrawSectionOwnerFees(_transactionSnapshot());
+        await repo.configureSectionPolicy(
+          _transactionSnapshot(),
+          SectionPolicyDraft(
+            mode: SectionPolicyMode.colourCanvas,
+            startsAtUnixSeconds: BigInt.from(100),
+            endsAtUnixSeconds: BigInt.from(700),
+            rulesDigest: List.filled(32, 1),
+          ),
+        );
+
+        expect(wallet.signedTransactions, hasLength(3));
+        expect(
+          wallet.signedTransactions.map(_computeBudgetOf),
+          everyElement((ComputeUnitLimit.sectionAdministration, null)),
+        );
       },
     );
 
@@ -634,6 +704,32 @@ SectionState _sectionState({
     policyPaletteId: 0,
     policyRewardPolicy: 0,
     pixels: PixelBitmap.demo(2).bytes,
+  );
+}
+
+/// The compute unit limit and optional priority fee declared at the head of a
+/// signed wire transaction.
+(int, int?) _computeBudgetOf(String wireTransaction) {
+  final transaction = getTransactionDecoder().decode(
+    base64Decode(wireTransaction),
+  );
+  final message = decompileTransactionMessage(
+    getCompiledTransactionMessageDecoder().decode(transaction.messageBytes),
+  );
+  final budget = message.instructions
+      .where(
+        (instruction) =>
+            instruction.programAddress == computeBudgetProgramAddress,
+      )
+      .toList();
+  final limit = budget.firstWhere((instruction) => instruction.data![0] == 2);
+  final price = budget.where((instruction) => instruction.data![0] == 3);
+
+  return (
+    ByteData.sublistView(limit.data!).getUint32(1, Endian.little),
+    price.isEmpty
+        ? null
+        : ByteData.sublistView(price.single.data!).getUint64(1, Endian.little),
   );
 }
 

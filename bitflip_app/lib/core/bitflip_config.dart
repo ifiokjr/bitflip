@@ -15,6 +15,7 @@ final class BitflipConfig {
     required this.rpcUrl,
     required this.serverpodUrl,
     required this.gameIndex,
+    this.priorityFeeMicroLamports = 0,
   });
 
   factory BitflipConfig.fromEnvironment({bool releaseMode = kReleaseMode}) {
@@ -23,12 +24,16 @@ final class BitflipConfig {
     const rpcUrl = String.fromEnvironment('SOLANA_RPC_URL');
     const serverpodUrl = String.fromEnvironment('SERVERPOD_URL');
     const gameIndex = String.fromEnvironment('BITFLIP_GAME_INDEX');
+    const priorityFee = String.fromEnvironment(
+      'SOLANA_PRIORITY_FEE_MICRO_LAMPORTS',
+    );
     return BitflipConfig.parse(
       environment: environment,
       walletChain: walletChain,
       rpcUrl: rpcUrl,
       serverpodUrl: serverpodUrl,
       gameIndex: gameIndex,
+      priorityFeeMicroLamports: priorityFee,
       releaseMode: releaseMode,
     );
   }
@@ -40,6 +45,7 @@ final class BitflipConfig {
     required String serverpodUrl,
     required String gameIndex,
     required bool releaseMode,
+    String priorityFeeMicroLamports = '',
   }) {
     if (!releaseMode) {
       environment = environment.isEmpty ? 'development' : environment;
@@ -91,6 +97,16 @@ final class BitflipConfig {
       );
     }
 
+    // An unset fee means no SetComputeUnitPrice instruction is attached.
+    final parsedPriorityFee = priorityFeeMicroLamports.trim().isEmpty
+        ? 0
+        : int.tryParse(priorityFeeMicroLamports.trim());
+    if (parsedPriorityFee == null || parsedPriorityFee < 0) {
+      throw StateError(
+        'SOLANA_PRIORITY_FEE_MICRO_LAMPORTS must be a non-negative integer.',
+      );
+    }
+
     if (parsedEnvironment == BitflipEnvironment.production) {
       if (walletChain != 'solana:mainnet') {
         throw StateError('Production must use solana:mainnet.');
@@ -106,6 +122,7 @@ final class BitflipConfig {
       rpcUrl: parsedRpcUrl.toString(),
       serverpodUrl: parsedServerpodUrl.toString(),
       gameIndex: parsedGameIndex,
+      priorityFeeMicroLamports: parsedPriorityFee,
     );
   }
 
@@ -114,6 +131,10 @@ final class BitflipConfig {
   final String rpcUrl;
   final String serverpodUrl;
   final int gameIndex;
+
+  /// Micro-lamports per compute unit added to every transaction as a priority
+  /// fee; zero attaches no price and relies on the base fee alone.
+  final int priorityFeeMicroLamports;
 }
 
 Uri _validatedUrl(String name, String value) {
