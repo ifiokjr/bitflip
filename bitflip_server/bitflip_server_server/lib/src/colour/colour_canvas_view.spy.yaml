@@ -4,4 +4,4 @@ fields:
   sectionIndex: int
   policyVersion: int
   highestRevision: int
-  colours: ByteData
+  colours: ByteData?

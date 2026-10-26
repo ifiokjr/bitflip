@@ -28,7 +28,7 @@ void main() {
         gameIndex: 0,
         sectionIndex: 7,
       );
-      final firstColours = _bytes(first.colours);
+      final firstColours = _bytes(first.colours!);
       expect(first.policyVersion, 1);
       expect(first.highestRevision, 12);
       expect(firstColours[0], 4);
@@ -44,9 +44,63 @@ void main() {
         gameIndex: 0,
         sectionIndex: 7,
       );
-      expect(_bytes(replay.colours)[0], 4);
+      expect(_bytes(replay.colours!)[0], 4);
       expect(replay.highestRevision, 12);
     });
+
+    test(
+      'confirms an unchanged canvas without resending the colours',
+      () async {
+        source.events = [
+          _event(revision: 5, colour: 3, pixels: [9], sectionIndex: 9),
+        ];
+        final recorded = await endpoints.colourCanvas.recordSignature(
+          sessionBuilder,
+          transactionSignature: 'verified-by-the-fake-source',
+          gameIndex: 0,
+          sectionIndex: 9,
+        );
+        expect(recorded.colours, isNotNull);
+
+        final unchanged = await endpoints.colourCanvas.load(
+          sessionBuilder,
+          gameIndex: 0,
+          sectionIndex: 9,
+          knownPolicyVersion: recorded.policyVersion,
+          knownRevision: recorded.highestRevision,
+        );
+        expect(unchanged.colours, isNull);
+        expect(unchanged.highestRevision, 5);
+        expect(unchanged.policyVersion, 1);
+
+        final staleRevision = await endpoints.colourCanvas.load(
+          sessionBuilder,
+          gameIndex: 0,
+          sectionIndex: 9,
+          knownPolicyVersion: 1,
+          knownRevision: 4,
+        );
+        expect(_bytes(staleRevision.colours!)[9], 3);
+
+        final otherPolicy = await endpoints.colourCanvas.load(
+          sessionBuilder,
+          gameIndex: 0,
+          sectionIndex: 9,
+          knownPolicyVersion: 0,
+          knownRevision: 5,
+        );
+        expect(otherPolicy.colours, isNotNull);
+
+        final knownEmpty = await endpoints.colourCanvas.load(
+          sessionBuilder,
+          gameIndex: 3,
+          sectionIndex: 1,
+          knownPolicyVersion: 0,
+          knownRevision: 0,
+        );
+        expect(knownEmpty.colours, isNull);
+      },
+    );
 
     test('returns an empty canvas and rejects unrelated signatures', () async {
       final empty = await endpoints.colourCanvas.load(
@@ -56,7 +110,7 @@ void main() {
       );
       expect(empty.policyVersion, 0);
       expect(empty.highestRevision, 0);
-      expect(_bytes(empty.colours), everyElement(noPixelColour));
+      expect(_bytes(empty.colours!), everyElement(noPixelColour));
 
       source.events = [
         _event(revision: 1, colour: 0, pixels: [1]),

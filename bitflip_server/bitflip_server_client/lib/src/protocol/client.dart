@@ -28,15 +28,23 @@ class EndpointColourCanvas extends _isc.EndpointRef {
   @override
   String get name => 'colourCanvas';
 
+  /// Loads the colour layer. A client that passes the policy version and
+  /// revision it already holds receives a view without
+  /// [ColourCanvasView.colours] when nothing changed, which skips the 4 KiB
+  /// canvas on every idle poll.
   _ida.Future<_ifgy9s0u.ColourCanvasView> load({
     required int gameIndex,
     required int sectionIndex,
+    int? knownPolicyVersion,
+    int? knownRevision,
   }) => caller.callServerEndpoint<_ifgy9s0u.ColourCanvasView>(
     'colourCanvas',
     'load',
     {
       'gameIndex': gameIndex,
       'sectionIndex': sectionIndex,
+      'knownPolicyVersion': knownPolicyVersion,
+      'knownRevision': knownRevision,
     },
   );
 

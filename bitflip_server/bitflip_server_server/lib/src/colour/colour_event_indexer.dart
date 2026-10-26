@@ -104,6 +104,7 @@ final class ColourEventIndexer {
     DateTime Function()? clock,
     String Function()? leaseToken,
     this.transactionDeadline = const Duration(seconds: 10),
+    this.maximumIdleInterval = const Duration(seconds: 30),
     Duration? leaseDuration,
   }) : _clock = clock ?? DateTime.now,
        _leaseToken = leaseToken ?? _secureLeaseToken,
@@ -119,12 +120,31 @@ final class ColourEventIndexer {
   final ColourFlipEventSource eventSource;
   final Duration transactionDeadline;
   final Duration leaseDuration;
+
+  /// Longest pause between sweeps while the program sees no new transactions.
+  final Duration maximumIdleInterval;
   final DateTime Function() _clock;
   final String Function() _leaseToken;
+  var _idleStreak = 0;
+  DateTime? _idleUntil;
+
+  /// The recurring call keeps firing at its base interval, but an idle canvas
+  /// doubles the pause between real sweeps up to [maximumIdleInterval]. That
+  /// spares the lease row two writes and the RPC a request on every tick.
+  Duration get idleBackoff {
+    final doubled = configuration.interval * (1 << _idleStreak);
+
+    return doubled < maximumIdleInterval ? doubled : maximumIdleInterval;
+  }
 
   Future<ColourIndexerBatchResult> runOnce(Session session) async {
     if (!configuration.enabled) {
       return const ColourIndexerBatchResult.disabled();
+    }
+
+    if (_idleUntil case final idleUntil?
+        when _clock().toUtc().isBefore(idleUntil)) {
+      return const ColourIndexerBatchResult.idle();
     }
 
     final claim = await _claim(session);
@@ -141,6 +161,7 @@ final class ColourEventIndexer {
           .timeout(transactionDeadline);
       final events = await _loadEvents(page.entries);
       await ColourCanvasStore.applyEvents(session, events);
+      _recordActivity(sawSignatures: page.entries.isNotEmpty);
 
       final hasAnotherPage = page.entries.length == configuration.pageSize;
       final batchHead =
@@ -170,34 +191,49 @@ final class ColourEventIndexer {
     }
   }
 
+  void _recordActivity({required bool sawSignatures}) {
+    if (sawSignatures) {
+      _idleStreak = 0;
+      _idleUntil = null;
+
+      return;
+    }
+
+    _idleUntil = _clock().toUtc().add(idleBackoff);
+    _idleStreak = min(_idleStreak + 1, _maximumIdleDoublings);
+  }
+
+  /// Fetches transactions with [ColourIndexerConfiguration.maximumConcurrentTransactions]
+  /// workers that each pull the next signature as soon as they finish, so one
+  /// slow RPC response never stalls the rest of the page. Callers order events
+  /// by revision, so completion order does not matter.
   Future<List<ColourPixelsFlipped>> _loadEvents(
     List<ColourProgramSignature> entries,
   ) async {
     final successful = entries.where((entry) => entry.succeeded).toList();
     final events = <ColourPixelsFlipped>[];
-    for (
-      var offset = 0;
-      offset < successful.length;
-      offset += configuration.maximumConcurrentTransactions
-    ) {
-      final end = min(
-        successful.length,
-        offset + configuration.maximumConcurrentTransactions,
-      );
-      final batches = await Future.wait(
-        successful
-            .sublist(offset, end)
-            .map(
-              (entry) => eventSource
-                  .eventsForSignature(entry.signature)
-                  .timeout(transactionDeadline),
-            ),
-      );
+    var next = 0;
 
-      for (final batch in batches) {
-        events.addAll(batch);
+    Future<void> worker() async {
+      while (next < successful.length) {
+        final entry = successful[next++];
+        events.addAll(
+          await eventSource
+              .eventsForSignature(entry.signature)
+              .timeout(transactionDeadline),
+        );
       }
     }
+
+    await Future.wait([
+      for (
+        var index = 0;
+        index <
+            min(configuration.maximumConcurrentTransactions, successful.length);
+        index++
+      )
+        worker(),
+    ]);
 
     return events;
   }
@@ -353,6 +389,15 @@ final class ColourIndexerBatchResult {
         sweepCompleted: false,
       );
 
+  const ColourIndexerBatchResult.idle()
+    : this._(
+        outcome: 'idle',
+        signaturesScanned: 0,
+        successfulTransactions: 0,
+        eventsApplied: 0,
+        sweepCompleted: false,
+      );
+
   const ColourIndexerBatchResult.completed({
     required int signaturesScanned,
     required int successfulTransactions,
@@ -391,6 +436,9 @@ abstract final class ColourEventIndexerRegistry {
     _indexer = indexer;
   }
 }
+
+/// Doubling past this point would exceed any sensible [ColourEventIndexer.maximumIdleInterval].
+const _maximumIdleDoublings = 16;
 
 String _secureLeaseToken() {
   final random = Random.secure();

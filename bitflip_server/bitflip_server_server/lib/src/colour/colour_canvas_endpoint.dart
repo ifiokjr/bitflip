@@ -14,10 +14,16 @@ final class ColourCanvasEndpoint extends Endpoint {
   @override
   bool get requireLogin => false;
 
+  /// Loads the colour layer. A client that passes the policy version and
+  /// revision it already holds receives a view without
+  /// [ColourCanvasView.colours] when nothing changed, which skips the 4 KiB
+  /// canvas on every idle poll.
   Future<ColourCanvasView> load(
     Session session, {
     required int gameIndex,
     required int sectionIndex,
+    int? knownPolicyVersion,
+    int? knownRevision,
   }) async {
     _validateIndices(gameIndex, sectionIndex);
     final stored = await ColourCanvasState.db.findFirstRow(
@@ -26,7 +32,13 @@ final class ColourCanvasEndpoint extends Endpoint {
           table.gameIndex.equals(gameIndex) &
           table.sectionIndex.equals(sectionIndex),
     );
-    return _viewFor(gameIndex, sectionIndex, stored);
+    return _viewFor(
+      gameIndex,
+      sectionIndex,
+      stored,
+      knownPolicyVersion: knownPolicyVersion,
+      knownRevision: knownRevision,
+    );
   }
 
   Future<ColourCanvasView> recordSignature(
@@ -65,25 +77,28 @@ final class ColourCanvasEndpoint extends Endpoint {
   }
 }
 
+/// Builds the view straight from the stored row: the colour bytes pass through
+/// and the per-pixel revisions are never read, so a load copies nothing.
 ColourCanvasView _viewFor(
   int gameIndex,
   int sectionIndex,
-  ColourCanvasState? state,
-) {
-  final canvas = state == null
-      ? ColourCanvasBuffer.empty()
-      : ColourCanvasBuffer.fromBytes(
-          policyVersion: state.policyVersion,
-          highestRevision: state.highestRevision,
-          colours: bytesFromByteData(state.colours),
-          pixelRevisions: bytesFromByteData(state.pixelRevisions),
-        );
+  ColourCanvasState? state, {
+  int? knownPolicyVersion,
+  int? knownRevision,
+}) {
+  final policyVersion = state?.policyVersion ?? 0;
+  final highestRevision = state?.highestRevision ?? 0;
+  final unchanged =
+      knownPolicyVersion == policyVersion && knownRevision == highestRevision;
   return ColourCanvasView(
     gameIndex: gameIndex,
     sectionIndex: sectionIndex,
-    policyVersion: canvas.policyVersion,
-    highestRevision: canvas.highestRevision,
-    colours: ByteData.sublistView(canvas.colours),
+    policyVersion: policyVersion,
+    highestRevision: highestRevision,
+    colours: unchanged
+        ? null
+        : state?.colours ??
+              ByteData.sublistView(ColourCanvasBuffer.empty().colours),
   );
 }
 
