@@ -3722,3 +3722,330 @@ fn independent_sections_process_concurrent_reward_traffic() {
 		program.stop().expect("stop isolated program test");
 	});
 }
+
+/// Compute-unit ceilings for every player-facing instruction, measured against
+/// the real SBF artifact. Instructions whose cost never varies sit a few
+/// percent above their measured value. Surfnet accounts CPI-heavy paths in
+/// run-to-run noise of fixed steps, so those ceilings sit above the noisiest
+/// observed run instead; either way a real regression — which is what these
+/// guard — fails loudly before it reaches a wallet's fee estimate.
+const COMPUTE_UNIT_BUDGETS: [(&str, u64); 13] = [
+	("flip one pixel", 20_000),
+	("flip one pixel after a missed window", 20_000),
+	("claim a section", 7_000),
+	("claim and fund a section in one transaction", 50_000),
+	("flip sixteen pixels", 18_000),
+	("configure a colour policy", 900),
+	("flip sixteen coloured pixels", 21_000),
+	("list a section", 900),
+	("cancel a listing", 850),
+	("purchase a section", 2_500),
+	("withdraw owner fees", 700),
+	("seal a section", 1_200),
+	("record a mint", 1_300),
+];
+
+fn compute_unit_budget(label: &str) -> u64 {
+	COMPUTE_UNIT_BUDGETS
+		.iter()
+		.find(|(name, _)| *name == label)
+		.map(|(_, budget)| *budget)
+		.unwrap_or_else(|| panic!("no compute budget for {label}"))
+}
+
+#[test]
+#[ignore = "run with test:surfpool"]
+fn player_instructions_stay_within_compute_budgets() {
+	pina_test::run(async {
+		let CustodyGame {
+			mut program,
+			authority,
+			config,
+			game,
+			bit_mint,
+			bit_reserve,
+			..
+		} = start_game_with_custody(1).await;
+		let payer = program.payer();
+		let buyer = Keypair::new();
+		program
+			.fund(&buyer.pubkey(), 200_000_000)
+			.expect("fund buyer");
+		let token_program = spl_token_2022_interface::id();
+		let (initial_section, _) = section_address(&program.program_id(), 0, 0);
+		let _ = create_player_bit_account(&program, &payer, &bit_mint.pubkey());
+		let mut report = Vec::new();
+		// Surfnet's compute accounting carries run-to-run noise in fixed
+		// steps, so every instruction is simulated three times and the
+		// stable minimum is budgeted. The clock is also moved to fixed
+		// offsets, so each instruction sees identical window math on every
+		// run, whatever the real seconds the setup consumed.
+		let base_millis =
+			u64::try_from(current_unix_timestamp(&program)).expect("timestamp fits u64") * 1_000;
+		let travel = |offset_seconds: u64| {
+			program
+				.time_travel_to_timestamp_millis(base_millis + offset_seconds * 1_000)
+				.unwrap_or_else(|error| panic!("travel to +{offset_seconds}s: {error}"));
+		};
+		let mut measure = |label: &'static str,
+		                   instructions: &[pina_test::Instruction],
+		                   signers: &[&dyn Signer]| {
+			let units = (0..3)
+				.map(|_| {
+					program
+						.simulate_compute_units(instructions, signers)
+						.unwrap_or_else(|error| panic!("simulate {label}: {error}"))
+				})
+				.min()
+				.expect("at least one measurement");
+			report.push((label, units, compute_unit_budget(label)));
+		};
+
+		travel(3600);
+
+		let flip_one = flip_pixels_instruction(
+			&program,
+			[&payer, &config, &game, &initial_section, &bit_mint.pubkey()],
+			&[(10, 10)],
+			TestFlipLimits {
+				expected_window_id: 12,
+				..TestFlipLimits::full_reward(1)
+			},
+		);
+		measure("flip one pixel", &[flip_one.clone()], &[]);
+		program
+			.send_instruction(flip_one)
+			.expect("unlock the first claimable section");
+
+		// Twelve windows have passed since the game launched, so this
+		// flip also exercises the missed-window advance; the steady state
+		// is measured above.
+		travel(3_910);
+		let flip_one_after_window = flip_pixels_instruction(
+			&program,
+			[&payer, &config, &game, &initial_section, &bit_mint.pubkey()],
+			&[(20, 20)],
+			TestFlipLimits {
+				expected_window_id: 13,
+				..TestFlipLimits::full_reward(1)
+			},
+		);
+		measure(
+			"flip one pixel after a missed window",
+			&[flip_one_after_window.clone()],
+			&[],
+		);
+		program
+			.send_instruction(flip_one_after_window)
+			.expect("commit a flip across a missed window");
+
+		let (section, bump) = section_address(&program.program_id(), 0, 1);
+		let section_vault = get_associated_token_address_with_program_id(
+			&section,
+			&bit_mint.pubkey(),
+			&token_program,
+		);
+		travel(3970);
+
+		let claim = claim_section_instruction(
+			&program,
+			&payer,
+			&config,
+			&game,
+			&initial_section,
+			&section,
+			&authority.pubkey(),
+			1,
+			bump,
+			DEFAULT_CLAIM_PRICE_LAMPORTS,
+		);
+		let fund = fund_section_vault_instruction(
+			&program,
+			&payer,
+			&config,
+			&section,
+			&bit_mint.pubkey(),
+			&bit_reserve,
+			&section_vault,
+			1,
+		);
+		measure("claim a section", &[claim.clone()], &[]);
+		measure(
+			"claim and fund a section in one transaction",
+			&[claim.clone(), fund.clone()],
+			&[],
+		);
+		program.send_instruction(claim).expect("claim section one");
+		program.send_instruction(fund).expect("fund section one");
+
+		travel(4030);
+
+		let flip_sixteen = flip_pixels_instruction(
+			&program,
+			[&payer, &config, &game, &section, &bit_mint.pubkey()],
+			&coordinates_for_batch(0),
+			TestFlipLimits {
+				section_index: 1,
+				..TestFlipLimits::full_reward(16)
+			},
+		);
+		measure("flip sixteen pixels", &[flip_sixteen.clone()], &[]);
+		program
+			.send_instruction(flip_sixteen)
+			.expect("flip a full batch, unlocking section two");
+
+		travel(4090);
+
+		let (colour_section, colour_bump) = section_address(&program.program_id(), 0, 2);
+		let colour_vault = get_associated_token_address_with_program_id(
+			&colour_section,
+			&bit_mint.pubkey(),
+			&token_program,
+		);
+		program
+			.send_instruction(claim_section_instruction(
+				&program,
+				&payer,
+				&config,
+				&game,
+				&section,
+				&colour_section,
+				&authority.pubkey(),
+				2,
+				colour_bump,
+				DEFAULT_CLAIM_PRICE_LAMPORTS,
+			))
+			.expect("claim section two for the colour round");
+		program
+			.send_instruction(fund_section_vault_instruction(
+				&program,
+				&payer,
+				&config,
+				&colour_section,
+				&bit_mint.pubkey(),
+				&bit_reserve,
+				&colour_vault,
+				2,
+			))
+			.expect("fund section two");
+
+		travel(4150);
+		let starts_at = current_unix_timestamp(&program);
+		let configure = configure_section_policy_instruction(
+			&program,
+			&payer,
+			&colour_section,
+			2,
+			0,
+			starts_at,
+			starts_at + 600,
+			0,
+			0,
+			[7; 32],
+		);
+		measure("configure a colour policy", &[configure.clone()], &[]);
+		program
+			.send_instruction(configure)
+			.expect("configure a live colour policy");
+
+		travel(4210);
+		let colour_flip = flip_pixels_instruction_with_policy(
+			&program,
+			[&payer, &config, &game, &colour_section, &bit_mint.pubkey()],
+			&coordinates_for_batch(3),
+			TestFlipLimits {
+				section_index: 2,
+				..TestFlipLimits::full_reward(16)
+			},
+			1,
+			3,
+		);
+		measure("flip sixteen coloured pixels", &[colour_flip.clone()], &[]);
+		program
+			.send_instruction(colour_flip)
+			.expect("flip a coloured batch");
+
+		travel(4270);
+
+		const SALE_PRICE: u64 = 25_000_000;
+		let list = list_section_instruction(&program, &payer, &game, &section, 1, SALE_PRICE);
+		measure("list a section", &[list.clone()], &[]);
+		program
+			.send_instruction(list.clone())
+			.expect("list section one");
+		travel(4330);
+
+		let cancel = cancel_section_listing_instruction(&program, &payer, &game, &section, 1);
+		measure("cancel a listing", &[cancel.clone()], &[]);
+		program
+			.send_instruction(cancel)
+			.expect("cancel the listing");
+		program.send_instruction(list).expect("relist section one");
+		travel(4390);
+
+		let withdraw = withdraw_section_owner_fees_instruction(&program, &payer, &section, 1);
+		measure("withdraw owner fees", &[withdraw.clone()], &[]);
+		program
+			.send_instruction(withdraw)
+			.expect("withdraw the accrued owner fees");
+		travel(4450);
+
+		let purchase = purchase_section_instruction(
+			&program,
+			&buyer.pubkey(),
+			&payer,
+			&game,
+			&section,
+			1,
+			SALE_PRICE,
+		);
+		measure("purchase a section", &[purchase.clone()], &[&buyer]);
+		program
+			.send_with_signers(purchase, &[&buyer])
+			.expect("buyer purchases section one");
+
+		travel(4510);
+
+		let seal = seal_section_instruction(&program, &buyer.pubkey(), &game, &section, 1);
+		measure("seal a section", &[seal.clone()], &[&buyer]);
+		program
+			.send_with_signers(seal, &[&buyer])
+			.expect("buyer seals section one");
+		travel(4570);
+
+		let record = record_mint_instruction(
+			&program,
+			&authority.pubkey(),
+			&config,
+			&game,
+			&section,
+			1,
+			&buyer.pubkey(),
+			&Keypair::new().pubkey(),
+			&Keypair::new().pubkey(),
+			0,
+		);
+		measure("record a mint", &[record.clone()], &[&authority]);
+		program
+			.send_with_signers(record, &[&authority])
+			.expect("record the compressed mint");
+
+		let table = report
+			.iter()
+			.map(|(label, units, budget)| format!("{label}: {units} / {budget} CU"))
+			.collect::<Vec<_>>()
+			.join("\n");
+		println!("compute units\n{table}");
+		let over_budget = report
+			.iter()
+			.filter(|(_, units, budget)| units > budget)
+			.map(|(label, units, budget)| format!("{label} used {units} CU, budget {budget}"))
+			.collect::<Vec<_>>();
+		assert!(
+			over_budget.is_empty(),
+			"compute budget regression:\n{}\n\nall measurements:\n{table}",
+			over_budget.join("\n")
+		);
+		program.stop().expect("stop isolated program test");
+	});
+}
