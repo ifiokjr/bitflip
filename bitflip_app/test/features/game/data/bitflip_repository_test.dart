@@ -6,6 +6,7 @@ import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/data/bitflip_repository.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
+import 'package:bitflip_app/features/game/domain/pixel_colour_map.dart';
 import 'package:bitflip_app/features/game/domain/section_economy.dart';
 import 'package:bitflip_app/features/game/domain/section_policy.dart';
 import 'package:bitflip_program/bitflip_program.dart';
@@ -30,7 +31,8 @@ void main() {
 
   SolanaBitflipRepository repository({
     bool connectWallet = true,
-    Future<serverpod.ColourCanvasView?> Function(int, int)? colourCanvasLoader,
+    Future<serverpod.ColourCanvasView?> Function(int, int, ColourCanvasHint?)?
+    colourCanvasLoader,
   }) {
     return SolanaBitflipRepository(
       config: _config,
@@ -124,7 +126,7 @@ void main() {
       final colours = Uint8List(sectionPixelCount)..[0] = 4;
 
       final refresh = await repository(
-        colourCanvasLoader: (gameIndex, sectionIndex) async {
+        colourCanvasLoader: (gameIndex, sectionIndex, hint) async {
           loads++;
 
           return serverpod.ColourCanvasView(
@@ -142,13 +144,14 @@ void main() {
         refresh.snapshot?.section.colourMap?.codeAt(0),
         SectionColour.violet.code,
       );
+      expect(refresh.snapshot?.section.colourRevision, 9);
     });
 
     test('ignores a colour canvas from another policy version', () async {
       await script.serveGame(sectionPolicyMode: 1, sectionPolicyVersion: 3);
 
       final refresh = await repository(
-        colourCanvasLoader: (gameIndex, sectionIndex) async {
+        colourCanvasLoader: (gameIndex, sectionIndex, hint) async {
           return serverpod.ColourCanvasView(
             gameIndex: gameIndex,
             sectionIndex: sectionIndex,
@@ -166,7 +169,7 @@ void main() {
       await script.serveGame(sectionPolicyMode: 1, sectionPolicyVersion: 3);
 
       final refresh = await repository(
-        colourCanvasLoader: (gameIndex, sectionIndex) async {
+        colourCanvasLoader: (gameIndex, sectionIndex, hint) async {
           throw StateError('rendering backend unavailable');
         },
       ).loadRefresh(0);
@@ -175,12 +178,73 @@ void main() {
       expect(refresh.snapshot?.section.colourMap, isNull);
     });
 
+    test(
+      'reuses the hinted canvas when the backend reports no change',
+      () async {
+        await script.serveGame(sectionPolicyMode: 1, sectionPolicyVersion: 3);
+        final held = PixelColourMap.empty().painted(const [
+          PixelCoordinate(2, 2),
+        ], SectionColour.pink);
+        ColourCanvasHint? receivedHint;
+
+        final refresh =
+            await repository(
+              colourCanvasLoader: (gameIndex, sectionIndex, hint) async {
+                receivedHint = hint;
+
+                return serverpod.ColourCanvasView(
+                  gameIndex: gameIndex,
+                  sectionIndex: sectionIndex,
+                  policyVersion: 3,
+                  highestRevision: 11,
+                  colours: null,
+                );
+              },
+            ).loadRefresh(
+              0,
+              colourLikely: true,
+              colourHint: ColourCanvasHint(
+                policyVersion: 3,
+                revision: 11,
+                colourMap: held,
+              ),
+            );
+
+        expect(receivedHint?.revision, 11);
+        expect(receivedHint?.policyVersion, 3);
+        expect(identical(refresh.snapshot?.section.colourMap, held), isTrue);
+        expect(refresh.snapshot?.section.colourRevision, 11);
+      },
+    );
+
+    test(
+      'leaves the colour layer empty when nothing is held and unchanged',
+      () async {
+        await script.serveGame(sectionPolicyMode: 1, sectionPolicyVersion: 3);
+
+        final refresh = await repository(
+          colourCanvasLoader: (gameIndex, sectionIndex, hint) async {
+            return serverpod.ColourCanvasView(
+              gameIndex: gameIndex,
+              sectionIndex: sectionIndex,
+              policyVersion: 3,
+              highestRevision: 0,
+              colours: null,
+            );
+          },
+        ).loadRefresh(0);
+
+        expect(refresh.snapshot?.section.colourMap, isNull);
+        expect(refresh.snapshot?.section.colourRevision, isNull);
+      },
+    );
+
     test('discards a wrong colour prefetch without loading twice', () async {
       await script.serveGame();
       var loads = 0;
 
       final refresh = await repository(
-        colourCanvasLoader: (gameIndex, sectionIndex) async {
+        colourCanvasLoader: (gameIndex, sectionIndex, hint) async {
           loads++;
 
           return serverpod.ColourCanvasView(
@@ -202,7 +266,16 @@ void main() {
       () async {
         await script.serveGame(sectionPolicyMode: 1, sectionPolicyVersion: 3);
 
-        final refresh = await repository().loadRefresh(0);
+        final repo = repository();
+        final refresh = await repo.loadRefresh(0);
+        final hinted = await repo.loadRefresh(
+          0,
+          colourHint: ColourCanvasHint(
+            policyVersion: 3,
+            revision: 1,
+            colourMap: PixelColourMap.empty(),
+          ),
+        );
 
         expect(refresh.snapshot?.section.revision, BigInt.from(7));
         expect(
@@ -210,6 +283,7 @@ void main() {
           isNull,
           reason: 'no backend listens on the test URL, so the layer is skipped',
         );
+        expect(hinted.snapshot?.section.colourMap, isNull);
       },
     );
 

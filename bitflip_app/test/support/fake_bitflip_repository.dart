@@ -78,6 +78,7 @@ final class FakeBitflipRepository implements BitflipRepository {
   int sealCalls = 0;
   int loadCalls = 0;
   List<PixelCoordinate> lastFlips = const [];
+  ColourCanvasHint? lastColourHint;
   SectionColour? lastColour;
   String? lastWalletId;
   BigInt? lastFundingLamports;
@@ -264,8 +265,10 @@ final class FakeBitflipRepository implements BitflipRepository {
   Future<GameRefresh> loadRefresh(
     int sectionIndex, {
     bool colourLikely = false,
+    ColourCanvasHint? colourHint,
   }) async {
     loadCalls++;
+    lastColourHint = colourHint;
     final error = loadError;
 
     if (error != null) throw error;

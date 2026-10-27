@@ -51,6 +51,16 @@ class Endpoints extends _is.EndpointDispatch {
               type: _is.getType<int>(),
               nullable: false,
             ),
+            'knownPolicyVersion': _is.ParameterDescription(
+              name: 'knownPolicyVersion',
+              type: _is.getType<int?>(),
+              nullable: true,
+            ),
+            'knownRevision': _is.ParameterDescription(
+              name: 'knownRevision',
+              type: _is.getType<int?>(),
+              nullable: true,
+            ),
           },
           call:
               (
@@ -62,6 +72,8 @@ class Endpoints extends _is.EndpointDispatch {
                         session,
                         gameIndex: params['gameIndex'],
                         sectionIndex: params['sectionIndex'],
+                        knownPolicyVersion: params['knownPolicyVersion'],
+                        knownRevision: params['knownRevision'],
                       ),
         ),
         'recordSignature': _is.MethodConnector(

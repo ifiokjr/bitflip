@@ -48,15 +48,13 @@ void run(List<String> args) async {
   );
   pod.webServer.addMiddleware(const SecurityHeadersMiddleware().call, '/');
 
+  final sealedArtwork = SealedSectionArtwork(
+    mintService: mintService,
+    publicBaseUrl: mintService.metadataBaseUrl,
+  );
   pod.webServer
-    ..addRoute(
-      SectionMetadataRoute(
-        mintService: mintService,
-        publicBaseUrl: mintService.metadataBaseUrl,
-      ),
-      '/metadata/:game/:section',
-    )
-    ..addRoute(SectionArtRoute(mintService), '/art/:game/:section');
+    ..addRoute(SectionMetadataRoute(sealedArtwork), '/metadata/:game/:section')
+    ..addRoute(SectionArtRoute(sealedArtwork), '/art/:game/:section');
 
   final flutterWeb = Directory('web/app');
 

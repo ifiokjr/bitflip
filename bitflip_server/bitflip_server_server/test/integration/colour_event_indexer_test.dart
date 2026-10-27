@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:bitflip_program/bitflip_program.dart';
@@ -53,7 +54,7 @@ void main() {
           gameIndex: 0,
           sectionIndex: 7,
         );
-        expect(_bytes(canvas.colours)[9], 5);
+        expect(_bytes(canvas.colours!)[9], 5);
         expect(canvas.highestRevision, 3);
 
         final cursor = await _cursor(sessionBuilder);
@@ -100,7 +101,104 @@ void main() {
           gameIndex: 0,
           sectionIndex: 7,
         );
-        expect(_bytes(canvas.colours)[100], 2);
+        expect(_bytes(canvas.colours!)[100], 2);
+      },
+    );
+
+    test(
+      'backs off while the program is idle and resumes on activity',
+      () async {
+        var now = DateTime.utc(2026, 9, 6, 17);
+        final source = _FakeIndexerSource()
+          ..pages.addAll([
+            const ColourProgramSignaturePage([]),
+            const ColourProgramSignaturePage([]),
+            const ColourProgramSignaturePage([]),
+            ColourProgramSignaturePage([
+              const ColourProgramSignature(signature: 'fresh', succeeded: true),
+            ]),
+            const ColourProgramSignaturePage([]),
+          ])
+          ..events['fresh'] = [_event(revision: 1, colour: 2, pixel: 3)];
+        final indexer = _indexer(
+          source,
+          clock: () => now,
+          maximumIdleInterval: const Duration(seconds: 5),
+        );
+
+        Future<String> outcome() async =>
+            (await _run(sessionBuilder, indexer.runOnce)).outcome;
+
+        expect(await outcome(), 'completed');
+        expect(indexer.idleBackoff, const Duration(seconds: 4));
+        expect(await outcome(), 'idle', reason: 'the first pause lasts 2s');
+        expect(source.requests, hasLength(1));
+
+        now = now.add(const Duration(seconds: 3));
+        expect(await outcome(), 'completed');
+        expect(
+          indexer.idleBackoff,
+          const Duration(seconds: 5),
+          reason: 'capped',
+        );
+        now = now.add(const Duration(seconds: 3));
+        expect(await outcome(), 'idle', reason: 'the second pause lasts 4s');
+
+        now = now.add(const Duration(seconds: 2));
+        expect(await outcome(), 'completed');
+        now = now.add(const Duration(seconds: 4));
+        expect(
+          await outcome(),
+          'idle',
+          reason: 'the third pause is capped at 5s',
+        );
+
+        now = now.add(const Duration(seconds: 2));
+        expect(await outcome(), 'completed');
+        expect(source.eventRequests, ['fresh']);
+        expect(
+          indexer.idleBackoff,
+          const Duration(seconds: 2),
+          reason: 'activity resets the backoff to the base interval',
+        );
+        expect(
+          await outcome(),
+          'completed',
+          reason: 'no pause follows a sweep that saw activity',
+        );
+      },
+    );
+
+    test(
+      'fetches a page with a bounded pool instead of fixed chunks',
+      () async {
+        final source = _FakeIndexerSource()
+          ..yieldPerEvent = true
+          ..pages.add(
+            ColourProgramSignaturePage([
+              for (var index = 0; index < 5; index++)
+                ColourProgramSignature(signature: 'tx-$index', succeeded: true),
+            ]),
+          );
+        final indexer = ColourEventIndexer(
+          configuration: const ColourIndexerConfiguration(
+            enabled: true,
+            cluster: 'devnet',
+            startSignature: 'start',
+            pageSize: 8,
+            maximumConcurrentTransactions: 2,
+          ),
+          signatureSource: source,
+          eventSource: source,
+          clock: () => DateTime.utc(2026, 9, 6, 17),
+          leaseToken: () => 'test-lease',
+        );
+
+        final result = await _run(sessionBuilder, indexer.runOnce);
+
+        expect(result.successfulTransactions, 5);
+        expect(source.eventRequests, hasLength(5));
+        expect(source.peakInFlight, 2);
       },
     );
 
@@ -135,6 +233,7 @@ void main() {
 ColourEventIndexer _indexer(
   _FakeIndexerSource source, {
   DateTime Function()? clock,
+  Duration maximumIdleInterval = const Duration(seconds: 30),
 }) {
   return ColourEventIndexer(
     configuration: const ColourIndexerConfiguration(
@@ -148,6 +247,7 @@ ColourEventIndexer _indexer(
     eventSource: source,
     clock: clock ?? () => DateTime.utc(2026, 9, 6, 17),
     leaseToken: () => 'test-lease',
+    maximumIdleInterval: maximumIdleInterval,
   );
 }
 
@@ -177,6 +277,9 @@ final class _FakeIndexerSource
   final requests = <_SignatureRequest>[];
   final eventRequests = <String>[];
   String? failOnceFor;
+  bool yieldPerEvent = false;
+  int _inFlight = 0;
+  int peakInFlight = 0;
 
   @override
   Future<ColourProgramSignaturePage> signatures({
@@ -192,13 +295,21 @@ final class _FakeIndexerSource
   @override
   Future<List<ColourPixelsFlipped>> eventsForSignature(String signature) async {
     eventRequests.add(signature);
+    _inFlight++;
+    peakInFlight = max(peakInFlight, _inFlight);
 
-    if (failOnceFor == signature) {
-      failOnceFor = null;
-      throw StateError('temporary RPC failure');
+    try {
+      if (yieldPerEvent) await Future<void>.delayed(Duration.zero);
+
+      if (failOnceFor == signature) {
+        failOnceFor = null;
+        throw StateError('temporary RPC failure');
+      }
+
+      return events[signature] ?? const [];
+    } finally {
+      _inFlight--;
     }
-
-    return events[signature] ?? const [];
   }
 }
 

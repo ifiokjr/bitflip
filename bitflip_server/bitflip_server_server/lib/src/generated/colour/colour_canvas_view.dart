@@ -20,7 +20,7 @@ abstract class ColourCanvasView
     required this.sectionIndex,
     required this.policyVersion,
     required this.highestRevision,
-    required this.colours,
+    this.colours,
   });
 
   factory ColourCanvasView({
@@ -28,7 +28,7 @@ abstract class ColourCanvasView
     required int sectionIndex,
     required int policyVersion,
     required int highestRevision,
-    required _idt.ByteData colours,
+    _idt.ByteData? colours,
   }) = _ColourCanvasViewImpl;
 
   factory ColourCanvasView.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -37,7 +37,9 @@ abstract class ColourCanvasView
       sectionIndex: jsonSerialization['sectionIndex'] as int,
       policyVersion: jsonSerialization['policyVersion'] as int,
       highestRevision: jsonSerialization['highestRevision'] as int,
-      colours: _is.ByteDataJsonExtension.fromJson(jsonSerialization['colours']),
+      colours: jsonSerialization['colours'] == null
+          ? null
+          : _is.ByteDataJsonExtension.fromJson(jsonSerialization['colours']),
     );
   }
 
@@ -49,7 +51,7 @@ abstract class ColourCanvasView
 
   int highestRevision;
 
-  _idt.ByteData colours;
+  _idt.ByteData? colours;
 
   /// Returns a shallow copy of this [ColourCanvasView]
   /// with some or all fields replaced by the given arguments.
@@ -69,7 +71,7 @@ abstract class ColourCanvasView
       'sectionIndex': sectionIndex,
       'policyVersion': policyVersion,
       'highestRevision': highestRevision,
-      'colours': colours.toJson(),
+      if (colours != null) 'colours': colours?.toJson(),
     };
   }
 
@@ -81,7 +83,7 @@ abstract class ColourCanvasView
       'sectionIndex': sectionIndex,
       'policyVersion': policyVersion,
       'highestRevision': highestRevision,
-      'colours': colours.toJson(),
+      if (colours != null) 'colours': colours?.toJson(),
     };
   }
 
@@ -91,13 +93,15 @@ abstract class ColourCanvasView
   }
 }
 
+class _Undefined {}
+
 class _ColourCanvasViewImpl extends ColourCanvasView {
   _ColourCanvasViewImpl({
     required int gameIndex,
     required int sectionIndex,
     required int policyVersion,
     required int highestRevision,
-    required _idt.ByteData colours,
+    _idt.ByteData? colours,
   }) : super._(
          gameIndex: gameIndex,
          sectionIndex: sectionIndex,
@@ -115,14 +119,14 @@ class _ColourCanvasViewImpl extends ColourCanvasView {
     int? sectionIndex,
     int? policyVersion,
     int? highestRevision,
-    _idt.ByteData? colours,
+    Object? colours = _Undefined,
   }) {
     return ColourCanvasView(
       gameIndex: gameIndex ?? this.gameIndex,
       sectionIndex: sectionIndex ?? this.sectionIndex,
       policyVersion: policyVersion ?? this.policyVersion,
       highestRevision: highestRevision ?? this.highestRevision,
-      colours: colours ?? this.colours.clone(),
+      colours: colours is _idt.ByteData? ? colours : this.colours?.clone(),
     );
   }
 }

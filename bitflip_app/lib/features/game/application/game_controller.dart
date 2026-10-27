@@ -219,11 +219,25 @@ class GameController extends _$GameController {
       }
 
       if (!ref.mounted) return;
+      final current = state.snapshot.section;
       final colourLikely =
-          state.snapshot.section.policy?.mode == SectionPolicyMode.colourCanvas;
+          current.policy?.mode == SectionPolicyMode.colourCanvas;
       final loaded = await _repository.loadRefresh(
         sectionIndex,
         colourLikely: colourLikely,
+        colourHint: switch ((
+          current.policy,
+          current.colourMap,
+          current.colourRevision,
+        )) {
+          (final policy?, final colourMap?, final revision?) =>
+            ColourCanvasHint(
+              policyVersion: policy.version.toInt(),
+              revision: revision,
+              colourMap: colourMap,
+            ),
+          _ => null,
+        },
       );
 
       if (!ref.mounted) return;

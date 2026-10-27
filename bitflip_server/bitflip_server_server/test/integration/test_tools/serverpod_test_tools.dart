@@ -194,6 +194,8 @@ class _ColourCanvasEndpoint {
     _ist.TestSessionBuilder sessionBuilder, {
     required int gameIndex,
     required int sectionIndex,
+    int? knownPolicyVersion,
+    int? knownRevision,
   }) async {
     return _ist.callAwaitableFunctionAndHandleExceptions(() async {
       var _localUniqueSession =
@@ -209,6 +211,8 @@ class _ColourCanvasEndpoint {
           parameters: _ist.testObjectToJson({
             'gameIndex': gameIndex,
             'sectionIndex': sectionIndex,
+            'knownPolicyVersion': knownPolicyVersion,
+            'knownRevision': knownRevision,
           }),
           serializationManager: _serializationManager,
         );

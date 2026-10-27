@@ -2,6 +2,7 @@ import 'package:bitflip_app/core/bitflip_wallet.dart';
 import 'package:bitflip_app/features/game/application/game_controller.dart';
 import 'package:bitflip_app/features/game/domain/game_snapshot.dart';
 import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
+import 'package:bitflip_app/features/game/domain/pixel_colour_map.dart';
 import 'package:bitflip_app/features/game/domain/section_economy.dart';
 import 'package:bitflip_app/features/game/domain/section_policy.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -72,6 +73,39 @@ void main() {
         () => state.queued.add(const PixelCoordinate(0, 0)),
         throwsUnsupportedError,
       );
+    });
+
+    test('hands the held colour layer to the next refresh as a hint', () async {
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final policy = SectionPolicySnapshot(
+        version: BigInt.from(4),
+        startsAtUnixSeconds: BigInt.from(now - 10),
+        endsAtUnixSeconds: BigInt.from(now + 600),
+        entryPriceTokens: BigInt.zero,
+        rewardPerActionTokens: BigInt.zero,
+        rulesDigest: List.filled(32, 1),
+        mode: SectionPolicyMode.colourCanvas,
+        paletteId: 0,
+        rewardPolicy: SectionRewardPolicy.none,
+      );
+      final held = PixelColourMap.empty().painted(const [
+        PixelCoordinate(1, 1),
+      ], SectionColour.amber);
+      final live = _liveSnapshot(SectionLifecycle.active, policy: policy);
+      repository.snapshot = live.copyWith(
+        section: live.section.copyWith(colourMap: held, colourRevision: 21),
+      );
+      final controller = container.read(gameControllerProvider.notifier);
+
+      await controller.refresh();
+      expect(repository.lastColourHint, isNull);
+
+      await controller.refresh();
+      final hint = repository.lastColourHint;
+
+      expect(hint?.policyVersion, 4);
+      expect(hint?.revision, 21);
+      expect(identical(hint?.colourMap, held), isTrue);
     });
 
     test('an unchanged poll keeps the snapshot and queue instances', () async {

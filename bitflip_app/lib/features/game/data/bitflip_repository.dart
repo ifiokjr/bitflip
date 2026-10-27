@@ -26,8 +26,13 @@ abstract interface class BitflipRepository {
   Future<BigInt?> loadWalletBalance();
 
   /// Loads the section snapshot and, when a wallet is connected, its balance
-  /// in one chain round trip.
-  Future<GameRefresh> loadRefresh(int sectionIndex, {bool colourLikely});
+  /// in one chain round trip. [colourHint] lets the colour backend answer
+  /// "unchanged" instead of resending a canvas the client already holds.
+  Future<GameRefresh> loadRefresh(
+    int sectionIndex, {
+    bool colourLikely,
+    ColourCanvasHint? colourHint,
+  });
   Future<String> connectWallet([String? walletId]);
   Future<String> fundWithMobileWallet(BigInt lamports);
   Future<String> claimSection(GameSnapshot snapshot);
@@ -63,6 +68,20 @@ final class BitflipMintResult {
 /// One refresh round trip: the section snapshot plus the wallet balance read
 /// from the same account fetch. Either field keeps its nullability so the
 /// controller can distinguish "unavailable" from "absent".
+/// The colour layer a client already holds, keyed by the policy version it was
+/// painted under and the backend revision it reflects.
+final class ColourCanvasHint {
+  const ColourCanvasHint({
+    required this.policyVersion,
+    required this.revision,
+    required this.colourMap,
+  });
+
+  final int policyVersion;
+  final int revision;
+  final PixelColourMap colourMap;
+}
+
 final class GameRefresh {
   const GameRefresh({required this.snapshot, this.walletBalanceLamports});
 
@@ -99,7 +118,11 @@ final class SolanaBitflipRepository implements BitflipRepository {
   final Rpc _rpc;
   final BitflipAddressBook _addresses;
   final serverpod.Client _serverpod;
-  final Future<serverpod.ColourCanvasView?> Function(int, int)?
+  final Future<serverpod.ColourCanvasView?> Function(
+    int gameIndex,
+    int sectionIndex,
+    ColourCanvasHint? hint,
+  )?
   colourCanvasLoader;
   final BitflipWallet _wallet;
 
@@ -109,17 +132,20 @@ final class SolanaBitflipRepository implements BitflipRepository {
   Future<serverpod.ColourCanvasView?> _loadColourCanvas(
     int gameIndex,
     int sectionIndex,
+    ColourCanvasHint? hint,
   ) async {
     try {
       final loader = colourCanvasLoader;
 
       if (loader != null) {
-        return await loader(gameIndex, sectionIndex);
+        return await loader(gameIndex, sectionIndex, hint);
       }
 
       return await _serverpod.colourCanvas.load(
         gameIndex: gameIndex,
         sectionIndex: sectionIndex,
+        knownPolicyVersion: hint?.policyVersion,
+        knownRevision: hint?.revision,
       );
     } on Object {
       return null;
@@ -164,6 +190,7 @@ final class SolanaBitflipRepository implements BitflipRepository {
   Future<GameRefresh> loadRefresh(
     int sectionIndex, {
     bool colourLikely = false,
+    ColourCanvasHint? colourHint,
   }) async {
     if (sectionIndex < 0 || sectionIndex >= sectionCount) {
       throw RangeError.range(sectionIndex, 0, sectionCount - 1);
@@ -174,7 +201,7 @@ final class SolanaBitflipRepository implements BitflipRepository {
     // Start the optional colour fetch before the chain fetch so both run in
     // parallel; when the guess is wrong the canvas is discarded unused.
     final colourCanvas = colourLikely
-        ? _loadColourCanvas(_gameIndex, sectionIndex)
+        ? _loadColourCanvas(_gameIndex, sectionIndex, colourHint)
         : null;
     final configAddress = await _addresses.config();
     final gameAddress = await _addresses.game(_gameIndex);
@@ -235,18 +262,27 @@ final class SolanaBitflipRepository implements BitflipRepository {
     if (section.policy?.mode == SectionPolicyMode.colourCanvas) {
       final canvas =
           await (colourCanvas ??
-              _loadColourCanvas(game.gameIndex, section.index));
+              _loadColourCanvas(game.gameIndex, section.index, colourHint));
 
       if (canvas != null &&
           BigInt.from(canvas.policyVersion) == section.policy?.version) {
-        section = section.copyWith(
-          colourMap: PixelColourMap.fromBytes(
-            canvas.colours.buffer.asUint8List(
-              canvas.colours.offsetInBytes,
-              canvas.colours.lengthInBytes,
-            ),
-          ),
-        );
+        // A view without colours confirms the hinted canvas is still current.
+        final colours = canvas.colours;
+        final colourMap = colours == null
+            ? colourHint?.colourMap
+            : PixelColourMap.fromBytes(
+                colours.buffer.asUint8List(
+                  colours.offsetInBytes,
+                  colours.lengthInBytes,
+                ),
+              );
+
+        if (colourMap != null) {
+          section = section.copyWith(
+            colourMap: colourMap,
+            colourRevision: canvas.highestRevision,
+          );
+        }
       }
     }
 

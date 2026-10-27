@@ -20,6 +20,7 @@ final class SectionSnapshot {
     this.economy,
     this.policy,
     this.colourMap,
+    this.colourRevision,
   });
 
   final int index;
@@ -35,6 +36,10 @@ final class SectionSnapshot {
   final SectionEconomySnapshot? economy;
   final SectionPolicySnapshot? policy;
   final PixelColourMap? colourMap;
+
+  /// The off-chain colour layer revision that [colourMap] reflects, so the
+  /// next refresh can ask the backend only whether anything changed.
+  final int? colourRevision;
 
   bool get isEditable => lifecycle == SectionLifecycle.active;
   bool get isClaimed => lifecycle != SectionLifecycle.unclaimed;
@@ -56,7 +61,8 @@ final class SectionSnapshot {
             other.bitVault == bitVault &&
             other.economy == economy &&
             other.policy == policy &&
-            other.colourMap == colourMap;
+            other.colourMap == colourMap &&
+            other.colourRevision == colourRevision;
   }
 
   @override
@@ -74,6 +80,7 @@ final class SectionSnapshot {
     economy,
     policy,
     colourMap,
+    colourRevision,
   );
 
   SectionSnapshot copyWith({
@@ -89,6 +96,7 @@ final class SectionSnapshot {
     SectionEconomySnapshot? economy,
     SectionPolicySnapshot? policy,
     PixelColourMap? colourMap,
+    int? colourRevision,
   }) {
     return SectionSnapshot(
       index: index,
@@ -104,6 +112,7 @@ final class SectionSnapshot {
       economy: economy ?? this.economy,
       policy: policy ?? this.policy,
       colourMap: colourMap ?? this.colourMap,
+      colourRevision: colourRevision ?? this.colourRevision,
     );
   }
 }
