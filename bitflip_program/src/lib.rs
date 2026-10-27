@@ -1431,6 +1431,15 @@ fn bit_recipient_account_balance(
 	Ok(token_account.amount())
 }
 
+/// Token balances observed while validating custody. No token moves between
+/// that check and the reward transfer, so they double as the transfer's
+/// pre-state and spare a second deserialization of each account.
+#[derive(Clone, Copy)]
+struct FlipCustodyBalances {
+	vault: u64,
+	recipient: u64,
+}
+
 fn assert_flip_custody(
 	[
 		section,
@@ -1444,27 +1453,27 @@ fn assert_flip_custody(
 	expected_section_vault: &Address,
 	emitted_tokens: u64,
 	allocation_tokens: u64,
-) -> ProgramResult {
+) -> Result<FlipCustodyBalances, ProgramError> {
 	let token_program = *token_program_account
 		.assert_address(&token_2022::ID)?
 		.address();
 	bit_mint.assert_address(expected_bit_mint)?;
 	assert_bit_mint(bit_mint, &token_program)?;
 	section_vault.assert_address(expected_section_vault)?;
-	let vault_balance = bit_token_account_balance(
+	let vault = bit_token_account_balance(
 		section_vault,
 		section.address(),
 		bit_mint.address(),
 		&token_program,
 	)?;
-	let _ = bit_recipient_account_balance(
+	let recipient = bit_recipient_account_balance(
 		player_bit_account,
 		player.address(),
 		bit_mint.address(),
 		&token_program,
 	)?;
 
-	if vault_balance
+	if vault
 		.checked_add(emitted_tokens)
 		.ok_or(ProgramError::ArithmeticOverflow)?
 		< allocation_tokens
@@ -1472,7 +1481,7 @@ fn assert_flip_custody(
 		return Err(BitflipError::InvalidBitTokenAccount.into());
 	}
 
-	Ok(())
+	Ok(FlipCustodyBalances { vault, recipient })
 }
 
 fn transfer_bit_reward(
@@ -1483,6 +1492,7 @@ fn transfer_bit_reward(
 		player_bit_account,
 		token_program_account,
 	]: [&AccountView; 5],
+	before: FlipCustodyBalances,
 	reward_tokens: u64,
 	game_index: u8,
 	section_index: u8,
@@ -1494,12 +1504,6 @@ fn transfer_bit_reward(
 
 	token_program_account.assert_address(&token_2022::ID)?;
 	let token_program = *token_program_account.address();
-	let vault_amount_before = section_vault
-		.as_token_account_for_program(&token_program)?
-		.amount();
-	let recipient_amount_before = player_bit_account
-		.as_token_account_for_program(&token_program)?
-		.amount();
 	let section_seeds = SectionState::seeds(game_index, section_index).with_bump(section_bump);
 	let section_signer = section_seeds.to_signer();
 	let signers = [section_signer.as_signer()];
@@ -1519,11 +1523,12 @@ fn transfer_bit_reward(
 	let recipient_amount_after = player_bit_account
 		.as_token_account_for_program(&token_program)?
 		.amount();
-	let vault_debit = vault_amount_before
+	let vault_debit = before
+		.vault
 		.checked_sub(vault_amount_after)
 		.ok_or(BitflipError::InvalidBitTokenAccount)?;
 	let recipient_credit = recipient_amount_after
-		.checked_sub(recipient_amount_before)
+		.checked_sub(before.recipient)
 		.ok_or(BitflipError::InvalidBitTokenAccount)?;
 
 	if vault_debit != reward_tokens || recipient_credit != reward_tokens {
@@ -1910,7 +1915,7 @@ impl<'a> ProcessAccountInfos<'a> for FlipPixelsAccounts<'a> {
 		}
 
 		let mut section_state = section_flip_state(self.section, args, clock.unix_timestamp)?;
-		assert_flip_custody(
+		let custody = assert_flip_custody(
 			[
 				self.section,
 				self.bit_mint,
@@ -1965,6 +1970,7 @@ impl<'a> ProcessAccountInfos<'a> for FlipPixelsAccounts<'a> {
 				self.player_bit_account,
 				self.token_program,
 			],
+			custody,
 			quote.reward_tokens,
 			args.game_index,
 			args.section_index,
