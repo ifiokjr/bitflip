@@ -24,6 +24,38 @@ final class SectionPriceConfig {
   final BigInt endFloorPriceLamports;
   final BigInt changeDenominator;
   final BigInt burstElasticity;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is SectionPriceConfig &&
+            other.allocationTokens == allocationTokens &&
+            other.emissionDurationSeconds == emissionDurationSeconds &&
+            other.windowSeconds == windowSeconds &&
+            other.targetTokensPerWindow == targetTokensPerWindow &&
+            other.startPriceLamports == startPriceLamports &&
+            other.minimumPriceLamports == minimumPriceLamports &&
+            other.maximumPriceLamports == maximumPriceLamports &&
+            other.startFloorPriceLamports == startFloorPriceLamports &&
+            other.endFloorPriceLamports == endFloorPriceLamports &&
+            other.changeDenominator == changeDenominator &&
+            other.burstElasticity == burstElasticity;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    allocationTokens,
+    emissionDurationSeconds,
+    windowSeconds,
+    targetTokensPerWindow,
+    startPriceLamports,
+    minimumPriceLamports,
+    maximumPriceLamports,
+    startFloorPriceLamports,
+    endFloorPriceLamports,
+    changeDenominator,
+    burstElasticity,
+  );
 }
 
 final class SectionEconomySnapshot {
@@ -54,6 +86,40 @@ final class SectionEconomySnapshot {
   final BigInt postedPriceLamports;
   final BigInt protocolFeeLamports;
   final BigInt ownerFeeLamports;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is SectionEconomySnapshot &&
+            other.launchedAt == launchedAt &&
+            other.windowStartedAt == windowStartedAt &&
+            other.lastUpdatedAt == lastUpdatedAt &&
+            other.windowId == windowId &&
+            other.windowTargetTokens == windowTargetTokens &&
+            other.windowRewardedTokens == windowRewardedTokens &&
+            other.emittedTokens == emittedTokens &&
+            other.rewardPoolTokens == rewardPoolTokens &&
+            other.controllerPriceLamports == controllerPriceLamports &&
+            other.postedPriceLamports == postedPriceLamports &&
+            other.protocolFeeLamports == protocolFeeLamports &&
+            other.ownerFeeLamports == ownerFeeLamports;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    launchedAt,
+    windowStartedAt,
+    lastUpdatedAt,
+    windowId,
+    windowTargetTokens,
+    windowRewardedTokens,
+    emittedTokens,
+    rewardPoolTokens,
+    controllerPriceLamports,
+    postedPriceLamports,
+    protocolFeeLamports,
+    ownerFeeLamports,
+  );
 
   SectionFlipQuote quote({
     required SectionPriceConfig config,

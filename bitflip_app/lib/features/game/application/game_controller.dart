@@ -160,7 +160,11 @@ final class GameViewState {
   }) {
     return GameViewState(
       snapshot: snapshot ?? this.snapshot,
-      queued: Set.unmodifiable(queued ?? this.queued),
+      // Reusing the existing set keeps an unchanged queue identical across
+      // state updates, so the canvas painter can skip its repaint.
+      queued: queued == null || identical(queued, this.queued)
+          ? this.queued
+          : Set.unmodifiable(queued),
       cursor: clearCursor ? null : cursor ?? this.cursor,
       activity: activity ?? this.activity,
       isBusy: isBusy ?? this.isBusy,
@@ -265,7 +269,9 @@ class GameController extends _$GameController {
     if (current.isDemo ||
         current.section.index != loaded.section.index ||
         loaded.section.revision >= current.section.revision) {
-      return loaded;
+      // An unchanged poll keeps the current instance so downstream identity
+      // checks (and the canvas repaint) stay short-circuited.
+      return loaded == current ? current : loaded;
     }
 
     return current;
