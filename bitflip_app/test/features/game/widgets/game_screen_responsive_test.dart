@@ -188,6 +188,61 @@ void main() {
     expect(find.text('SIGNAL MIRROR'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('the chain poll pauses while the app is hidden', (tester) async {
+    final repository = FakeBitflipRepository(
+      isWalletSupported: false,
+      snapshot: _liveSnapshot(),
+    );
+    await tester.binding.setSurfaceSize(const Size(900, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [bitflipRepositoryProvider.overrideWithValue(repository)],
+        child: const BitflipApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OPEN CANVAS'));
+    await tester.pumpAndSettle();
+    final loadsWhileVisible = repository.loadCalls;
+
+    await tester.pump(const Duration(seconds: 13));
+    expect(
+      repository.loadCalls,
+      greaterThan(loadsWhileVisible),
+      reason: 'the twelve-second poll runs while visible',
+    );
+
+    final loadsBeforeHiding = repository.loadCalls;
+    for (final state in [
+      AppLifecycleState.inactive,
+      AppLifecycleState.hidden,
+      AppLifecycleState.paused,
+    ]) {
+      tester.binding.handleAppLifecycleStateChanged(state);
+    }
+    await tester.pump(const Duration(seconds: 40));
+    expect(
+      repository.loadCalls,
+      loadsBeforeHiding,
+      reason: 'a hidden app keeps its battery and RPC quota',
+    );
+
+    for (final state in [
+      AppLifecycleState.hidden,
+      AppLifecycleState.inactive,
+      AppLifecycleState.resumed,
+    ]) {
+      tester.binding.handleAppLifecycleStateChanged(state);
+    }
+    await tester.pump(const Duration(seconds: 13));
+    expect(
+      repository.loadCalls,
+      greaterThan(loadsBeforeHiding),
+      reason: 'resuming restarts the poll',
+    );
+  });
 }
 
 GameSnapshot _liveSnapshot() => GameSnapshot.empty(gameIndex: 0).copyWith(
