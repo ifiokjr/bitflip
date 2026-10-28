@@ -1,7 +1,18 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { chmodSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	chmodSync,
+	existsSync,
+	lstatSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	statSync,
+	symlinkSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -166,6 +177,145 @@ test("backup refuses to overwrite an existing artifact", () => {
 		rmSync(directory, { force: true, recursive: true });
 	}
 });
+
+/// Stub only the database commands so backup filesystem and checksum behavior
+/// runs through the real shell and installed SHA-256 utility without a server.
+function installFakePostgres(
+	directory: string,
+	checksumCommand: "sha256sum" | "shasum" = "sha256sum",
+): NodeJS.ProcessEnv {
+	const dump = join(directory, "pg_dump");
+	const restore = join(directory, "pg_restore");
+	symlinkSync(process.execPath, join(directory, "node"));
+
+	for (const command of ["bash", "dirname", "mkdir", "ln", checksumCommand]) {
+		const resolved = spawnSync("bash", ["-c", "command -v \"$1\"", "bash", command], {
+			encoding: "utf8",
+		});
+		assert.equal(resolved.status, 0, `Missing test command: ${command}`);
+		symlinkSync(resolved.stdout.trim(), join(directory, command));
+	}
+
+	writeFileSync(
+		dump,
+		`#!/usr/bin/env bash
+set -euo pipefail
+for argument in "$@"; do
+  case "$argument" in
+    --file=*) printf 'test archive\\n' >"\${argument#--file=}" ;;
+  esac
+done
+if [[ -n "\${BITFLIP_TEST_CHECKSUM_TARGET:-}" ]]; then
+  ln -s "$BITFLIP_TEST_CHECKSUM_TARGET" "$BITFLIP_BACKUP_OUTPUT.sha256"
+fi
+`,
+	);
+	writeFileSync(restore, "#!/usr/bin/env bash\nexit 0\n");
+	chmodSync(dump, 0o755);
+	chmodSync(restore, 0o755);
+
+	return {
+		PATH: directory,
+		PGDATABASE: "bitflip",
+		PGHOST: "database.example.com",
+		PGPASSWORD: "test-only",
+		PGPORT: "5432",
+		PGUSER: "bitflip",
+	};
+}
+
+test("backup refuses existing checksum files and symlinks without clobbering", () => {
+	for (const kind of ["file", "symlink", "dangling symlink", "device symlink"]) {
+		const directory = mkdtempSync(join(tmpdir(), "bitflip-checksum-"));
+
+		try {
+			const output = join(directory, "new.dump");
+			const sidecar = `${output}.sha256`;
+			const target = join(directory, "protected.txt");
+			const environment = installFakePostgres(directory);
+
+			if (kind === "file") {
+				writeFileSync(sidecar, "existing checksum");
+			} else {
+				if (kind === "symlink") {
+					writeFileSync(target, "do not overwrite");
+				}
+
+				symlinkSync(kind === "device symlink" ? "/dev/null" : target, sidecar);
+			}
+
+			const result = runScript("setup/scripts/postgres_backup.sh", {
+				...environment,
+				BITFLIP_BACKUP_OUTPUT: output,
+			});
+
+			assert.notEqual(result.status, 0, `${kind} must be refused`);
+			assert.doesNotMatch(result.stdout, /Backup created and readable/);
+
+			if (kind === "file") {
+				assert.equal(readFileSync(sidecar, "utf8"), "existing checksum");
+			} else {
+				assert.ok(lstatSync(sidecar).isSymbolicLink());
+
+				if (kind === "symlink") {
+					assert.equal(readFileSync(target, "utf8"), "do not overwrite");
+				} else {
+					assert.equal(existsSync(target), false);
+				}
+			}
+		} finally {
+			rmSync(directory, { force: true, recursive: true });
+		}
+	}
+});
+
+test("backup refuses a checksum symlink inserted during the dump", () => {
+	for (const kind of ["file", "device"]) {
+		const directory = mkdtempSync(join(tmpdir(), "bitflip-checksum-race-"));
+
+		try {
+			const output = join(directory, "new.dump");
+			const target = join(directory, "protected.txt");
+			const environment = installFakePostgres(directory);
+			writeFileSync(target, "do not overwrite");
+			const result = runScript("setup/scripts/postgres_backup.sh", {
+				...environment,
+				BITFLIP_BACKUP_OUTPUT: output,
+				BITFLIP_TEST_CHECKSUM_TARGET: kind === "device" ? "/dev/null" : target,
+			});
+
+			assert.equal(readFileSync(output, "utf8"), "test archive\n");
+			assert.notEqual(result.status, 0);
+			assert.equal(readFileSync(target, "utf8"), "do not overwrite");
+			assert.ok(lstatSync(`${output}.sha256`).isSymbolicLink());
+			assert.doesNotMatch(result.stdout, /Backup created and readable/);
+		} finally {
+			rmSync(directory, { force: true, recursive: true });
+		}
+	}
+});
+
+for (const checksumCommand of ["sha256sum", "shasum"] as const) {
+	test(`backup creates a valid private checksum with ${checksumCommand}`, () => {
+		const directory = mkdtempSync(join(tmpdir(), "bitflip-checksum-success-"));
+
+		try {
+			const output = join(directory, "new.dump");
+			const result = runScript("setup/scripts/postgres_backup.sh", {
+				...installFakePostgres(directory, checksumCommand),
+				BITFLIP_BACKUP_OUTPUT: output,
+			});
+			assert.equal(result.status, 0, result.stderr);
+			const checksum = createHash("sha256").update(readFileSync(output)).digest("hex");
+			assert.equal(readFileSync(`${output}.sha256`, "utf8"), `${checksum}  ${output}\n`);
+			assert.equal(statSync(output).mode & 0o777, 0o600);
+			assert.equal(statSync(`${output}.sha256`).mode & 0o777, 0o600);
+			assert.match(result.stdout, /Backup created and readable/);
+		} finally {
+			rmSync(directory, { force: true, recursive: true });
+		}
+	});
+}
 
 test("restore verification requires a named disposable target", () => {
 	const result = runScript("setup/scripts/postgres_restore_verify.sh", {

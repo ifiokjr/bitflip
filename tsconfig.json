@@ -14,6 +14,7 @@
 	},
 	"include": [
 		"setup/build_wallet_bridge.ts",
+		"setup/scripts/write_backup_checksum.ts",
 		"setup/verify_container.ts",
 		"setup/wallet_bridge.ts",
 		"setup/wallet_bridge.test.ts"
