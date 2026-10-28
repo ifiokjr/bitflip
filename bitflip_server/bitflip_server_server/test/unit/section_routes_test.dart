@@ -14,6 +14,222 @@ const _active = 1;
 
 void main() {
   group('SealedSectionArtwork', () {
+    test('caches absent accounts from the real Solana loader', () async {
+      var rpcLoads = 0;
+      var now = DateTime.utc(2026, 10, 28);
+      final rpc = Rpc(
+        api: MapRpcApi({
+          'getMultipleAccounts': (_) => RpcPlan(
+            execute: (_) async {
+              rpcLoads++;
+
+              return {
+                'context': {'slot': BigInt.one},
+                'value': [null, null, null],
+              };
+            },
+          ),
+        }),
+        transport: (_) async => null,
+      );
+      final artwork = SealedSectionArtwork(
+        mintService: SolanaBitflipMintService(
+          rpc: rpc,
+          merkleTreeAddress: null,
+          operatorPrivateKey: null,
+          metadataBaseUrl: 'https://bitflip.art',
+        ),
+        publicBaseUrl: 'https://bitflip.art',
+        clock: () => now,
+      );
+
+      for (var attempt = 0; attempt < 100; attempt++) {
+        final response = await serveSectionAsset(
+          () => attempt.isEven ? artwork.metadata(0, 8) : artwork.art(0, 8),
+        );
+
+        expect(response.statusCode, 404);
+      }
+
+      expect(rpcLoads, 1);
+      now = now.add(const Duration(seconds: 30));
+      expect(
+        (await serveSectionAsset(() => artwork.art(0, 8))).statusCode,
+        404,
+      );
+      expect(rpcLoads, 2);
+    });
+
+    test(
+      'bounds concurrent enumeration without queueing distinct misses',
+      () async {
+        final gate = Completer<void>();
+        final service = _FakeMintService({}, beforeLoad: () => gate.future);
+        final artwork = SealedSectionArtwork(
+          mintService: service,
+          publicBaseUrl: 'https://bitflip.art',
+        );
+        final requests = [
+          for (var index = 0; index < 1000; index++)
+            serveSectionAsset(() => artwork.art(index ~/ 256, index % 256)),
+        ];
+        final coalesced = serveSectionAsset(() => artwork.metadata(0, 0));
+
+        expect(service.loads, 4);
+        expect((await requests.last).statusCode, 503);
+        gate.complete();
+        final responses = await Future.wait(requests);
+
+        expect(responses.where((r) => r.statusCode == 404), hasLength(4));
+        expect(responses.where((r) => r.statusCode == 503), hasLength(996));
+        expect((await coalesced).statusCode, 404);
+        expect(service.loads, 4, reason: 'rejected work is never queued');
+        expect(
+          (await serveSectionAsset(() => artwork.art(0, 10))).statusCode,
+          404,
+        );
+        expect(
+          service.loads,
+          5,
+          reason: 'completed misses release their slots',
+        );
+      },
+    );
+
+    test(
+      'limits fast misses over a rolling window and recovers at expiry',
+      () async {
+        var now = DateTime.utc(2026, 10, 28);
+        final service = _FakeMintService({
+          (0, 0): _section(0, 0, status: _sealed),
+        });
+        final artwork = SealedSectionArtwork(
+          mintService: service,
+          publicBaseUrl: 'https://bitflip.art',
+          maximumLoadsPerWindow: 2,
+          clock: () => now,
+        );
+        final cached = await artwork.art(0, 0);
+        now = now.add(const Duration(seconds: 1));
+        await expectLater(artwork.art(0, 1), throwsStateError);
+
+        expect(
+          (await serveSectionAsset(() => artwork.art(0, 2))).statusCode,
+          503,
+        );
+        expect(await artwork.art(0, 0), same(cached));
+        await expectLater(artwork.metadata(0, 1), throwsStateError);
+        expect(service.loads, 2, reason: 'cache hits do not spend admission');
+
+        now = now.add(const Duration(seconds: 29));
+        await expectLater(artwork.art(0, 2), throwsStateError);
+        expect(service.loads, 3);
+        expect(
+          (await serveSectionAsset(() => artwork.art(0, 3))).statusCode,
+          503,
+        );
+        now = now.add(const Duration(seconds: 1));
+        await expectLater(artwork.art(0, 3), throwsStateError);
+        expect(service.loads, 4);
+      },
+    );
+
+    test(
+      'bounds negative retention when enumerating completed misses',
+      () async {
+        final service = _FakeMintService({});
+        final artwork = SealedSectionArtwork(
+          mintService: service,
+          publicBaseUrl: 'https://bitflip.art',
+          maximumCachedSections: 2,
+        );
+
+        for (var index = 0; index < 10; index++) {
+          await expectLater(artwork.art(0, index), throwsStateError);
+        }
+
+        await expectLater(artwork.metadata(0, 9), throwsStateError);
+        expect(service.loads, 10);
+        await expectLater(artwork.art(0, 0), throwsStateError);
+        expect(
+          service.loads,
+          11,
+          reason: 'the oldest negative entry was evicted',
+        );
+      },
+    );
+
+    test('bounds rendered retention and keeps recently used assets', () async {
+      final service = _FakeMintService({
+        for (var index = 0; index < 3; index++)
+          (0, index): _section(0, index, status: _sealed),
+      });
+      final artwork = SealedSectionArtwork(
+        mintService: service,
+        publicBaseUrl: 'https://bitflip.art',
+        maximumCachedSections: 2,
+      );
+      final first = await artwork.art(0, 0);
+      await artwork.art(0, 1);
+      await artwork.metadata(0, 0);
+      await artwork.art(0, 2);
+
+      expect(await artwork.art(0, 0), same(first));
+      expect(service.loads, 3);
+      await artwork.art(0, 1);
+      expect(
+        service.loads,
+        4,
+        reason: 'the least recently used entry was evicted',
+      );
+    });
+
+    test(
+      'propagates RPC failures and charges them to the load budget',
+      () async {
+        var failing = true;
+        var now = DateTime.utc(2026, 10, 28);
+        final service = _FakeMintService(
+          {(0, 0): _section(0, 0, status: _sealed)},
+          beforeLoad: () async {
+            if (failing) throw TimeoutException('RPC unavailable');
+          },
+        );
+        final artwork = SealedSectionArtwork(
+          mintService: service,
+          publicBaseUrl: 'https://bitflip.art',
+          maximumLoadsPerWindow: 2,
+          maximumConcurrentLoads: 1,
+          clock: () => now,
+        );
+
+        for (var attempt = 0; attempt < 2; attempt++) {
+          await expectLater(
+            serveSectionAsset(() => artwork.art(0, 0)),
+            throwsA(isA<TimeoutException>()),
+          );
+        }
+
+        expect(
+          (await serveSectionAsset(() => artwork.art(0, 0))).statusCode,
+          503,
+        );
+        expect(service.loads, 2);
+        now = now.add(const Duration(seconds: 30));
+        failing = false;
+
+        expect(
+          (await serveSectionAsset(() => artwork.art(0, 0))).statusCode,
+          200,
+        );
+        expect(
+          service.loads,
+          3,
+          reason: 'RPC failures never become cached 404s',
+        );
+      },
+    );
+
     test(
       'renders a sealed section once and serves both assets from it',
       () async {
@@ -81,8 +297,13 @@ void main() {
           clock: () => now,
         );
 
-        await expectLater(artwork.art(0, 2), throwsStateError);
-        await expectLater(artwork.metadata(0, 2), throwsStateError);
+        for (var attempt = 0; attempt < 100; attempt++) {
+          await expectLater(
+            attempt.isEven ? artwork.art(0, 2) : artwork.metadata(0, 2),
+            throwsStateError,
+          );
+        }
+
         expect(service.loads, 1, reason: 'the miss is remembered');
 
         now = now.add(const Duration(seconds: 31));

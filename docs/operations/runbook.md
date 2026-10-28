@@ -26,6 +26,15 @@ Never record database passwords, signing keys, seed phrases, or the operator pri
 5. Restore that exact dump into an isolated database with `setup/scripts/postgres_restore_verify.sh`. A backup is not considered valid until this succeeds.
 6. Rehearse pending migrations against the restored copy. Serverpod must start, `/startupz` and `/readyz` must pass, and the application integration suite must complete before touching the live database.
 7. Confirm ingress has a distributed source/global challenge rate limit, request-size limit, TLS, and no route to the Insights port.
+8. Confirm both public artwork routes use the distributed ingress/CDN limits described below, with no direct origin bypass.
+
+## Public artwork RPC budget
+
+`/metadata` and `/art` share one `SealedSectionArtwork` instance. Each process admits at most four concurrent section loads and 32 new loads in any rolling 30-second window, including failed loads. Excess cold requests return `503`, `Retry-After: 30`, and `Cache-Control: no-store` without queueing or calling RPC. Cached responses and requests sharing an existing load do not spend admission capacity.
+
+The process retains at most 256 rendered sections and 256 negative entries. Missing or invalid on-chain accounts and unsealed sections are remembered for 30 seconds; transport failures remain errors. Rendered entries are evicted in least-recently-used order, and negative entries expire or are evicted oldest first. Successful responses keep their existing immutable CDN headers.
+
+These limits reset at process restart and multiply with replicas. Before public rollout, the release owner must approve the cold-request budget against expected marketplace traffic and the provider quota reserved for minting, indexing, and readiness. Enforce an aggregate limit for both routes at ingress/CDN across all replicas, prevent origin bypass, and verify the deployed policy with a bounded load test. Source tests establish the process bounds; they do not establish a deployed edge policy or provider capacity.
 
 ## Staging rollout
 

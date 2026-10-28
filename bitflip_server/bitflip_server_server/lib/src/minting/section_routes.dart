@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:bitflip_program/bitflip_program_constraints.dart';
@@ -27,27 +28,46 @@ final class SectionAsset {
   final ETagHeader etag;
 }
 
-/// Renders every sealed section's metadata and SVG exactly once and serves the
-/// cached bodies with immutable caching headers. Unsealed lookups are
-/// remembered for [unsealedRetryAfter] so a crawler cannot turn each miss into
-/// another chain read, and concurrent misses for one section share a single
-/// load.
+/// Shares bounded artwork and negative caches between both public routes.
+///
+/// New chain loads have a process-wide concurrency and rolling-window budget
+/// within this shared instance. Saturation rejects work without queueing it;
+/// cached assets, cached misses, and coalesced loads need no admission slot.
 final class SealedSectionArtwork {
   SealedSectionArtwork({
     required this.mintService,
     required String publicBaseUrl,
     this.unsealedRetryAfter = const Duration(seconds: 30),
+    this.maximumCachedSections = 256,
+    this.maximumConcurrentLoads = 4,
+    this.maximumLoadsPerWindow = 32,
+    this.loadWindow = const Duration(seconds: 30),
     DateTime Function()? clock,
   }) : _publicBaseUrl = publicBaseUrl.replaceFirst(RegExp(r'/+$'), ''),
-       _clock = clock ?? DateTime.now;
+       _clock = clock ?? DateTime.now {
+    if (maximumCachedSections < 1 ||
+        maximumConcurrentLoads < 1 ||
+        maximumLoadsPerWindow < 1 ||
+        unsealedRetryAfter <= Duration.zero ||
+        loadWindow <= Duration.zero) {
+      throw ArgumentError('Artwork cache and load limits must be positive.');
+    }
+  }
 
   final BitflipMintService mintService;
   final String _publicBaseUrl;
   final Duration unsealedRetryAfter;
+
+  /// Each of the positive and negative caches retains at most this many keys.
+  final int maximumCachedSections;
+  final int maximumConcurrentLoads;
+  final int maximumLoadsPerWindow;
+  final Duration loadWindow;
   final DateTime Function() _clock;
   final Map<(int, int), _RenderedSection> _rendered = {};
   final Map<(int, int), Future<_RenderedSection>> _loading = {};
-  final Map<(int, int), DateTime> _unsealedUntil = {};
+  final Map<(int, int), DateTime> _unavailableUntil = {};
+  final Queue<DateTime> _loadStarts = Queue();
 
   Future<SectionAsset> metadata(int gameIndex, int sectionIndex) async {
     return (await _section(gameIndex, sectionIndex)).metadata;
@@ -60,26 +80,72 @@ final class SealedSectionArtwork {
   Future<_RenderedSection> _section(int gameIndex, int sectionIndex) async {
     _validateIndices(gameIndex, sectionIndex);
     final key = (gameIndex, sectionIndex);
-    final rendered = _rendered[key];
+    final rendered = _rendered.remove(key);
 
-    if (rendered != null) return rendered;
+    if (rendered != null) {
+      _rendered[key] = rendered;
 
-    final retryAt = _unsealedUntil[key];
-
-    if (retryAt != null && _clock().isBefore(retryAt)) {
-      throw StateError('Only sealed sections have permanent artwork.');
+      return rendered;
     }
 
-    return _loading[key] ??= _load(key).whenComplete(() {
+    final now = _clock();
+    final retryAt = _unavailableUntil[key];
+
+    if (retryAt != null && now.isBefore(retryAt)) {
+      throw StateError('The section has no permanent artwork yet.');
+    }
+
+    _unavailableUntil.remove(key);
+    final loading = _loading[key];
+
+    if (loading != null) return loading;
+
+    while (_loadStarts.isNotEmpty &&
+        !now.isBefore(_loadStarts.first.add(loadWindow))) {
+      _loadStarts.removeFirst();
+    }
+
+    // Security: distinct coordinates must not bypass coalescing and consume
+    // the RPC capacity used by minting, indexing, and readiness. Failed loads
+    // also spend the budget; there is no queue of attacker-controlled keys.
+    if (_loading.length >= maximumConcurrentLoads ||
+        _loadStarts.length >= maximumLoadsPerWindow) {
+      throw SectionArtworkBusy(loadWindow);
+    }
+
+    _loadStarts.addLast(now);
+
+    return _loading[key] = _load(key).whenComplete(() {
       _loading.remove(key);
     });
   }
 
+  void _rememberUnavailable((int, int) key) {
+    final now = _clock();
+    _unavailableUntil.removeWhere((_, until) => !now.isBefore(until));
+
+    if (_unavailableUntil.length >= maximumCachedSections) {
+      _unavailableUntil.remove(_unavailableUntil.keys.first);
+    }
+
+    _unavailableUntil[key] = now.add(unsealedRetryAfter);
+  }
+
   Future<_RenderedSection> _load((int, int) key) async {
-    final section = await mintService.loadSection(key.$1, key.$2);
+    final MintableSection section;
+
+    try {
+      section = await mintService.loadSection(key.$1, key.$2);
+    } on StateError {
+      // loadSection uses StateError for absent/invalid on-chain accounts,
+      // already exposed as 404 by these routes. Transport failures propagate
+      // without becoming cached 404s.
+      _rememberUnavailable(key);
+      rethrow;
+    }
 
     if (!section.isSealed && !section.isMinted) {
-      _unsealedUntil[key] = _clock().add(unsealedRetryAfter);
+      _rememberUnavailable(key);
       throw StateError('Only sealed sections have permanent artwork.');
     }
 
@@ -97,11 +163,22 @@ final class SealedSectionArtwork {
         mimeType: _svgMimeType,
       ),
     );
+    if (_rendered.length >= maximumCachedSections) {
+      _rendered.remove(_rendered.keys.first);
+    }
+
     _rendered[key] = rendered;
-    _unsealedUntil.remove(key);
+    _unavailableUntil.remove(key);
 
     return rendered;
   }
+}
+
+/// The public artwork RPC budget is exhausted; callers may retry later.
+final class SectionArtworkBusy implements Exception {
+  const SectionArtworkBusy(this.retryAfter);
+
+  final Duration retryAfter;
 }
 
 final class _RenderedSection {
@@ -147,6 +224,17 @@ Future<Response> serveSectionAsset(
     return Response.badRequest();
   } on RangeError {
     return Response.notFound();
+  } on SectionArtworkBusy catch (error) {
+    return Response(
+      503,
+      headers: Headers.build((headers) {
+        headers
+          ..cacheControl = CacheControlHeader(noStore: true)
+          ..retryAfter = RetryAfterHeader(
+            delay: (error.retryAfter.inMicroseconds + 999999) ~/ 1000000,
+          );
+      }),
+    );
   } on StateError {
     return Response.notFound();
   }

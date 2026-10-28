@@ -18,6 +18,7 @@ void main() {
       final artwork = SealedSectionArtwork(
         mintService: service,
         publicBaseUrl: 'https://bitflip.art',
+        maximumLoadsPerWindow: 2,
       );
       pod.webServer
         ..addRoute(SectionMetadataRoute(artwork), '/metadata/:game/:section')
@@ -84,6 +85,31 @@ void main() {
         unsealed.drain<void>(),
         malformed.drain<void>(),
         outOfRange.drain<void>(),
+      ]);
+
+      final overloaded = await client
+          .getUrl(url('/metadata/0/8.json'))
+          .then((r) => r.close());
+      final cachedMiss = await client
+          .getUrl(url('/metadata/0/7.json'))
+          .then((r) => r.close());
+      final cachedArt = await client
+          .getUrl(url('/art/0/5.svg'))
+          .then((r) => r.close());
+
+      expect(overloaded.statusCode, 503);
+      expect(overloaded.headers.value(HttpHeaders.retryAfterHeader), '30');
+      expect(
+        overloaded.headers.value(HttpHeaders.cacheControlHeader),
+        'no-store',
+      );
+      expect(cachedMiss.statusCode, 404);
+      expect(cachedArt.statusCode, 200);
+      expect(service.loads, 2, reason: 'overload and cache hits need no RPC');
+      await Future.wait([
+        overloaded.drain<void>(),
+        cachedMiss.drain<void>(),
+        cachedArt.drain<void>(),
       ]);
     });
   });
