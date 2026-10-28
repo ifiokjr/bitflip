@@ -32,6 +32,7 @@ void main() {
   late SurfpoolClient surfpool;
   late Uint8List operatorSecretKey;
   late KeyPairSigner owner;
+  late KeyPairSigner buyer;
   late KeyPairSigner merkleTree;
   late Address configAddress;
   late Address gameAddress;
@@ -48,6 +49,7 @@ void main() {
     );
     operatorSecretKey = surfpool.surfnet.payerSecretKey;
     owner = generateKeyPairSigner();
+    buyer = generateKeyPairSigner();
     merkleTree = generateKeyPairSigner();
 
     await Future.wait([
@@ -69,6 +71,7 @@ void main() {
       _deployProgram(surfpool, _noopProgram, _artifactPath('noop-v0.2.0.so')),
     ]);
     await surfpool.airdrop(owner.address, BigInt.from(2_000_000_000));
+    await surfpool.airdrop(buyer.address, BigInt.from(2_000_000_000));
 
     final (derivedConfigAddress, configBump) = await findConfigPda(
       programAddress: bitflipProgramProgramAddress,
@@ -156,6 +159,7 @@ void main() {
 
   tearDownAll(() async {
     owner.keyPair.dispose();
+    buyer.keyPair.dispose();
     merkleTree.keyPair.dispose();
     await surfpool.stop();
   });
@@ -174,7 +178,7 @@ void main() {
   });
 
   test(
-    'atomically mints a sealed section and records its Pina receipt',
+    'rejects seller authorization after a sale, then mints for the buyer',
     () async {
       final service = SolanaBitflipMintService(
         rpc: surfpool.rpc,
@@ -187,7 +191,55 @@ void main() {
       expect(before.owner, owner.address);
       expect(before.bitmap[72], 128, reason: 'pixel (7, 9) should be on');
 
-      final result = await service.mint(before);
+      final price = BigInt.from(1_000_000);
+      await _sendInstructions(
+        surfpool,
+        [
+          getListSectionInstruction(
+            programAddress: bitflipProgramProgramAddress,
+            owner: owner.address,
+            game: gameAddress,
+            section: sectionAddress,
+            gameIndex: 0,
+            sectionIndex: 1,
+            priceLamports: price,
+          ),
+        ],
+        extraSigners: [owner],
+      );
+      await _sendInstructions(
+        surfpool,
+        [
+          getPurchaseSectionInstruction(
+            programAddress: bitflipProgramProgramAddress,
+            buyer: buyer.address,
+            seller: owner.address,
+            game: gameAddress,
+            section: sectionAddress,
+            systemProgram: system.systemProgramAddress,
+            gameIndex: 0,
+            sectionIndex: 1,
+            maximumPriceLamports: price,
+          ),
+        ],
+        extraSigners: [buyer],
+      );
+
+      await expectLater(
+        service.mint(before),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'The section owner changed before minting.',
+          ),
+        ),
+      );
+      final purchased = await service.loadSection(0, 1);
+      expect(purchased.owner, buyer.address);
+      expect(purchased.isSealed, isTrue);
+
+      final result = await service.mint(purchased);
       expect(result.alreadyMinted, isFalse);
       expect(result.transactionSignature, isNotEmpty);
       expect(result.merkleTree, merkleTree.address);
@@ -198,6 +250,7 @@ void main() {
       expect(after.assetId, result.assetId);
       expect(after.merkleTree, merkleTree.address);
       expect(after.leafIndex, 0);
+      await expectLater(service.mint(before), throwsA(isA<StateError>()));
 
       final (treeAuthority, _) = await bubblegum.findTreeAuthorityPda(
         merkleTree: merkleTree.address,

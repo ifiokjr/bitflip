@@ -72,6 +72,7 @@ final class MintSubmission {
 abstract interface class BitflipMintService {
   Future<MintableSection> loadSection(int gameIndex, int sectionIndex);
 
+  /// Mints only while the current owner matches the authorized `section.owner`.
   Future<MintSubmission> mint(MintableSection section);
 }
 
@@ -274,6 +275,11 @@ final class SolanaBitflipMintService implements BitflipMintService {
   Future<MintSubmission> _mintOnce(MintableSection section) async {
     final fresh = await loadSection(section.gameIndex, section.sectionIndex);
 
+    // Security: A sale must not carry the signer's consent to the new owner.
+    if (fresh.owner != section.owner) {
+      throw StateError('The section owner changed before minting.');
+    }
+
     if (fresh.isMinted) {
       return MintSubmission(
         assetId: fresh.assetId!,
@@ -314,7 +320,6 @@ final class SolanaBitflipMintService implements BitflipMintService {
       };
       if (encodedTreeConfig.programAddress !=
           bubblegum.mplBubblegumProgramAddressObject) {
-
         throw StateError(
           'The configured tree authority is not owned by Bubblegum.',
         );
@@ -337,8 +342,8 @@ final class SolanaBitflipMintService implements BitflipMintService {
       final mintInstruction = bubblegum.getMintV1Instruction(
         programAddress: bubblegum.mplBubblegumProgramAddressObject,
         treeAuthority: treeAuthority,
-        leafOwner: fresh.owner,
-        leafDelegate: fresh.owner,
+        leafOwner: section.owner,
+        leafDelegate: section.owner,
         merkleTree: tree,
         payer: signer.address,
         treeDelegate: signer.address,
@@ -368,7 +373,7 @@ final class SolanaBitflipMintService implements BitflipMintService {
         section: fresh.sectionAddress,
         gameIndex: fresh.gameIndex,
         sectionIndex: fresh.sectionIndex,
-        expectedOwner: fresh.owner,
+        expectedOwner: section.owner,
         assetId: assetId,
         merkleTree: tree,
         leafIndex: leafIndex,
@@ -458,7 +463,6 @@ final class SolanaBitflipMintService implements BitflipMintService {
     }
 
     try {
-
       return bytes.length == 64
           ? createKeyPairSignerFromBytes(bytes)
           : createKeyPairSignerFromPrivateKeyBytes(bytes);
@@ -658,12 +662,7 @@ void _requirePublicHttps(String name, String value) {
 
 void _validateIndices(int gameIndex, int sectionIndex) {
   if (gameIndex < 0 || gameIndex > bitflipMaximumGameIndex) {
-    throw RangeError.range(
-      gameIndex,
-      0,
-      bitflipMaximumGameIndex,
-      'gameIndex',
-    );
+    throw RangeError.range(gameIndex, 0, bitflipMaximumGameIndex, 'gameIndex');
   }
 
   if (sectionIndex < 0 || sectionIndex > bitflipMaximumSectionIndex) {
