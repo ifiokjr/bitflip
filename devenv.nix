@@ -147,20 +147,20 @@ in
     };
     flutter = {
       exec = ''
-        set -euo pipefail
-        unset CC CXX LD AR NM RANLIB STRIP OBJCOPY OBJDUMP SIZE STRINGS
-    unset NIX_CC NIX_BINTOOLS NIX_CFLAGS_COMPILE NIX_LDFLAGS
-    unset NIX_HARDENING_ENABLE NIX_ENFORCE_NO_NATIVE
-    unset NIX_CC_WRAPPER_TARGET_HOST_arm64_apple_darwin
-    unset NIX_BINTOOLS_WRAPPER_TARGET_HOST_arm64_apple_darwin
-    unset NIX_PKG_CONFIG_WRAPPER_TARGET_HOST_arm64_apple_darwin
-    unset NIX_DONT_SET_RPATH NIX_DONT_SET_RPATH_FOR_BUILD
-    unset NIX_IGNORE_LD_THROUGH_GCC NIX_NO_SELF_RPATH
-    unset IN_NIX_SHELL __NIX_DARWIN_SET_ENVIRONMENT_DONE
-        unset SDKROOT MACOSX_DEPLOYMENT_TARGET CFLAGS CXXFLAGS LDFLAGS ARCHFLAGS
-        unset PKG_CONFIG PKG_CONFIG_PATH LD_LIBRARY_PATH LD_DYLD_PATH cmakeFlags
-        ${resolveFlutterSdk}
-        exec "$flutter_sdk/bin/flutter" "$@"
+            set -euo pipefail
+            unset CC CXX LD AR NM RANLIB STRIP OBJCOPY OBJDUMP SIZE STRINGS
+        unset NIX_CC NIX_BINTOOLS NIX_CFLAGS_COMPILE NIX_LDFLAGS
+        unset NIX_HARDENING_ENABLE NIX_ENFORCE_NO_NATIVE
+        unset NIX_CC_WRAPPER_TARGET_HOST_arm64_apple_darwin
+        unset NIX_BINTOOLS_WRAPPER_TARGET_HOST_arm64_apple_darwin
+        unset NIX_PKG_CONFIG_WRAPPER_TARGET_HOST_arm64_apple_darwin
+        unset NIX_DONT_SET_RPATH NIX_DONT_SET_RPATH_FOR_BUILD
+        unset NIX_IGNORE_LD_THROUGH_GCC NIX_NO_SELF_RPATH
+        unset IN_NIX_SHELL __NIX_DARWIN_SET_ENVIRONMENT_DONE
+            unset SDKROOT MACOSX_DEPLOYMENT_TARGET CFLAGS CXXFLAGS LDFLAGS ARCHFLAGS
+            unset PKG_CONFIG PKG_CONFIG_PATH LD_LIBRARY_PATH LD_DYLD_PATH cmakeFlags
+            ${resolveFlutterSdk}
+            exec "$flutter_sdk/bin/flutter" "$@"
       '';
       description = "Run the pinned Flutter SDK with an Xcode-safe environment.";
       binary = "bash";
@@ -385,10 +385,8 @@ in
           echo "Install Docker or Podman before building the container." >&2
           exit 1
         fi
-        "$container_runtime" build \
-          --file "$DEVENV_ROOT/${serverDir}/Dockerfile" \
-          --tag bitflip-server:verification \
-          "$DEVENV_ROOT"
+        cd "$DEVENV_ROOT"
+        node --experimental-strip-types setup/verify_container.ts "$container_runtime"
       '';
       description = "Build the production Serverpod image with the Flutter site.";
       binary = "bash";

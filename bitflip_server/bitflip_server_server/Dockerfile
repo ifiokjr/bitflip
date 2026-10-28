@@ -39,8 +39,10 @@ COPY --from=build /runtime/ /
 # Copy compiled server executable and native libraries
 COPY --from=build /app/bitflip_server/bitflip_server_server/build/bundle/ ./
 
-# Copy configuration files and resources
-COPY --from=build /app/bitflip_server/bitflip_server_server/config/ config/
+# Copy only public runtime configuration, even if the build context policy changes.
+COPY --from=build /app/bitflip_server/bitflip_server_server/config/development.yaml \
+  /app/bitflip_server/bitflip_server_server/config/production.yaml \
+  /app/bitflip_server/bitflip_server_server/config/staging.yaml config/
 COPY --from=build /app/bitflip_server/bitflip_server_server/web/ web/
 COPY --from=build /app/bitflip_server/bitflip_server_server/migrations/ migrations/
 
