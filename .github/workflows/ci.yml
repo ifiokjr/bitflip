@@ -28,7 +28,7 @@ jobs:
         run: |
           image="$(jq -er '.image | select(test("^ghcr\\.io/cachix/devenv:[A-Za-z0-9._-]+@sha256:[a-f0-9]{64}$"))' .devcontainer.json)"
           docker pull "$image"
-          docker run --rm --network none "$image" bash -euo pipefail -c 'devenv version; nix --version'
+          docker run --rm --network none --entrypoint /nix-entrypoint.sh "$image" bash -euo pipefail -c 'devenv version; nix --version'
 
   verify:
     runs-on: ubuntu-latest
