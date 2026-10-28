@@ -48,6 +48,9 @@ class EndpointColourCanvas extends _isc.EndpointRef {
     },
   );
 
+  /// Returns the latest indexed canvas for clients reporting a confirmed flip.
+  /// Only the durable indexer fetches and applies colour transactions; public
+  /// signatures must not become reusable tokens for RPC and database writes.
   _ida.Future<_ifgy9s0u.ColourCanvasView> recordSignature({
     required String transactionSignature,
     required int gameIndex,
