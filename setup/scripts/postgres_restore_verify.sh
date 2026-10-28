@@ -21,13 +21,43 @@ if [[ ! -f "$BITFLIP_BACKUP_FILE" ]]; then
 	exit 1
 fi
 
+: "${BITFLIP_BACKUP_SHA256:?Set BITFLIP_BACKUP_SHA256 from the authenticated release record.}"
+
+if [[ ! "$BITFLIP_BACKUP_SHA256" =~ ^[[:xdigit:]]{64}$ ]]; then
+	echo "BITFLIP_BACKUP_SHA256 must contain exactly 64 hexadecimal SHA-256 digits." >&2
+	exit 1
+fi
+
+expected_sha256="$(printf '%s' "$BITFLIP_BACKUP_SHA256" | tr '[:upper:]' '[:lower:]')"
+umask 077
+restore_directory="$(mktemp -d "${TMPDIR:-/tmp}/bitflip-restore-verify.XXXXXXXX")"
+restore_started=false
+
 cleanup() {
-	if [[ "${BITFLIP_KEEP_RESTORE_DATABASE:-false}" != "true" ]]; then
+	rm -rf -- "$restore_directory"
+	if [[ "$restore_started" == "true" ]] &&
+		[[ "${BITFLIP_KEEP_RESTORE_DATABASE:-false}" != "true" ]]; then
 		dropdb --if-exists "$BITFLIP_RESTORE_DATABASE"
 	fi
 }
 trap cleanup EXIT
 
+# Authenticate and restore the same private bytes, even if storage replaces the source.
+restore_file="$restore_directory/backup.dump"
+cp -- "$BITFLIP_BACKUP_FILE" "$restore_file"
+
+if command -v sha256sum >/dev/null 2>&1; then
+	checksum="$(sha256sum <"$restore_file")"
+else
+	checksum="$(shasum -a 256 <"$restore_file")"
+fi
+
+if [[ "${checksum%% *}" != "$expected_sha256" ]]; then
+	echo "Backup SHA-256 digest mismatch; refusing restore verification." >&2
+	exit 1
+fi
+
+restore_started=true
 dropdb --if-exists "$BITFLIP_RESTORE_DATABASE"
 createdb "$BITFLIP_RESTORE_DATABASE"
 pg_restore \
@@ -35,7 +65,7 @@ pg_restore \
 	--no-owner \
 	--no-acl \
 	--dbname="$BITFLIP_RESTORE_DATABASE" \
-	"$BITFLIP_BACKUP_FILE"
+	"$restore_file"
 
 table_count="$(
 	PGDATABASE="$BITFLIP_RESTORE_DATABASE" psql \

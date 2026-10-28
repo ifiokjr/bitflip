@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { chmodSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -180,4 +181,177 @@ test("restore verification requires a named disposable target", () => {
 
 	assert.notEqual(result.status, 0);
 	assert.match(result.stderr, /distinct, confirmed database/);
+});
+
+function restoreFixture() {
+	const directory = mkdtempSync(join(tmpdir(), "bitflip-restore-"));
+	const backup = join(directory, "source.dump");
+	const calls = join(directory, "database-calls");
+	const restored = join(directory, "restored.dump");
+	const archive = Buffer.from("PGDMP original archive\n");
+	const digest = createHash("sha256").update(archive).digest("hex");
+	writeFileSync(backup, archive);
+
+	for (const command of ["dropdb", "createdb", "pg_restore", "psql"]) {
+		const executable = join(directory, command);
+		writeFileSync(
+			executable,
+			`#!/usr/bin/env bash
+set -euo pipefail
+command="\${0##*/}"
+printf '%s\\n' "$command" >> "$DATABASE_CALL_LOG"
+case "$command" in
+  dropdb)
+    if [[ "\${REPLACE_SOURCE:-false}" == true ]]; then
+      printf 'substituted after authentication' > "$BITFLIP_BACKUP_FILE"
+    fi
+    ;;
+  pg_restore)
+    printf '%s' "\${!#}" > "$RESTORED_BACKUP.path"
+    if [[ "\${FAIL_RESTORE:-false}" == true ]]; then exit 42; fi
+    cp -- "\${!#}" "$RESTORED_BACKUP"
+    ;;
+  psql) printf '1\\n' ;;
+esac
+`,
+		);
+		chmodSync(executable, 0o755);
+	}
+
+	return {
+		archive,
+		backup,
+		calls,
+		digest,
+		directory,
+		restored,
+		run(overrides: NodeJS.ProcessEnv = {}) {
+			return runScript("setup/scripts/postgres_restore_verify.sh", {
+				BITFLIP_BACKUP_FILE: backup,
+				BITFLIP_BACKUP_SHA256: digest,
+				BITFLIP_RESTORE_CONFIRM: "bitflip_restore_verify",
+				BITFLIP_RESTORE_DATABASE: "bitflip_restore_verify",
+				DATABASE_CALL_LOG: calls,
+				PATH: `${directory}:${process.env.PATH ?? ""}`,
+				PGDATABASE: "bitflip",
+				PGHOST: "127.0.0.1",
+				PGPASSWORD: "test-only",
+				PGPORT: "5432",
+				PGUSER: "bitflip",
+				RESTORED_BACKUP: restored,
+				TMPDIR: directory,
+				...overrides,
+			});
+		},
+	};
+}
+
+test("restore rejects missing, malformed, and mismatched trusted digests before database commands", () => {
+	const fixture = restoreFixture();
+	try {
+		for (
+			const digest of [
+				undefined,
+				"",
+				"a".repeat(63),
+				"g".repeat(64),
+				`${fixture.digest}  source.dump`,
+				`${fixture.digest}\n`,
+				"0".repeat(64),
+			]
+		) {
+			const result = fixture.run({ BITFLIP_BACKUP_SHA256: digest });
+			assert.notEqual(result.status, 0, `Digest ${String(digest)} must fail`);
+			assert.match(result.stderr, /SHA256|SHA-256/);
+			assert.equal(existsSync(fixture.calls), false, "No database command may run");
+		}
+	} finally {
+		rmSync(fixture.directory, { force: true, recursive: true });
+	}
+});
+
+test("restore rejects a one-byte substitution even with a matching adjacent checksum", () => {
+	const fixture = restoreFixture();
+	try {
+		const tampered = Buffer.from(fixture.archive);
+		tampered[0] = 0;
+		writeFileSync(fixture.backup, tampered);
+		const attackerDigest = createHash("sha256").update(tampered).digest("hex");
+		writeFileSync(`${fixture.backup}.sha256`, `${attackerDigest}  ${fixture.backup}\n`);
+
+		const result = fixture.run();
+		assert.notEqual(result.status, 0);
+		assert.match(result.stderr, /SHA-256.*mismatch/);
+		assert.equal(existsSync(fixture.calls), false, "No database command may run");
+		assert.equal(
+			readdirSync(fixture.directory).some((name) => name.startsWith("bitflip-restore-verify.")),
+			false,
+			"Rejected snapshots must be cleaned up",
+		);
+	} finally {
+		rmSync(fixture.directory, { force: true, recursive: true });
+	}
+});
+
+test("restore uses the authenticated snapshot even if the original is replaced", () => {
+	const fixture = restoreFixture();
+	try {
+		const result = fixture.run({
+			BITFLIP_BACKUP_SHA256: fixture.digest.toUpperCase(),
+			REPLACE_SOURCE: "true",
+		});
+		assert.equal(result.status, 0, result.stderr);
+		assert.match(result.stdout, /Restore verified with 1 public tables/);
+		assert.deepEqual(readFileSync(fixture.restored), fixture.archive);
+		assert.notDeepEqual(readFileSync(fixture.backup), fixture.archive);
+		assert.deepEqual(readFileSync(fixture.calls, "utf8").trim().split("\n"), [
+			"dropdb",
+			"createdb",
+			"pg_restore",
+			"psql",
+			"dropdb",
+		]);
+		const snapshot = readFileSync(`${fixture.restored}.path`, "utf8");
+		assert.notEqual(snapshot, fixture.backup);
+		assert.equal(existsSync(snapshot), false, "Snapshot must be cleaned up");
+	} finally {
+		rmSync(fixture.directory, { force: true, recursive: true });
+	}
+});
+
+test("restore fails closed when hashing fails", () => {
+	const fixture = restoreFixture();
+	try {
+		const sha256sum = join(fixture.directory, "sha256sum");
+		writeFileSync(sha256sum, "#!/usr/bin/env bash\nexit 41\n");
+		chmodSync(sha256sum, 0o755);
+		const result = fixture.run();
+		assert.equal(result.status, 41);
+		assert.equal(existsSync(fixture.calls), false, "No database command may run");
+		assert.equal(
+			readdirSync(fixture.directory).some((name) => name.startsWith("bitflip-restore-verify.")),
+			false,
+			"Unverified snapshots must be cleaned up",
+		);
+	} finally {
+		rmSync(fixture.directory, { force: true, recursive: true });
+	}
+});
+
+test("restore failure cleans up the disposable database and authenticated snapshot", () => {
+	const fixture = restoreFixture();
+	try {
+		const result = fixture.run({ FAIL_RESTORE: "true" });
+		assert.equal(result.status, 42);
+		assert.deepEqual(readFileSync(fixture.calls, "utf8").trim().split("\n"), [
+			"dropdb",
+			"createdb",
+			"pg_restore",
+			"dropdb",
+		]);
+		const snapshot = readFileSync(`${fixture.restored}.path`, "utf8");
+		assert.equal(existsSync(snapshot), false, "Snapshot must be cleaned up");
+	} finally {
+		rmSync(fixture.directory, { force: true, recursive: true });
+	}
 });
