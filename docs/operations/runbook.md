@@ -59,6 +59,8 @@ Run restore verification on a disposable PostgreSQL instance isolated from produ
 
 The current beta uses bounded synchronous submission plus idempotent re-entry. After any timeout or process loss:
 
+`RecordSectionMint` now requires the canonical Bubblegum tree-config account. It validates its owner and discriminator, requires the post-mint counter to equal the proposed leaf index plus one, and derives the asset PDA from that leaf. A stale allocation fails the entire atomic transaction, rolling back both the Bubblegum mint and the receipt. Roll out the reviewed program and regenerated server client together; an older server that omits the tree-config account will fail closed. This guard does not repair historical receipts or remove the single-process beta and durable-worker launch gates.
+
 1. Load the section account at confirmed commitment.
 2. If status is minted, compare its asset ID, tree, and leaf index with Bubblegum tree state and return the existing result.
 3. If status is sealed and no submitted signature is known, require a fresh wallet authorization before retrying.

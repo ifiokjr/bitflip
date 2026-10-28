@@ -8,6 +8,7 @@ import 'dart:typed_data';
 
 import 'package:bitflip_program/bitflip_program.dart';
 import 'package:bitflip_server_server/src/minting/bitflip_mint_service.dart';
+import 'package:bs58/bs58.dart';
 import 'package:solana_kit/solana_kit.dart';
 import 'package:solana_kit_mpl_bubblegum/solana_kit_mpl_bubblegum.dart'
     as bubblegum;
@@ -28,6 +29,8 @@ const _disableSbpfV0V1V2DeploymentFeature = Address(
   'B8JJXCy5amZyWG9r7EnUYLwzXSXTxG7GZ1qZ1qggo83g',
 );
 
+final _receiptComputeUnits = <int>[];
+
 void main() {
   late SurfpoolClient surfpool;
   late Uint8List operatorSecretKey;
@@ -37,6 +40,7 @@ void main() {
   late Address configAddress;
   late Address gameAddress;
   late Address sectionAddress;
+  late Uint8List sealedSectionData;
 
   setUpAll(() async {
     surfpool = await createSurfpoolClient(
@@ -155,6 +159,7 @@ void main() {
       extraSigners: [owner],
     );
     await _createPrivateTree(surfpool, merkleTree);
+    sealedSectionData = await _accountData(surfpool, sectionAddress);
   });
 
   tearDownAll(() async {
@@ -282,6 +287,7 @@ void main() {
         logs,
         contains('Program ${bitflipProgramProgramAddress.value} success'),
       );
+      await _expectLeafEvent(surfpool, result, owner.address);
     },
   );
 
@@ -300,6 +306,382 @@ void main() {
     expect(result.assetId, minted.assetId);
     expect(result.leafIndex, 0);
   });
+
+  test(
+    'rejects forged, stale and duplicate receipts without state changes',
+    () async {
+      final (treeAuthority, _) = await bubblegum.findTreeAuthorityPda(
+        merkleTree: merkleTree.address,
+      );
+      final section = await _installSealedSection(
+        surfpool,
+        sealedSectionData,
+        2,
+      );
+      final assetId = await _assetId(merkleTree.address, 0);
+      final record = getRecordSectionMintInstruction(
+        programAddress: bitflipProgramProgramAddress,
+        collectionAuthority: surfpool.payer.address,
+        config: configAddress,
+        game: gameAddress,
+        section: section,
+        treeAuthority: treeAuthority,
+        gameIndex: 0,
+        sectionIndex: 2,
+        expectedOwner: owner.address,
+        assetId: assetId,
+        merkleTree: merkleTree.address,
+        leafIndex: 0,
+      );
+      final sectionBefore = await _accountData(surfpool, section);
+      final gameBefore = await _accountData(surfpool, gameAddress);
+      final treeData = await _accountData(surfpool, treeAuthority);
+
+      Future<void> rejected(Instruction instruction) async {
+        await expectLater(
+          _sendInstructions(surfpool, [instruction]),
+          throwsStateError,
+        );
+        expect(await _accountData(surfpool, section), sectionBefore);
+        expect(await _accountData(surfpool, gameAddress), gameBefore);
+      }
+
+      // A different asset cannot be substituted even when the counter matches.
+      final forged = Uint8List.fromList(record.data!);
+      forged.setRange(36, 68, getAddressEncoder().encode(owner.address));
+      await rejected(
+        Instruction(
+          programAddress: record.programAddress,
+          accounts: record.accounts,
+          data: forged,
+        ),
+      );
+
+      // A newer counter recreates a replica's stale prediction after MintV1.
+      final advanced = Uint8List.fromList(treeData);
+      ByteData.sublistView(advanced).setUint64(80, 2, Endian.little);
+      await surfpool.cheatcodes.setAccount(treeAuthority, data: advanced);
+      await rejected(record);
+
+      for (final malformed in [Uint8List(8), Uint8List(96)]) {
+        await surfpool.cheatcodes.setAccount(treeAuthority, data: malformed);
+        await rejected(record);
+      }
+      await surfpool.cheatcodes.setAccount(treeAuthority, data: treeData);
+
+      final substituted = [...record.accounts!];
+      substituted[4] = AccountMeta(
+        address: surfpool.payer.address,
+        role: AccountRole.readonly,
+      );
+      await rejected(
+        Instruction(
+          programAddress: record.programAddress,
+          accounts: substituted,
+          data: record.data,
+        ),
+      );
+
+      // The original owner and lifecycle checks still apply with a valid tree.
+      final active = Uint8List.fromList(sectionBefore)..[132] = 1;
+      await surfpool.cheatcodes.setAccount(section, data: active);
+      await expectLater(
+        _sendInstructions(surfpool, [record]),
+        throwsStateError,
+      );
+      await surfpool.cheatcodes.setAccount(section, data: sectionBefore);
+
+      final duplicate = getRecordSectionMintInstruction(
+        programAddress: bitflipProgramProgramAddress,
+        collectionAuthority: surfpool.payer.address,
+        config: configAddress,
+        game: gameAddress,
+        section: sectionAddress,
+        treeAuthority: treeAuthority,
+        gameIndex: 0,
+        sectionIndex: 1,
+        expectedOwner: owner.address,
+        assetId: assetId,
+        merkleTree: merkleTree.address,
+        leafIndex: 0,
+      );
+      await expectLater(
+        _sendInstructions(surfpool, [duplicate]),
+        throwsStateError,
+      );
+    },
+  );
+
+  test('racing allocations roll back the loser and retry without an orphan', () async {
+    final sections = await Future.wait([
+      _installSealedSection(surfpool, sealedSectionData, 3),
+      _installSealedSection(surfpool, sealedSectionData, 4),
+    ]);
+    final (treeAuthority, _) = await bubblegum.findTreeAuthorityPda(
+      merkleTree: merkleTree.address,
+    );
+    final predictedLeaf = ByteData.sublistView(
+      await _accountData(surfpool, treeAuthority),
+    ).getUint64(80, Endian.little);
+    final assetId = await _assetId(merkleTree.address, predictedLeaf);
+    final transactions = await Future.wait([
+      for (var i = 0; i < sections.length; i++)
+        _atomicMintInstructions(
+          surfpool,
+          merkleTree.address,
+          owner.address,
+          configAddress,
+          gameAddress,
+          sections[i],
+          i + 3,
+          predictedLeaf,
+        ),
+    ]);
+    final attempts = await Future.wait([
+      for (final instructions in transactions)
+        _raceAttempt(surfpool, instructions),
+    ]);
+    expect(
+      attempts.where((attempt) => attempt.signature != null),
+      hasLength(1),
+    );
+    final winner = attempts.indexWhere((attempt) => attempt.signature != null);
+    final loser = 1 - winner;
+    expect(
+      attempts[loser].error.toString(),
+      contains('custom program error: 0xe'),
+    );
+
+    final service = SolanaBitflipMintService(
+      rpc: surfpool.rpc,
+      merkleTreeAddress: merkleTree.address.value,
+      operatorPrivateKey: jsonEncode(operatorSecretKey),
+      metadataBaseUrl: 'https://bitflip.invalid',
+    );
+    final winningSection = await service.loadSection(0, winner + 3);
+    expect(winningSection.assetId, assetId);
+    expect(winningSection.leafIndex, predictedLeaf);
+    await _expectLeafEvent(
+      surfpool,
+      MintSubmission(
+        assetId: assetId,
+        merkleTree: merkleTree.address,
+        leafIndex: predictedLeaf,
+        alreadyMinted: false,
+        transactionSignature: attempts[winner].signature,
+      ),
+      owner.address,
+    );
+    expect((await service.loadSection(0, loser + 3)).isSealed, isTrue);
+    expect(
+      ByteData.sublistView(await _accountData(surfpool, treeAuthority))
+          .getUint64(80, Endian.little),
+      predictedLeaf + 1,
+    );
+
+    final retry = await service.mint(await service.loadSection(0, loser + 3));
+    expect(retry.leafIndex, predictedLeaf + 1);
+    await _expectLeafEvent(surfpool, retry, owner.address);
+
+    // A new operator instance represents a crash after confirmation but before
+    // returning the result. Its retry must reconcile the existing receipt.
+    final restarted = SolanaBitflipMintService(
+      rpc: surfpool.rpc,
+      merkleTreeAddress: merkleTree.address.value,
+      operatorPrivateKey: jsonEncode(operatorSecretKey),
+      metadataBaseUrl: 'https://bitflip.invalid',
+    );
+    final recovered = await restarted.mint(
+      await restarted.loadSection(0, loser + 3),
+    );
+    expect(recovered.alreadyMinted, isTrue);
+    expect(recovered.assetId, retry.assetId);
+    expect(recovered.leafIndex, retry.leafIndex);
+    expect(
+      ByteData.sublistView(await _accountData(surfpool, treeAuthority))
+          .getUint64(80, Endian.little),
+      predictedLeaf + 2,
+    );
+  });
+
+  test('receipt validation stays within its reviewed compute budget', () {
+    expect(_receiptComputeUnits, hasLength(3));
+    // Two canonical PDA searches have variable cost depending on their bumps.
+    // The increase from 1,300 CU requires explicit performance approval.
+    expect(_receiptComputeUnits, everyElement(lessThanOrEqualTo(30000)));
+  });
+}
+
+Future<Uint8List> _accountData(SurfpoolClient client, Address address) async {
+  return switch (await fetchEncodedAccount(client.rpc, address)) {
+    ExistingAccount<Uint8List>(:final data) => Uint8List.fromList(data),
+    NonExistingAccount<Uint8List>() => throw StateError(
+      'Missing test account.',
+    ),
+  };
+}
+
+Future<Address> _installSealedSection(
+  SurfpoolClient client,
+  Uint8List template,
+  int index,
+) async {
+  final (section, bump) = await findSectionPda(
+    programAddress: bitflipProgramProgramAddress,
+    seeds: SectionSeeds(gameIndex: 0, sectionIndex: index),
+  );
+  final data = Uint8List.fromList(template)
+    ..[131] = index
+    ..[133] = bump;
+  await client.cheatcodes.setAccount(
+    section,
+    owner: bitflipProgramProgramAddress,
+    lamports: 10000000,
+    data: data,
+  );
+  return section;
+}
+
+Future<Address> _assetId(Address tree, int leaf) async {
+  final nonce = Uint8List(8);
+  ByteData.sublistView(nonce).setUint64(0, leaf, Endian.little);
+  return (await getProgramDerivedAddress(
+    programAddress: _bubblegumProgram,
+    seeds: ['asset', getAddressEncoder().encode(tree), nonce],
+  )).$1;
+}
+
+Future<List<Instruction>> _atomicMintInstructions(
+  SurfpoolClient client,
+  Address tree,
+  Address owner,
+  Address config,
+  Address game,
+  Address section,
+  int index,
+  int leaf,
+) async {
+  final (treeAuthority, _) = await bubblegum.findTreeAuthorityPda(
+    merkleTree: tree,
+  );
+  return [
+    bubblegum.getMintV1Instruction(
+      programAddress: _bubblegumProgram,
+      treeAuthority: treeAuthority,
+      leafOwner: owner,
+      leafDelegate: owner,
+      merkleTree: tree,
+      payer: client.payer.address,
+      treeDelegate: client.payer.address,
+      logWrapper: _noopProgram,
+      compressionProgram: _compressionProgram,
+      systemProgram: system.systemProgramAddress,
+      message: bubblegum.MetadataArgs(
+        name: 'Bitflip 0:$index',
+        symbol: 'BITFLIP',
+        uri: 'https://bitflip.invalid/metadata/0/$index.json',
+        sellerFeeBasisPoints: 0,
+        creators: [
+          bubblegum.Creator(
+            address: client.payer.address,
+            verified: false,
+            share: 100,
+          ),
+        ],
+      ),
+    ),
+    getRecordSectionMintInstruction(
+      programAddress: bitflipProgramProgramAddress,
+      collectionAuthority: client.payer.address,
+      config: config,
+      game: game,
+      section: section,
+      treeAuthority: treeAuthority,
+      gameIndex: 0,
+      sectionIndex: index,
+      expectedOwner: owner,
+      assetId: await _assetId(tree, leaf),
+      merkleTree: tree,
+      leafIndex: leaf,
+    ),
+  ];
+}
+
+Future<({String? signature, Object? error})> _raceAttempt(
+  SurfpoolClient client,
+  List<Instruction> instructions,
+) async {
+  try {
+    return (
+      signature: await _sendInstructions(client, instructions),
+      error: null,
+    );
+  } on Object catch (error) {
+    return (signature: null, error: error);
+  }
+}
+
+/// Decode the actual V1 LeafSchemaEvent from Bubblegum's Noop CPI, rather than
+/// inferring the minted identity from the same counter used by the server.
+Future<void> _expectLeafEvent(
+  SurfpoolClient client,
+  MintSubmission receipt,
+  Address owner,
+) async {
+  final transaction = await client.rpc
+      .getTransaction(
+        Signature(receipt.transactionSignature!),
+        const rpc_api.GetTransactionConfig(
+          commitment: rpc_types.Commitment.confirmed,
+          maxSupportedTransactionVersion: 0,
+        ),
+      )
+      .send();
+  final meta = transaction!['meta']! as Map<String, Object?>;
+  final message =
+      (transaction['transaction']! as Map<String, Object?>)['message']!
+          as Map<String, Object?>;
+  final keys = (message['accountKeys']! as List).cast<String>();
+  final events = <Uint8List>[];
+  for (final group
+      in (meta['innerInstructions']! as List).cast<Map<String, Object?>>()) {
+    for (final instruction
+        in (group['instructions']! as List).cast<Map<String, Object?>>()) {
+      if (keys[instruction['programIdIndex']! as int] != _noopProgram.value) {
+        continue;
+      }
+      final data = base58.decode(instruction['data']! as String);
+      if (data.length >= 209 &&
+          data[0] == 1 &&
+          data[1] == 0 &&
+          data[6] == 1 &&
+          data[7] == 0 &&
+          data[8] == 0) {
+        events.add(data);
+      }
+    }
+  }
+  expect(events, hasLength(1));
+  final event = events.single;
+  expect(
+    getAddressDecoder().decode(Uint8List.sublistView(event, 9, 41)),
+    receipt.assetId,
+  );
+  expect(
+    getAddressDecoder().decode(Uint8List.sublistView(event, 41, 73)),
+    owner,
+  );
+  expect(
+    ByteData.sublistView(event).getUint64(105, Endian.little),
+    receipt.leafIndex,
+  );
+  final logs = (meta['logMessages']! as List).cast<String>();
+  final consumed = RegExp(
+    'Program ${bitflipProgramProgramAddress.value} consumed (\\d+) of',
+  ).allMatches(logs.join('\n')).map((match) => int.parse(match[1]!)).single;
+  _receiptComputeUnits.add(consumed);
+  // ignore: avoid_print
+  print('RecordSectionMint leaf ${receipt.leafIndex}: $consumed CU');
 }
 
 Future<void> _setTestSectionPixel(

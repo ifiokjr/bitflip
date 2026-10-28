@@ -21,6 +21,7 @@ use pina::sysvars::Sysvar;
 use pina::sysvars::clock::Clock;
 use pina::*;
 
+mod mint_receipt;
 pub mod pricing;
 
 declare_id!("5AuNvfV9Xi9gskJpW2qQJndQkFcwbWNV6fjaf2VvuEcM");
@@ -602,6 +603,8 @@ pub struct RecordSectionMintAccounts<'a> {
 	pub config: &'a AccountView,
 	pub game: &'a mut AccountView,
 	pub section: &'a mut AccountView,
+	/// Bubblegum's canonical tree config, read after the atomic MintV1.
+	pub tree_authority: &'a AccountView,
 }
 
 #[derive(Accounts, Debug)]
@@ -2061,6 +2064,8 @@ impl<'a> ProcessAccountInfos<'a> for RecordSectionMintAccounts<'a> {
 				return Err(BitflipError::OwnerChanged.into());
 			}
 		}
+
+		mint_receipt::assert_mint_receipt(self.tree_authority, args)?;
 
 		let mut section = self.section.as_account_mut::<SectionState>(&ID)?;
 		section.asset_id = args.asset_id;

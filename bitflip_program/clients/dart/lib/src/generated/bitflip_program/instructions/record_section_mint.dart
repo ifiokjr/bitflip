@@ -142,6 +142,7 @@ Instruction getRecordSectionMintInstruction({
   required Address config,
   required Address game,
   required Address section,
+  required Address treeAuthority,
   required int gameIndex,
   required int sectionIndex,
   required Address expectedOwner,
@@ -165,6 +166,7 @@ Instruction getRecordSectionMintInstruction({
     AccountMeta(address: config, role: AccountRole.readonly),
     AccountMeta(address: game, role: AccountRole.writable),
     AccountMeta(address: section, role: AccountRole.writable),
+    AccountMeta(address: treeAuthority, role: AccountRole.readonly),
     ],
     data: getRecordSectionMintInstructionDataEncoder().encode(instructionData),
   );
