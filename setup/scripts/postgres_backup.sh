@@ -25,9 +25,16 @@ pg_dump \
 pg_restore --list "$BITFLIP_BACKUP_OUTPUT" >/dev/null
 
 if command -v sha256sum >/dev/null 2>&1; then
-	sha256sum "$BITFLIP_BACKUP_OUTPUT" >"$BITFLIP_BACKUP_OUTPUT.sha256"
+	checksum_command=(sha256sum)
 else
-	shasum -a 256 "$BITFLIP_BACKUP_OUTPUT" >"$BITFLIP_BACKUP_OUTPUT.sha256"
+	checksum_command=(shasum -a 256)
 fi
+
+# The writer creates the sidecar exclusively; shell noclobber still follows
+# symlinks to devices and FIFOs. A prior existence check would also be racy.
+"${checksum_command[@]}" "$BITFLIP_BACKUP_OUTPUT" |
+	node --experimental-strip-types \
+		"$(dirname "${BASH_SOURCE[0]}")/write_backup_checksum.ts" \
+		"$BITFLIP_BACKUP_OUTPUT.sha256"
 
 echo "Backup created and readable: $BITFLIP_BACKUP_OUTPUT"
