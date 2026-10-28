@@ -22,10 +22,12 @@ Never record database passwords, signing keys, seed phrases, or the operator pri
 1. Require a green CI run for the exact commit. Verify generated code is clean and all release-mode builds completed.
 2. Build the container once. Promote that digest from staging to production; do not rebuild between environments.
 3. Validate every release variable listed in [release-readiness.md](../release-readiness.md). Resolve secrets from the deployment secret manager, not a checked-in file or shell history.
-4. Create a custom-format PostgreSQL backup with `setup/scripts/postgres_backup.sh`. Copy the dump and checksum to encrypted storage with retention and access controls.
-5. Restore that exact dump into an isolated database with `setup/scripts/postgres_restore_verify.sh`. A backup is not considered valid until this succeeds.
+4. Create a custom-format PostgreSQL backup with `setup/scripts/postgres_backup.sh`. Copy the dump and checksum to encrypted storage with retention and access controls. Record the SHA-256 digest in a signed release record kept separately from backup storage.
+5. Verify that release record's signature with the release owner's trusted key. Set `BITFLIP_BACKUP_SHA256` to its 64-digit digest and `BITFLIP_BACKUP_FILE` to the selected dump, then run `setup/scripts/postgres_restore_verify.sh`. Never derive the expected digest from the downloaded dump or its adjacent `.sha256` file: an attacker could replace both. The script hashes a private local copy before any database command and restores only that authenticated copy; allow local temporary space for one full dump. A backup is not considered valid until this succeeds.
 6. Rehearse pending migrations against the restored copy. Serverpod must start, `/startupz` and `/readyz` must pass, and the application integration suite must complete before touching the live database.
 7. Confirm ingress has a distributed source/global challenge rate limit, request-size limit, TLS, and no route to the Insights port.
+
+Run restore verification on a disposable PostgreSQL instance isolated from production databases and credentials, with outbound network access blocked. Use a dedicated restore role with only the privileges needed to create and own the disposable database, without superuser, role administration, or membership in production roles. A database name ending in `_restore_verify` is an accidental-deletion guard, not an isolation boundary. The script does not verify release signatures, instance isolation, or role grants; the release owner must verify those prerequisites before supplying the trusted digest. Destroy the instance after rehearsal.
 
 ## Staging rollout
 
