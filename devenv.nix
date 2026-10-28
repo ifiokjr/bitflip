@@ -385,10 +385,8 @@ in
           echo "Install Docker or Podman before building the container." >&2
           exit 1
         fi
-        "$container_runtime" build \
-          --file "$DEVENV_ROOT/${serverDir}/Dockerfile" \
-          --tag bitflip-server:verification \
-          "$DEVENV_ROOT"
+        cd "$DEVENV_ROOT"
+        node --experimental-strip-types setup/verify_container.ts "$container_runtime"
       '';
       description = "Build the production Serverpod image with the Flutter site.";
       binary = "bash";

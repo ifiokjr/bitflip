@@ -90,6 +90,8 @@ build:container
 
 `test:surfpool` builds the actual SBF program with its public test authority in an isolated target directory before testing, so it cannot replace the deployable production artifact. `test:surfpool:cnft` deploys Bitflip, Bubblegum, Account Compression, and Noop to an offline Surfnet, then proves that minting and recording the Pina receipt are atomic and idempotent. The external binaries are fetched from a pinned commit and SHA-256 verified. Serverpod tests use its managed embedded PostgreSQL and do not require Docker. `test:wallet` checks chain/feature filtering and rejects wallets that return altered signed-message bytes.
 
+`build:container` builds committed sources plus the generated Flutter site in an isolated context. It adds inert credential canaries, verifies Docker context exclusions, and scans every production image layer for them. Local ignored credentials are never read. The runtime image includes only public development, staging, and production configuration; supply deployment secrets separately.
+
 ## Compressed-NFT minting
 
 Configure these as deployment secrets; never commit them:

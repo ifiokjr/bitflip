@@ -17,4 +17,18 @@
 **/build/
 **/coverage/
 **/test/
-**/config/passwords.yaml
+# Git ignore does not protect the Docker context. Admit only public config.
+**/config/**
+!bitflip_server/bitflip_server_server/config/development.yaml
+!bitflip_server/bitflip_server_server/config/generator.yaml
+!bitflip_server/bitflip_server_server/config/production.yaml
+!bitflip_server/bitflip_server_server/config/staging.yaml
+!bitflip_server/bitflip_server_server/config/test.yaml
+
+**/.env
+**/.env.*
+**/passwords.yaml
+**/*service_account*.json
+**/*keypair*.json
+**/*.pem
+**/*.key
