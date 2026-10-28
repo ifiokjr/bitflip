@@ -10,10 +10,13 @@ import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
 import 'package:bitflip_app/features/game/domain/pixel_colour_map.dart';
 import 'package:bitflip_app/features/game/domain/section_economy.dart';
 import 'package:bitflip_app/features/game/domain/section_policy.dart';
+import 'package:bitflip_program/bitflip_mint_authorization.dart';
 import 'package:bitflip_program/bitflip_program.dart';
 import 'package:bitflip_server_client/bitflip_server_client.dart' as serverpod;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:solana_kit/solana_kit.dart';
+
+import '../../../support/mint_authorization_fixture.dart';
 
 final _walletAddress = _base58(32, 1);
 final _treasuryAddress = _base58(32, 2);
@@ -33,6 +36,7 @@ void main() {
   SolanaBitflipRepository repository({
     bool connectWallet = true,
     int priorityFeeMicroLamports = 0,
+    serverpod.Client? serverpodClient,
     Future<serverpod.ColourCanvasView?> Function(int, int, ColourCanvasHint?)?
     colourCanvasLoader,
   }) {
@@ -48,6 +52,7 @@ void main() {
       rpc: createSolanaRpcFromTransport(script.transport),
       wallet: connectWallet ? wallet : _FakeWallet(null),
       colourCanvasLoader: colourCanvasLoader,
+      serverpodClient: serverpodClient,
     );
   }
 
@@ -56,6 +61,166 @@ void main() {
 
     expect(repository.isDemoMode, isFalse);
     expect(repository.walletChain, 'solana:devnet');
+  });
+
+  group('mint challenge validation', () {
+    late _FakeMintEndpoint endpoint;
+    late SolanaBitflipRepository mintRepository;
+    late GameSnapshot snapshot;
+    late ({MintAuthorization authorization, String message}) fixture;
+
+    setUp(() async {
+      await script.serveGame();
+      endpoint = _FakeMintEndpoint();
+      mintRepository = repository(serverpodClient: _FakeServerpod(endpoint));
+      snapshot = (await mintRepository.loadRefresh(12)).snapshot!;
+      fixture = mintAuthorizationFixture(_walletAddress);
+      endpoint.challenge = serverpod.MintChallengeView(
+        nonce: fixture.authorization.nonce,
+        expiresAt: fixture.authorization.expiresAt,
+        message: fixture.message,
+      );
+    });
+
+    test(
+      'signs canonical local intent and submits the matching nonce',
+      () async {
+        final result = await mintRepository.mintSection(snapshot);
+
+        expect(result.assetId, 'minted-asset');
+        expect(wallet.signedMessages, [fixture.message]);
+        expect(endpoint.submittedNonce, fixture.authorization.nonce);
+        expect(endpoint.mintCalls, 1);
+      },
+    );
+
+    for (final (field, before, after) in [
+      ('version', 'authorization v1', 'authorization v2'),
+      ('domain', 'bitflip/mint-section', 'another-service/login'),
+      (
+        'wallet',
+        'Wallet: $_walletAddress',
+        'Wallet: 11111111111111111111111111111111',
+      ),
+      ('game', 'Game: 0', 'Game: 1'),
+      ('section', 'Section: 12', 'Section: 13'),
+      (
+        'nonce',
+        'Nonce: abcdefghijklmnopqrstuvwxyz012345',
+        'Nonce: ABCDEFGHIJKLMNOPQRSTUVWXYZ012345',
+      ),
+      ('expiry', 'Expires:', 'Expires: 2099-01-01T00:00:00.000Z '),
+      ('action', 'Mint the sealed section', 'Log in to another service'),
+      ('line endings', '\n', '\r\n'),
+    ]) {
+      test('refuses altered $field before signing or submitting', () async {
+        endpoint.challenge = endpoint.challenge.copyWith(
+          message: fixture.message.replaceAll(before, after),
+        );
+
+        await expectLater(
+          mintRepository.mintSection(snapshot),
+          throwsStateError,
+        );
+        expect(wallet.signedMessages, isEmpty);
+        expect(endpoint.mintCalls, 0);
+      });
+    }
+
+    test('refuses arbitrary text and appended content', () async {
+      for (final message in [
+        'Log in',
+        '${fixture.message}\n',
+        '${fixture.message}\nTransfer all funds',
+      ]) {
+        endpoint.challenge = endpoint.challenge.copyWith(message: message);
+        await expectLater(
+          mintRepository.mintSection(snapshot),
+          throwsStateError,
+        );
+      }
+
+      expect(wallet.signedMessages, isEmpty);
+      expect(endpoint.mintCalls, 0);
+    });
+
+    test(
+      'refuses a nonce response field that disagrees with the text',
+      () async {
+        endpoint.challenge = endpoint.challenge.copyWith(
+          nonce: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ012345',
+        );
+
+        await expectLater(
+          mintRepository.mintSection(snapshot),
+          throwsStateError,
+        );
+        expect(wallet.signedMessages, isEmpty);
+        expect(endpoint.mintCalls, 0);
+      },
+    );
+
+    test(
+      'refuses an expiry response field that disagrees with the text',
+      () async {
+        endpoint.challenge = endpoint.challenge.copyWith(
+          expiresAt: fixture.authorization.expiresAt.add(
+            const Duration(seconds: 1),
+          ),
+        );
+
+        await expectLater(
+          mintRepository.mintSection(snapshot),
+          throwsStateError,
+        );
+        expect(wallet.signedMessages, isEmpty);
+        expect(endpoint.mintCalls, 0);
+      },
+    );
+
+    test('refuses malformed nonces including line injection', () async {
+      for (final nonce in [
+        '',
+        'short',
+        '${'a' * 31}\n',
+        '${'a' * 32}\n',
+        'a' * 33,
+        '${'a' * 31}!',
+      ]) {
+        endpoint.challenge = endpoint.challenge.copyWith(nonce: nonce);
+        await expectLater(
+          mintRepository.mintSection(snapshot),
+          throwsFormatException,
+        );
+      }
+
+      expect(wallet.signedMessages, isEmpty);
+      expect(endpoint.mintCalls, 0);
+    });
+
+    test('refuses expired or distant expiry even with matching text', () async {
+      for (final expiry in [
+        DateTime.now().subtract(const Duration(seconds: 1)),
+        DateTime.now().add(const Duration(days: 1)),
+      ]) {
+        final invalid = mintAuthorizationFixture(
+          _walletAddress,
+          expiresAt: expiry,
+        );
+        endpoint.challenge = serverpod.MintChallengeView(
+          nonce: invalid.authorization.nonce,
+          expiresAt: invalid.authorization.expiresAt,
+          message: invalid.message,
+        );
+        await expectLater(
+          mintRepository.mintSection(snapshot),
+          throwsStateError,
+        );
+      }
+
+      expect(wallet.signedMessages, isEmpty);
+      expect(endpoint.mintCalls, 0);
+    });
   });
 
   group('SolanaBitflipRepository.loadRefresh', () {
@@ -745,6 +910,16 @@ final class _FakeWallet implements BitflipWallet {
 
   final String? _address;
   final signedTransactions = <String>[];
+  final signedMessages = <String>[];
+
+  @override
+  Future<String> signMintAuthorization(MintAuthorization authorization) async {
+    signedMessages.add(
+      authorization.messageForSigning(connectedWallet: address),
+    );
+
+    return 'mint-signature';
+  }
 
   @override
   String? get address => _address;
@@ -780,4 +955,51 @@ final class _FakeWallet implements BitflipWallet {
       'Unexpected wallet call in test: ${invocation.memberName}',
     );
   }
+}
+
+final class _FakeServerpod implements serverpod.Client {
+  _FakeServerpod(this.mint);
+
+  @override
+  final serverpod.EndpointMint mint;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw StateError('Unexpected server call');
+}
+
+final class _FakeMintEndpoint implements serverpod.EndpointMint {
+  late serverpod.MintChallengeView challenge;
+  int mintCalls = 0;
+  String? submittedNonce;
+
+  @override
+  Future<serverpod.MintChallengeView> createChallenge({
+    required String walletAddress,
+    required int gameIndex,
+    required int sectionIndex,
+  }) async => challenge;
+
+  @override
+  Future<serverpod.MintSectionResult> mintSection({
+    required String walletAddress,
+    required int gameIndex,
+    required int sectionIndex,
+    required String nonce,
+    required String signatureBase64,
+  }) async {
+    mintCalls++;
+    submittedNonce = nonce;
+
+    return serverpod.MintSectionResult(
+      assetId: 'minted-asset',
+      merkleTree: 'tree',
+      leafIndex: 0,
+      alreadyMinted: false,
+    );
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw StateError('Unexpected endpoint call');
 }

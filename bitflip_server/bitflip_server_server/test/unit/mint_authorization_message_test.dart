@@ -1,4 +1,4 @@
-import 'package:bitflip_server_server/src/minting/mint_endpoint.dart';
+import 'package:bitflip_program/bitflip_mint_authorization.dart';
 import 'package:bitflip_server_server/src/minting/bitflip_mint_service.dart';
 import 'package:solana_kit/solana_kit.dart';
 import 'package:test/test.dart';
@@ -8,26 +8,24 @@ void main() {
     'mint authorization binds wallet, section, nonce, expiry, and action',
     () {
       final expiry = DateTime.utc(2026, 9, 4, 12, 30);
-      final message = mintAuthorizationMessage(
-        walletAddress: 'Wallet1111111111111111111111111111111111111',
-        gameIndex: 7,
+      final message = MintAuthorization(
+        walletAddress: '11111111111111111111111111111111',
+        gameIndex: 3,
         sectionIndex: 219,
-        nonce: 'one-time-nonce',
+        nonce: 'abcdefghijklmnopqrstuvwxyz012345',
         expiresAt: expiry,
-      );
+      ).message;
 
-      expect(message, contains('Bitflip compressed NFT authorization'));
       expect(
         message,
-        contains('Wallet: Wallet1111111111111111111111111111111111111'),
-      );
-      expect(message, contains('Game: 7'));
-      expect(message, contains('Section: 219'));
-      expect(message, contains('Nonce: one-time-nonce'));
-      expect(message, contains('Expires: 2026-09-04T12:30:00.000Z'));
-      expect(
-        message,
-        endsWith('Action: Mint the sealed section to this wallet.'),
+        'Bitflip compressed NFT authorization v1\n'
+        'Domain: bitflip/mint-section\n'
+        'Wallet: 11111111111111111111111111111111\n'
+        'Game: 3\n'
+        'Section: 219\n'
+        'Nonce: abcdefghijklmnopqrstuvwxyz012345\n'
+        'Expires: 2026-09-04T12:30:00.000Z\n'
+        'Action: Mint the sealed section to this wallet.',
       );
     },
   );

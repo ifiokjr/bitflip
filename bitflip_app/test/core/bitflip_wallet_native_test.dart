@@ -5,6 +5,8 @@ import 'package:bitflip_app/core/bitflip_wallet_native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:solana_kit/solana_kit.dart';
 
+import '../support/mint_authorization_fixture.dart';
+
 void main() {
   group('embedded mobile wallet', () {
     test('creates one key and restores the same address', () async {
@@ -36,23 +38,55 @@ void main() {
       expect(storage.value, 'v1:not-base64');
     });
 
-    test('signs messages with the embedded Ed25519 key', () async {
-      final seed = Uint8List.fromList(List.generate(32, (index) => index + 1));
-      final storage = _MemoryWalletStorage('v1:${base64Encode(seed)}');
-      final wallet = _wallet(storage: storage);
+    test(
+      'signs only canonical mint bytes with the embedded Ed25519 key',
+      () async {
+        final seed = Uint8List.fromList(
+          List.generate(32, (index) => index + 1),
+        );
+        final storage = _MemoryWalletStorage('v1:${base64Encode(seed)}');
+        final wallet = _wallet(storage: storage);
 
-      final encodedSignature = await wallet.signMessage('bitflip challenge');
-      final keyPair = createKeyPairFromPrivateKeyBytes(seed);
+        await wallet.initialize();
+        final fixture = mintAuthorizationFixture(wallet.address!);
+        final encodedSignature = await wallet.signMintAuthorization(
+          fixture.authorization,
+        );
+        final keyPair = createKeyPairFromPrivateKeyBytes(seed);
 
-      expect(
-        verifySignature(
-          keyPair.publicKey,
-          signatureBytes(Uint8List.fromList(base64Decode(encodedSignature))),
-          Uint8List.fromList(utf8.encode('bitflip challenge')),
-        ),
-        isTrue,
-      );
-      keyPair.dispose();
+        expect(
+          verifySignature(
+            keyPair.publicKey,
+            signatureBytes(Uint8List.fromList(base64Decode(encodedSignature))),
+            Uint8List.fromList(utf8.encode(fixture.message)),
+          ),
+          isTrue,
+        );
+        keyPair.dispose();
+      },
+    );
+
+    test('refuses another wallet or an expired mint statement', () async {
+      final wallet = _wallet(storage: _MemoryWalletStorage());
+      await wallet.initialize();
+
+      for (final authorization in [
+        mintAuthorizationFixture('11111111111111111111111111111111')
+            .authorization,
+        mintAuthorizationFixture(
+          wallet.address!,
+          expiresAt: DateTime.now().subtract(const Duration(seconds: 1)),
+        ).authorization,
+        mintAuthorizationFixture(
+          wallet.address!,
+          expiresAt: DateTime.now().add(const Duration(days: 1)),
+        ).authorization,
+      ]) {
+        await expectLater(
+          wallet.signMintAuthorization(authorization),
+          throwsStateError,
+        );
+      }
     });
 
     test('signs the compiled transaction before submitting it', () async {

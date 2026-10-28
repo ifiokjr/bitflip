@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:bitflip_program/bitflip_mint_authorization.dart';
 import 'package:bitflip_program/bitflip_program_constraints.dart';
 import 'package:bitflip_server_server/src/generated/protocol.dart';
 import 'package:bitflip_server_server/src/minting/bitflip_mint_service.dart';
@@ -12,7 +13,6 @@ final _secureRandom = Random.secure();
 final _noncePattern = RegExp(r'^[A-Za-z0-9_-]{32}$');
 
 class MintEndpoint extends Endpoint {
-  static const _challengeLifetime = Duration(minutes: 5);
   static const _challengeRetention = Duration(days: 1);
   static const _chainReadDeadline = Duration(seconds: 10);
   static const _mintDeadline = Duration(seconds: 90);
@@ -43,15 +43,15 @@ class MintEndpoint extends Endpoint {
     }
 
     final now = DateTime.now().toUtc();
-    final expiresAt = now.add(_challengeLifetime);
+    final expiresAt = now.add(MintAuthorization.lifetime);
     final nonce = _nonce();
-    final message = mintAuthorizationMessage(
+    final message = MintAuthorization(
       walletAddress: wallet.value,
       gameIndex: gameIndex,
       sectionIndex: sectionIndex,
       nonce: nonce,
       expiresAt: expiresAt,
-    );
+    ).message;
     await DatabaseUtil.runInTransactionOrSavepoint(session.db, null, (
       transaction,
     ) async {
@@ -120,13 +120,13 @@ class MintEndpoint extends Endpoint {
               !challenge.expiresAt.isAfter(now)) {
             throw StateError('The mint authorization is no longer valid.');
           }
-          final expectedMessage = mintAuthorizationMessage(
+          final expectedMessage = MintAuthorization(
             walletAddress: wallet.value,
             gameIndex: gameIndex,
             sectionIndex: sectionIndex,
             nonce: challenge.nonce,
             expiresAt: challenge.expiresAt,
-          );
+          ).message;
           if (challenge.message != expectedMessage ||
               !verifySolanaSignature(
                 publicKeyBytes: decodeBase58PublicKey(wallet.value),
@@ -271,24 +271,6 @@ void _logMint(
   );
 }
 
-String mintAuthorizationMessage({
-  required String walletAddress,
-  required int gameIndex,
-  required int sectionIndex,
-  required String nonce,
-  required DateTime expiresAt,
-}) {
-  return [
-    'Bitflip compressed NFT authorization',
-    'Wallet: $walletAddress',
-    'Game: $gameIndex',
-    'Section: $sectionIndex',
-    'Nonce: $nonce',
-    'Expires: ${expiresAt.toUtc().toIso8601String()}',
-    'Action: Mint the sealed section to this wallet.',
-  ].join('\n');
-}
-
 Address _validatedWallet(String value) {
   final normalized = value.trim();
 
@@ -314,12 +296,7 @@ String _validatedNonce(String value) {
 
 void _validateIndices(int gameIndex, int sectionIndex) {
   if (gameIndex < 0 || gameIndex > bitflipMaximumGameIndex) {
-    throw RangeError.range(
-      gameIndex,
-      0,
-      bitflipMaximumGameIndex,
-      'gameIndex',
-    );
+    throw RangeError.range(gameIndex, 0, bitflipMaximumGameIndex, 'gameIndex');
   }
 
   if (sectionIndex < 0 || sectionIndex > bitflipMaximumSectionIndex) {

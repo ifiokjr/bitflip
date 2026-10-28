@@ -97,6 +97,8 @@
   "cancelListing": "CANCEL LISTING",
   "buySection": "BUY THIS SECTOR",
   "mintCompressedNft": "MINT COMPRESSED NFT",
+  "mintAuthorizationIntent": "Sign a Bitflip authorization to mint game {game}, sector {section} to wallet {wallet} on {network}.",
+  "@mintAuthorizationIntent": {"placeholders": {"game": {"type": "int"}, "section": {"type": "int"}, "wallet": {"type": "String"}, "network": {"type": "String"}}},
   "sectionOwner": "OWNER",
   "ownerFeeShare": "EARNS {percent}% OF FLIP FEES",
   "@ownerFeeShare": {"placeholders": {"percent": {"type": "String"}}},

@@ -610,6 +610,17 @@ abstract class AppLocalizations {
   /// **'MINT COMPRESSED NFT'**
   String get mintCompressedNft;
 
+  /// No description provided for @mintAuthorizationIntent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign a Bitflip authorization to mint game {game}, sector {section} to wallet {wallet} on {network}.'**
+  String mintAuthorizationIntent(
+    int game,
+    int section,
+    String wallet,
+    String network,
+  );
+
   /// No description provided for @sectionOwner.
   ///
   /// In en, this message translates to:
