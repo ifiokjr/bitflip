@@ -12,11 +12,11 @@ import 'package:solana_kit/solana_kit.dart';
 abstract final class ComputeUnitLimit {
   /// Claim plus vault funding: the claim creates the section account and the
   /// funding creates and fills its BIT vault.
-  static const claimAndFundSection = 60000;
+  static const claimAndFundSection = 80000;
 
   /// A flip batch preceded by the idempotent creation of the player's BIT
   /// account, which costs the most the first time it runs.
-  static const flipPixels = 50000;
+  static const flipPixels = 65000;
 
   /// Listing, cancelling, purchasing, sealing, withdrawing fees, and
   /// configuring a policy each touch one or two accounts without CPIs.

@@ -3726,17 +3726,18 @@ fn independent_sections_process_concurrent_reward_traffic() {
 /// Compute-unit ceilings for every player-facing instruction, measured against
 /// the real SBF artifact. Instructions whose cost never varies sit a few
 /// percent above their measured value. Surfnet accounts CPI-heavy paths in
-/// run-to-run noise of fixed steps, so those ceilings sit above the noisiest
-/// observed run instead; either way a real regression — which is what these
+/// run-to-run noise of fixed steps that is correlated per runner and has stacked
+/// roughly 25k CU above the deterministic cost on a slow machine, so those
+/// ceilings sit above the noisiest run observed anywhere; either way a real regression — which is what these
 /// guard — fails loudly before it reaches a wallet's fee estimate.
 const COMPUTE_UNIT_BUDGETS: [(&str, u64); 13] = [
-	("flip one pixel", 20_000),
-	("flip one pixel after a missed window", 20_000),
+	("flip one pixel", 30_000),
+	("flip one pixel after a missed window", 30_000),
 	("claim a section", 7_000),
-	("claim and fund a section in one transaction", 50_000),
-	("flip sixteen pixels", 18_000),
+	("claim and fund a section in one transaction", 80_000),
+	("flip sixteen pixels", 35_000),
 	("configure a colour policy", 900),
-	("flip sixteen coloured pixels", 21_000),
+	("flip sixteen coloured pixels", 35_000),
 	("list a section", 900),
 	("cancel a listing", 850),
 	("purchase a section", 2_500),
