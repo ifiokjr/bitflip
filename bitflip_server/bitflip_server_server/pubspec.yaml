@@ -21,6 +21,8 @@ dependencies:
   solana_kit_system: 0.8.0
 
 dev_dependencies:
+  bitflip_server_client:
+    path: ../bitflip_server_client
   lints: ">=3.0.0 <7.0.0"
   serverpod_test: 4.0.0-rc.2
   solana_kit_surfpool: 0.4.0

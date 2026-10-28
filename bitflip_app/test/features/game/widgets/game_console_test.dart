@@ -35,6 +35,13 @@ void main() {
     );
 
     expect(find.text('MINT COMPRESSED NFT'), findsOneWidget);
+    expect(
+      find.textContaining(
+        'Sign a Bitflip authorization to mint game 0, sector 0',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('on solana:devnet.'), findsOneWidget);
     await tester.tap(find.byKey(BitflipTestKeys.mintSection));
     await tester.pump();
 

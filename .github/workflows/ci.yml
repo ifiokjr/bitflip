@@ -28,6 +28,7 @@ jobs:
           - test:wallet
           - test:operations
           - test:flutter
+          - test:flutter:web-wallet
           - test:surfpool
           - test:surfpool:cnft
           - build:server

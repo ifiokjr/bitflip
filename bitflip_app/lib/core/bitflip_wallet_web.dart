@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:js_interop';
 
 import 'package:bitflip_app/core/bitflip_wallet_option.dart';
+import 'package:bitflip_program/bitflip_mint_authorization.dart';
 
 @JS('bitflipWallet')
 external _WalletBridge? get _bitflipWalletBridge;
@@ -66,7 +67,9 @@ class BitflipWallet {
         .toDart;
   }
 
-  Future<String> signMessage(String message) async {
+  Future<String> signMintAuthorization(MintAuthorization authorization) async {
+    final message = authorization.messageForSigning(connectedWallet: address);
+
     return (await _requireBridge().signMessage(message.toJS).toDart).toDart;
   }
 

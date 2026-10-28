@@ -306,6 +306,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mintCompressedNft => 'MINT COMPRESSED NFT';
 
   @override
+  String mintAuthorizationIntent(
+    int game,
+    int section,
+    String wallet,
+    String network,
+  ) {
+    return 'Sign a Bitflip authorization to mint game $game, sector $section to wallet $wallet on $network.';
+  }
+
+  @override
   String get sectionOwner => 'OWNER';
 
   @override

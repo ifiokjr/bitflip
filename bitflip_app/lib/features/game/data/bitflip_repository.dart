@@ -9,6 +9,7 @@ import 'package:bitflip_app/features/game/domain/pixel_bitmap.dart';
 import 'package:bitflip_app/features/game/domain/pixel_colour_map.dart';
 import 'package:bitflip_app/features/game/domain/section_economy.dart';
 import 'package:bitflip_app/features/game/domain/section_policy.dart';
+import 'package:bitflip_program/bitflip_mint_authorization.dart';
 import 'package:bitflip_program/bitflip_program.dart';
 import 'package:bitflip_server_client/bitflip_server_client.dart' as serverpod;
 import 'package:solana_kit/solana_kit.dart';
@@ -97,6 +98,7 @@ final class SolanaBitflipRepository implements BitflipRepository {
     BitflipAddressBook? addresses,
     this.colourCanvasLoader,
     BitflipWallet? wallet,
+    serverpod.Client? serverpodClient,
   }) : _config = config,
        _gameIndex = config.gameIndex,
        _rpc =
@@ -106,7 +108,7 @@ final class SolanaBitflipRepository implements BitflipRepository {
              allowInsecureHttp: _isLoopback(config.rpcUrl),
            ),
        _addresses = addresses ?? BitflipAddressBook(),
-       _serverpod = serverpod.Client(config.serverpodUrl),
+       _serverpod = serverpodClient ?? serverpod.Client(config.serverpodUrl),
        _wallet =
            wallet ??
            BitflipWallet(
@@ -644,7 +646,6 @@ final class SolanaBitflipRepository implements BitflipRepository {
     );
     if (colour != null) {
       try {
-
         await _serverpod.colourCanvas.recordSignature(
           transactionSignature: transactionSignature,
           gameIndex: snapshot.gameIndex,
@@ -702,7 +703,15 @@ final class SolanaBitflipRepository implements BitflipRepository {
       gameIndex: snapshot.gameIndex,
       sectionIndex: snapshot.section.index,
     );
-    final signature = await _wallet.signMessage(challenge.message);
+    final authorization = MintAuthorization(
+      walletAddress: walletAddress,
+      gameIndex: snapshot.gameIndex,
+      sectionIndex: snapshot.section.index,
+      nonce: challenge.nonce,
+      expiresAt: challenge.expiresAt,
+    );
+    authorization.verifyChallenge(challenge.message);
+    final signature = await _wallet.signMintAuthorization(authorization);
     final result = await _serverpod.mint.mintSection(
       walletAddress: walletAddress,
       gameIndex: snapshot.gameIndex,

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:bitflip_app/core/bitflip_wallet_option.dart';
+import 'package:bitflip_program/bitflip_mint_authorization.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:solana_kit/solana_kit.dart';
 import 'package:solana_kit_mobile_wallet_adapter/solana_kit_mobile_wallet_adapter.dart';
@@ -126,8 +127,9 @@ class BitflipWallet {
     return _transactionSender(getBase64EncodedWireTransaction(signed));
   }
 
-  Future<String> signMessage(String message) async {
+  Future<String> signMintAuthorization(MintAuthorization authorization) async {
     final keyPair = await _requireKeyPair();
+    final message = authorization.messageForSigning(connectedWallet: address);
     final signature = signBytes(
       keyPair.privateKey,
       Uint8List.fromList(utf8.encode(message)),
@@ -171,7 +173,6 @@ class BitflipWallet {
         rethrow;
       }
       _keyPair = generated;
-
     } on Object {
       _initialization = null;
       rethrow;

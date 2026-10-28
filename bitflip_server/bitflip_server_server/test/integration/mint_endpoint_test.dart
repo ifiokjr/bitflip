@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:bitflip_program/bitflip_mint_authorization.dart';
+import 'package:bitflip_server_client/bitflip_server_client.dart' as client;
 import 'package:bitflip_server_server/src/generated/protocol.dart';
 import 'package:bitflip_server_server/src/minting/bitflip_mint_service.dart';
 import 'package:bs58/bs58.dart';
@@ -45,6 +47,58 @@ void main() {
       expect(result.alreadyMinted, isFalse);
       expect(mintService.mintCalls, 1);
     });
+
+    test(
+      'mints from a canonical authorization after a client JSON roundtrip',
+      () async {
+        final walletAddress = _walletAddress(owner);
+        final challenge = await endpoints.mint.createChallenge(
+          sessionBuilder,
+          walletAddress: walletAddress,
+          gameIndex: 0,
+          sectionIndex: 12,
+        );
+        final wire = jsonDecode(jsonEncode(challenge.toJsonForProtocol()));
+
+        if (wire is! Map<String, dynamic>) {
+          fail('The challenge must serialize as a JSON object.');
+        }
+
+        final received = client.MintChallengeView.fromJson(wire);
+        final authorization = MintAuthorization(
+          walletAddress: walletAddress,
+          gameIndex: 0,
+          sectionIndex: 12,
+          nonce: received.nonce,
+          expiresAt: received.expiresAt,
+        );
+        authorization.verifyChallenge(received.message);
+        final session = sessionBuilder.build();
+        final stored = await MintChallenge.db.findFirstRow(
+          session,
+          where: (table) => table.nonce.equals(received.nonce),
+        );
+        await session.close();
+        expect(stored, isNotNull);
+        expect(stored!.expiresAt, received.expiresAt);
+        expect(stored.message, authorization.message);
+
+        final result = await endpoints.mint.mintSection(
+          sessionBuilder,
+          walletAddress: walletAddress,
+          gameIndex: 0,
+          sectionIndex: 12,
+          nonce: authorization.nonce,
+          signatureBase64: _signature(
+            owner,
+            authorization.messageForSigning(connectedWallet: walletAddress),
+          ),
+        );
+
+        expect(result.assetId, _address.value);
+        expect(mintService.mintCalls, 1);
+      },
+    );
 
     test('rejects replaying a consumed authorization', () async {
       final walletAddress = _walletAddress(owner);

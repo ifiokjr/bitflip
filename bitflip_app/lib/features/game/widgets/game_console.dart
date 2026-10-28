@@ -245,14 +245,23 @@ class GameConsole extends HookWidget {
                       : context.l10n.sectorLocked,
                 ),
               )
-            else if (section.lifecycle == SectionLifecycle.sealed)
+            else if (section.lifecycle == SectionLifecycle.sealed) ...[
+              Text(
+                context.l10n.mintAuthorizationIntent(
+                  state.snapshot.gameIndex,
+                  section.index,
+                  state.walletAddress ?? context.l10n.demoMode,
+                  state.walletChain,
+                ),
+              ),
+              const SizedBox(height: 12),
               FilledButton.icon(
                 key: BitflipTestKeys.mintSection,
                 onPressed: canMint && !state.isBusy ? onMint : null,
                 icon: const Icon(Icons.auto_awesome_outlined),
                 label: Text(context.l10n.mintCompressedNft),
-              )
-            else if (section.lifecycle == SectionLifecycle.minted)
+              ),
+            ] else if (section.lifecycle == SectionLifecycle.minted)
               FilledButton.icon(
                 onPressed: null,
                 icon: const Icon(Icons.verified_outlined),
@@ -506,7 +515,6 @@ class _PolicyPanel extends HookWidget {
 
     final canConfigure =
         section.isEditable &&
-
         !section.isProtocolOwned &&
         state.walletAddress == section.owner &&
         !state.isBusy &&

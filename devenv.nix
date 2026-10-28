@@ -577,6 +577,16 @@ in
       description = "Test Wallet Standard discovery and signing boundaries.";
       binary = "bash";
     };
+    "test:flutter:web-wallet" = {
+      exec = ''
+        set -euo pipefail
+        ${resolveFlutterSdk}
+        cd "$DEVENV_ROOT/${appDir}"
+        "$flutter_sdk/bin/flutter" test --platform chrome test/core/bitflip_wallet_web_test.dart
+      '';
+      description = "Verify the browser wallet signs only canonical mint authorizations.";
+      binary = "bash";
+    };
     "test:operations" = {
       exec = ''
         set -euo pipefail
