@@ -196,24 +196,29 @@ final class ChallengeRateLimiter {
   final Map<String, List<DateTime>> _attemptsBySource = {};
   final List<DateTime> _globalAttempts = [];
 
+  /// Number of retained sources, bounded by [maximumGlobal].
+  int get trackedSourceCount => _attemptsBySource.length;
+
   void record(String source) {
     final now = _clock().toUtc();
     final cutoff = now.subtract(window);
     _globalAttempts.removeWhere((attempt) => attempt.isBefore(cutoff));
 
-    if (_globalAttempts.isEmpty) {
-      _attemptsBySource.removeWhere(
-        (_, attempts) => attempts.every((attempt) => attempt.isBefore(cutoff)),
-      );
-    }
+    // Security: expire idle sources even while other traffic fills the window.
+    _attemptsBySource.removeWhere((_, attempts) {
+      attempts.removeWhere((attempt) => attempt.isBefore(cutoff));
 
-    final attempts = _attemptsBySource.putIfAbsent(source, () => []);
-    attempts.removeWhere((attempt) => attempt.isBefore(cutoff));
-    if (attempts.length >= maximumPerSource ||
-        _globalAttempts.length >= maximumGlobal) {
+      return attempts.isEmpty;
+    });
+    final attempts = _attemptsBySource[source];
+
+    if (_globalAttempts.length >= maximumGlobal ||
+        (attempts?.length ?? 0) >= maximumPerSource) {
       throw StateError('Too many mint requests. Wait before trying again.');
     }
-    attempts.add(now);
+
+    // Only admitted requests retain state, so sources cannot exceed the cap.
+    (_attemptsBySource[source] ??= []).add(now);
     _globalAttempts.add(now);
   }
 }
