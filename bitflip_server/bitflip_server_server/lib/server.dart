@@ -38,7 +38,6 @@ void run(List<String> args) async {
   );
   MintServiceRegistry.configure(mintService);
   final colourEventSource = SolanaColourFlipEventSource(mintService.rpc);
-  ColourFlipEventSourceRegistry.configure(colourEventSource);
   ColourEventIndexerRegistry.configure(
     ColourEventIndexer(
       configuration: colourIndexerConfiguration,

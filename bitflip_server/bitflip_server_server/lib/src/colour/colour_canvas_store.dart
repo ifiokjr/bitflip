@@ -46,12 +46,20 @@ abstract final class ColourCanvasStore {
               colours: bytesFromByteData(stored.colours),
               pixelRevisions: bytesFromByteData(stored.pixelRevisions),
             );
+      var changed = false;
+
       for (final event in orderedEvents) {
         if (event.gameIndex != gameIndex ||
             event.sectionIndex != sectionIndex) {
           throw ArgumentError('A colour event belongs to another section.');
         }
-        canvas.apply(event);
+        changed = canvas.apply(event) || changed;
+      }
+
+      if (!changed && stored != null) {
+        result = stored;
+
+        return;
       }
 
       final next = ColourCanvasState(
@@ -102,7 +110,5 @@ abstract final class ColourCanvasStore {
   }
 }
 
-Uint8List bytesFromByteData(ByteData data) => data.buffer.asUint8List(
-  data.offsetInBytes,
-  data.lengthInBytes,
-);
+Uint8List bytesFromByteData(ByteData data) =>
+    data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);

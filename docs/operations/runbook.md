@@ -33,7 +33,7 @@ Never record database passwords, signing keys, seed phrases, or the operator pri
 2. Wait for `/startupz`; then require `/livez` and `/readyz`. Readiness includes PostgreSQL and a bounded Solana `getSlot` request.
 3. Run the `staging verification` GitHub workflow from outside the hosting network. For a sealed canary section, provide both optional indices so its metadata and SVG are checked too.
 4. Exercise wallet cancellation, insufficient funds, stale revision, and RPC failure. Confirm each path preserves queued work and does not report success.
-5. Disable client colour-signature hints, make confirmed colour flips, and verify the recurring indexer catches up from its durable cursor. Restart the server during a multi-page sweep and prove replay neither loses nor overwrites a newer pixel revision.
+5. Make confirmed colour flips and verify the recurring indexer catches up from its durable cursor. Public `colourCanvas.recordSignature` calls only read the latest indexed canvas; they never fetch or apply transactions. After idle backoff, a new flip can wait up to 30 seconds before the next sweep, plus RPC and catch-up time. Monitor sweep age and indexing failures. Restart the server during a multi-page sweep and prove replay neither loses nor overwrites a newer pixel revision or rewrites an unchanged canvas row.
 6. Run a bounded devnet canary: connect, claim, flip, confirm, seal, authorize mint, and verify both the cNFT and Bitflip receipt on chain. Record signatures and the asset ID.
 7. Hold staging for the soak period required by the Serverpod ADR. Review errors, latency, RPC usage, database connections, indexer sweep age, and operator saturation.
 
