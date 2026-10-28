@@ -5,8 +5,9 @@ import * as fs from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-const runtime = process.argv[2];
-assert(runtime === "docker" || runtime === "podman", "Expected Docker or Podman");
+const requestedRuntime = process.argv[2];
+assert(requestedRuntime === "docker" || requestedRuntime === "podman", "Expected Docker or Podman");
+const runtime: "docker" | "podman" = requestedRuntime;
 
 const server = "bitflip_server/bitflip_server_server";
 const directory = fs.mkdtempSync(join(tmpdir(), "bitflip-container-"));
