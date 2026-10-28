@@ -79,6 +79,53 @@ void main() {
       expect(mintService.mintCalls, 1);
     });
 
+    test('requires the buyer to sign a new challenge after a sale', () async {
+      final sellerWallet = _walletAddress(owner);
+      final sellerChallenge = await endpoints.mint.createChallenge(
+        sessionBuilder,
+        walletAddress: sellerWallet,
+        gameIndex: 0,
+        sectionIndex: 12,
+      );
+      final sellerSignature = _signature(owner, sellerChallenge.message);
+      final buyer = ed25519.generateKey();
+      final buyerWallet = _walletAddress(buyer);
+      mintService.owner = buyerWallet;
+
+      for (final wallet in [sellerWallet, buyerWallet]) {
+        await expectLater(
+          endpoints.mint.mintSection(
+            sessionBuilder,
+            walletAddress: wallet,
+            gameIndex: 0,
+            sectionIndex: 12,
+            nonce: sellerChallenge.nonce,
+            signatureBase64: sellerSignature,
+          ),
+          throwsA(isA<StateError>()),
+        );
+      }
+
+      expect(mintService.mintCalls, 0);
+      final buyerChallenge = await endpoints.mint.createChallenge(
+        sessionBuilder,
+        walletAddress: buyerWallet,
+        gameIndex: 0,
+        sectionIndex: 12,
+      );
+      final result = await endpoints.mint.mintSection(
+        sessionBuilder,
+        walletAddress: buyerWallet,
+        gameIndex: 0,
+        sectionIndex: 12,
+        nonce: buyerChallenge.nonce,
+        signatureBase64: _signature(buyer, buyerChallenge.message),
+      );
+
+      expect(result.alreadyMinted, isFalse);
+      expect(mintService.mintCalls, 1);
+    });
+
     test('rejects an expired authorization before operator work', () async {
       final walletAddress = _walletAddress(owner);
       final challenge = await endpoints.mint.createChallenge(
@@ -219,7 +266,7 @@ const _address = Address('11111111111111111111111111111111');
 final class _FakeMintService implements BitflipMintService {
   _FakeMintService({required this.owner});
 
-  final String owner;
+  String owner;
   int status = 2;
   int mintCalls = 0;
 
