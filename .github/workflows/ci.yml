@@ -44,6 +44,9 @@ jobs:
         with:
           version: 0.3.27
 
+      - name: Install pinned Rust toolchain before parallel formatter hooks
+        run: rustup toolchain install
+
       - name: Set up devenv
         uses: ./.github/actions/devenv
         with:
