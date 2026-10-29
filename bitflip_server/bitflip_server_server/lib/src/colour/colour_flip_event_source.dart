@@ -139,22 +139,9 @@ String validateTransactionSignature(String value) {
     }
   } on FormatException {
     rethrow;
-
   } on Object {
     throw const FormatException('Invalid Solana transaction signature.');
   }
 
   return normalized;
-}
-
-abstract final class ColourFlipEventSourceRegistry {
-  static ColourFlipEventSource? _source;
-
-  static ColourFlipEventSource get source =>
-      _source ??
-      (throw StateError('The Bitflip colour event source is unavailable.'));
-
-  static void configure(ColourFlipEventSource source) {
-    _source = source;
-  }
 }

@@ -2,13 +2,11 @@ import 'dart:typed_data';
 
 import 'package:bitflip_program/bitflip_program_constraints.dart';
 import 'package:bitflip_server_server/src/colour/colour_canvas_reducer.dart';
-import 'package:bitflip_server_server/src/colour/colour_canvas_store.dart';
 import 'package:bitflip_server_server/src/colour/colour_flip_event_source.dart';
 import 'package:bitflip_server_server/src/generated/protocol.dart';
 import 'package:serverpod/serverpod.dart';
 
 final class ColourCanvasEndpoint extends Endpoint {
-  static const _chainReadDeadline = Duration(seconds: 10);
   static final _submissionLimiter = ColourSubmissionRateLimiter();
 
   @override
@@ -41,6 +39,9 @@ final class ColourCanvasEndpoint extends Endpoint {
     );
   }
 
+  /// Returns the latest indexed canvas for clients reporting a confirmed flip.
+  /// Only the durable indexer fetches and applies colour transactions; public
+  /// signatures must not become reusable tokens for RPC and database writes.
   Future<ColourCanvasView> recordSignature(
     Session session, {
     required String transactionSignature,
@@ -51,29 +52,9 @@ final class ColourCanvasEndpoint extends Endpoint {
     _submissionLimiter.record(
       session.request?.connectionInfo.remote.address.toString() ?? 'internal',
     );
-    final events = await ColourFlipEventSourceRegistry.source
-        .eventsForSignature(transactionSignature)
-        .timeout(_chainReadDeadline);
-    final relevantEvents = events
-        .where(
-          (event) =>
-              event.gameIndex == gameIndex &&
-              event.sectionIndex == sectionIndex,
-        )
-        .toList();
-    if (relevantEvents.isEmpty) {
-      throw StateError(
-        'The transaction has no verified colour event for this section.',
-      );
-    }
+    validateTransactionSignature(transactionSignature);
 
-    final result = await ColourCanvasStore.applySectionEvents(
-      session,
-      gameIndex: gameIndex,
-      sectionIndex: sectionIndex,
-      events: relevantEvents,
-    );
-    return _viewFor(gameIndex, sectionIndex, result);
+    return load(session, gameIndex: gameIndex, sectionIndex: sectionIndex);
   }
 }
 
@@ -104,12 +85,7 @@ ColourCanvasView _viewFor(
 
 void _validateIndices(int gameIndex, int sectionIndex) {
   if (gameIndex < 0 || gameIndex > bitflipMaximumGameIndex) {
-    throw RangeError.range(
-      gameIndex,
-      0,
-      bitflipMaximumGameIndex,
-      'gameIndex',
-    );
+    throw RangeError.range(gameIndex, 0, bitflipMaximumGameIndex, 'gameIndex');
   }
 
   if (sectionIndex < 0 || sectionIndex > bitflipMaximumSectionIndex) {
