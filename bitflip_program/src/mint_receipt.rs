@@ -2,15 +2,15 @@
 
 use pina::*;
 
-use crate::BitflipError;
-use crate::RecordSectionMintInstructionZc;
+use super::BitflipError;
+use super::RecordSectionMintInstructionZc;
 
 const BUBBLEGUM_ID: Address = address!("BGUMAp9Gq7iTEuizy4pqaxsTyUCBK68MDfK752saRPUY");
 const TREE_CONFIG_DISCRIMINATOR: [u8; 8] = [122, 245, 175, 248, 171, 34, 0, 207];
 
-/// A stale prediction must abort the whole transaction, including its MintV1.
+/// A stale prediction must abort the whole transaction, including its `MintV1`.
 /// Solana holds the tree's write lock for the transaction, so another replica
-/// cannot advance this counter between MintV1 and RecordSectionMint.
+/// cannot advance this counter between `MintV1` and `RecordSectionMint`.
 pub(super) fn assert_mint_receipt(
 	tree_authority: &AccountView,
 	args: &RecordSectionMintInstructionZc,

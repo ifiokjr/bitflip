@@ -603,7 +603,7 @@ pub struct RecordSectionMintAccounts<'a> {
 	pub config: &'a AccountView,
 	pub game: &'a mut AccountView,
 	pub section: &'a mut AccountView,
-	/// Bubblegum's canonical tree config, read after the atomic MintV1.
+	/// Bubblegum's canonical tree config, read after the atomic `MintV1`.
 	pub tree_authority: &'a AccountView,
 }
 
