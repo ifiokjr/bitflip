@@ -287,7 +287,7 @@ void main() {
         logs,
         contains('Program ${bitflipProgramProgramAddress.value} success'),
       );
-      await _expectLeafEvent(surfpool, result, owner.address);
+      await _expectLeafEvent(surfpool, result, buyer.address);
     },
   );
 
