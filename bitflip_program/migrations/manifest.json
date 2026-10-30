@@ -792,15 +792,21 @@
 								"signer": true
 							},
 							{
-								"name": "config"
+								"name": "config",
+								"pda": "config"
 							},
 							{
 								"name": "game",
-								"writable": true
+								"writable": true,
+								"pda": "game"
 							},
 							{
 								"name": "section",
-								"writable": true
+								"writable": true,
+								"pda": "section"
+							},
+							{
+								"name": "tree_authority"
 							}
 						]
 					}

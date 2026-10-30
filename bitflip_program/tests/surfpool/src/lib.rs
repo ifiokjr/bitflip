@@ -43,7 +43,6 @@ use program_under_test::SECTION_PALETTE_COLOUR_COUNT;
 use program_under_test::SECTION_PALETTE_DEFAULT;
 use program_under_test::SECTION_REWARD_POLICY_NONE;
 use program_under_test::SECTION_STATUS_ACTIVE;
-use program_under_test::SECTION_STATUS_MINTED;
 use program_under_test::SECTION_STATUS_SEALED;
 use program_under_test::SectionState;
 use program_under_test::pricing::DEFAULT_BURST_ELASTICITY;
@@ -70,6 +69,8 @@ use spl_token_2022_interface::state::Mint;
 const CONFIG_SEED: &[u8] = b"config";
 const GAME_SEED: &[u8] = b"game";
 const SECTION_SEED: &[u8] = b"section";
+const BUBBLEGUM_ID: Pubkey = Pubkey::from_str_const("BGUMAp9Gq7iTEuizy4pqaxsTyUCBK68MDfK752saRPUY");
+
 const TEST_AUTHORITY_SECRET: [u8; 32] = [
 	182, 10, 64, 122, 65, 236, 229, 117, 171, 47, 35, 220, 225, 174, 225, 180, 186, 105, 196, 216,
 	166, 207, 46, 39, 227, 107, 186, 154, 107, 88, 177, 103,
@@ -925,6 +926,7 @@ fn record_mint_instruction(
 	data.extend_from_slice(&asset_id.to_bytes());
 	data.extend_from_slice(&merkle_tree.to_bytes());
 	data.extend_from_slice(&leaf_index.to_le_bytes());
+	let (tree_authority, _) = Pubkey::find_program_address(&[merkle_tree.as_ref()], &BUBBLEGUM_ID);
 	program.instruction(
 		&data,
 		vec![
@@ -932,6 +934,7 @@ fn record_mint_instruction(
 			AccountMeta::new_readonly(*config, false),
 			AccountMeta::new(*game, false),
 			AccountMeta::new(*section, false),
+			AccountMeta::new_readonly(tree_authority, false),
 		],
 	)
 }
@@ -3287,7 +3290,7 @@ fn only_the_owner_can_seal_an_active_section() {
 
 #[test]
 #[ignore = "run with test:surfpool"]
-fn mint_recording_requires_sealed_state_and_collection_authority() {
+fn mint_recording_requires_sealed_state_collection_authority_and_bubblegum_tree() {
 	pina_test::run(async {
 		let CustodyGame {
 			mut program,
@@ -3316,8 +3319,8 @@ fn mint_recording_requires_sealed_state_and_collection_authority() {
 			&bit_reserve,
 		)
 		.await;
-		let asset_id = Keypair::new().pubkey();
 		let merkle_tree = Keypair::new().pubkey();
+		let asset_id = Keypair::new().pubkey();
 		let record = |collection_authority: &Pubkey| {
 			record_mint_instruction(
 				&program,
@@ -3348,31 +3351,20 @@ fn mint_recording_requires_sealed_state_and_collection_authority() {
 			.send_with_signers(record(&outsider.pubkey()), &[&outsider])
 			.expect_err("an unrelated signer cannot record a mint");
 		assert!(!unauthorized.message().is_empty());
-		program
+		let missing_tree = program
 			.send_with_signers(record(&authority.pubkey()), &[&authority])
-			.expect("collection authority records the mint");
+			.expect_err("a missing Bubblegum tree cannot attest a mint");
+		assert!(!missing_tree.message().is_empty());
 
 		let section_account = program.account(&section).expect("fetch section");
-		assert_eq!(section_account.data[132], SECTION_STATUS_MINTED);
-		assert_eq!(
-			&section_account.data[34..66],
-			asset_id.to_bytes().as_slice()
-		);
-		assert_eq!(
-			&section_account.data[66..98],
-			merkle_tree.to_bytes().as_slice()
-		);
-		assert_eq!(u32_at(&section_account.data, 136), 42);
+		assert_eq!(section_account.data[132], SECTION_STATUS_SEALED);
 		let game_account = program.account(&game).expect("fetch game");
 		assert_eq!(
 			u16::from_le_bytes([game_account.data[16], game_account.data[17]]),
-			1
+			0
 		);
-
-		let duplicate = program
-			.send_with_signers(record(&authority.pubkey()), &[&authority])
-			.expect_err("a recorded mint cannot be overwritten");
-		assert_custom_error(&duplicate, BitflipError::SectionAlreadyMinted);
+		// Success, duplicate rejection and receipt CU are covered against the
+		// real Bubblegum program by test:surfpool:cnft.
 		program.stop().expect("stop isolated program test");
 	});
 }
@@ -3730,7 +3722,7 @@ fn independent_sections_process_concurrent_reward_traffic() {
 /// roughly 25k CU above the deterministic cost on a slow machine, so those
 /// ceilings sit above the noisiest run observed anywhere; either way a real regression — which is what these
 /// guard — fails loudly before it reaches a wallet's fee estimate.
-const COMPUTE_UNIT_BUDGETS: [(&str, u64); 13] = [
+const COMPUTE_UNIT_BUDGETS: [(&str, u64); 12] = [
 	("flip one pixel", 30_000),
 	("flip one pixel after a missed window", 30_000),
 	("claim a section", 7_000),
@@ -3743,7 +3735,6 @@ const COMPUTE_UNIT_BUDGETS: [(&str, u64); 13] = [
 	("purchase a section", 2_500),
 	("withdraw owner fees", 700),
 	("seal a section", 1_200),
-	("record a mint", 1_300),
 ];
 
 fn compute_unit_budget(label: &str) -> u64 {
@@ -4014,22 +4005,8 @@ fn player_instructions_stay_within_compute_budgets() {
 			.expect("buyer seals section one");
 		travel(4570);
 
-		let record = record_mint_instruction(
-			&program,
-			&authority.pubkey(),
-			&config,
-			&game,
-			&section,
-			1,
-			&buyer.pubkey(),
-			&Keypair::new().pubkey(),
-			&Keypair::new().pubkey(),
-			0,
-		);
-		measure("record a mint", &[record.clone()], &[&authority]);
-		program
-			.send_with_signers(record, &[&authority])
-			.expect("record the compressed mint");
+		// Receipt CU is measured with the actual Bubblegum stack in
+		// test:surfpool:cnft; a synthetic identifier can no longer record a mint.
 
 		let table = report
 			.iter()
