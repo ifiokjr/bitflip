@@ -27,6 +27,8 @@ fvm install 3.47.2
 install:all
 ```
 
+Cursor cloud agents run that same bootstrap from [`.cursor/cloud-agent-install.sh`](.cursor/cloud-agent-install.sh). The script installs single-user Nix with flakes and `nix-command`, installs devenv from the public devenv binary cache, puts `nix` and `devenv` on `PATH` for login and non-login shells, and warms the shell with `devenv shell -- true`. It then installs the Flutter release pinned in `.fvmrc` and the locked workspace dependencies. iOS and macOS release builds still require macOS and Xcode; Android release builds require the Android SDK, which the Linux cloud image does not install.
+
 Start the complete development stack—embedded PostgreSQL, migrations, Serverpod hot reload, API on 8080, and the auto-launched Flutter web app—through devenv:
 
 ```bash
