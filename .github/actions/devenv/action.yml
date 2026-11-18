@@ -8,6 +8,16 @@ inputs:
 runs:
   using: composite
   steps:
+    # dprint formats Rust files in parallel. Each rustfmt starts rustup, and
+    # the first devenv shell is what installs the toolchain from
+    # rust-toolchain.toml. Concurrent downloads roll that install back, so
+    # later cargo commands fail (the 2026-11-06 Android release job). Install
+    # the toolchain once, before Nix or devenv, for every job that uses this
+    # action.
+    - name: Install pinned Rust toolchain before parallel formatter hooks
+      shell: bash
+      run: rustup toolchain install
+
     - name: Install Nix
       uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
       with:
