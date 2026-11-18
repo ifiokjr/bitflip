@@ -1,0 +1,4 @@
+{
+	"name": "Bitflip",
+	"install": "bash .cursor/cloud-agent-install.sh"
+}
